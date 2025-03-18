@@ -50,7 +50,7 @@
 30. Accept new payments from customers against existing invoices
 31. Payments Reconciliation
 32. A lot more bug fixes from the version 14
-33.my customization
+33.my customizations
 ---
 
 ### How to Install
