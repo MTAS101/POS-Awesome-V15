@@ -161,7 +161,9 @@
                         setFormatedFloat(item, 'qty', null, false, $event.target.value),
                         calc_stock_qty(item, $event.target.value),
                       ]
-                      " :rules="[isNumber]" :disabled="!!item.posa_is_replace"></v-text-field>
+                      "
+                      @focus="$event.target.select()"
+                       :rules="[isNumber]" :disabled="!!item.posa_is_replace"></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-select density="compact" bg-color="white" :label="frappe._('UOM')" v-model="item.uom"
@@ -185,7 +187,9 @@
                         ),
                         calc_prices(item, $event.target.value, $event),
                       ]
-                      " :rules="[isNumber]" id="rate" :disabled="!!item.posa_is_replace ||
+                      " 
+                      @focus="$event.target.select()"
+                      :rules="[isNumber]" id="rate" :disabled="!!item.posa_is_replace ||
                         !!item.posa_offer_applied ||
                         !pos_profile.posa_allow_user_to_edit_rate ||
                         !!invoice_doc.is_return
@@ -1734,21 +1738,21 @@ export default {
     },
 
     shortOpenPayment(e) {
-      if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
+      if (e.keyCode === 121) {
         e.preventDefault();
         this.show_payment();
       }
     },
 
     shortDeleteFirstItem(e) {
-      if (e.key === "d" && (e.ctrlKey || e.metaKey)) {
+      if (e.key === "d" && (e.ctrlKey || e.metaKey)  || e.key === 'ي'  && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         this.remove_item(this.items[0]);
       }
     },
 
     shortOpenFirstItem(e) {
-      if (e.key === "a" && (e.ctrlKey || e.metaKey)) {
+      if (e.key === "a" && (e.ctrlKey || e.metaKey) || e.key === 'ش'  && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         this.expanded = [];
         this.expanded.push(this.items[0]);
@@ -1756,7 +1760,7 @@ export default {
     },
 
     shortSelectDiscount(e) {
-      if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+      if (e.key === "z" && (e.ctrlKey || e.metaKey)  || e.key === 'ئ'  && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         this.$refs.discount.focus();
       }

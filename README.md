@@ -75,8 +75,9 @@
 
 ### Shortcuts:
 
-- `CTRL or CMD + S` open payments
-- `CTRL or CMD + X` submit payments
+- `F10` open payments
+- `F9` submit payments
+- `F8` submit payments with print
 - `CTRL or CMD + D` remove the first item from the top
 - `CTRL or CMD + A` expand the first item from the top
 - `CTRL or CMD + E` focus on discount field

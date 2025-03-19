@@ -1036,11 +1036,19 @@ export default {
       }
     },
 
-    // Short Pay Shortcut (Ctrl+X)
+    // Short Pay Shortcut (f9)
     shortPay(e) {
-      if (e.key === "x" && (e.ctrlKey || e.metaKey)) {
+      if (e.keyCode === 120) {
         e.preventDefault();
         this.submit();
+      }
+    },
+
+    // Short Pay Shortcut (f8)
+    shortPaywithprint(e) {
+      if (e.keyCode === 119) {
+        e.preventDefault();
+        this.submit(undefined, false, true);
       }
     },
 
@@ -1370,8 +1378,7 @@ export default {
       });
     });
 
-    // Listen for keyboard shortcuts
-    document.addEventListener("keydown", this.shortPay.bind(this));
+    
   },
   beforeUnmount() {
     // Remove event listeners
@@ -1384,9 +1391,16 @@ export default {
     this.eventBus.$off("set_customer_info_to_edit");
     this.eventBus.$off("set_mpesa_payment");
   },
+  created() {
+    // Listen for keyboard shortcuts
+
+    document.addEventListener("keydown", this.shortPay.bind(this));
+    document.addEventListener("keydown", this.shortPaywithprint.bind(this));
+  },
   unmounted() {
     // Remove keyboard shortcut listener
     document.removeEventListener("keydown", this.shortPay);
+    document.removeEventListener("keydown", this.shortPaywithprint);
   },
 };
 </script>
