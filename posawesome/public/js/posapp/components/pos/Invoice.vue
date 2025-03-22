@@ -103,7 +103,7 @@
 </v-col>
 </v-row>
       <div class="my-0 py-0 overflow-y-auto" style="max-height: 60vh">
-        <v-data-table :headers="items_headers" :items="items" v-model:expanded="expanded" show-expand
+        <v-data-table :headers="items_headers" :items="items"  v-model:expanded="expanded" show-expand
           item-value="posa_row_id" class="elevation-1" :items-per-page="itemsPerPage" expand-on-click
           hide-default-footer>
           <template v-slot:item.qty="{ item }">{{
@@ -119,12 +119,12 @@
               )
             }}</template>
           <template v-slot:item.posa_is_offer="{ item }">
-  <v-checkbox-btn
-    v-model="item.posa_is_offer"
-    class="center"
-    @change="toggleOffer(item)"
-  ></v-checkbox-btn>
-</template>
+            <v-checkbox-btn
+              v-model="item.posa_is_offer"
+              class="center"
+              @change="toggleOffer(item)"
+            ></v-checkbox-btn>
+          </template>
 
           <template v-slot:expanded-row="{ columns: headers, item }">
             <td :colspan="headers.length" class="ma-0 pa-0">
@@ -1360,7 +1360,6 @@ export default {
     async update_items_details(items) {
       if (!items?.length) return;
       if (!this.pos_profile) return;
-      
       try {
         const response = await frappe.call({
           method: "posawesome.posawesome.api.posapp.get_items_details",
@@ -1368,14 +1367,16 @@ export default {
             pos_profile: this.pos_profile,
             items_data: items
           }
+          
         });
-
+        
         if (response?.message) {
           items.forEach((item) => {
             const updated_item = response.message.find(
               (element) => element.posa_row_id == item.posa_row_id
             );
             if (updated_item) {
+             
               item.actual_qty = updated_item.actual_qty;
               item.serial_no_data = updated_item.serial_no_data;
               item.batch_no_data = updated_item.batch_no_data;
@@ -1482,6 +1483,7 @@ export default {
             item.stock_qty = data.stock_qty;
             item.actual_qty = data.actual_qty;
             item.stock_uom = data.stock_uom;
+            item.item_uoms = data.item_uoms[0];
             (item.has_serial_no = data.has_serial_no),
               (item.has_batch_no = data.has_batch_no),
               vm.calc_item_price(item);
@@ -2692,7 +2694,7 @@ export default {
       this.eventBus.emit("set_customer_info_to_edit", this.customer_info);
     },
     expanded(data_value) {
-      // this.update_items_details(data_value);
+      //this.update_items_details(data_value);
       if (data_value.length > 0) {
         this.update_item_detail(data_value[0]);
       }

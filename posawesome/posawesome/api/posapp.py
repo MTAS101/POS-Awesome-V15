@@ -324,7 +324,7 @@ def get_items(
                             "item_attributes": item_attributes or "",
                         }
                     )
-                    result.append(row)
+                    result.append(row)           
         return result
 
     if _pos_profile.get("posa_use_server_cache"):
@@ -933,7 +933,6 @@ def get_items_details(pos_profile, items_data):
                 )
 
                 result.append(row)
-
         return result
 
     if _pos_profile.get("posa_use_server_cache"):
@@ -976,6 +975,12 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
         doc,
         overwrite_warehouse=False,
     )
+    uoms = frappe.get_all(
+                    "UOM Conversion Detail",
+                    filters={"parent": item_code},
+                    fields=["uom", "conversion_factor"],
+                )          
+    res["item_uoms"] = uoms or [],            
     if item.get("is_stock_item") and warehouse:
         res["actual_qty"] = get_stock_availability(item_code, warehouse)
     res["max_discount"] = max_discount

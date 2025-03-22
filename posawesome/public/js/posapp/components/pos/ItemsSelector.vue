@@ -181,6 +181,7 @@ export default {
             vm.eventBus.emit("set_all_items", vm.items);
             vm.loading = false;
             console.info("Items Loaded");
+            
             if (
               vm.pos_profile.posa_local_storage &&
               !vm.pos_profile.pose_use_limit_search
@@ -256,6 +257,7 @@ export default {
       this.add_item(item)
     },
     add_item(item) {
+     
       item = { ...item };
       if (item.has_variants) {
         this.eventBus.emit("open_variants_model", item, this.items);
