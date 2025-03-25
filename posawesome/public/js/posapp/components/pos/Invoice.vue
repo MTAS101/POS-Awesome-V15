@@ -1570,8 +1570,14 @@ export default {
     switch(fieldId) {
       case "rate":
         item.rate = this.flt(newValue, this.currency_precision);
-        item.discount_amount = this.flt(priceListRate - item.rate, this.currency_precision);
-        item.discount_percentage = this.flt((item.discount_amount / priceListRate) * 100, this.float_precision);
+        if (item.rate < priceListRate){
+            item.discount_amount = this.flt(priceListRate - item.rate, this.currency_precision);
+           item.discount_percentage = this.flt((item.discount_amount / priceListRate) * 100, this.float_precision);
+        }else{
+           item.discount_amount = 0;
+           item.discount_percentage=0;
+        }
+        
         break;
 
       case "discount_amount":
