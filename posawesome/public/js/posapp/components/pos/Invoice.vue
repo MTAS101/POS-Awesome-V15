@@ -1756,8 +1756,12 @@ export default {
     shortOpenFirstItem(e) {
       if (e.key === "a" && (e.ctrlKey || e.metaKey) || e.key === 'ش'  && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        this.expanded = [];
-        this.expanded.push(this.items[0]);
+        if (this.expanded.length > 0 ){
+          this.expanded = [];
+        }else{
+           this.expanded.push(this.items[0].posa_row_id);
+        }
+       
       }
     },
 
@@ -2694,7 +2698,7 @@ export default {
       this.eventBus.emit("set_customer_info_to_edit", this.customer_info);
     },
     expanded(data_value) {
-      //this.update_items_details(data_value);
+     //this.update_items_details(data_value);
       if (data_value.length > 0) {
         this.update_item_detail(data_value[0]);
       }
