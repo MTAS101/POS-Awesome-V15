@@ -1771,6 +1771,20 @@ export default {
       }
     },
 
+    shortOpenFirstItemAndfocusonQTY(e) {
+      if (e.keyCode === 113) {
+        e.preventDefault();
+        if (this.expanded.length > 0 ){
+          this.expanded = [];
+        }else{
+           this.expanded.push(this.items[0].posa_row_id);
+           console.log(this.$refs)
+            this.$refs.qty.focus();
+        }
+       
+      }
+    },
+
     shortSelectDiscount(e) {
       if (e.key === "z" && (e.ctrlKey || e.metaKey)  || e.key === 'ئ'  && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
@@ -2685,12 +2699,14 @@ export default {
     document.addEventListener("keydown", this.shortDeleteFirstItem.bind(this));
     document.addEventListener("keydown", this.shortOpenFirstItem.bind(this));
     document.addEventListener("keydown", this.shortSelectDiscount.bind(this));
+    document.addEventListener("keydown", this.shortOpenFirstItemAndfocusonQTY.bind(this));
   },
   unmounted() {
     document.removeEventListener("keydown", this.shortOpenPayment);
     document.removeEventListener("keydown", this.shortDeleteFirstItem);
     document.removeEventListener("keydown", this.shortOpenFirstItem);
     document.removeEventListener("keydown", this.shortSelectDiscount);
+    document.removeEventListener("keydown", this.shortOpenFirstItemAndfocusonQTY);
   },
   watch: {
     customer() {
