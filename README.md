@@ -79,6 +79,9 @@
 - `F10` open payments
 - `F9` submit payments
 - `F8` submit payments with print
+- `F2` focus on qty
+- `F3` focus on rate
+- `F4` focus on uom
 - `CTRL or CMD + D` remove the first item from the top
 - `CTRL or CMD + A` expand the first item from the top
 - `CTRL or CMD + E` focus on discount field
