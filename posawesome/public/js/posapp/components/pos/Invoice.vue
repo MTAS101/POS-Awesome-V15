@@ -136,14 +136,19 @@
                       ]
                       "
                       @focus="$event.target.select()"
-                       :rules="[isNumber]" :disabled="!!item.posa_is_replace"></v-text-field>
+                       :rules="[isNumber]" :disabled="!!item.posa_is_replace"
+                       ref="qtyField" 
+                       ></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-select density="compact" bg-color="white" :label="frappe._('UOM')" v-model="item.uom"
                     :items="item.item_uoms" variant="outlined" item-title="uom" item-value="uom" hide-details
                     @update:model-value="calc_uom(item, $event)" :disabled="!!invoice_doc.is_return ||
                       !!item.posa_is_replace
-                      ">
+                      "
+                      ref="uomField" 
+                      :menu="isMenuActive"
+                      >
                   </v-select>
                 </v-col>
                 <v-col cols="4">
@@ -168,7 +173,9 @@
                         !!invoice_doc.is_return
                         ? true
                         : false
-                        "></v-text-field>
+                        "
+                        ref="rateField" 
+                        ></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-text-field density="compact" variant="outlined" color="primary"
@@ -1753,9 +1760,44 @@ export default {
           this.expanded = [];
         }else{
            this.expanded.push(this.items[0].posa_row_id);
-           console.log(this.$refs)
-            this.$refs.qty.focus();
-        }
+          this.$nextTick(() => {
+            // Focus on the qty field of the first item
+            this.$refs.qtyField.focus();
+          });
+         }
+       
+      }
+    },
+
+    shortOpenFirstItemAndfocusonRate(e) {
+      if (e.keyCode === 114) {
+        e.preventDefault();
+        if (this.expanded.length > 0 ){
+          this.expanded = [];
+        }else{
+           this.expanded.push(this.items[0].posa_row_id);
+          this.$nextTick(() => {
+            // Focus on the qty field of the first item
+            this.$refs.rateField.focus();
+          });
+         }
+       
+      }
+    },
+
+    shortOpenFirstItemAndfocusonUOM(e) {
+      if (e.keyCode === 115) {
+        e.preventDefault();
+        if (this.expanded.length > 0 ){
+          this.expanded = [];
+        }else{
+           this.expanded.push(this.items[0].posa_row_id);
+          this.$nextTick(() => {
+            // Focus on the qty field of the first item
+            this.$refs.uomField.focus();
+            this.isMenuActive = true;
+          });
+         }
        
       }
     },
@@ -1763,7 +1805,7 @@ export default {
     shortSelectDiscount(e) {
       if (e.key === "z" && (e.ctrlKey || e.metaKey)  || e.key === 'ئ'  && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        this.$refs.discount.focus();
+        this.$refs.percentage_discount.focus();
       }
     },
 
@@ -2680,6 +2722,8 @@ export default {
     document.addEventListener("keydown", this.shortOpenFirstItem.bind(this));
     document.addEventListener("keydown", this.shortSelectDiscount.bind(this));
     document.addEventListener("keydown", this.shortOpenFirstItemAndfocusonQTY.bind(this));
+    document.addEventListener("keydown", this.shortOpenFirstItemAndfocusonRate.bind(this));
+    document.addEventListener("keydown", this.shortOpenFirstItemAndfocusonUOM.bind(this));
   },
   unmounted() {
     document.removeEventListener("keydown", this.shortOpenPayment);
@@ -2687,6 +2731,8 @@ export default {
     document.removeEventListener("keydown", this.shortOpenFirstItem);
     document.removeEventListener("keydown", this.shortSelectDiscount);
     document.removeEventListener("keydown", this.shortOpenFirstItemAndfocusonQTY);
+    document.removeEventListener("keydown", this.shortOpenFirstItemAndfocusonRate);
+    document.removeEventListener("keydown", this.shortOpenFirstItemAndfocusonUOM);
   },
   watch: {
     customer() {
