@@ -23,13 +23,10 @@
       </v-card>
     </v-dialog>
     <v-card style="max-height: 70vh; height: 70vh" class="cards my-0 py-0 mt-3 bg-grey-lighten-5">
-      <v-row align="center" class="items px-2 py-1">
-        <v-col v-if="pos_profile.posa_allow_sales_order" cols="9" class="pb-2 pr-0">
-          <Customer></Customer>
-        </v-col>
-        <v-col v-if="!pos_profile.posa_allow_sales_order" cols="12" class="pb-2">
-          <Customer></Customer>
-        </v-col>
+  <v-row align="center" class="items px-2 py-1">
+    <v-col :cols="pos_profile.posa_allow_sales_order ? 9 : 12" class="pb-2 pr-0">
+      <Customer />
+    </v-col>
         <v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-2">
           <v-select density="compact" hide-details variant="outlined" color="primary" bg-color="white"
             :items="invoiceTypes" :label="frappe._('Type')" v-model="invoiceType"
@@ -654,25 +651,25 @@ export default {
     },
 
     clear_invoice() {
-      this.items = [];
-      this.posa_offers = [];
-      this.expanded = [];
-      this.posa_offers = [];
-      this.eventBus.emit("set_pos_coupons", []);
-      this.posa_coupons = [];
-      this.customer = this.pos_profile.customer;
-      this.invoice_doc = "";
-      this.return_doc = "";
-      this.discount_amount = 0;
-      this.additional_discount_percentage = 0;
-      this.delivery_charges_rate = 0;
-      this.selected_delivery_charge = "";
-      this.eventBus.emit("set_customer_readonly", false);
-      this.invoiceType = this.pos_profile.posa_default_sales_order
-        ? "Order"
-        : "Invoice";
-      this.invoiceTypes = ["Invoice", "Order"];
-    },
+  this.items = [];
+  this.posa_offers = [];
+  this.expanded = [];
+  this.eventBus.emit("set_pos_coupons", []);
+  this.posa_coupons = [];
+  this.invoice_doc = "";
+  this.return_doc = "";
+  this.discount_amount = 0;
+  this.additional_discount_percentage = 0;
+  this.delivery_charges_rate = 0;
+  this.selected_delivery_charge = "";
+
+  // Always reset to default customer after invoice
+  this.customer = this.pos_profile.customer;
+
+  this.eventBus.emit("set_customer_readonly", false);
+  this.invoiceType = this.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
+  this.invoiceTypes = ["Invoice", "Order"];
+},
 	
 	async fetch_customer_balance() {
   try {
