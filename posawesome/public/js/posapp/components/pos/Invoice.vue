@@ -567,7 +567,8 @@ export default {
           this.set_batch_qty(new_item, new_item.batch_no, false);
         }
         this.items.unshift(new_item);
-        this.update_item_detail(new_item);
+        //this.update_item_detail(new_item);
+        this.update_item_detail(this.items[0]);
       } else {
         const cur_item = this.items[index];
         this.update_items_details([cur_item]);
