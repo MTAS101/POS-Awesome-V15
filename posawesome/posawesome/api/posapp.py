@@ -483,8 +483,52 @@ def add_taxes_from_tax_template(item, parent_doc):
                 if parent_doc.doctype == "Purchase Order":
                     tax_row.update({"category": "Total", "add_deduct_tax": "Add"})
                 tax_row.db_insert()
+                
+@frappe.whitelist()
+def update_invoice_from_order(data):
+     data = json.loads(data)
+     invoice_doc = frappe.get_doc("Sales Invoice", data.get("name"))
+     invoice_doc.update(data)
+     invoice_doc.save()
+     return invoice_doc
 
-
+@frappe.whitelist()
+def validate_return_items(return_against, items):
+     """Custom validation for return items"""
+     original_invoice = frappe.get_doc("Sales Invoice", return_against)
+     
+     # Create lookup for original items
+     original_items = {}
+     for item in original_invoice.items:
+         # Use item_code as key since that's what we're matching against
+         if item.item_code not in original_items:
+             original_items[item.item_code] = {
+                 'qty': item.qty,
+                 'rate': item.rate
+             }
+         else:
+             original_items[item.item_code]['qty'] += item.qty
+ 
+     # Validate return items
+     for item in items:
+         item_code = item.get('item_code')
+         if item_code not in original_items:
+             return {
+                 "valid": False,
+                 "message": f"Item {item_code} not found in original invoice"
+             }
+         
+         return_qty = abs(float(item.get('qty')))
+         if return_qty > original_items[item_code]['qty']:
+             return {
+                 "valid": False, 
+                 "message": f"Return quantity {return_qty} exceeds original quantity {original_items[item_code]['qty']} for item {item_code}"
+             }
+             
+         original_items[item_code]['qty'] -= return_qty
+ 
+     return {"valid": True}
+    
 @frappe.whitelist()
 def update_invoice(data):
     data = json.loads(data)
