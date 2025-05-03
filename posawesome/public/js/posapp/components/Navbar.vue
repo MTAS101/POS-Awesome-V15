@@ -1,7 +1,11 @@
 <template>
   <nav>
     <v-app-bar height="40" class="elevation-2">
-      <v-app-bar-nav-icon @click.stop="drawer = !drawer" class="text-grey"></v-app-bar-nav-icon>
+      <v-app-bar-nav-icon 
+        ref="navIcon"
+        @click.stop="handleNavClick" 
+        class="text-grey"
+      ></v-app-bar-nav-icon>
       <v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32" class="mr-2"
         color="primary"></v-img>
       <v-toolbar-title @click="go_desk" style="cursor: pointer" class="text-uppercase text-primary">
@@ -67,7 +71,18 @@
         </v-menu>
       </div>
     </v-app-bar>
-    <v-navigation-drawer v-model="drawer" v-model:mini-variant="mini" class="bg-primary margen-top" width="170">
+    <div 
+      class="nav-trigger-area"
+      @click="triggerNavClick"
+      style="cursor: pointer"
+    ></div>
+    <v-navigation-drawer 
+      v-model="drawer" 
+      v-model:mini-variant="mini" 
+      class="bg-primary margen-top" 
+      width="170"
+      @mouseleave="handleMouseLeave"
+    >
       <v-list theme="dark">
         <v-list-item class="px-2">
           <template v-slot:prepend>
@@ -137,6 +152,7 @@ export default {
       freezeTitle: '',
       freezeMsg: '',
       last_invoice: '',
+      closeTimeout: null,
     };
   },
   methods: {
@@ -200,6 +216,23 @@ export default {
         true
       );
     },
+    handleNavClick() {
+      this.drawer = true;
+      this.mini = false;
+    },
+    handleMouseLeave() {
+      if (!this.drawer) return;
+      
+      this.closeTimeout = setTimeout(() => {
+        this.drawer = false;
+        this.mini = true;
+      }, 250);
+    },
+    triggerNavClick() {
+      if (!this.drawer) {
+        this.$refs.navIcon.$el.click();
+      }
+    },
   },
   created: function () {
     this.$nextTick(function () {
@@ -238,11 +271,31 @@ export default {
       });
     });
   },
+  beforeUnmount() {
+    if (this.closeTimeout) {
+      clearTimeout(this.closeTimeout);
+    }
+  }
 };
 </script>
 
 <style scoped>
 .margen-top {
   margin-top: 0px;
+}
+.v-navigation-drawer {
+  transition: all 0.3s ease-out;
+}
+.nav-trigger-area {
+  position: fixed;
+  left: 0;
+  top: 40px; /* Below the app bar */
+  width: 10px;
+  height: 100vh;
+  z-index: 100;
+  background-color: transparent;
+}
+.nav-trigger-area:hover {
+  background-color: rgba(0, 0, 0, 0.1); /* Slight highlight on hover */
 }
 </style>
