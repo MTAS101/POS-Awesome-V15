@@ -212,12 +212,12 @@
           <div class="pb-6 pr-6" style="position: absolute; bottom: 0; width: 100%">
             <v-row>
               <v-col cols="6" class="pr-1">
-                <v-btn block color="primary" theme="dark" @click="submit">
+                <v-btn block size="large" color="primary" theme="dark" @click="submit" :disabled="vaildatPayment || isSubmitting" :loading="isSubmitting">
                   {{ __("Submit") }}
                 </v-btn>
               </v-col>
               <v-col cols="6" class="pl-1">
-                <v-btn block color="success" theme="dark" @click="submit_and_print">
+                <v-btn block size="large" color="success" theme="dark" @click="submit(undefined, false, true)" :disabled="vaildatPayment || isSubmitting" :loading="isSubmitting">
                   {{ __("Submit & Print") }}
                 </v-btn>
               </v-col>
@@ -376,6 +376,7 @@ export default {
           key: "amount",
         },
       ],
+      isSubmitting: false,
     };
   },
 
@@ -582,15 +583,20 @@ export default {
       this.set_payment_methods();
     },
     submit() {
+      if (this.isSubmitting) return;
+      this.isSubmitting = true;
       const customer = this.customer_name;
       const vm = this;
+      
       if (!customer) {
+        this.isSubmitting = false;
         frappe.throw(__("Please select a customer"));
         return;
       }
       
       // Check if we have selected invoices
       if (this.selected_invoices.length == 0) {
+        this.isSubmitting = false;
         frappe.throw(__("Please select an invoice"));
         return;
       }
@@ -601,6 +607,7 @@ export default {
                           this.total_payment_methods;
       
       if (total_payments <= 0) {
+        this.isSubmitting = false;
         frappe.throw(__("Please make a payment or select an payment"));
         return;
       }
@@ -633,6 +640,7 @@ export default {
         freeze: true,
         freeze_message: __("Processing Payment"),
         callback: function (r) {
+          vm.isSubmitting = false;
           if (r.message) {
             frappe.utils.play_sound("submit");
             vm.clear_all(false);
@@ -643,18 +651,25 @@ export default {
             vm.get_draft_mpesa_payments_register();
           }
         },
+        error: function() {
+          vm.isSubmitting = false;
+        }
       });
     },
     submit_and_print() {
+      if (this.isSubmitting) return;
+      this.isSubmitting = true;
       const customer = this.customer_name;
       const vm = this;
       if (!customer) {
+        this.isSubmitting = false;
         frappe.throw(__("Please select a customer"));
         return;
       }
-      
+    
       // Check if we have selected invoices
       if (this.selected_invoices.length == 0) {
+        this.isSubmitting = false;
         frappe.throw(__("Please select an invoice"));
         return;
       }
@@ -665,6 +680,7 @@ export default {
                           this.total_payment_methods;
       
       if (total_payments <= 0) {
+        this.isSubmitting = false;
         frappe.throw(__("Please make a payment or select an payment"));
         return;
       }
@@ -697,6 +713,7 @@ export default {
         freeze: true,
         freeze_message: __("Processing Payment"),
         callback: function (r) {
+          vm.isSubmitting = false;
           if (r.message) {
             console.log("Server response:", JSON.stringify(r.message));
             frappe.utils.play_sound("submit");
@@ -720,6 +737,9 @@ export default {
             vm.get_draft_mpesa_payments_register();
           }
         },
+        error: function() {
+          vm.isSubmitting = false;
+        }
       });
     },
     selectSingleInvoice(item) {
