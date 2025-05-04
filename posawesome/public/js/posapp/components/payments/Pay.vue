@@ -87,9 +87,21 @@
                 </p>
               </v-col>
             </v-row>
-            <v-data-table :headers="unallocated_payments_headers" :items="unallocated_payments" item-key="name"
-              class="elevation-1 mt-0" :single-select="singleSelect" show-select v-model="selected_payments"
-              :loading="unallocated_payments_loading" checkbox-color="primary">
+            <v-data-table 
+              :headers="unallocated_payments_headers" 
+              :items="unallocated_payments" 
+              item-key="name"
+              class="elevation-1 mt-0" 
+              :loading="unallocated_payments_loading">
+              <template v-slot:item.select="{ item }">
+                <v-checkbox
+                  v-model="selected_payments"
+                  :value="item"
+                  color="primary"
+                  hide-details
+                  @click.stop
+                ></v-checkbox>
+              </template>
               <template v-slot:item.paid_amount="{ item }">
                 {{ currencySymbol(item.currency) }}
                 {{ formatCurrency(item.paid_amount) }}
@@ -307,6 +319,13 @@ export default {
         },
       ],
       unallocated_payments_headers: [
+        {
+          title: "",
+          align: "center",
+          sortable: false,
+          key: "select",
+          width: "50px"
+        },
         {
           title: __("Payment ID"),
           align: "start",
