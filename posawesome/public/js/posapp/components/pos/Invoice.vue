@@ -185,26 +185,23 @@
                         " suffix="%"></v-text-field>
                 </v-col>
                 <v-col cols="4">
-                  <v-text-field density="compact" variant="outlined" color="primary"
-                    :label="frappe._('Discount Amount')" bg-color="white" hide-details
-                    :model-value="formatCurrency(item.discount_amount)" @change="
-                      [
-                        setFormatedCurrency(
-                          item,
-                          'discount_amount',
-                          null,
-                          true,
-                          $event
-                        ),
-                        calc_prices(item, $event.target.value, { target: { id: 'discount_amount' } }),
-                      ]
-                      " :rules="[isNumber]" id="discount_amount" :disabled="!!item.posa_is_replace ||
-                        item.posa_offer_applied ||
-                        !pos_profile.posa_allow_user_to_edit_item_discount ||
-                        (this.invoiceType === 'Return' && this.invoice_doc.return_against)
-                        ? true
-                        : false
-                        " :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
+<v-text-field
+  density="compact"
+  variant="outlined"
+  color="primary"
+  :label="frappe._('Discount Amount')"
+  bg-color="white"
+  hide-details
+  v-model="discount_amount"
+  ref="discount"
+  @change="calc_prices(items, $event.target.value, { target: { id: 'discount_amount' } })"
+  :rules="['isNumber']"
+  id="discount_amount"
+  :disabled="!item.posa_is_replace || pos_profile.posa_offer_applied || 
+             !pos_profile.posa_allow_user_to_edit_item_discount ||
+             (this.invoice_type == 'Return' && this.invoice_doc.return_against)"
+  :prefix="currencySymbol(pos_profile.currency)"
+></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-text-field density="compact" variant="outlined" color="primary"
