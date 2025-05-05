@@ -185,6 +185,7 @@
                         " suffix="%"></v-text-field>
                 </v-col>
                 <v-col cols="4">
+
                   <v-text-field density="compact" variant="outlined" color="primary"
                     :label="frappe._('Discount Amount')" bg-color="white" hide-details
                     :model-value="formatCurrency(item.discount_amount)" @change="
