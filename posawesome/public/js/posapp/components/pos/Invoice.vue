@@ -22,7 +22,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    <v-card style="max-height: 70vh; height: 70vh" class="cards my-0 py-0 mt-3 bg-grey-lighten-5">
+    <v-card style="max-height: 70vh; height: 70vh" :class="['cards my-0 py-0 mt-3 bg-grey-lighten-5', {'return-mode': invoiceType === 'Return'}]">
   <v-row align="center" class="items px-2 py-1">
     <v-col :cols="pos_profile.posa_allow_sales_order ? 9 : 12" class="pb-2 pr-0">
       <Customer />
@@ -2958,5 +2958,23 @@ export default {
 .v-date-picker .v-card-actions {
   padding: 8px !important;
   border-top: 1px solid rgba(0,0,0,0.12);
+}
+
+.return-mode {
+  border: 2px solid #ff5252 !important;
+  position: relative;
+}
+
+.return-mode::before {
+  content: 'RETURN';
+  position: absolute;
+  top: 0;
+  right: 0;
+  background-color: #ff5252;
+  color: white;
+  padding: 4px 12px;
+  font-weight: bold;
+  border-bottom-left-radius: 8px;
+  z-index: 1;
 }
 </style>
