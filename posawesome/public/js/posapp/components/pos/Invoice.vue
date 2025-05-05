@@ -185,27 +185,33 @@
                         " suffix="%"></v-text-field>
                 </v-col>
                 <v-col cols="4">
-                  <v-text-field density="compact" variant="outlined" color="primary"
-                    :label="frappe._('Discount Amount')" bg-color="white" hide-details
-                    :model-value="formatCurrency(item.discount_amount)" :rules="[isNumber]" @change="
+                  <v-text-field
+                    density="compact"
+                    variant="outlined"
+                    color="primary"
+                    :label="frappe._('Discount Amount')"
+                    bg-color="white"
+                    hide-details
+                    v-model="discount_amount"
+                    ref="discount"
+                    :prefix="currencySymbol(pos_profile.currency)"
+                    :rules="[isNumber]"
+                    @change="
                       [
                         setFormatedCurrency(
-                          item,
+                          null,
                           'discount_amount',
                           null,
                           true,
                           $event
                         ),
-                        ,
-                        calc_prices(item, $event.target.value, $event),
                       ]
-                      " :prefix="currencySymbol(pos_profile.currency)" id="discount_amount" :disabled="!!item.posa_is_replace ||
-                        !!item.posa_offer_applied ||
-                        !pos_profile.posa_allow_user_to_edit_item_discount ||
-                        (this.invoiceType === 'Return' && this.invoice_doc.return_against)
-                        ? true
-                        : false
-                        "></v-text-field>
+                    "
+                    :disabled="
+                      !pos_profile.posa_allow_user_to_edit_additional_discount ||
+                      (this.invoiceType === 'Return' && this.invoice_doc.return_against)
+                    "
+                  ></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-text-field density="compact" variant="outlined" color="primary"
@@ -1850,9 +1856,17 @@ export default {
     },
 
     shortSelectDiscount(e) {
-      if (e.key === "z" && (e.ctrlKey || e.metaKey)) {
+      console.log('Shortcut pressed:', e.key, e.ctrlKey);
+      if (e.key.toLowerCase() === "e" && (e.ctrlKey || e.metaKey)) {
+        console.log('Focusing discount field');
         e.preventDefault();
-        this.$refs.discount.focus();
+        e.stopPropagation();
+        if (this.$refs.discount) {
+          this.$refs.discount.focus();
+          console.log('Discount field focused');
+        } else {
+          console.log('Discount field ref not found');
+        }
       }
     },
 

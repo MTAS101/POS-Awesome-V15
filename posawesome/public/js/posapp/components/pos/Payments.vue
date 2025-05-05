@@ -969,18 +969,19 @@ export default {
           data: data,
           invoice: this.invoice_doc,
         },
-        async: false,
         callback: function (r) {
-          if (!r?.message) {
+          if (!r.message) {
             vm.eventBus.emit("show_message", {
-              title: `Error submitting invoice`,
+              title: __("Error submitting invoice"),
               color: "error",
             });
             return;
           }
+          
           if (print) {
             vm.load_print_page();
           }
+          
           vm.customer_credit_dict = [];
           vm.redeem_customer_credit = false;
           vm.is_cashback = true;
@@ -988,15 +989,15 @@ export default {
 
           vm.eventBus.emit("set_last_invoice", vm.invoice_doc.name);
           vm.eventBus.emit("show_message", {
-            title: `Invoice ${r.message.name} is Submitted`,
+            title: __("Invoice {0} is Submitted", [r.message.name]),
             color: "success",
           });
+          
           frappe.utils.play_sound("submit");
           vm.addresses = [];
           vm.eventBus.emit("clear_invoice");
           vm.back_to_invoice();
-          return;
-        },
+        }
       });
     },
 
@@ -1062,11 +1063,18 @@ export default {
       }
     },
 
-    // Short Pay Shortcut (Ctrl+X)
+    // Submit Payment Shortcut (Ctrl+X)
     shortPay(e) {
-      if (e.key === "x" && (e.ctrlKey || e.metaKey)) {
+      console.log('Shortcut pressed:', e.key, e.ctrlKey);
+      if (e.key.toLowerCase() === "x" && (e.ctrlKey || e.metaKey)) {
+        console.log('Submitting invoice via shortcut');
         e.preventDefault();
-        this.submit();
+        e.stopPropagation();
+        if (this.invoice_doc && this.invoice_doc.payments) {
+          this.submit_invoice();
+        } else {
+          console.log('No invoice doc or payments found');
+        }
       }
     },
 
@@ -1367,6 +1375,10 @@ export default {
       }
     },
   },
+  created() {
+    // Initialize keyboard shortcuts
+    document.addEventListener("keydown", this.shortPay.bind(this));
+  },
   mounted() {
     this.$nextTick(() => {
       // Listen to various events
@@ -1435,9 +1447,6 @@ export default {
         this.set_mpesa_payment(data);
       });
     });
-
-    // Listen for keyboard shortcuts
-    document.addEventListener("keydown", this.shortPay.bind(this));
   },
   beforeUnmount() {
     // Remove event listeners
