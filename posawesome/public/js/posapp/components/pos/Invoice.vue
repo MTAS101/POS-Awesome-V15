@@ -518,9 +518,9 @@ export default {
     },
 
     add_one(item) {
-      // For returns, we need to subtract (make more negative)
+      // For returns, we need to add (make more negative)
       if (this.invoiceType === "Return") {
-        item.qty--;
+        item.qty++;
       } else {
         item.qty++;
       }
@@ -531,9 +531,9 @@ export default {
       this.$forceUpdate();
     },
     subtract_one(item) {
-      // For returns, we need to add (make less negative)
+      // For returns, we need to subtract (make less negative)
       if (this.invoiceType === "Return") {
-        item.qty++;
+        item.qty--;
       } else {
         item.qty--;
       }
@@ -572,6 +572,10 @@ export default {
           item.batch_no = null;
           this.set_batch_qty(new_item, new_item.batch_no, false);
         }
+        // Make quantity negative for returns
+        if (this.invoiceType === "Return") {
+          new_item.qty = -Math.abs(new_item.qty || 1);
+        }
         this.items.unshift(new_item);
         this.update_item_detail(new_item);
       } else {
@@ -592,10 +596,11 @@ export default {
           item.to_set_serial_no = null;
         }
         if (!cur_item.has_batch_no) {
-          cur_item.qty += item.qty || 1;
-          // Make sure the quantity is negative for returns
-          if (this.invoiceType === "Return" && cur_item.qty > 0) {
-            cur_item.qty = -Math.abs(cur_item.qty);
+          // For returns, subtract from quantity to make it more negative
+          if (this.invoiceType === "Return") {
+            cur_item.qty -= (item.qty || 1);
+          } else {
+            cur_item.qty += (item.qty || 1);
           }
           this.calc_stock_qty(cur_item, cur_item.qty);
         } else {
@@ -604,14 +609,24 @@ export default {
               cur_item.batch_no == item.batch_no) ||
             !cur_item.batch_no
           ) {
-            cur_item.qty += item.qty || 1;
+            // For returns, subtract from quantity to make it more negative
+            if (this.invoiceType === "Return") {
+              cur_item.qty -= (item.qty || 1);
+            } else {
+              cur_item.qty += (item.qty || 1);
+            }
             this.calc_stock_qty(cur_item, cur_item.qty);
           } else {
             const new_item = this.get_new_item(cur_item);
             new_item.batch_no = item.batch_no || item.to_set_batch_no;
             new_item.batch_no_expiry_date = "";
             new_item.actual_batch_qty = "";
-            new_item.qty = item.qty || 1;
+            // Make quantity negative for returns
+            if (this.invoiceType === "Return") {
+              new_item.qty = -Math.abs(item.qty || 1);
+            } else {
+              new_item.qty = item.qty || 1;
+            }
             if (new_item.batch_no) {
               this.set_batch_qty(new_item, new_item.batch_no, false);
               item.to_set_batch_no = null;
