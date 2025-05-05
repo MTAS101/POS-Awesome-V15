@@ -185,33 +185,26 @@
                         " suffix="%"></v-text-field>
                 </v-col>
                 <v-col cols="4">
-                  <v-text-field
-                    density="compact"
-                    variant="outlined"
-                    color="primary"
-                    :label="frappe._('Discount Amount')"
-                    bg-color="white"
-                    hide-details
-                    v-model="discount_amount"
-                    ref="discount"
-                    :prefix="currencySymbol(pos_profile.currency)"
-                    :rules="[isNumber]"
-                    @change="
+                  <v-text-field density="compact" variant="outlined" color="primary"
+                    :label="frappe._('Discount Amount')" bg-color="white" hide-details
+                    :model-value="formatCurrency(item.discount_amount)" @change="
                       [
                         setFormatedCurrency(
-                          null,
+                          item,
                           'discount_amount',
                           null,
                           true,
                           $event
                         ),
+                        calc_prices(item, $event.target.value, { target: { id: 'discount_amount' } }),
                       ]
-                    "
-                    :disabled="
-                      !pos_profile.posa_allow_user_to_edit_additional_discount ||
-                      (this.invoiceType === 'Return' && this.invoice_doc.return_against)
-                    "
-                  ></v-text-field>
+                      " :rules="[isNumber]" id="discount_amount" :disabled="!!item.posa_is_replace ||
+                        item.posa_offer_applied ||
+                        !pos_profile.posa_allow_user_to_edit_item_discount ||
+                        (this.invoiceType === 'Return' && this.invoice_doc.return_against)
+                        ? true
+                        : false
+                        " :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-text-field density="compact" variant="outlined" color="primary"
@@ -319,15 +312,15 @@
             </v-col>
             <v-col v-if="!pos_profile.posa_use_percentage_discount" cols="6" class="pa-1">
               <v-text-field
-  v-model="discount_amount"
-  :label="frappe._('Additional Discount')"
-  variant="outlined"
-  density="compact"
-  color="warning"
-  :prefix="currencySymbol(pos_profile.currency)"
-  :disabled="!pos_profile.posa_allow_user_to_edit_additional_discount"
->
-</v-text-field>
+                v-model="additional_discount"
+                :label="frappe._('Additional Discount')"
+                variant="outlined"
+                density="compact"
+                color="warning"
+                :prefix="currencySymbol(pos_profile.currency)"
+                :disabled="!pos_profile.posa_allow_user_to_edit_additional_discount"
+              >
+              </v-text-field>
             </v-col>
             <v-col v-if="pos_profile.posa_use_percentage_discount" cols="6" class="pa-1">
               <v-text-field v-model="additional_discount_percentage" @change="update_discount_umount()"
@@ -406,8 +399,9 @@ export default {
       return_doc: "",
       customer: "",
       customer_info: "",
-	  customer_balance: 0,
+      customer_balance: 0,
       discount_amount: 0,
+      additional_discount: 0,  // New variable for additional discount
       additional_discount_percentage: 0,
       total_tax: 0,
       items: [],
@@ -483,7 +477,7 @@ export default {
           sum += flt(item.qty) * flt(item.rate);
         }
       });
-      sum -= this.flt(this.discount_amount);
+      sum -= this.flt(this.additional_discount);  // Changed from discount_amount to additional_discount
       sum += this.flt(this.delivery_charges_rate);
       return this.flt(sum, this.currency_precision);
     },
@@ -690,25 +684,26 @@ export default {
     },
 
     clear_invoice() {
-  this.items = [];
-  this.posa_offers = [];
-  this.expanded = [];
-  this.eventBus.emit("set_pos_coupons", []);
-  this.posa_coupons = [];
-  this.invoice_doc = "";
-  this.return_doc = "";
-  this.discount_amount = 0;
-  this.additional_discount_percentage = 0;
-  this.delivery_charges_rate = 0;
-  this.selected_delivery_charge = "";
+      this.items = [];
+      this.posa_offers = [];
+      this.expanded = [];
+      this.eventBus.emit("set_pos_coupons", []);
+      this.posa_coupons = [];
+      this.invoice_doc = "";
+      this.return_doc = "";
+      this.discount_amount = 0;
+      this.additional_discount = 0;  // Added this line
+      this.additional_discount_percentage = 0;
+      this.delivery_charges_rate = 0;
+      this.selected_delivery_charge = "";
 
-  // Always reset to default customer after invoice
-  this.customer = this.pos_profile.customer;
+      // Always reset to default customer after invoice
+      this.customer = this.pos_profile.customer;
 
-  this.eventBus.emit("set_customer_readonly", false);
-  this.invoiceType = this.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
-  this.invoiceTypes = ["Invoice", "Order"];
-},
+      this.eventBus.emit("set_customer_readonly", false);
+      this.invoiceType = this.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
+      this.invoiceTypes = ["Invoice", "Order"];
+    },
 	
 	async fetch_customer_balance() {
   try {
@@ -918,7 +913,7 @@ export default {
       doc.customer = this.customer;
       doc.items = this.get_invoice_items();
       doc.total = this.subtotal;
-      doc.discount_amount = flt(this.discount_amount);
+      doc.discount_amount = flt(this.additional_discount);  // Changed from discount_amount to additional_discount
       doc.additional_discount_percentage = flt(this.additional_discount_percentage);
       doc.posa_pos_opening_shift = this.pos_opening_shift.name;
       doc.payments = this.get_payments();
@@ -1600,76 +1595,88 @@ export default {
       // If value is too large, reset to 0
       if (value < -100 || value > 100) {
         this.additional_discount_percentage = 0;
-        this.discount_amount = 0;
+        this.additional_discount = 0;
         return;
       }
 
       // Calculate discount amount based on percentage
       if (this.Total && this.Total !== 0) {
-        this.discount_amount = (this.Total * value) / 100;
+        this.additional_discount = (this.Total * value) / 100;
       } else {
-        this.discount_amount = 0;
+        this.additional_discount = 0;
       }
     },
 
     calc_prices(item, value, $event) {
-  if (!$event?.target?.id) return;
-  
-  const fieldId = $event.target.id;
-  const priceListRate = flt(item.price_list_rate, this.currency_precision);
-  let newValue = flt(value, this.currency_precision);
+      if (!$event?.target?.id) return;
+      
+      const fieldId = $event.target.id;
+      const priceListRate = flt(item.price_list_rate, this.currency_precision);
+      let newValue = flt(value, this.currency_precision);
 
-  // Handle negative values
-  if (newValue < 0) {
-    newValue = 0;
-    this.eventBus.emit("show_message", {
-      title: __("Negative values not allowed"),
-      color: "error"
-    });
-  }
+      // Handle negative values
+      if (newValue < 0) {
+        newValue = 0;
+        this.eventBus.emit("show_message", {
+          title: __("Negative values not allowed"),
+          color: "error"
+        });
+      }
 
-  try {
-    // Field-wise calculations
-    switch(fieldId) {
-      case "rate":
-        item.rate = this.flt(newValue, this.currency_precision);
-        item.discount_amount = this.flt(priceListRate - item.rate, this.currency_precision);
-        item.discount_percentage = this.flt((item.discount_amount / priceListRate) * 100, this.float_precision);
-        break;
+      try {
+        // Field-wise calculations
+        switch(fieldId) {
+          case "rate":
+            item.rate = this.flt(newValue, this.currency_precision);
+            // Calculate discount amount based on difference from price list rate
+            item.discount_amount = this.flt(priceListRate - item.rate, this.currency_precision);
+            // Calculate percentage based on discount amount
+            if (priceListRate) {
+              item.discount_percentage = this.flt((item.discount_amount / priceListRate) * 100, this.float_precision);
+            }
+            break;
 
-      case "discount_amount":
-        newValue = Math.min(newValue, priceListRate);
-        item.discount_amount = this.flt(newValue, this.currency_precision);
-        item.rate = this.flt(priceListRate - item.discount_amount, this.currency_precision);
-        item.discount_percentage = this.flt((item.discount_amount / priceListRate) * 100, this.float_precision);
-        break;
+          case "discount_amount":
+            // Ensure discount amount doesn't exceed price list rate
+            newValue = Math.min(newValue, priceListRate);
+            item.discount_amount = this.flt(newValue, this.currency_precision);
+            // Update rate based on discount amount
+            item.rate = this.flt(priceListRate - item.discount_amount, this.currency_precision);
+            // Calculate percentage based on discount amount
+            if (priceListRate) {
+              item.discount_percentage = this.flt((item.discount_amount / priceListRate) * 100, this.float_precision);
+            }
+            break;
 
-      case "discount_percentage":
-        newValue = Math.min(newValue, 100);
-        item.discount_percentage = this.flt(newValue, this.float_precision);
-        item.discount_amount = this.flt((priceListRate * item.discount_percentage) / 100, this.currency_precision);
-        item.rate = this.flt(priceListRate - item.discount_amount, this.currency_precision);
-        break;
-    }
+          case "discount_percentage":
+            // Ensure percentage doesn't exceed 100%
+            newValue = Math.min(newValue, 100);
+            item.discount_percentage = this.flt(newValue, this.float_precision);
+            // Calculate discount amount based on percentage
+            item.discount_amount = this.flt((priceListRate * item.discount_percentage) / 100, this.currency_precision);
+            // Update rate based on discount amount
+            item.rate = this.flt(priceListRate - item.discount_amount, this.currency_precision);
+            break;
+        }
 
-    // Ensure rate doesn't go below zero
-    if (item.rate < 0) {
-      item.rate = 0;
-      item.discount_amount = priceListRate;
-      item.discount_percentage = 100;
-    }
+        // Ensure rate doesn't go below zero
+        if (item.rate < 0) {
+          item.rate = 0;
+          item.discount_amount = priceListRate;
+          item.discount_percentage = 100;
+        }
 
-    // Update stock calculations
-    this.calc_stock_qty(item, item.qty);
-    this.$forceUpdate();
-  } catch (error) {
-    console.error("Error calculating prices:", error);
-    this.eventBus.emit("show_message", {
-      title: __("Error calculating prices"),
-      color: "error"
-    });
-  }
-},
+        // Update stock calculations and force UI update
+        this.calc_stock_qty(item, item.qty);
+        this.$forceUpdate();
+      } catch (error) {
+        console.error("Error calculating prices:", error);
+        this.eventBus.emit("show_message", {
+          title: __("Error calculating prices"),
+          color: "error"
+        });
+      }
+    },
 
     calc_item_price(item) {
       // Commented out the rate reset - allows manual rates
@@ -1863,10 +1870,26 @@ export default {
     },
 
     shortOpenFirstItem(e) {
-      if (e.key === "a" && (e.ctrlKey || e.metaKey)) {
+      if (e.key.toLowerCase() === "a" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
-        this.expanded = [];
-        this.expanded.push(this.items[0]);
+        e.stopPropagation();
+        if (this.items.length > 0) {
+          const firstItem = this.items[0];
+          const isExpanded = this.expanded.some(item => item.posa_row_id === firstItem.posa_row_id);
+          
+          if (isExpanded) {
+            // If already expanded, remove it from expanded array
+            this.expanded = this.expanded.filter(item => item.posa_row_id !== firstItem.posa_row_id);
+          } else {
+            // If not expanded, add it to expanded array
+            this.expanded = [firstItem];
+          }
+          
+          // Force update to ensure reactivity
+          this.$nextTick(() => {
+            this.$forceUpdate();
+          });
+        }
       }
     },
 
@@ -2828,14 +2851,13 @@ export default {
       this.close_payments();
       this.eventBus.emit("set_customer", this.customer);
       this.fetch_customer_details();
-	  this.fetch_customer_balance();
+      this.fetch_customer_balance();
       this.set_delivery_charges();
     },
     customer_info() {
       this.eventBus.emit("set_customer_info_to_edit", this.customer_info);
     },
     expanded(data_value) {
-      // this.update_items_details(data_value);
       if (data_value.length > 0) {
         this.update_item_detail(data_value[0]);
       }
@@ -2855,14 +2877,14 @@ export default {
     invoiceType() {
       this.eventBus.emit("update_invoice_type", this.invoiceType);
     },
-    discount_amount() {
-      if (!this.discount_amount || this.discount_amount == 0) {
+    additional_discount() {
+      if (!this.additional_discount || this.additional_discount == 0) {
         this.additional_discount_percentage = 0;
       } else if (this.pos_profile.posa_use_percentage_discount) {
         // Prevent division by zero which causes NaN
         if (this.Total && this.Total !== 0) {
           this.additional_discount_percentage =
-            (this.discount_amount / this.Total) * 100;
+            (this.additional_discount / this.Total) * 100;
         } else {
           this.additional_discount_percentage = 0;
         }
@@ -2870,7 +2892,7 @@ export default {
         this.additional_discount_percentage = 0;
       }
     },
-	posting_date: {
+    posting_date: {
       handler(newVal) {
         if (!newVal) return;
         // Make sure the date is in YYYY-MM-DD format
