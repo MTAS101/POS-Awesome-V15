@@ -1643,6 +1643,7 @@ export default {
           case "discount_amount":
             // Ensure discount amount doesn't exceed price list rate
             newValue = Math.min(newValue, priceListRate);
+            this.discount_amount = this.flt(newValue, this.currency_precision);
             item.discount_amount = this.flt(newValue, this.currency_precision);
             // Update rate based on discount amount
             item.rate = this.flt(priceListRate - item.discount_amount, this.currency_precision);
@@ -1658,6 +1659,7 @@ export default {
             item.discount_percentage = this.flt(newValue, this.float_precision);
             // Calculate discount amount based on percentage
             item.discount_amount = this.flt((priceListRate * item.discount_percentage) / 100, this.currency_precision);
+            this.discount_amount = item.discount_amount;
             // Update rate based on discount amount
             item.rate = this.flt(priceListRate - item.discount_amount, this.currency_precision);
             break;
@@ -1667,6 +1669,7 @@ export default {
         if (item.rate < 0) {
           item.rate = 0;
           item.discount_amount = priceListRate;
+          this.discount_amount = priceListRate;
           item.discount_percentage = 100;
         }
 
