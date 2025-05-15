@@ -26,6 +26,11 @@
   "valid_upto",
   "coupon_based",
   "auto",
+  "rule_item_code",
+  "buy_get_free_section",
+  "min_buy_quantity",
+  "column_break_bnnn",
+  "max_get_quantity",
   "quantity_and_amount_section",
   "min_qty",
   "max_qty",
@@ -79,7 +84,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Qualifying Transaction / Item",
-   "options": "\nItem Code\nItem Group\nBrand\nTransaction",
+   "options": "\nItem Code\nItem Group\nBrand\nTransaction\nBuy Get Free",
    "reqd": 1
   },
   {
@@ -112,9 +117,9 @@
   },
   {
    "fieldname": "item",
-   "fieldtype": "Link",
+   "fieldtype": "Table",
    "label": "Apply Rule On Item Code",
-   "options": "Item"
+   "options": "Pricing Rule Item Code"
   },
   {
    "fieldname": "item_group",
@@ -305,13 +310,45 @@
    "fieldname": "coupon_based",
    "fieldtype": "Check",
    "label": "Coupon Code Based"
+  },
+  {
+   "depends_on": "eval:doc.apply_on ==\"Buy Get Free\"",
+   "fieldname": "buy_get_free_section",
+   "fieldtype": "Section Break",
+   "label": "Buy Get Free"
+  },
+  {
+   "fieldname": "min_buy_quantity",
+   "fieldtype": "Float",
+   "label": "Min Buy Quantity ",
+   "mandatory_depends_on": "eval:doc.apply_on ==\"Buy Get Free\""
+  },
+  {
+   "fieldname": "column_break_bnnn",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "max_get_quantity",
+   "fieldtype": "Float",
+   "label": "Max Get Quantity",
+   "mandatory_depends_on": "eval:doc.apply_on ==\"Buy Get Free\""
+  },
+  {
+   "depends_on": "eval:doc.apply_on ==\"Buy Get Free\"",
+   "fieldname": "rule_item_code",
+   "fieldtype": "Table",
+   "label": "Rule Item Code",
+   "mandatory_depends_on": "eval:doc.apply_on ==\"Buy Get Free\"",
+   "options": "Pos offer Item"
   }
  ],
  "index_web_pages_for_search": 1,
- "modified": "2021-07-25 17:09:55.634113",
+ "links": [],
+ "modified": "2025-05-15 12:49:13.510212",
  "modified_by": "Administrator",
  "module": "POSAwesome",
  "name": "POS Offer",
+ "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
   {
@@ -381,9 +418,11 @@
    "write": 1
   }
  ],
+ "row_format": "Dynamic",
  "show_name_in_global_search": 1,
  "show_preview_popup": 1,
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "track_changes": 1
 }

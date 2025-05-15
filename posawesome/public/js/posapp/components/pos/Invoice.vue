@@ -683,91 +683,322 @@ export default {
     },
 
     add_item(item) {
-      if (!item.uom) {
-        item.uom = item.stock_uom;
-      }
-      let index = -1;
-      if (!this.new_line) {
-        index = this.items.findIndex(
-          (el) =>
-            el.item_code === item.item_code &&
-            el.uom === item.uom &&
-            !el.posa_is_offer &&
-            !el.posa_is_replace &&
-            ((el.batch_no && item.batch_no && el.batch_no === item.batch_no) || (!el.batch_no && !item.batch_no))
-        );
-      }
+  if (!item.uom) {
+    item.uom = item.stock_uom;
+  }
+  
+  // Check if this is a free item from an offer
+  const isFreeItem = item.free_from_offer || false;
+  
+  let index = -1;
+  if (!this.new_line) {
+    index = this.items.findIndex(
+      (el) =>
+        el.item_code === item.item_code &&
+        el.uom === item.uom &&
+        !el.posa_is_offer &&
+        !el.posa_is_replace &&
+        ((el.batch_no && item.batch_no && el.batch_no === item.batch_no) || (!el.batch_no && !item.batch_no))
+    );
+  }
 
-      let new_item;
-      if (index === -1 || this.new_line) {
-        new_item = this.get_new_item(item);
-        // Handle serial number logic
-        if (item.has_serial_no && item.to_set_serial_no) {
-          new_item.serial_no_selected = [];
-          new_item.serial_no_selected.push(item.to_set_serial_no);
-          item.to_set_serial_no = null;
-        }
-        // Handle batch number logic
-        if (item.has_batch_no && item.to_set_batch_no) {
-          new_item.batch_no = item.to_set_batch_no;
-          item.to_set_batch_no = null;
-          item.batch_no = null;
-          this.set_batch_qty(new_item, new_item.batch_no, false);
-        }
-        // Make quantity negative for returns
-        if (this.invoiceType === "Return") {
-          new_item.qty = -Math.abs(new_item.qty || 1);
-        }
-        this.items.unshift(new_item);
-        this.update_item_detail(new_item);
+  let new_item;
+  if (index === -1 || this.new_line) {
+    new_item = this.get_new_item(item);
+    // Handle serial number logic
+    if (item.has_serial_no && item.to_set_serial_no) {
+      new_item.serial_no_selected = [];
+      new_item.serial_no_selected.push(item.to_set_serial_no);
+      item.to_set_serial_no = null;
+    }
+    // Handle batch number logic
+    if (item.has_batch_no && item.to_set_batch_no) {
+      new_item.batch_no = item.to_set_batch_no;
+      item.to_set_batch_no = null;
+      item.batch_no = null;
+      this.set_batch_qty(new_item, new_item.batch_no, false);
+    }
+    // Make quantity negative for returns
+    if (this.invoiceType === "Return") {
+      new_item.qty = -Math.abs(new_item.qty || 1);
+    }
+    this.items.unshift(new_item);
+    this.update_item_detail(new_item);
 
-        // Expand new item if it has batch or serial number
-        if ((!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no) {
-          this.$nextTick(() => {
-            this.expanded = [new_item.posa_row_id];
-          });
+    // Expand new item if it has batch or serial number
+    if ((!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no) {
+      this.$nextTick(() => {
+        this.expanded = [new_item.posa_row_id];
+      });
+    }
+    
+    // Process Buy-Get offers for auto-adding free items
+    // Only do this for regular items, not for free items being added
+    if (!isFreeItem) {
+      this.$nextTick(() => {
+        this.processBuyGetOffers(new_item);
+      });
+    }
+  } else {
+    const cur_item = this.items[index];
+    this.update_items_details([cur_item]);
+    // Serial number logic for existing item
+    if (item.has_serial_no && item.to_set_serial_no) {
+      if (cur_item.serial_no_selected.includes(item.to_set_serial_no)) {
+        this.eventBus.emit("show_message", {
+          title: __(`This Serial Number {0} has already been added!`, [
+            item.to_set_serial_no,
+          ]),
+          color: "warning",
+        });
+        item.to_set_serial_no = null;
+        return;
+      }
+      cur_item.serial_no_selected.push(item.to_set_serial_no);
+      item.to_set_serial_no = null;
+    }
+    
+    // For returns, subtract from quantity to make it more negative
+    if (this.invoiceType === "Return") {
+      cur_item.qty -= (item.qty || 1);
+    } else {
+      cur_item.qty += (item.qty || 1);
+    }
+    this.calc_stock_qty(cur_item, cur_item.qty);
+    
+    // Update batch quantity if needed
+    if (cur_item.has_batch_no && cur_item.batch_no) {
+      this.set_batch_qty(cur_item, cur_item.batch_no, false);
+    }
+    
+    this.set_serial_no(cur_item);
+    
+    // Process Buy-Get offers for updated item
+    // Only do this for regular items, not for free items
+    if (!isFreeItem && !cur_item.posa_is_offer) {
+      this.$nextTick(() => {
+        this.processBuyGetOffers(cur_item);
+      });
+    }
+  }
+  
+  this.$forceUpdate();
+  
+  // Only try to expand if new_item exists and should be expanded
+  if (new_item && ((!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no)) {
+    this.expanded = [new_item.posa_row_id];
+  }
+  
+  return new_item;
+},
+
+processBuyGetOffers(addedItem) {
+  // Skip if no offers or no valid item
+  if (!this.posOffers || this.posOffers.length === 0 || !addedItem) {
+    return;
+  }
+  
+  console.log(`Processing Buy-Get offers for added item: ${addedItem.item_code}`);
+  
+  // Find all Buy-Get Free offers
+  const buyGetOffers = this.posOffers.filter(offer => 
+    offer.apply_on === "Buy Get Free"
+  );
+  
+  if (buyGetOffers.length === 0) {
+    console.log("No Buy-Get offers available");
+    return;
+  }
+  
+  // For each offer, check if the added item is in the rule items
+  buyGetOffers.forEach(offer => {
+    // Extract all item codes from the rule_item_code table
+    const offerItemCodes = Array.isArray(offer.rule_item_code) ? 
+      offer.rule_item_code.map(rule => rule.item_code) : [];
+    
+    // If no rule items defined, skip this offer
+    if (offerItemCodes.length === 0) {
+      console.log(`Offer ${offer.name} has no rule items`);
+      return;
+    }
+    
+    // Check if the added item is part of this offer
+    if (!offerItemCodes.includes(addedItem.item_code)) {
+      console.log(`Item ${addedItem.item_code} not in offer's rule items`);
+      return;
+    }
+    
+    console.log(`Item ${addedItem.item_code} is part of offer ${offer.name}`);
+    
+    // Get min_buy and max_get values
+    const min_buy = parseInt(offer.min_buy_quantity) || 1;
+    const max_get = parseInt(offer.max_get_quantity) || 1;
+    
+    // Find all items in the cart that are part of this offer
+    const offerItemsInCart = this.items.filter(item => 
+      offerItemCodes.includes(item.item_code) && !item.posa_is_offer
+    );
+    
+    // If we have at least 2 different item types
+    const uniqueItemCodes = new Set(offerItemsInCart.map(item => item.item_code));
+    if (uniqueItemCodes.size >= 2) {
+      console.log(`Found ${uniqueItemCodes.size} different item types in cart from this offer`);
+      
+      // No need to add items - the existing offer system will handle this
+      console.log("Multiple offer items in cart - will be handled by regular offer system");
+    } else {
+      // We have only one type of item from the offer in the cart
+      console.log("Only one offer item type in cart, may need to add complementary items");
+      
+      // Group cart items by code and calculate totals
+      const itemsByCode = {};
+      offerItemsInCart.forEach(item => {
+        if (!itemsByCode[item.item_code]) {
+          itemsByCode[item.item_code] = {
+            items: [],
+            total_qty: 0,
+            price: parseFloat(item.price_list_rate)
+          };
+        }
+        
+        itemsByCode[item.item_code].items.push(item);
+        itemsByCode[item.item_code].total_qty += parseFloat(item.qty);
+      });
+      
+      // Get the current item code and quantity
+      const currentItemCode = Object.keys(itemsByCode)[0];
+      const currentQty = itemsByCode[currentItemCode].total_qty;
+      const currentPrice = itemsByCode[currentItemCode].price;
+      
+      console.log(`Current item: ${currentItemCode}, Qty: ${currentQty}, Price: ${currentPrice}`);
+      
+      // Calculate how many free items can be given
+      const numSets = Math.floor(currentQty / min_buy);
+      const freeQtyAllowed = numSets * max_get;
+      
+      console.log(`Sets: ${numSets}, Free items allowed: ${freeQtyAllowed}`);
+      
+      // Only proceed if we have enough items to qualify for free items
+      if (numSets > 0 && freeQtyAllowed > 0) {
+        console.log("Calculating which items to add...");
+        
+        // Find other items in the offer that aren't in the cart
+        const otherOfferItemCodes = offerItemCodes.filter(code => code !== currentItemCode);
+        
+        // If there are other items in the offer
+        if (otherOfferItemCodes.length > 0) {
+          console.log(`Found ${otherOfferItemCodes.length} other items in offer`);
+          
+          // Find details for these other items
+          const otherItemDetails = [];
+          
+          for (const itemCode of otherOfferItemCodes) {
+            const itemDetails = this.allItems.find(item => item.item_code === itemCode);
+            
+            if (itemDetails) {
+              otherItemDetails.push({
+                item_code: itemCode,
+                price: parseFloat(itemDetails.price_list_rate),
+                details: itemDetails
+              });
+            }
+          }
+          
+          // Sort other items by price (lowest first)
+          otherItemDetails.sort((a, b) => a.price - b.price);
+          
+          console.log("Other offer items by price (lowest first):", 
+            otherItemDetails.map(i => `${i.item_code}: ${i.price}`).join(', '));
+          
+          // Compare prices to determine which items to add
+          // If current item is more expensive than the cheapest other item, add the cheapest
+          if (otherItemDetails.length > 0 && currentPrice > otherItemDetails[0].price) {
+            const cheapestItem = otherItemDetails[0];
+            console.log(`Current item ${currentItemCode} (${currentPrice}) is more expensive than ${cheapestItem.item_code} (${cheapestItem.price})`);
+            console.log(`Adding ${freeQtyAllowed} free ${cheapestItem.item_code} items`);
+            
+            // Add the cheapest item as free
+            const freeItem = { ...cheapestItem.details };
+            freeItem.qty = freeQtyAllowed;
+            freeItem.free_from_offer = offer.name;
+            freeItem.free_from_buy_item = currentItemCode;
+            freeItem.posa_is_offer = 1;
+            freeItem.is_free_item = 1;
+            
+            // Add to cart
+            this.add_free_item(freeItem);
+            
+            // Show message to user
+            this.eventBus.emit("show_message", {
+              title: __(`Added ${freeQtyAllowed} free ${cheapestItem.details.item_name || cheapestItem.item_code} to your cart`),
+              color: "success",
+            });
+          }
+          // If current item is cheaper than all other items, consider this the "free" item
+          else if (otherItemDetails.length > 0 && currentPrice <= otherItemDetails[0].price) {
+            console.log(`Current item ${currentItemCode} (${currentPrice}) is cheaper than other offer items`);
+            
+            // The current item will be marked as "free" by the offer system
+            // But we need specific handling for quantities
+            
+            // Calculate how many should be free based on min_buy and max_get
+            if (currentQty > min_buy) {
+              console.log(`${min_buy} of ${currentQty} ${currentItemCode} will be paid, ${Math.min(max_get, currentQty - min_buy)} will be free`);
+              // This will be handled by the regular offer system
+            }
+          }
         }
       } else {
-        const cur_item = this.items[index];
-        this.update_items_details([cur_item]);
-        // Serial number logic for existing item
-        if (item.has_serial_no && item.to_set_serial_no) {
-          if (cur_item.serial_no_selected.includes(item.to_set_serial_no)) {
-            this.eventBus.emit("show_message", {
-              title: __(`This Serial Number {0} has already been added!`, [
-                item.to_set_serial_no,
-              ]),
-              color: "warning",
-            });
-            item.to_set_serial_no = null;
-            return;
-          }
-          cur_item.serial_no_selected.push(item.to_set_serial_no);
-          item.to_set_serial_no = null;
-        }
-        
-        // For returns, subtract from quantity to make it more negative
-        if (this.invoiceType === "Return") {
-          cur_item.qty -= (item.qty || 1);
-        } else {
-          cur_item.qty += (item.qty || 1);
-        }
-        this.calc_stock_qty(cur_item, cur_item.qty);
-        
-        // Update batch quantity if needed
-        if (cur_item.has_batch_no && cur_item.batch_no) {
-          this.set_batch_qty(cur_item, cur_item.batch_no, false);
-        }
-        
-        this.set_serial_no(cur_item);
+        console.log("Not enough quantity to qualify for free items");
       }
-      this.$forceUpdate();
-      
-      // Only try to expand if new_item exists and should be expanded
-      if (new_item && ((!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no)) {
-        this.expanded = [new_item.posa_row_id];
-      }
-    },
+    }
+  });
+  
+  // Re-process all offers after adding free items
+  this.$nextTick(() => {
+    this.handelOffers();
+  });
+},
+
+add_free_item(item) {
+  if (!item.uom) {
+    item.uom = item.stock_uom;
+  }
+  
+  console.log(`Adding free item ${item.item_code} from offer ${item.free_from_offer}`);
+  
+  // Create a new item
+  const new_item = this.get_new_item(item);
+  
+  // Mark as a free item
+  new_item.free_from_offer = item.free_from_offer;
+  new_item.free_from_buy_item = item.free_from_buy_item;
+  new_item.posa_is_offer = 1;
+  new_item.is_free_item = 1;
+  
+  // Make it free (0 price, 100% discount)
+  new_item.original_base_rate = new_item.base_rate;
+  new_item.original_base_price_list_rate = new_item.base_price_list_rate;
+  new_item.original_rate = new_item.rate;
+  new_item.original_price_list_rate = new_item.price_list_rate;
+  
+  new_item.discount_percentage = 100;
+  new_item.base_rate = 0;
+  new_item.rate = 0;
+  new_item.discount_amount = new_item.price_list_rate;
+  new_item.base_discount_amount = new_item.base_price_list_rate;
+  
+  // Empty offers array to be filled by the offer system
+  new_item.posa_offers = JSON.stringify([]);
+  
+  // Add to cart
+  this.items.unshift(new_item);
+  
+  // Force UI update
+  this.$forceUpdate();
+  
+  return new_item;
+},
 
     // Create a new item object with default and calculated fields
     get_new_item(item) {
@@ -2530,34 +2761,43 @@ export default {
     },
 
     handelOffers() {
-      const offers = [];
-      this.posOffers.forEach((offer) => {
-        if (offer.apply_on === "Item Code") {
-          const itemOffer = this.getItemOffer(offer);
-          if (itemOffer) {
-            offers.push(itemOffer);
-          }
-        } else if (offer.apply_on === "Item Group") {
-          const groupOffer = this.getGroupOffer(offer);
-          if (groupOffer) {
-            offers.push(groupOffer);
-          }
-        } else if (offer.apply_on === "Brand") {
-          const brandOffer = this.getBrandOffer(offer);
-          if (brandOffer) {
-            offers.push(brandOffer);
-          }
-        } else if (offer.apply_on === "Transaction") {
-          const transactionOffer = this.getTransactionOffer(offer);
-          if (transactionOffer) {
-            offers.push(transactionOffer);
-          }
-        }
-      });
+  const offers = [];
+  
+  this.posOffers.forEach((offer) => {
+    if (offer.apply_on === "Item Code") {
+      const itemOffer = this.getItemOffer(offer);
+      if (itemOffer) {
+        offers.push(itemOffer);
+      }
+    } else if (offer.apply_on === "Buy Get Free") {
+      const buyGetOffer = this.getItemBuyGetFree(offer);
+      if (buyGetOffer) {
+        offers.push(buyGetOffer);
+      }
+    } else if (offer.apply_on === "Item Group") {
+      const groupOffer = this.getGroupOffer(offer);
+      if (groupOffer) {
+        offers.push(groupOffer);
+      }
+    } else if (offer.apply_on === "Brand") {
+      const brandOffer = this.getBrandOffer(offer);
+      if (brandOffer) {
+        offers.push(brandOffer);
+      }
+    } else if (offer.apply_on === "Transaction") {
+      const transactionOffer = this.getTransactionOffer(offer);
+      if (transactionOffer) {
+        offers.push(transactionOffer);
+      }
+    }
+  });
 
-      this.setItemGiveOffer(offers);
-      this.updatePosOffers(offers);
-    },
+  // Process offers that need special handling
+  this.setItemGiveOffer(offers);
+  
+  // Update the offers in the POS
+  this.updatePosOffers(offers);
+},
 
     setItemGiveOffer(offers) {
       // Set item give offer for replace
@@ -2671,34 +2911,369 @@ export default {
 
     getItemOffer(offer) {
       let apply_offer = null;
+
       if (offer.apply_on === "Item Code") {
         if (this.checkOfferCoupon(offer)) {
-          this.items.forEach((item) => {
-            if (!item.posa_is_offer && item.item_code === offer.item) {
-              const items = [];
+          const matchedItems = [];
+          let total_qty = 0;
+          let total_amt = 0;
+
+          const offerItemCodes = offer.item || [];
+
+          this.items.forEach((cartItem) => {
+            
+            const matchingOfferItem = offerItemCodes.find(offerItem => 
+              offerItem.item_code === cartItem.item_code
+            );
+
+            if (matchingOfferItem && !cartItem.posa_is_offer) {
               if (
                 offer.offer === "Item Price" &&
-                item.posa_offer_applied &&
-                !this.checkOfferIsAppley(item, offer)
+                cartItem.posa_offer_applied &&
+                !this.checkOfferIsAppley(cartItem, offer)
               ) {
-              } else {
-                const res = this.checkQtyAnountOffer(
-                  offer,
-                  item.stock_qty,
-                  item.stock_qty * item.price_list_rate
-                );
-                if (res.apply) {
-                  items.push(item.posa_row_id);
-                  offer.items = items;
-                  apply_offer = offer;
-                }
+                return;
               }
+
+              matchedItems.push({
+                item_code: cartItem.item_code,
+                row_id: cartItem.posa_row_id,
+                quantity: cartItem.stock_qty,
+                rate: cartItem.price_list_rate,
+                amount: cartItem.stock_qty * cartItem.price_list_rate,
+                offer_item_reference: matchingOfferItem 
+              });
+
+              total_qty += cartItem.stock_qty;
+              total_amt += cartItem.stock_qty * cartItem.price_list_rate;
             }
           });
+
+          if (matchedItems.length > 0) {
+            const res = this.checkQtyAnountOffer(offer, total_qty, total_amt);
+
+            if (res.apply) {
+              offer.matched_items = matchedItems;
+              offer.total_matched_qty = total_qty;
+              offer.total_matched_amount = total_amt;
+              
+              offer.items = matchedItems.map(item => item.row_id);
+              
+              apply_offer = offer;
+            }
+          }
         }
       }
+
       return apply_offer;
     },
+
+
+    getItemBuyGetFree(offer) {
+  let apply_offer = null;
+
+  if (offer.apply_on === "Buy Get Free") {
+    if (this.checkOfferCoupon(offer)) {
+      const matchedBuyItems = [];
+      const matchedGetItems = [];
+      
+      let total_qty = 0;
+      let total_amt = 0;
+      
+      // Get all item codes from the rule_item_code table
+      const offerItemCodes = offer.rule_item_code && Array.isArray(offer.rule_item_code) 
+        ? offer.rule_item_code.map(rule => rule.item_code) 
+        : [];
+      
+      console.log(`Checking Buy-Get offer: ${offer.name} with ${offerItemCodes.length} items`);
+      
+      if (offerItemCodes.length === 0) {
+        console.log("No items in rule_item_code table");
+        return null;
+      }
+      
+      // Find items in the cart that match offer items
+      const relevantCartItems = this.items.filter(cartItem => 
+        offerItemCodes.includes(cartItem.item_code) && !cartItem.free_from_offer
+      );
+      
+      // Skip if no relevant items found
+      if (relevantCartItems.length === 0) {
+        console.log("No relevant items found in cart for this offer");
+        return null;
+      }
+      
+      // Determine min_buy and max_get values
+      const min_buy = parseInt(offer.min_buy_quantity) || 1;
+      const max_get = parseInt(offer.max_get_quantity) || 1;
+      
+      console.log(`Offer parameters - min_buy: ${min_buy}, max_get: ${max_get}`);
+      
+      // Two main scenarios:
+      // 1. Multiple different item types in cart - compare prices
+      // 2. Single item type with enough quantity - split paid/free
+      
+      const uniqueItemCodes = new Set(relevantCartItems.map(item => item.item_code));
+      
+      // Scenario 1: Multiple different item types
+      if (uniqueItemCodes.size >= 2) {
+        console.log("Multiple different item types found - applying price-based logic");
+        
+        // Sort items by price (highest first)
+        relevantCartItems.sort((a, b) => 
+          parseFloat(b.price_list_rate) - parseFloat(a.price_list_rate)
+        );
+        
+        // Group cart items by item code for easier processing
+        const cartItemsByCode = {};
+        relevantCartItems.forEach(item => {
+          if (!cartItemsByCode[item.item_code]) {
+            cartItemsByCode[item.item_code] = {
+              items: [],
+              total_qty: 0,
+              total_amt: 0,
+              price: parseFloat(item.price_list_rate)
+            };
+          }
+          
+          cartItemsByCode[item.item_code].items.push(item);
+          cartItemsByCode[item.item_code].total_qty += parseFloat(item.qty);
+          cartItemsByCode[item.item_code].total_amt += parseFloat(item.qty) * parseFloat(item.price_list_rate);
+        });
+        
+        // Sort item codes by price (highest first)
+        const sortedItemCodes = Object.keys(cartItemsByCode).sort(
+          (a, b) => cartItemsByCode[b].price - cartItemsByCode[a].price
+        );
+        
+        // Process items in price order (highest to lowest)
+        let remainingBuySets = 0;
+        
+        for (let i = 0; i < sortedItemCodes.length; i++) {
+          const itemCode = sortedItemCodes[i];
+          const itemGroup = cartItemsByCode[itemCode];
+          
+          // For higher priced items, mark as "buy" items
+          if (i === 0) {
+            console.log(`Marking highest price item ${itemCode} (${itemGroup.price}) as "buy" item`);
+            
+            // Calculate how many "buy sets" we have
+            remainingBuySets = Math.floor(itemGroup.total_qty / min_buy);
+            
+            // Add as buy items
+            itemGroup.items.forEach(item => {
+              matchedBuyItems.push({
+                item_code: item.item_code,
+                row_id: item.posa_row_id,
+                quantity: parseFloat(item.qty),
+                rate: parseFloat(item.price_list_rate),
+                amount: parseFloat(item.qty) * parseFloat(item.price_list_rate),
+                role: 'buy'
+              });
+              
+              // Add to totals for condition checking
+              total_qty += parseFloat(item.qty);
+              total_amt += parseFloat(item.qty) * parseFloat(item.price_list_rate);
+            });
+          }
+          // For lower priced items, mark as "get" items
+          else {
+            console.log(`Marking lower price item ${itemCode} (${itemGroup.price}) as potential "get" item`);
+            
+            // Skip if no buy sets left
+            if (remainingBuySets <= 0) {
+              console.log("No buy sets left - skipping");
+              continue;
+            }
+            
+            // Calculate how many items can be free
+            const potentialFreeQty = remainingBuySets * max_get;
+            const actualFreeQty = Math.min(potentialFreeQty, itemGroup.total_qty);
+            
+            if (actualFreeQty <= 0) {
+              console.log("No free quantity available - skipping");
+              continue;
+            }
+            
+            console.log(`Free items available: ${actualFreeQty} out of ${itemGroup.total_qty}`);
+            
+            // Mark items as free
+            let markedFreeQty = 0;
+            
+            // Sort by ascending price to make lowest price items free
+            const sortedItems = [...itemGroup.items].sort((a, b) => 
+              parseFloat(a.price_list_rate) - parseFloat(b.price_list_rate)
+            );
+            
+            for (const getItem of sortedItems) {
+              if (markedFreeQty >= actualFreeQty) break;
+              
+              // If item already has another offer, skip it
+              if (
+                getItem.posa_offer_applied && 
+                !this.checkOfferIsAppley(getItem, offer)
+              ) {
+                console.log(`Item ${getItem.item_code} already has another offer applied`);
+                continue;
+              }
+              
+              // Calculate free quantity for this item
+              const remainingFreeQty = actualFreeQty - markedFreeQty;
+              const itemFreeQty = Math.min(remainingFreeQty, parseFloat(getItem.qty));
+              
+              if (itemFreeQty > 0) {
+                matchedGetItems.push({
+                  item_code: getItem.item_code,
+                  row_id: getItem.posa_row_id,
+                  quantity: parseFloat(getItem.qty),
+                  rate: parseFloat(getItem.price_list_rate),
+                  amount: parseFloat(getItem.qty) * parseFloat(getItem.price_list_rate),
+                  role: 'get',
+                  free_qty: itemFreeQty
+                });
+                
+                markedFreeQty += itemFreeQty;
+                console.log(`Marked ${itemFreeQty} of ${getItem.item_code} as free. Total marked: ${markedFreeQty}/${actualFreeQty}`);
+                
+                // Reduce remaining buy sets
+                remainingBuySets -= Math.ceil(itemFreeQty / max_get);
+              }
+            }
+          }
+        }
+      }
+      // Scenario 2: Single item type with enough quantity
+      else if (uniqueItemCodes.size === 1) {
+        console.log("Single item type found - applying quantity-based logic");
+        
+        const itemCode = [...uniqueItemCodes][0];
+        const itemsOfType = relevantCartItems.filter(item => item.item_code === itemCode);
+        const totalQty = itemsOfType.reduce((sum, item) => sum + parseFloat(item.qty), 0);
+        
+        console.log(`Item: ${itemCode}, Total quantity: ${totalQty}`);
+        
+        // Only proceed if we have enough quantity for at least one set
+        if (totalQty >= min_buy + max_get) {
+          console.log(`Quantity (${totalQty}) is enough for at least one set of buy (${min_buy}) + get (${max_get})`);
+          
+          // Calculate how many to buy and how many are free
+          const totalSets = Math.floor(totalQty / (min_buy + max_get));
+          const buyQty = totalSets * min_buy;
+          const freeQty = Math.min(totalSets * max_get, totalQty - buyQty);
+          
+          console.log(`Sets: ${totalSets}, Buy qty: ${buyQty}, Free qty: ${freeQty}`);
+          
+          // Split items into buy and get based on quantity
+          let remainingBuyQty = buyQty;
+          let remainingFreeQty = freeQty;
+          
+          for (const item of itemsOfType) {
+            const itemQty = parseFloat(item.qty);
+            
+            // Determine how much of this item is "buy" and how much is "free"
+            const itemBuyQty = Math.min(remainingBuyQty, itemQty);
+            remainingBuyQty -= itemBuyQty;
+            
+            // Only mark as "buy" if some quantity is marked as such
+            if (itemBuyQty > 0) {
+              matchedBuyItems.push({
+                item_code: item.item_code,
+                row_id: item.posa_row_id,
+                quantity: itemQty,
+                rate: parseFloat(item.price_list_rate),
+                amount: itemQty * parseFloat(item.price_list_rate),
+                role: 'buy',
+                buy_qty: itemBuyQty
+              });
+              
+              // Add to totals
+              total_qty += itemQty;
+              total_amt += itemQty * parseFloat(item.price_list_rate);
+            }
+            
+            // Determine free quantity
+            const itemFreeQty = Math.min(remainingFreeQty, itemQty - itemBuyQty);
+            remainingFreeQty -= itemFreeQty;
+            
+            // Only mark as "get" if some quantity is free
+            if (itemFreeQty > 0) {
+              matchedGetItems.push({
+                item_code: item.item_code,
+                row_id: item.posa_row_id,
+                quantity: itemQty,
+                rate: parseFloat(item.price_list_rate),
+                amount: itemQty * parseFloat(item.price_list_rate),
+                role: 'get',
+                free_qty: itemFreeQty
+              });
+            }
+          }
+        } else {
+          console.log(`Not enough quantity (${totalQty}) for a full set (${min_buy + max_get})`);
+        }
+      }
+      
+      // Combine all matched items (both buy and get)
+      const allMatchedItems = [...matchedBuyItems, ...matchedGetItems];
+      
+      // Only proceed if we found matching items
+      if (matchedGetItems.length > 0) {
+        console.log(`Found ${matchedBuyItems.length} buy items and ${matchedGetItems.length} get items for offer`);
+        
+        // Check if the offer conditions are met
+        const res = this.checkQtyAnountOffer(offer, total_qty, total_amt);
+        console.log("Offer condition check result:", res);
+        
+        if (res.apply) {
+          // Attach the matched items to the offer
+          offer.matched_buy_items = matchedBuyItems;
+          offer.matched_get_items = matchedGetItems;
+          offer.matched_items = allMatchedItems;
+          offer.total_matched_qty = total_qty;
+          offer.total_matched_amount = total_amt;
+          
+          // Generate unique row_id if not present
+          if (!offer.row_id) {
+            offer.row_id = this.makeid(10);
+          }
+          
+          // Set row IDs for compatibility with existing code
+          offer.items = [...new Set(allMatchedItems.map(item => item.row_id))];
+          
+          // Return the offer as applicable
+          apply_offer = offer;
+          console.log("Buy-Get offer will be applied:", offer.name);
+        } else {
+          console.log("Buy-Get offer conditions not met");
+        }
+      } else {
+        console.log("No matching 'get' items found for Buy-Get offer:", offer.name);
+      }
+    } else {
+      console.log("Coupon requirement not met for Buy-Get offer");
+    }
+  }
+  
+  return apply_offer;
+},
+ debugOfferStructure(offer) {
+  console.log("===== OFFER STRUCTURE DEBUG =====");
+  console.log(`Offer name: ${offer.name}`);
+  console.log(`Apply on: ${offer.apply_on}`);
+  
+  if (offer.rule_item_code) {
+    console.log(`rule_item_code exists with ${offer.rule_item_code.length} items`);
+    if (offer.rule_item_code.length > 0) {
+      console.log("Sample rule item:", offer.rule_item_code[0]);
+    }
+  } else {
+    console.log("No rule_item_code found");
+  }
+  
+  console.log(`min_buy_quantity: ${offer.min_buy_quantity}`);
+  console.log(`max_get_quantity: ${offer.max_get_quantity}`);
+  console.log("==================================");
+},
 
     getGroupOffer(offer) {
       let apply_offer = null;
@@ -2955,11 +3530,158 @@ export default {
       this.deleteOfferFromItems(invoiceOffer);
     },
 
-    applyNewOffer(offer) {
-      if (offer.offer === "Item Price") {
-        this.ApplyOnPrice(offer);
+
+ApplyBuyGetFreeOffer(offer) {
+  console.log('Applying Buy-Get-Free offer:', offer.name);
+  
+  if (!offer.matched_get_items || offer.matched_get_items.length === 0) {
+    console.log('No get items to make free');
+    return;
+  }
+  
+  offer.matched_get_items.forEach(getItem => {
+    const cartItem = this.items.find(item => item.posa_row_id === getItem.row_id);
+    
+    if (!cartItem) {
+      console.log(`Get item ${getItem.item_code} not found in cart`);
+      return;
+    }
+    
+    const item_offers = JSON.parse(cartItem.posa_offers || '[]');
+    
+    if (!item_offers.includes(offer.row_id)) {
+      console.log(`Applying free offer to ${getItem.item_code} (${getItem.row_id})`);
+      
+      if (!cartItem.posa_offer_applied) {
+        cartItem.original_base_rate = cartItem.base_rate;
+        cartItem.original_base_price_list_rate = cartItem.base_price_list_rate;
+        cartItem.original_rate = cartItem.rate;
+        cartItem.original_price_list_rate = cartItem.price_list_rate;
       }
-      if (offer.offer === "Give Product") {
+      
+      const totalQty = parseFloat(cartItem.qty);
+      const freeQty = parseFloat(getItem.free_qty);
+      
+      if (freeQty >= totalQty) {
+        cartItem.base_rate = 0;
+        cartItem.rate = 0;
+        cartItem.discount_percentage = 100;
+        cartItem.discount_amount = cartItem.price_list_rate;
+        cartItem.base_discount_amount = cartItem.base_price_list_rate;
+      } 
+      else if (freeQty > 0) {
+        // Calculate partial discount
+        const freeRatio = freeQty / totalQty;
+        const discountPercentage = freeRatio * 100;
+        
+        // Apply partial discount
+        cartItem.discount_percentage = discountPercentage;
+        
+        // Calculate discount amounts
+        cartItem.discount_amount = this.flt(cartItem.price_list_rate * freeRatio, this.currency_precision);
+        cartItem.base_discount_amount = this.flt(cartItem.base_price_list_rate * freeRatio, this.currency_precision);
+        
+        // Calculate new rates after discount
+        cartItem.rate = this.flt(cartItem.price_list_rate - cartItem.discount_amount, this.currency_precision);
+        cartItem.base_rate = this.flt(cartItem.base_price_list_rate - cartItem.base_discount_amount, this.currency_precision);
+        
+        console.log(`${cartItem.item_code} is partially free (${freeQty}/${totalQty} qty, ${discountPercentage.toFixed(2)}% off)`);
+      }
+      
+      // Calculate final amounts
+      cartItem.amount = this.flt(cartItem.qty * cartItem.rate, this.currency_precision);
+      cartItem.base_amount = this.flt(cartItem.qty * cartItem.base_rate, this.currency_precision);
+      
+      // Mark as having an offer applied
+      cartItem.posa_offer_applied = 1;
+      
+      // Add this offer to the item's offers
+      item_offers.push(offer.row_id);
+      cartItem.posa_offers = JSON.stringify(item_offers);
+      
+      // Force update the UI
+      this.$forceUpdate();
+    } else {
+      console.log(`Item ${cartItem.item_code} already has offer ${offer.row_id} applied`);
+    }
+  });
+  
+  offer.matched_buy_items.forEach(buyItem => {
+    const cartItem = this.items.find(item => item.posa_row_id === buyItem.row_id);
+    if (cartItem) {
+      // Mark item as associated with this offer
+      const item_offers = JSON.parse(cartItem.posa_offers || '[]');
+      if (!item_offers.includes(offer.row_id)) {
+        item_offers.push(offer.row_id);
+        cartItem.posa_offers = JSON.stringify(item_offers);
+      }
+    }
+  });
+},
+
+  RemoveBuyGetFreeOffer(offer) {
+    console.log('Removing Buy-Get-Free offer:', offer.name);
+    
+    let offerItems = [];
+
+    offerItems = typeof offer.items === 'string' ? JSON.parse(offer.items) : offer.items;
+    
+    
+    this.items.forEach(cartItem => {
+      let item_offers = [];
+        item_offers = JSON.parse(cartItem.posa_offers);
+    
+      
+      if (item_offers.includes(offer.row_id)) {
+        if (cartItem.buy_get_offer_applied === offer.name) {
+          if (cartItem.original_base_rate !== undefined) {
+            cartItem.base_rate = cartItem.original_base_rate;
+            cartItem.base_price_list_rate = cartItem.original_base_price_list_rate;
+            
+            if (this.selected_currency !== this.pos_profile.currency) {
+              cartItem.rate = this.flt(cartItem.base_rate / this.exchange_rate, this.currency_precision);
+              cartItem.price_list_rate = this.flt(cartItem.base_price_list_rate / this.exchange_rate, this.currency_precision);
+            } else {
+              cartItem.rate = cartItem.base_rate;
+              cartItem.price_list_rate = cartItem.base_price_list_rate;
+            }
+            
+            cartItem.discount_percentage = 0;
+            cartItem.discount_amount = 0;
+            cartItem.base_discount_amount = 0;
+            
+            cartItem.original_base_rate = null;
+            cartItem.original_base_price_list_rate = null;
+            cartItem.original_rate = null;
+            cartItem.original_price_list_rate = null;
+          }
+          
+          cartItem.buy_get_offer_applied = null;
+        }
+        
+        const updated_offers = item_offers.filter(id => id !== offer.row_id);
+        cartItem.posa_offers = JSON.stringify(updated_offers);
+        
+        if (updated_offers.length === 0) {
+          cartItem.posa_offer_applied = 0;
+        }
+        
+        cartItem.buy_get_offer_role = null;
+        
+        cartItem.amount = this.flt(cartItem.qty * cartItem.rate, this.currency_precision);
+        cartItem.base_amount = this.flt(cartItem.qty * cartItem.base_rate, this.currency_precision);
+        
+        this.$forceUpdate();
+      }
+    });
+  },
+
+    applyNewOffer(offer) {
+      if (offer.apply_on === "Buy Get Free") {
+          this.ApplyBuyGetFreeOffer(offer);
+        } else if (offer.offer === "Item Price") {
+          this.ApplyOnPrice(offer);
+        } else if (offer.offer === "Give Product") {
         let itemsRowID;
         if (typeof offer.items === "string") {
           itemsRowID = JSON.parse(offer.items);
@@ -3838,11 +4560,17 @@ export default {
       this.pos_opening_shift = data.pos_opening_shift;
       this.stock_settings = data.stock_settings;
       // Increase precision for better handling of small amounts
-      this.float_precision = 6;  // Changed from 2 to 6
-      this.currency_precision = 6;  // Changed from 2 to 6
       this.invoiceType = this.pos_profile.posa_default_sales_order
         ? "Order"
         : "Invoice";
+
+      frappe.db.get_single_value("System Settings", "float_precision").then((val) => {
+      this.float_precision = parseInt(val || 2);
+        });
+
+      frappe.db.get_single_value("System Settings", "currency_precision").then((val) => {
+      this.currency_precision = parseInt(val || 2);
+        });
 
       // Add this block to handle currency initialization
       if (this.pos_profile.posa_allow_multi_currency) {

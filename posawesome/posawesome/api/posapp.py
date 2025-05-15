@@ -1629,7 +1629,8 @@ def get_offers(profile):
         "valid_from": date,
         "valid_upto": date,
     }
-    data = frappe.db.sql(
+    
+    offers = frappe.db.sql(
         """
         SELECT *
         FROM `tabPOS Offer`
@@ -1640,11 +1641,38 @@ def get_offers(profile):
         (warehouse is NULL OR warehouse  = '' OR  warehouse = %(warehouse)s) AND
         (valid_from is NULL OR valid_from  = '' OR  valid_from <= %(valid_from)s) AND
         (valid_upto is NULL OR valid_from  = '' OR  valid_upto >= %(valid_upto)s)
-    """,
+        """,
         values=values,
         as_dict=1,
     )
-    return data
+    
+    for offer in offers:
+        if offer.get("apply_on") == "Item Code":
+            offer_items = frappe.db.sql(
+                """
+                SELECT item_code, uom
+                FROM `tabPricing Rule Item Code`
+                WHERE parent = %s
+                """,
+                offer.name,
+                as_dict=1
+            )
+            offer["item"] = offer_items
+        
+        elif offer.get("apply_on") == "Buy Get Free":
+            rule_items = frappe.db.sql(
+                """
+                SELECT item_code, uom
+                FROM `tabPos offer Item`
+                WHERE parent = %s
+                """,
+                offer.name,
+                as_dict=1
+            )
+            offer["rule_item_code"] = rule_items
+
+    
+    return offers
 
 
 @frappe.whitelist()
