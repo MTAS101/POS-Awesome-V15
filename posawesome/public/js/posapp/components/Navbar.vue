@@ -115,7 +115,6 @@
 
 <script>
 export default {
-  // components: {MyPopup},
   data() {
     return {
       drawer: false,
@@ -141,124 +140,100 @@ export default {
       closeTimeout: null,
     };
   },
+  created() {
+    // use boot company if available, otherwise keep default
+    const bootCompany = frappe.boot.user_info && frappe.boot.user_info.company;
+    this.company = bootCompany || this.company;
+
+    // fetch company logo
+    if (this.company && this.company !== 'POS Awesome') {
+      frappe.call({
+        method: 'frappe.client.get',
+        args: { doctype: 'Company', name: this.company },
+        callback: r => {
+          if (r.message && r.message.company_logo) {
+            this.company_img = r.message.company_logo;
+          }
+        }
+      });
+    }
+
+    // existing event registrations
+    this.$nextTick(() => {
+      this.eventBus.on('show_message', this.show_message);
+      this.eventBus.on('set_company', data => {
+        this.company = data.name || this.company;
+        this.company_img = data.company_logo || this.company_img;
+      });
+      this.eventBus.on('register_pos_profile', data => {
+        this.pos_profile = data.pos_profile;
+        const payments = { text: 'Payments', icon: 'mdi-cash-register' };
+        if (this.pos_profile.posa_use_pos_awesome_payments && this.items.length !== 2) {
+          this.items.push(payments);
+        }
+      });
+      this.eventBus.on('set_last_invoice', data => (this.last_invoice = data));
+      this.eventBus.on('freeze', data => { this.freeze = true; this.freezeTitle = data.title; this.freezeMsg = data.msg; });
+      this.eventBus.on('unfreeze', () => { this.freeze = false; this.freezeTitle = ''; this.freezeMsg = ''; });
+    });
+  },
   methods: {
     changePage(key) {
       this.$emit('changePage', key);
     },
     go_desk() {
-      frappe.set_route('/');
-      location.reload();
+      frappe.set_route('/'); location.reload();
     },
     go_about() {
-      const win = window.open(
-        'https://github.com/yrestom/POS-Awesome',
-        '_blank'
-      );
-      win.focus();
-    },
-    close_shift_dialog() {
-      this.eventBus.emit('open_closing_dialog');
-    },
-    show_message(data) {
-      this.snack = true;
-      this.snackColor = data.color;
-      this.snackText = data.title;
-    },
-    logOut() {
-      var me = this;
-      me.logged_out = true;
-      return frappe.call({
-        method: 'logout',
-        callback: function (r) {
-          if (r.exc) {
-            return;
+      frappe.call({
+        method: 'posawesome.posawesome.api.posapp.get_app_info',
+        callback: r => {
+          if (r.message && Array.isArray(r.message.apps)) {
+            let html = `
+              <table style="width:100%; border-collapse:collapse; text-align:left;">
+                <thead>
+                  <tr>
+                    <th style="padding:8px;">${__('Application')}</th>
+                    <th style="padding:8px;">${__('Version')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+            `;
+            r.message.apps.forEach(app => {
+              html += `
+                  <tr>
+                    <td style="padding:8px;"><strong>${app.app_name}</strong></td>
+                    <td style="padding:8px;">${app.installed_version}</td>
+                  </tr>
+              `;
+            });
+            html += `
+                </tbody>
+              </table>
+            `;
+
+            frappe.msgprint({ title: __('Installed Applications'), indicator: 'blue', message: html });
           }
-          frappe.set_route('/app/home');
-          location.reload();
         },
+        error: () => frappe.msgprint({ title: __('Error'), indicator: 'red', message: __('Failed to retrieve app info') })
       });
+    },
+    close_shift_dialog() { this.eventBus.emit('open_closing_dialog'); },
+    show_message(data) { this.snack = true; this.snackColor = data.color; this.snackText = data.title; },
+    logOut() {
+      let me = this; me.logged_out = true;
+      return frappe.call({ method: 'logout', callback: r => { if (!r.exc) { frappe.set_route('/app/home'); location.reload(); } } });
     },
     print_last_invoice() {
       if (!this.last_invoice) return;
-      const print_format =
-        this.pos_profile.print_format_for_online ||
-        this.pos_profile.print_format;
-      const letter_head = this.pos_profile.letter_head || 0;
-      const url =
-        frappe.urllib.get_base_url() +
-        '/printview?doctype=Sales%20Invoice&name=' +
-        this.last_invoice +
-        '&trigger_print=1' +
-        '&format=' +
-        print_format +
-        '&no_letterhead=' +
-        letter_head;
-      const printWindow = window.open(url, 'Print');
-      printWindow.addEventListener(
-        'load',
-        function () {
-          printWindow.print();
-        },
-        true
-      );
+      const pf = this.pos_profile.print_format_for_online || this.pos_profile.print_format;
+      const lh = this.pos_profile.letter_head || 0;
+      const url = `${frappe.urllib.get_base_url()}/printview?doctype=Sales%20Invoice&name=${this.last_invoice}&trigger_print=1&format=${pf}&no_letterhead=${lh}`;
+      const pw = window.open(url, 'Print'); pw.addEventListener('load', () => pw.print(), true);
     },
-    handleNavClick() {
-      this.drawer = true;
-      this.mini = false;
-    },
-    handleMouseLeave() {
-      if (!this.drawer) return;
-      this.closeTimeout = setTimeout(() => {
-        this.drawer = false;
-        this.mini = true;
-      }, 250);
-    },
-    triggerNavClick() {
-      if (!this.drawer) {
-        this.$refs.navIcon.$el.click();
-      }
-    },
-  },
-  created: function () {
-    this.$nextTick(function () {
-      this.eventBus.on('show_message', (data) => {
-        this.show_message(data);
-      });
-      this.eventBus.on('set_company', (data) => {
-        this.company = data.name;
-        this.company_img = data.company_logo
-          ? data.company_logo
-          : this.company_img;
-      });
-      this.eventBus.on('register_pos_profile', (data) => {
-        this.pos_profile = data.pos_profile;
-        const payments = { text: 'Payments', icon: 'mdi-cash-register' };
-        if (
-          this.pos_profile.posa_use_pos_awesome_payments &&
-          this.items.length !== 2
-        ) {
-          this.items.push(payments);
-        }
-      });
-      this.eventBus.on('set_last_invoice', (data) => {
-        this.last_invoice = data;
-      });
-      this.eventBus.on('freeze', (data) => {
-        this.freeze = true;
-        this.freezeTitle = data.title;
-        this.freezeMsg = data.msg;
-      });
-      this.eventBus.on('unfreeze', () => {
-        this.freeze = false;
-        this.freezTitle = '';
-        this.freezeMsg = '';
-      });
-    });
-  },
-  beforeUnmount() {
-    if (this.closeTimeout) {
-      clearTimeout(this.closeTimeout);
-    }
+    handleNavClick() { this.drawer = true; this.mini = false; },
+    handleMouseLeave() { if (!this.drawer) return; this.closeTimeout = setTimeout(() => { this.drawer = false; this.mini = true; }, 250); },
+    triggerNavClick() { if (!this.drawer) this.$refs.navIcon.$el.click(); }
   }
 };
 </script>
@@ -272,13 +247,11 @@ export default {
   color: rgba(0, 0, 0, 0.6) !important;
 }
 
-/* Drawer styling */
 .drawer-custom {
   background-color: #fafafa;
   transition: all 0.3s ease-out;
 }
 
-/* Header when expanded */
 .drawer-header {
   display: flex;
   align-items: center;
@@ -286,7 +259,6 @@ export default {
   padding: 0 16px;
 }
 
-/* Header when mini */
 .drawer-header-mini {
   display: flex;
   justify-content: center;
@@ -294,7 +266,6 @@ export default {
   height: 64px;
 }
 
-/* Company name */
 .drawer-company {
   margin-left: 12px;
   flex: 1;
@@ -303,20 +274,17 @@ export default {
   color: #424242;
 }
 
-/* Icon styling */
 .drawer-icon {
   font-size: 24px;
   color: #1976d2;
 }
 
-/* Item title */
 .drawer-item-title {
   margin-left: 8px;
   font-weight: 500;
   color: #424242;
 }
 
-/* Hover and active states */
 .v-list-item:hover {
   background-color: rgba(25, 118, 210, 0.1) !important;
 }
@@ -325,7 +293,6 @@ export default {
   background-color: rgba(25, 118, 210, 0.2) !important;
 }
 
-/* User menu (activator and dropdown) styling: unchanged from before */
 .user-menu-btn {
   text-transform: none;
   padding: 4px 12px;
