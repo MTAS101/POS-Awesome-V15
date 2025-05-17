@@ -9,13 +9,16 @@
           v-model:expanded="expanded" show-expand item-key="row_id" class="elevation-1" :items-per-page="itemsPerPage"
           hide-default-footer>
           <template v-slot:item.offer_applied="{ item }">
-            <v-checkbox-btn @click="toggleOfferApplied(item)" v-model="item.offer_applied" :disabled="(item.offer == 'Give Product' &&
-              !item.give_item &&
-              (!offer.replace_cheapest_item || !offer.replace_item)) ||
-              (item.offer == 'Grand Total' &&
-                discount_percentage_offer_name &&
-                discount_percentage_offer_name != item.name)
-              "></v-checkbox-btn>
+            <v-checkbox-btn
+              :model-value="item.offer_applied"
+              @click.stop="toggleOfferApplied(item)"
+              :disabled="(item.offer == 'Give Product' &&
+                          !item.give_item &&
+                          (!item.replace_cheapest_item || !item.replace_item)) ||
+                        (item.offer == 'Grand Total' &&
+                          discount_percentage_offer_name &&
+                          discount_percentage_offer_name != item.name)">
+            </v-checkbox-btn>
           </template>
           <template v-slot:expanded-item="{ headers, item }">
             <td :colspan="headers.length">
@@ -88,6 +91,16 @@ export default {
       list_offers = [...this.pos_offers];
       this.pos_offers = list_offers;
     },
+    toggleOfferApplied(item) {
+    // Toggle the current state (check/uncheck)
+    item.offer_applied = !item.offer_applied;
+
+    // Emit updated list of applied offers
+    this.handelOffers();
+    this.updateCounters();
+    this.updatePosCoupuns();
+    },
+
     makeid(length) {
       let result = '';
       const characters = 'abcdefghijklmnopqrstuvwxyz0123456789';
@@ -107,7 +120,7 @@ export default {
           toRemove.push(pos_offer.row_id);
         }
       });
-      this.removeOffers(toRemove);
+      // this.removeOffers(toRemove);
       offers.forEach((offer) => {
         const pos_offer = this.pos_offers.find(
           (pos_offer) => offer.name === pos_offer.name
@@ -230,6 +243,7 @@ export default {
     },
   },
 
+
   created: function () {
     this.$nextTick(function () {
       this.eventBus.on('register_pos_profile', (data) => {
@@ -252,4 +266,7 @@ export default {
     });
   },
 };
+
+
+
 </script>
