@@ -404,6 +404,15 @@ export default {
         this.flags.batch_no = null;
         this.qty = 1;
         this.$refs.debounce_search.focus();
+
+
+         // ✅ Clear the search inputs
+    this.search = "";
+    this.first_search = "";
+    this.search_backup = "";
+
+    // ✅ Refocus the search input
+    this.$refs.debounce_search?.focus();
       }
     },
     search_onchange: _.debounce(function(newSearchTerm) {
@@ -589,6 +598,8 @@ export default {
         this.enter_event();
       }
     },
+
+
     generateWordCombinations(inputString) {
       const words = inputString.split(" ");
       const wordCount = words.length;
