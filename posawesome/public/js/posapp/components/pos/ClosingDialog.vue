@@ -13,16 +13,23 @@
               <v-col cols="12" class="pa-1">
                 <v-data-table :headers="headers" :items="dialog_data.payment_reconciliation" item-key="mode_of_payment"
                   class="elevation-1" :items-per-page="itemsPerPage" hide-default-footer>
+                  
                   <template v-slot:item.closing_amount="props">
-                    <v-confirm-edit v-model:return-value="props.item.closing_amount">
-                      {{ currencySymbol(pos_profile.currency) }}
-                      {{ formatCurrency(props.item.closing_amount) }}
-                      <template v-slot:input>
-                        <v-text-field v-model="props.item.closing_amount" :rules="[max25chars]"
-                          :label="frappe._('Edit')" single-line counter type="number"></v-text-field>
+                    <v-confirm-edit v-model="props.item.closing_amount">
+                      <template v-slot:default="{ model: proxyModel, actions }">
+                        <template class="mx-auto" style="max-width: 380px; display: flex; justify-content: space-between; align-items: center;">
+                          <v-text-field v-model="proxyModel.value" 
+                          :rules="[validateNumber, max25chars]" 
+                          :label="frappe._('Edit Closing Amount')" 
+                           type="number" 
+                           @focus="$event.target.select()"
+                           style="flex-grow: 1;"></v-text-field>
+                          <component :is="actions"></component>
+                        </template>
                       </template>
                     </v-confirm-edit>
                   </template>
+
                   <template v-slot:item.difference="{ item }">
                     {{ currencySymbol(pos_profile.currency) }}
                     {{
@@ -85,7 +92,6 @@ export default {
         sortable: true,
       },
     ],
-    max25chars: (v) => v.length <= 20 || 'Input too long!', // TODO : should validate as number
     pagination: {},
   }),
   watch: {},
@@ -98,6 +104,29 @@ export default {
       this.eventBus.emit('submit_closing_pos', this.dialog_data);
       this.closingDialog = false;
     },
+    formatCurrency(value) {
+      value = parseFloat(value || 0);
+      return value.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+    },
+    validateNumber(value) {
+      if (value === null || value === undefined || value === '') {
+        return 'Value cannot be empty';
+      }
+      if (isNaN(value)) {
+        return 'Must be a valid number';
+      }
+      if (Number(value) < 0) {
+        return 'Value cannot be negative';
+      }
+      return true;
+    },
+    max25chars(value) {
+      return value.toString().length <= 25 || 'Input too long!';
+    },
+   // currencySymbol(currency) {
+    //  return currency ? currency : '$'; // Default to '$' if no currency provided
+   // },
+
   },
 
   created: function () {
