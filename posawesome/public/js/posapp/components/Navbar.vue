@@ -104,7 +104,6 @@
 </template>
 
 <script>
-import { eventBus } from '@/eventBus';
 
 export default {
   name: 'NavBar',
@@ -145,12 +144,12 @@ export default {
     }
 
     this.$nextTick(() => {
-      eventBus.on('show_message', this.showMessage);
-      eventBus.on('set_company', data => {
+      this.eventBus.on('show_message', this.showMessage);
+      this.eventBus.on('set_company', data => {
         this.company = data.name || this.company;
         this.companyImg = data.company_logo || this.companyImg;
       });
-      eventBus.on('register_pos_profile', data => {
+      this.eventBus.on('register_pos_profile', data => {
         this.posProfile = data.pos_profile;
         const paymentsItem = { text: 'Payments', icon: 'mdi-cash-register' };
         if (this.posProfile.posa_use_pos_awesome_payments &&
@@ -158,15 +157,15 @@ export default {
           this.items.push(paymentsItem);
         }
       });
-      eventBus.on('set_last_invoice', data => {
+      this.eventBus.on('set_last_invoice', data => {
         this.lastInvoiceId = data;
       });
-      eventBus.on('freeze', data => {
+      this.eventBus.on('freeze', data => {
         this.freeze = true;
         this.freezeTitle = data.title;
         this.freezeMsg = data.msg;
       });
-      eventBus.on('unfreeze', () => {
+      this.eventBus.on('unfreeze', () => {
         this.freeze = false;
         this.freezeTitle = '';
         this.freezeMsg = '';
