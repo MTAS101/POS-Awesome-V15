@@ -722,10 +722,12 @@ export default {
         const response = await frappe.call({
           method: "posawesome.posawesome.api.posapp.allow_remove_item",
           args: {
-            id: this.remove_approval_id,
+            code: this.remove_approval_id,
             item_code: this.item_to_remove.item_code,
-            pos_profile: this.pos_profile,
-            shift_id: this.pos_opening_shift,
+            uom: this.item_to_remove.uom,
+            qty: this.item_to_remove.qty,
+            pos_profile: this.pos_profile.name,
+            shift_id: this.pos_opening_shift.name,
             invoice_doc: this.invoice_doc
           }
         });
