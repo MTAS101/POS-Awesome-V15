@@ -433,6 +433,22 @@
       </v-row>
     </v-card>
   </div>
+
+  <!-- Remove Item Approval Dialog -->
+  <v-dialog v-model="confirm_remove_dialog" max-width="400">
+    <v-card>
+      <v-card-title>{{ __("Enter Approval ID") }}</v-card-title>
+      <v-card-text>
+        <v-text-field v-model="remove_approval_id" label="Approval ID" />
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="error" text @click="confirm_remove_dialog = false">{{ __("Cancel") }}</v-btn>
+        <v-btn color="primary" text @click="confirm_remove_item">{{ __("Confirm") }}</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
 </template>
 
 <script>
@@ -444,6 +460,10 @@ export default {
   mixins: [format],
   data() {
     return {
+      // Remove item confirmation dialog state
+      confirm_remove_dialog: false,
+      item_to_remove: null,
+      remove_approval_id: "",
       // POS profile settings
       pos_profile: "",
       pos_opening_shift: "",
@@ -672,17 +692,74 @@ export default {
       }
     },
 
-    remove_item(item) {
-      const index = this.items.findIndex(
-        (el) => el.posa_row_id == item.posa_row_id
-      );
-      if (index >= 0) {
-        this.items.splice(index, 1);
+    async remove_item(item) {
+      if (item.qty > 1) {
+        this.eventBus.emit("show_message", {
+          title: __("You can only remove the item when quantity is 1"),
+          color: "warning"
+        });
+        return;
       }
-      // Remove from expanded if present
-      this.expanded = this.expanded.filter(id => id !== item.posa_row_id);
+      if(this.pos_profile.custom_disable_item_delete == 0 || !this.pos_profile.custom_disable_item_delete) {
+        this.item_to_remove = item;
+
+         const index = this.items.findIndex(
+            (el) => el.posa_row_id == this.item_to_remove.posa_row_id
+          );
+          if (index >= 0) {
+            this.items.splice(index, 1);
+            this.expanded = this.expanded.filter(id => id !== this.item_to_remove.posa_row_id);
+          }
+        this.item_to_remove = null;
+        return ;
+      }
+      this.item_to_remove = item;
+      this.confirm_remove_dialog = true;
     },
 
+    async confirm_remove_item() {
+      try {
+        const response = await frappe.call({
+          method: "posawesome.posawesome.api.posapp.allow_remove_item",
+          args: {
+            id: this.remove_approval_id,
+            item_code: this.item_to_remove.item_code,
+            pos_profile: this.pos_profile,
+            shift_id: this.pos_opening_shift,
+            invoice_doc: this.invoice_doc
+          }
+        });
+
+        if (response.message === true) {
+          const index = this.items.findIndex(
+            (el) => el.posa_row_id == this.item_to_remove.posa_row_id
+          );
+          if (index >= 0) {
+            this.items.splice(index, 1);
+            this.expanded = this.expanded.filter(id => id !== this.item_to_remove.posa_row_id);
+          }
+          this.eventBus.emit("show_message", {
+            title: __("Item removed"),
+            color: "success"
+          });
+        } else {
+          this.eventBus.emit("show_message", {
+            title: __("Permission denied to remove item"),
+            color: "error"
+          });
+        }
+      } catch (error) {
+        console.error("Error in confirming item removal", error);
+        this.eventBus.emit("show_message", {
+          title: __("Error removing item"),
+          color: "error"
+        });
+      } finally {
+        this.confirm_remove_dialog = false;
+        this.item_to_remove = null;
+        this.remove_approval_id = "";
+      }
+    },
     add_item(item) {
       if (!item.uom) {
         item.uom = item.stock_uom;
@@ -3940,7 +4017,11 @@ export default {
       // For returns, we need to subtract (make less negative)
       if (this.invoiceType === "Return") {
         item.qty--;
-      } else {
+      } else if(this.pos_profile.custom_disable_item_delete == 1 && item.qty == 1) {
+        this.remove_item(item);
+        return;
+      }
+      else{
         item.qty--;
       }
       if (item.qty == 0) {
