@@ -69,29 +69,6 @@ def get_opening_dialog_data():
 
     return data
 
-@frappe.whitelist()
-def allow_remove_item(code,item_code,uom, qty, pos_profile,shift_id, invoice_doc):
-    " Allow removing item from invoice"
-    supervisor_code = frappe.db.get_value('Supervisor Code', {'code': code, 'disable': 0}, 'name')
-    if not supervisor_code:
-        frappe.throw(_("Code is not valid or has been disabled"))   
-    doc = frappe.new_doc("POS Deleted Items")
-    extra_d = f"Invoice id {invoice_doc} and shift id {shift_id}"
-    doc.update({
-        "item": item_code,
-        "pos_profile": pos_profile,     
-        "supervisor_code": supervisor_code,
-        "user": frappe.session.user,
-        "uom": uom,
-        "qty": qty,
-        "extra_details": extra_d
-    })  
-    doc.insert(ignore_permissions=True)
-    frappe.db.commit()
-    return True
-      
-    
-
 
 @frappe.whitelist()
 def create_opening_voucher(pos_profile, company, balance_details):
@@ -141,8 +118,8 @@ def check_opening_shift(user):
 
 
 def update_opening_shift_data(data, pos_profile):
-    data["pos_profile"] = frappe.get_cached_doc("POS Profile", pos_profile)
-    data["company"] = frappe.get_cached_doc("Company", data["pos_profile"].company)
+    data["pos_profile"] = frappe.get_doc("POS Profile", pos_profile)
+    data["company"] = frappe.get_doc("Company", data["pos_profile"].company)
     allow_negative_stock = frappe.get_value(
         "Stock Settings", None, "allow_negative_stock"
     )
