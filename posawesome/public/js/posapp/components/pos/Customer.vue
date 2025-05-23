@@ -1,32 +1,36 @@
 <template>
-  <div>
-    <!-- ? Disable dropdown if either readonly or loadingCustomers is true -->
-    <v-autocomplete
-      ref="customerDropdown"
-      density="compact"
-      clearable
-      variant="outlined"
-      color="primary"
-      :label="frappe._('Customer')"
-      v-model="internalCustomer"
-      :items="customers"
-      item-title="customer_name"
-      item-value="name"
-      bg-color="white"
-      :no-data-text="__('Customers not found')"
-      hide-details
-      :customFilter="customFilter"
-      :disabled="readonly || loadingCustomers"
-      append-icon="mdi-plus"
-      @click:append="new_customer"
-      prepend-inner-icon="mdi-account-edit"
-      @click:prepend-inner="edit_customer"
-      @update:menu="onCustomerMenuToggle"
-      @update:modelValue="onCustomerChange"
-      @keydown.enter="handleEnter"
-    >
-      <!-- Custom template for dropdown item display -->
-      <template v-slot:item="{ props, item }">
+  <!-- ? Disable dropdown if either readonly or loadingCustomers is true -->
+  <div class="customer-input-wrapper">
+    <v-autocomplete ref="customerDropdown" class="customer-autocomplete sleek-field" density="compact" clearable
+      variant="solo" color="primary" :label="frappe._('Customer')" v-model="internalCustomer" :items="customers"
+      item-title="customer_name" item-value="name" bg-color="white" :no-data-text="__('Customers not found')"
+      hide-details :customFilter="customFilter" :disabled="readonly || loadingCustomers"
+      :menu-props="{ closeOnContentClick: false }" @update:menu="onCustomerMenuToggle"
+      @update:modelValue="onCustomerChange" @keydown.enter="handleEnter">
+      <!-- Edit icon (left) -->
+      <template #prepend-inner>
+        <v-tooltip text="Edit customer">
+          <template #activator="{ on, attrs }">
+            <v-icon v-bind="attrs" v-on="on" class="icon-button" @mousedown.prevent.stop @click.stop="edit_customer">
+              mdi-account-edit
+            </v-icon>
+          </template>
+        </v-tooltip>
+      </template>
+
+      <!-- Add icon (right) -->
+      <template #append-inner>
+        <v-tooltip text="Add new customer">
+          <template #activator="{ on, attrs }">
+            <v-icon v-bind="attrs" v-on="on" class="icon-button" @mousedown.prevent.stop @click.stop="new_customer">
+              mdi-plus
+            </v-icon>
+          </template>
+        </v-tooltip>
+      </template>
+
+      <!-- Dropdown display -->
+      <template #item="{ props, item }">
         <v-list-item v-bind="props">
           <v-list-item-subtitle v-if="item.raw.customer_name !== item.raw.name">
             <div v-html="`ID: ${item.raw.name}`"></div>
@@ -47,12 +51,51 @@
       </template>
     </v-autocomplete>
 
-    <!-- Update Customer Modal -->
-    <div class="mb-8">
-      <UpdateCustomer></UpdateCustomer>
+    <!-- Update customer modal -->
+    <div class="mt-4">
+      <UpdateCustomer />
     </div>
   </div>
 </template>
+
+<style scoped>
+.customer-input-wrapper {
+  width: 100%;
+  max-width: 100%;
+  padding-right: 1.5rem;
+  /* Elegant space at the right edge */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.customer-autocomplete {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+  background-color: #fff;
+}
+
+.customer-autocomplete:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.icon-button {
+  cursor: pointer;
+  font-size: 20px;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+  opacity: 1;
+  color: var(--v-theme-primary);
+}
+</style>
+
+
 
 <script>
 import UpdateCustomer from './UpdateCustomer.vue';
@@ -208,11 +251,11 @@ export default {
       });
 
       this.eventBus.on('add_customer_to_list', (customer) => {
-  this.customers.push(customer);
-  this.customer = customer.name;
-  this.internalCustomer = customer.name;
-  this.eventBus.emit('update_customer', customer.name);
-});
+        this.customers.push(customer);
+        this.customer = customer.name;
+        this.internalCustomer = customer.name;
+        this.eventBus.emit('update_customer', customer.name);
+      });
 
       this.eventBus.on('set_customer_readonly', (value) => {
         this.readonly = value;

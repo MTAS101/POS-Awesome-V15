@@ -152,5 +152,9 @@ export default {
       }
     });
   },
+  beforeUnmount() {
+    this.eventBus.off('open_ClosingDialog');
+    this.eventBus.off('register_pos_profile');
+  },
 };
 </script>
