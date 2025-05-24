@@ -94,40 +94,77 @@ export default {
       details: '',
       error: null,
       complete: false,
-      statusInterval: null
+      statusInterval: null,
+      retryCount: 0,
+      maxRetries: 3
     };
   },
   methods: {
     async initializeBootstrap() {
       try {
+        // Reset status
         this.loading = true;
         this.error = null;
         this.complete = false;
         this.progress = 5;
         this.status_message = __('Initializing offline database...');
         
-        // Clear browser caches on retry
-        try {
-          if (window.caches && window.caches.keys) {
-            const cacheKeys = await window.caches.keys();
-            for (const key of cacheKeys) {
-              if (key.includes('posawesome')) {
-                await window.caches.delete(key);
-                console.log(`Cache '${key}' deleted`);
+        // If we've already tried multiple times, force a complete reset
+        if (this.retryCount >= 2) {
+          this.details = __('Attempting recovery after previous failures...');
+          
+          // Clear browser caches on retry
+          try {
+            if (window.caches && window.caches.keys) {
+              const cacheKeys = await window.caches.keys();
+              for (const key of cacheKeys) {
+                if (key.includes('posawesome')) {
+                  await window.caches.delete(key);
+                  console.log(`Cache '${key}' deleted`);
+                }
               }
             }
+          } catch (cacheError) {
+            console.warn('Error clearing caches:', cacheError);
           }
-        } catch (cacheError) {
-          console.warn('Error clearing caches:', cacheError);
+          
+          // Clear IndexedDB databases
+          try {
+            await this.clearAllDatabases();
+          } catch (dbError) {
+            console.warn('Error clearing databases:', dbError);
+          }
+          
+          // Wait longer to ensure cleanup completes
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
         
         // Initialize database
         this.details = __('Creating database for offline data...');
-        const db = await initOfflineStores();
+        let db = null;
+        try {
+          db = await initOfflineStores();
+        } catch (dbError) {
+          console.error('Failed to initialize database:', dbError);
+          // If database init fails, try one more time after a delay
+          this.details = __('Database initialization failed, retrying...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          db = await initOfflineStores();
+        }
+        
+        if (!db) {
+          throw new Error('Failed to initialize database');
+        }
         
         // Check if bootstrap is needed
         this.details = __('Checking if offline data needs to be updated...');
-        const bootstrapNeeded = await checkBootstrapNeeded(db, this.pos_profile);
+        let bootstrapNeeded = true;
+        try {
+          bootstrapNeeded = await checkBootstrapNeeded(db, this.pos_profile);
+        } catch (checkError) {
+          console.warn('Error checking bootstrap need, assuming needed:', checkError);
+          bootstrapNeeded = true;
+        }
         
         if (!bootstrapNeeded) {
           // Bootstrap not needed, use cached data
@@ -162,6 +199,7 @@ export default {
           this.progress = 100;
           this.status_message = __('Offline data ready');
           this.details = __('All master data has been downloaded and verified');
+          this.retryCount = 0; // Reset retry count on success
           
           // Emit completion event
           this.$emit('bootstrap-progress', 100);
@@ -172,6 +210,7 @@ export default {
           this.error = status.error || __('Unknown error during bootstrap');
           this.status_message = __('Data preparation failed');
           this.details = __('Please check your connection and try again');
+          this.retryCount++; // Increment retry count
         }
       } catch (error) {
         console.error('Bootstrap initialization error:', error);
@@ -179,6 +218,7 @@ export default {
         this.error = error.message;
         this.status_message = __('Failed to initialize');
         this.details = __('Try refreshing the page or clearing browser data');
+        this.retryCount++; // Increment retry count
         
         // Try to provide more helpful error message based on error type
         if (error.message.includes('IndexedDB') || error.message.includes('object store')) {
@@ -187,6 +227,40 @@ export default {
           this.details = __('Network error. Check your internet connection and try again.');
         }
       }
+    },
+    
+    async clearAllDatabases() {
+      const dbNames = ['posawesome-offline-db'];
+      
+      for (const dbName of dbNames) {
+        try {
+          await this.deleteDatabase(dbName);
+          console.log(`Database ${dbName} deleted`);
+        } catch (error) {
+          console.warn(`Failed to delete database ${dbName}:`, error);
+        }
+      }
+    },
+    
+    async deleteDatabase(dbName) {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.deleteDatabase(dbName);
+        
+        request.onsuccess = () => {
+          console.log(`Database ${dbName} successfully deleted`);
+          resolve();
+        };
+        
+        request.onerror = (event) => {
+          reject(new Error(`Error deleting database ${dbName}: ${event.target.error}`));
+        };
+        
+        request.onblocked = () => {
+          console.warn(`Database ${dbName} deletion blocked`);
+          // Try to continue anyway
+          resolve();
+        };
+      });
     },
     
     startProgressMonitoring() {
@@ -225,22 +299,27 @@ export default {
     
     retryBootstrap() {
       // Ask user to confirm clear database on retry
-      if (confirm(__('Would you like to completely reset the offline database? This will clear all cached data.'))) {
-        console.log('User confirmed database reset, starting fresh bootstrap');
-        
-        // Show loading state
-        this.loading = true;
-        this.error = null;
-        this.progress = 2;
-        this.status_message = __('Resetting offline database...');
-        this.details = __('Clearing existing data...');
-        
-        // Use setTimeout to allow UI to update before starting potentially slow operation
-        setTimeout(() => {
+      if (this.retryCount >= 2) {
+        if (confirm(__('Multiple attempts have failed. Would you like to completely reset the offline database? This will clear all cached data.'))) {
+          console.log('User confirmed database reset, starting fresh bootstrap');
+          
+          // Show loading state
+          this.loading = true;
+          this.error = null;
+          this.progress = 2;
+          this.status_message = __('Resetting offline database...');
+          this.details = __('Clearing existing data...');
+          
+          // Use setTimeout to allow UI to update before starting potentially slow operation
+          setTimeout(() => {
+            this.initializeBootstrap();
+          }, 500);
+        } else {
+          // Just retry without clearing database
           this.initializeBootstrap();
-        }, 500);
+        }
       } else {
-        // Just retry without clearing database
+        // Regular retry
         this.initializeBootstrap();
       }
     }

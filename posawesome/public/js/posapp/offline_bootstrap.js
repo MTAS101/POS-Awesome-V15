@@ -21,32 +21,32 @@ const bootstrapStatus = {
   lastUpdated: null,
 };
 
+// Track active database connections
+let activeConnection = null;
+
 /**
  * Initialize database with required object stores for master data
  */
 export async function initOfflineStores() {
   try {
-    // Close any existing database connections
-    let db = null;
-    try {
-      db = await initDB();
-      if (db) {
+    // Reset status for new bootstrap attempt
+    bootstrapStatus.isComplete = false;
+    bootstrapStatus.progress = 0;
+    bootstrapStatus.message = 'Initializing database';
+    bootstrapStatus.error = null;
+    
+    // Safely close any existing database connections
+    if (activeConnection) {
+      try {
         console.log('Closing existing database connection');
-        db.close();
+        activeConnection.close();
+        activeConnection = null;
+        
+        // Add a delay to ensure connection is fully closed
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } catch (error) {
+        console.log('Error closing existing database connection:', error);
       }
-    } catch (error) {
-      console.log('No existing database connection to close');
-    }
-
-    // Force close any open connections to ensure clean upgrade
-    console.log('Requesting database cleanup');
-    try {
-      await new Promise(resolve => {
-        // A small delay to ensure connections are properly closed
-        setTimeout(resolve, 500);
-      });
-    } catch (e) {
-      console.log('Delay for connection cleanup skipped');
     }
     
     // Delete the database if it exists and recreate
@@ -56,8 +56,8 @@ export async function initOfflineStores() {
       try {
         await deleteDatabase('posawesome-offline-db');
         console.log('Database deleted successfully');
-        // Small delay to ensure deletion completes
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Ensure deletion completes with a longer delay
+        await new Promise(resolve => setTimeout(resolve, 1500));
       } catch (deleteError) {
         console.error('Error deleting database:', deleteError);
         // Continue despite error
@@ -84,6 +84,17 @@ export async function initOfflineStores() {
         const db = event.target.result;
         console.log('IndexedDB opened for bootstrap with version:', db.version);
         
+        // Store the active connection
+        activeConnection = db;
+        
+        // Set up connection close handling
+        db.onclose = () => {
+          console.log('Database connection closed');
+          if (activeConnection === db) {
+            activeConnection = null;
+          }
+        };
+        
         // Verify all required stores exist
         const storeNames = Array.from(db.objectStoreNames);
         const requiredStores = [CUSTOMERS_STORE, ITEMS_STORE, TAXES_STORE, BOOTSTRAP_INFO_STORE];
@@ -91,6 +102,7 @@ export async function initOfflineStores() {
         
         if (missingStores.length > 0) {
           db.close();
+          activeConnection = null;
           reject(new Error(`Missing required object stores: ${missingStores.join(', ')}`));
           return;
         }
@@ -149,20 +161,22 @@ export async function initOfflineStores() {
 async function checkIfDbExists(dbName) {
   return new Promise(resolve => {
     const request = indexedDB.open(dbName);
+    let db = null;
     
     request.onsuccess = function(event) {
-      const db = event.target.result;
+      db = event.target.result;
       db.close();
       resolve(true);
     };
     
     request.onupgradeneeded = function(event) {
-      const db = event.target.result;
+      db = event.target.result;
       db.close();
       resolve(false);
     };
     
     request.onerror = function() {
+      if (db) db.close();
       resolve(false);
     };
   });
@@ -204,6 +218,7 @@ export async function startBootstrap(posProfile) {
     
     // Initialize database with required stores
     const db = await initOfflineStores();
+    activeConnection = db; // Update our tracked connection
     
     // Get batch size from POS profile or use default
     const batchSize = posProfile.posa_offline_batch_size || 100;
@@ -247,6 +262,11 @@ export async function startBootstrap(posProfile) {
 async function downloadCustomers(db, posProfile, batchSize) {
   try {
     updateBootstrapStatus('Downloading customers...', 10);
+    
+    // Check if the database connection is valid
+    if (!db || !db.objectStoreNames) {
+      throw new Error('Invalid database connection for customer download');
+    }
     
     // Clear existing customers
     await clearObjectStore(db, CUSTOMERS_STORE);
@@ -316,6 +336,11 @@ async function downloadItems(db, posProfile, batchSize) {
   try {
     updateBootstrapStatus('Downloading items...', 45);
     
+    // Check if the database connection is valid
+    if (!db || !db.objectStoreNames) {
+      throw new Error('Invalid database connection for item download');
+    }
+    
     // Clear existing items
     await clearObjectStore(db, ITEMS_STORE);
     
@@ -384,6 +409,11 @@ async function downloadTaxes(db, posProfile) {
   try {
     updateBootstrapStatus('Downloading taxes...', 85);
     
+    // Check if the database connection is valid
+    if (!db || !db.objectStoreNames) {
+      throw new Error('Invalid database connection for tax download');
+    }
+    
     // Clear existing taxes
     await clearObjectStore(db, TAXES_STORE);
     
@@ -436,6 +466,11 @@ async function validateData(db) {
   try {
     updateBootstrapStatus('Validating data integrity...', 95);
     
+    // Check if the database connection is valid
+    if (!db || !db.objectStoreNames) {
+      throw new Error('Invalid database connection for data validation');
+    }
+    
     // Check if we have at least one customer
     const customerCount = await getObjectStoreCount(db, CUSTOMERS_STORE);
     console.log(`Validated ${customerCount} customers`);
@@ -459,6 +494,11 @@ async function validateData(db) {
  */
 async function saveBootstrapInfo(db, posProfile) {
   try {
+    // Check if the database connection is valid
+    if (!db || !db.objectStoreNames) {
+      throw new Error('Invalid database connection for saving bootstrap info');
+    }
+    
     const info = {
       id: 'bootstrap_info',
       lastUpdated: new Date(),
@@ -477,26 +517,56 @@ async function saveBootstrapInfo(db, posProfile) {
 }
 
 /**
- * Helper to save a batch of data to an object store
+ * Helper to safely execute a database transaction
  */
-async function saveDataBatch(db, storeName, dataArray) {
+async function safeTransaction(db, storeNames, mode, callback) {
   return new Promise((resolve, reject) => {
-    // First verify the store exists
-    if (!db.objectStoreNames.contains(storeName)) {
-      reject(new Error(`Object store '${storeName}' does not exist. Database may need to be recreated.`));
+    // Verify the database connection is valid
+    if (!db || !db.objectStoreNames) {
+      reject(new Error('Invalid database connection'));
       return;
     }
     
-    const transaction = db.transaction([storeName], 'readwrite');
+    // Verify all requested stores exist
+    for (const storeName of storeNames) {
+      if (!db.objectStoreNames.contains(storeName)) {
+        reject(new Error(`Object store '${storeName}' does not exist`));
+        return;
+      }
+    }
+    
+    try {
+      const transaction = db.transaction(storeNames, mode);
+      
+      transaction.oncomplete = () => {
+        resolve();
+      };
+      
+      transaction.onerror = (event) => {
+        reject(new Error(`Transaction error: ${event.target.error}`));
+      };
+      
+      transaction.onabort = (event) => {
+        reject(new Error(`Transaction aborted: ${event.target.error}`));
+      };
+      
+      callback(transaction);
+    } catch (error) {
+      reject(new Error(`Failed to create transaction: ${error.message}`));
+    }
+  });
+}
+
+/**
+ * Helper to save a batch of data to an object store
+ */
+async function saveDataBatch(db, storeName, dataArray) {
+  if (!dataArray || dataArray.length === 0) {
+    return; // Nothing to save
+  }
+  
+  return safeTransaction(db, [storeName], 'readwrite', (transaction) => {
     const store = transaction.objectStore(storeName);
-    
-    transaction.oncomplete = () => {
-      resolve();
-    };
-    
-    transaction.onerror = (event) => {
-      reject(new Error(`Error saving batch to ${storeName}: ${event.target.error}`));
-    };
     
     // Add each item to the store
     dataArray.forEach(item => {
@@ -513,25 +583,39 @@ async function saveDataBatch(db, storeName, dataArray) {
  * Helper to save a single item to an object store
  */
 async function saveToObjectStore(db, storeName, data) {
+  if (!data) {
+    return; // Nothing to save
+  }
+  
   return new Promise((resolve, reject) => {
-    // First verify the store exists
-    if (!db.objectStoreNames.contains(storeName)) {
-      reject(new Error(`Object store '${storeName}' does not exist. Database may need to be recreated.`));
-      return;
+    try {
+      // Verify the database connection is valid
+      if (!db || !db.objectStoreNames) {
+        reject(new Error('Invalid database connection'));
+        return;
+      }
+      
+      // Verify the store exists
+      if (!db.objectStoreNames.contains(storeName)) {
+        reject(new Error(`Object store '${storeName}' does not exist`));
+        return;
+      }
+      
+      const transaction = db.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      const request = store.add(data);
+      
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      
+      request.onerror = (event) => {
+        reject(new Error(`Error saving to ${storeName}: ${event.target.error}`));
+      };
+    } catch (error) {
+      reject(new Error(`Failed to save to ${storeName}: ${error.message}`));
     }
-    
-    const transaction = db.transaction([storeName], 'readwrite');
-    const store = transaction.objectStore(storeName);
-    
-    const request = store.add(data);
-    
-    request.onsuccess = () => {
-      resolve(request.result);
-    };
-    
-    request.onerror = (event) => {
-      reject(new Error(`Error saving to ${storeName}: ${event.target.error}`));
-    };
   });
 }
 
@@ -540,24 +624,34 @@ async function saveToObjectStore(db, storeName, data) {
  */
 async function clearObjectStore(db, storeName) {
   return new Promise((resolve, reject) => {
-    // First verify the store exists
-    if (!db.objectStoreNames.contains(storeName)) {
-      reject(new Error(`Object store '${storeName}' does not exist. Database may need to be recreated.`));
-      return;
+    try {
+      // Verify the database connection is valid
+      if (!db || !db.objectStoreNames) {
+        reject(new Error('Invalid database connection'));
+        return;
+      }
+      
+      // Verify the store exists
+      if (!db.objectStoreNames.contains(storeName)) {
+        reject(new Error(`Object store '${storeName}' does not exist`));
+        return;
+      }
+      
+      const transaction = db.transaction([storeName], 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      const request = store.clear();
+      
+      request.onsuccess = () => {
+        resolve();
+      };
+      
+      request.onerror = (event) => {
+        reject(new Error(`Error clearing ${storeName}: ${event.target.error}`));
+      };
+    } catch (error) {
+      reject(new Error(`Failed to clear ${storeName}: ${error.message}`));
     }
-    
-    const transaction = db.transaction([storeName], 'readwrite');
-    const store = transaction.objectStore(storeName);
-    
-    const request = store.clear();
-    
-    request.onsuccess = () => {
-      resolve();
-    };
-    
-    request.onerror = (event) => {
-      reject(new Error(`Error clearing ${storeName}: ${event.target.error}`));
-    };
   });
 }
 
@@ -566,24 +660,34 @@ async function clearObjectStore(db, storeName) {
  */
 async function getObjectStoreCount(db, storeName) {
   return new Promise((resolve, reject) => {
-    // First verify the store exists
-    if (!db.objectStoreNames.contains(storeName)) {
-      reject(new Error(`Object store '${storeName}' does not exist. Database may need to be recreated.`));
-      return;
+    try {
+      // Verify the database connection is valid
+      if (!db || !db.objectStoreNames) {
+        reject(new Error('Invalid database connection'));
+        return;
+      }
+      
+      // Verify the store exists
+      if (!db.objectStoreNames.contains(storeName)) {
+        reject(new Error(`Object store '${storeName}' does not exist`));
+        return;
+      }
+      
+      const transaction = db.transaction([storeName], 'readonly');
+      const store = transaction.objectStore(storeName);
+      
+      const request = store.count();
+      
+      request.onsuccess = () => {
+        resolve(request.result);
+      };
+      
+      request.onerror = (event) => {
+        reject(new Error(`Error counting ${storeName}: ${event.target.error}`));
+      };
+    } catch (error) {
+      reject(new Error(`Failed to count ${storeName}: ${error.message}`));
     }
-    
-    const transaction = db.transaction([storeName], 'readonly');
-    const store = transaction.objectStore(storeName);
-    
-    const request = store.count();
-    
-    request.onsuccess = () => {
-      resolve(request.result);
-    };
-    
-    request.onerror = (event) => {
-      reject(new Error(`Error counting ${storeName}: ${event.target.error}`));
-    };
   });
 }
 
@@ -616,6 +720,12 @@ export function isBootstrapComplete() {
  */
 export async function checkBootstrapNeeded(db, posProfile) {
   try {
+    // Verify the database connection is valid
+    if (!db || !db.objectStoreNames) {
+      console.log('Invalid database connection, bootstrap needed');
+      return true;
+    }
+    
     // Get bootstrap info from store
     const info = await getBootstrapInfo(db);
     
@@ -664,18 +774,34 @@ export async function checkBootstrapNeeded(db, posProfile) {
 async function getBootstrapInfo(db) {
   try {
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction([BOOTSTRAP_INFO_STORE], 'readonly');
-      const store = transaction.objectStore(BOOTSTRAP_INFO_STORE);
+      // Verify the database connection is valid
+      if (!db || !db.objectStoreNames) {
+        reject(new Error('Invalid database connection'));
+        return;
+      }
       
-      const request = store.get('bootstrap_info');
+      // Verify the store exists
+      if (!db.objectStoreNames.contains(BOOTSTRAP_INFO_STORE)) {
+        reject(new Error(`Info store does not exist`));
+        return;
+      }
       
-      request.onsuccess = () => {
-        resolve(request.result);
-      };
-      
-      request.onerror = (event) => {
-        reject(new Error(`Error getting bootstrap info: ${event.target.error}`));
-      };
+      try {
+        const transaction = db.transaction([BOOTSTRAP_INFO_STORE], 'readonly');
+        const store = transaction.objectStore(BOOTSTRAP_INFO_STORE);
+        
+        const request = store.get('bootstrap_info');
+        
+        request.onsuccess = () => {
+          resolve(request.result);
+        };
+        
+        request.onerror = (event) => {
+          reject(new Error(`Error getting bootstrap info: ${event.target.error}`));
+        };
+      } catch (error) {
+        reject(new Error(`Failed to get bootstrap info: ${error.message}`));
+      }
     });
   } catch (error) {
     console.error('Error getting bootstrap info:', error);
