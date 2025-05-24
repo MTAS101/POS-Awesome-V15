@@ -1701,9 +1701,14 @@ export default {
         
         // If offline, add a flag to indicate this should be submitted, not saved as draft
         if (isOfflineMode) {
+          // Generate a unique name for offline invoice
           invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
-          invoice_doc.is_pos = 1;
-          invoice_doc.offline_submit = true; // Flag to indicate this should be submitted when synced
+          
+          // Set important flags for offline processing
+          invoice_doc.is_pos = 1;  // This is a POS invoice
+          invoice_doc.update_stock = 1; // Update stock when syncing
+          invoice_doc.offline_submit = true; // Submit when synced online
+          
           console.log('Invoice flagged for automatic submission when online');
           
           // Show info message about offline mode
@@ -1742,8 +1747,21 @@ export default {
           }
         }
         
-        // Get payments with correct sign (positive/negative)
+        // Get payments with correct sign (positive/negative) and ensure at least one payment method
         invoice_doc.payments = this.get_payments();
+        
+        // For offline mode, ensure at least one payment method has a value
+        if (isOfflineMode && invoice_doc.payments && invoice_doc.payments.length > 0) {
+          // Find if any payment has a non-zero amount
+          const hasPaymentValue = invoice_doc.payments.some(payment => payment.amount !== 0);
+          
+          // If no payment has a value, set the first payment to the invoice total
+          if (!hasPaymentValue) {
+            invoice_doc.payments[0].amount = invoice_doc.rounded_total || invoice_doc.grand_total;
+            console.log('Setting default payment amount for offline mode:', invoice_doc.payments[0].amount);
+          }
+        }
+        
         console.log('Final payment data:', invoice_doc.payments);
 
         // Double-check return invoice payments are negative
