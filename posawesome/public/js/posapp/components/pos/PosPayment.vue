@@ -132,19 +132,104 @@ async create_invoice(transactionId) {
   try {
     // Check if we're offline
     if (!navigator.onLine) {
+      // Pass the transactionId to handle_offline_invoice
       return await this.handle_offline_invoice(transactionId);
     }
 
     // Online invoice creation logic
-    const invoice = await this.submit_invoice(transactionId);
+    // Pass the transactionId to submit_invoice (assuming submit_invoice is adapted or already handles it)
+    const invoice = await this.submit_invoice(transactionId); 
     return invoice;
   } catch (error) {
     console.error('Error in create_invoice:', error);
+    // Ensure processing state is reset on error if this transaction was active
+    if (this.processingTransactionId === transactionId) {
+        this.isProcessing = false;
+        this.processingTransactionId = null;
+        if(this.processingTimeout) clearTimeout(this.processingTimeout);
+    }
     throw error;
   }
 },
 
-async submit_invoice(print) {
+async handle_offline_invoice(transactionId) {
+  // Ensure this is still the active transaction before proceeding
+  if (this.processingTransactionId !== transactionId) {
+    console.log('Transaction was superseded, aborting offline invoice handling');
+    return null;
+  }
+
+  console.log('Processing offline invoice with transaction ID:', transactionId);
+
+  try {
+    // Assuming this.invoice_doc is populated with the current invoice details
+    if (!this.invoice_doc) {
+      console.error('Invoice document is not available for offline saving.');
+      this.eventBus.emit('show_message', {
+        title: __('Invoice data is missing. Cannot save offline.'),
+        color: 'error',
+      });
+      return null;
+    }
+
+    // Prepare the invoice data for offline storage
+    // Ensure posa_transaction_id is set from the passed transactionId
+    const invoiceToSave = {
+      ...this.invoice_doc,
+      posa_transaction_id: transactionId, // Crucial for preventing duplicates
+      payments: this.process_payments(), // Assuming this prepares payment data correctly
+      // Add any other necessary fields for offline object, similar to prepare_invoice_data in Payments.vue
+      offline_pos_name: `OFFPOS-${transactionId}`, // Ensure unique offline name
+      offline_invoice: 1,
+      offline_sync_status: 'not_synced',
+      // Ensure all necessary fields from the original invoice_doc are included
+      // This might require a more robust way to clone/prepare this.invoice_doc
+      // For example, if 'items' or other nested objects need specific processing:
+      // items: this.invoice_doc.items.map(item => ({ ...item })), // Deep clone if necessary
+    };
+    
+    // Dynamically import saveInvoiceOffline from offline_db.js
+    const { saveInvoiceOffline } = await import('../../offline_db');
+    const savedInvoiceName = await saveInvoiceOffline(invoiceToSave);
+
+    if (savedInvoiceName) {
+      this.eventBus.emit('show_message', {
+        title: __('Invoice saved offline successfully'),
+        message: `ID: ${savedInvoiceName}`,
+        color: 'success',
+      });
+      this.eventBus.emit('payment_completed', {
+        success: true,
+        offline: true,
+        invoice_id: savedInvoiceName,
+        transactionId: transactionId,
+      });
+      this.close_dialog(); // Close payment dialog
+      this.eventBus.emit('clear_invoice'); // Clear current invoice view
+      return { name: savedInvoiceName, transactionId: transactionId }; // Return consistent with online flow
+    } else {
+      throw new Error('Failed to save invoice offline, saveInvoiceOffline returned null or undefined.');
+    }
+  } catch (error) {
+    console.error('Error saving invoice offline:', error);
+    this.eventBus.emit('show_message', {
+      title: __('Error saving invoice offline'),
+      message: error.message || 'Please try again.',
+      color: 'error',
+    });
+    // Do not re-throw the error here if you want submit_dialog to reset processing state
+    // Or, ensure submit_dialog's finally block correctly handles it.
+    return null; // Indicate failure
+  }
+  // Note: The processing state (isProcessing, processingTransactionId)
+  // should be reset by the calling function (submit_dialog) in its finally block
+  // to ensure it's always reset regardless of success or failure here.
+},
+
+async submit_invoice(transactionIdOrPrint) {
+  let transactionId = typeof transactionIdOrPrint === 'string' ? transactionIdOrPrint : this.invoice_doc.posa_transaction_id;
+  let print = typeof transactionIdOrPrint === 'boolean' ? transactionIdOrPrint : false; // Default print to false
+
   if (!this.validate_payments()) {
     return;
   }
@@ -189,11 +274,11 @@ async submit_invoice(print) {
         is_credit_sale: this.is_credit_sale,
         is_write_off_change: this.is_write_off_change,
         is_cashback: this.is_cashback,
-        transaction_id: this.invoice_doc.posa_transaction_id
+        transaction_id: transactionId
       }
     };
 
-    console.log('Submitting invoice with transaction ID:', this.invoice_doc.posa_transaction_id);
+    console.log('Submitting invoice with transaction ID:', transactionId);
 
     const result = await frappe.call({
       method: "posawesome.posawesome.api.posapp.submit_invoice",
@@ -213,7 +298,7 @@ async submit_invoice(print) {
           success: true,
           offline: false,
           invoice_id: result.message.name,
-          transaction_id: this.invoice_doc.posa_transaction_id
+          transaction_id: transactionId
         });
       } else {
         const draft = await frappe.call({
@@ -235,7 +320,7 @@ async submit_invoice(print) {
             offline: false,
             invoice_id: draft.message.name,
             draft: true,
-            transaction_id: this.invoice_doc.posa_transaction_id
+            transaction_id: transactionId
           });
         }
       }
