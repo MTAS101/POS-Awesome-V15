@@ -22,15 +22,15 @@ async handleOfflineSubmission() {
       return;
     }
 
-    // Import offline_db functions
-    const { saveInvoiceOffline } = await import('../../offline_db');
-    
-    // Add offline flags
-    this.invoice_doc.offline_pos_name = `OFFPOS${Date.now()}`;
+    // Generate unique offline_pos_name
+    this.invoice_doc.offline_pos_name = `OFFPOS${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     this.invoice_doc.offline_mode = true;
     this.invoice_doc.offline_sync_status = 'not_synced';
     this.invoice_doc.offline_submit = true;
 
+    // Import offline_db functions
+    const { saveInvoiceOffline } = await import('../../offline_db');
+    
     const result = await saveInvoiceOffline(this.invoice_doc);
     
     if (result) {
@@ -53,14 +53,24 @@ async handleOfflineSubmission() {
 
 // Update the submit_dialog method to handle offline mode
 async submit_dialog() {
-  if (this.isProcessing) {
-    console.log('Payment already in process, preventing duplicate submission');
+  // Prevent duplicate submissions
+  if (this.submissionLock || this.processingPayment) {
+    console.log('Payment submission locked or already processing');
     return;
   }
 
   try {
-    this.isProcessing = true;
+    this.submissionLock = true;
+    this.processingPayment = true;
     
+    // Add a small delay to prevent rapid double clicks
+    if (this.lastSubmissionTime && Date.now() - this.lastSubmissionTime < 2000) {
+      console.log('Preventing rapid resubmission');
+      return;
+    }
+    
+    this.lastSubmissionTime = Date.now();
+
     // Clear any existing timeout
     if (this.processingTimeout) {
       clearTimeout(this.processingTimeout);
@@ -68,7 +78,8 @@ async submit_dialog() {
 
     // Set a timeout to reset processing state after 30 seconds
     this.processingTimeout = setTimeout(() => {
-      this.isProcessing = false;
+      this.processingPayment = false;
+      this.submissionLock = false;
     }, 30000);
 
     // Check if we're offline
@@ -91,11 +102,14 @@ async submit_dialog() {
       color: 'error'
     });
   } finally {
-    // Clear timeout and reset state
+    // Clear timeout and reset states
     if (this.processingTimeout) {
       clearTimeout(this.processingTimeout);
     }
-    this.isProcessing = false;
+    setTimeout(() => {
+      this.processingPayment = false;
+      this.submissionLock = false;
+    }, 2000); // Add delay before allowing new submission
   }
 },
 
@@ -105,7 +119,10 @@ data() {
     processingTimeout: null,
     lastProcessedInvoiceId: null,
     isOffline: !navigator.onLine,
-    offlineListener: null
+    offlineListener: null,
+    submissionLock: false,
+    lastSubmissionTime: null,
+    processingPayment: false
   };
 },
 

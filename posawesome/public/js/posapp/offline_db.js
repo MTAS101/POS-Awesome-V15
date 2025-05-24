@@ -157,6 +157,11 @@ export async function saveInvoiceOffline(invoice) {
       // Sanitize the invoice to remove non-serializable data and circular references
       const sanitizedInvoice = sanitizeForStorage(invoice);
       
+      // Generate unique offline_pos_name if not exists
+      if (!sanitizedInvoice.offline_pos_name) {
+        sanitizedInvoice.offline_pos_name = `OFFPOS${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      }
+      
       // Add timestamp for sorting/tracking and set offline_submit flag to true
       const order = {
         ...sanitizedInvoice,
@@ -182,7 +187,11 @@ export async function saveInvoiceOffline(invoice) {
             // Also send a message to the service worker
             navigator.serviceWorker.controller?.postMessage({
               type: 'STORE_OFFLINE_ORDER',
-              payload: { id: request.result, timestamp: Date.now() }
+              payload: { 
+                id: request.result, 
+                timestamp: Date.now(),
+                offline_pos_name: order.offline_pos_name
+              }
             });
           });
         }
@@ -557,6 +566,28 @@ async function submitInvoice(invoice) {
     console.log('Server response:', responseData);
 
     if (responseData.message?.name) {
+      // Double check if invoice was created in the meantime
+      const doubleCheck = await checkIfInvoiceExists(invoice);
+      if (doubleCheck && doubleCheck.name !== responseData.message.name) {
+        console.warn('Duplicate invoice detected:', {
+          original: doubleCheck.name,
+          new: responseData.message.name
+        });
+        // Cancel the new invoice
+        await fetch(`/api/method/frappe.client.cancel`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Frappe-CSRF-Token': frappe.csrf_token
+          },
+          body: JSON.stringify({
+            doctype: 'Sales Invoice',
+            name: responseData.message.name
+          })
+        });
+        return doubleCheck;
+      }
+
       // Mark the invoice as synced in IndexedDB
       await markOrderSynced(invoice.id);
       
@@ -592,7 +623,66 @@ async function submitInvoice(invoice) {
 // Check if invoice already exists on server
 async function checkIfInvoiceExists(invoice) {
   try {
-    const response = await fetch(`/api/method/frappe.client.get_list`, {
+    // First check if this is a sales order conversion
+    if (invoice.order_id) {
+      const orderResponse = await fetch(`/api/method/frappe.client.get_list`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frappe-CSRF-Token': frappe.csrf_token
+        },
+        body: JSON.stringify({
+          doctype: 'Sales Invoice',
+          filters: {
+            order_id: invoice.order_id,
+            docstatus: ['!=', 2] // Not cancelled
+          },
+          fields: ['name', 'docstatus', 'order_id']
+        })
+      });
+
+      if (!orderResponse.ok) {
+        throw new Error('Failed to check existing order invoice');
+      }
+
+      const orderResult = await orderResponse.json();
+      if (orderResult.message && orderResult.message.length > 0) {
+        console.log('Invoice already exists for order:', invoice.order_id);
+        return orderResult.message[0];
+      }
+    }
+
+    // Then check by offline_pos_name
+    if (invoice.offline_pos_name) {
+      const response = await fetch(`/api/method/frappe.client.get_list`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Frappe-CSRF-Token': frappe.csrf_token
+        },
+        body: JSON.stringify({
+          doctype: 'Sales Invoice',
+          filters: {
+            offline_pos_name: invoice.offline_pos_name,
+            docstatus: ['!=', 2] // Not cancelled
+          },
+          fields: ['name', 'docstatus', 'offline_pos_name']
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to check existing invoice');
+      }
+
+      const result = await response.json();
+      if (result.message && result.message.length > 0) {
+        console.log('Invoice already exists with offline_pos_name:', invoice.offline_pos_name);
+        return result.message[0];
+      }
+    }
+
+    // Finally check by exact match of key fields
+    const keyFieldsResponse = await fetch(`/api/method/frappe.client.get_list`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -601,20 +691,25 @@ async function checkIfInvoiceExists(invoice) {
       body: JSON.stringify({
         doctype: 'Sales Invoice',
         filters: {
-          offline_pos_name: invoice.offline_pos_name,
-          docstatus: ['!=', 2] // Not cancelled
+          posting_date: invoice.posting_date,
+          customer: invoice.customer,
+          total: invoice.total,
+          grand_total: invoice.grand_total,
+          docstatus: ['!=', 2],
+          creation: ['>=', frappe.datetime.add_minutes(frappe.datetime.now_datetime(), -5)]
         },
-        fields: ['name', 'docstatus']
+        fields: ['name', 'docstatus', 'offline_pos_name', 'customer', 'grand_total']
       })
     });
 
-    if (!response.ok) {
-      throw new Error('Failed to check existing invoice');
+    if (!keyFieldsResponse.ok) {
+      throw new Error('Failed to check existing invoice by key fields');
     }
 
-    const result = await response.json();
-    if (result.message && result.message.length > 0) {
-      return result.message[0];
+    const keyFieldsResult = await keyFieldsResponse.json();
+    if (keyFieldsResult.message && keyFieldsResult.message.length > 0) {
+      console.log('Found matching recent invoice:', keyFieldsResult.message[0]);
+      return keyFieldsResult.message[0];
     }
 
     return null;
