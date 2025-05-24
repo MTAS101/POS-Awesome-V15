@@ -157,11 +157,13 @@ export async function saveInvoiceOffline(invoice) {
       // Sanitize the invoice to remove non-serializable data and circular references
       const sanitizedInvoice = sanitizeForStorage(invoice);
       
-      // Add timestamp for sorting/tracking
+      // Add timestamp for sorting/tracking and set offline_submit flag to true
+      // so invoice will be submitted when synced online, not saved as draft
       const order = {
         ...sanitizedInvoice,
         timestamp: Date.now(),
-        synced: false
+        synced: false,
+        offline_submit: true // Always set to true to ensure invoice is submitted when synced
       };
       
       const request = store.add(order);
@@ -443,18 +445,19 @@ export async function processPendingInvoices() {
       try {
         console.log('Processing order:', order.id);
         
-        // Check if this invoice should be submitted (not just saved as draft)
-        const shouldSubmit = order.offline_submit === true;
+        // All orders should be submitted, not saved as draft
+        // This ensures consistent behavior across the application
+        const shouldSubmit = true;
         
         // Server expects data in a specific format
         // The API is expecting a string that it will JSON.parse,
         // but we need to send a proper object wrapped in a data field
         const requestData = {
           data: JSON.stringify(order),
-          submit: shouldSubmit ? 1 : 0  // Add submit flag if this should be submitted
+          submit: 1 // Always submit invoices when syncing from offline mode
         };
         
-        console.log('Sending order with submit flag:', shouldSubmit);
+        console.log('Sending order with submit flag enabled');
         
         // Call the server API to process the order
         const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {

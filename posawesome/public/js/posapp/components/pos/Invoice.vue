@@ -1704,6 +1704,13 @@ export default {
           invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
           invoice_doc.is_pos = 1;
           invoice_doc.offline_submit = true; // Flag to indicate this should be submitted when synced
+          console.log('Invoice flagged for automatic submission when online');
+          
+          // Show info message about offline mode
+          this.eventBus.emit('show_message', {
+            title: __('You are offline. Invoice will be submitted automatically when online.'),
+            color: 'info'
+          });
         }
         
         // Check if this is a return invoice
