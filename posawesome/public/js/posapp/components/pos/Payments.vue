@@ -638,6 +638,9 @@ export default {
       sales_person: "",
       addresses: [],
       is_user_editing_paid_change: false,
+      isProcessing: false,
+      processingTimeout: null,
+      lastProcessedInvoiceId: null,
     };
   },
   computed: {
@@ -1563,9 +1566,206 @@ export default {
       
       return payments;
     },
+    debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    },
+    async submit_dialog() {
+      if (this.isProcessing) {
+        console.log('Payment already in process, skipping duplicate submission');
+        return;
+      }
+
+      try {
+        this.isProcessing = true;
+        
+        // Clear any existing timeout
+        if (this.processingTimeout) {
+          clearTimeout(this.processingTimeout);
+        }
+
+        // Set a timeout to reset processing state after 30 seconds
+        this.processingTimeout = setTimeout(() => {
+          this.isProcessing = false;
+        }, 30000);
+
+        const result = await this.process_payment();
+        
+        if (result && result.invoice_id) {
+          this.lastProcessedInvoiceId = result.invoice_id;
+          console.log('Payment processed successfully:', result.invoice_id);
+        }
+      } catch (error) {
+        console.error('Error in submit_dialog:', error);
+        frappe.show_alert({
+          message: __('Error processing payment. Please try again.'),
+          indicator: 'red'
+        });
+      } finally {
+        // Clear timeout and reset state
+        if (this.processingTimeout) {
+          clearTimeout(this.processingTimeout);
+        }
+        this.isProcessing = false;
+      }
+    },
+    async process_payment() {
+      if (this.isProcessing) {
+        console.log('Payment already in process, skipping');
+        return;
+      }
+
+      try {
+        this.isProcessing = true;
+        const invoice = await this.create_invoice();
+        
+        if (invoice && invoice.name) {
+          // Check if this invoice was already processed
+          if (this.lastProcessedInvoiceId === invoice.name) {
+            console.log('Invoice already processed:', invoice.name);
+            return null;
+          }
+
+          this.lastProcessedInvoiceId = invoice.name;
+          
+          // Emit payment completed event
+          this.eventBus.emit('payment_completed', {
+            success: true,
+            invoice_id: invoice.name
+          });
+
+          return { success: true, invoice_id: invoice.name };
+        }
+        return null;
+      } catch (error) {
+        console.error('Error in process_payment:', error);
+        throw error;
+      } finally {
+        this.isProcessing = false;
+      }
+    },
+    async create_invoice() {
+      if (this.isProcessing) {
+        console.log('Invoice creation already in process, skipping');
+        return;
+      }
+
+      try {
+        this.isProcessing = true;
+        
+        // Check if we're offline
+        if (!navigator.onLine) {
+          return await this.handle_offline_invoice();
+        }
+
+        // Online invoice creation logic
+        const invoice = await this.submit_invoice();
+        return invoice;
+      } catch (error) {
+        console.error('Error in create_invoice:', error);
+        throw error;
+      } finally {
+        this.isProcessing = false;
+      }
+    },
+    async handle_offline_invoice() {
+      try {
+        const { saveInvoiceOffline } = await import('../../offline_db');
+        const invoice = this.prepare_invoice_data();
+        
+        const result = await saveInvoiceOffline(invoice);
+        if (result) {
+          console.log('Invoice saved offline successfully');
+          this.eventBus.emit('show_message', {
+            title: __('Invoice saved offline successfully'),
+            color: 'success'
+          });
+          
+          this.reset_payments();
+          this.dialog = false;
+          
+          this.eventBus.emit('payment_completed', {
+            success: true,
+            offline: true,
+            invoice_id: result
+          });
+          
+          return { name: result };
+        }
+        throw new Error('Failed to save invoice offline');
+      } catch (error) {
+        console.error('Error handling offline invoice:', error);
+        throw error;
+      }
+    },
+    prepare_invoice_data() {
+      const invoice = {
+        doctype: 'Sales Invoice',
+        is_pos: 1,
+        pos_profile: this.pos_profile.name,
+        company: this.pos_profile.company,
+        posting_date: frappe.datetime.now_date(),
+        posting_time: frappe.datetime.now_time(),
+        customer: this.customer,
+        items: this.items.map(item => ({
+          item_code: item.item_code,
+          item_name: item.item_name,
+          description: item.description,
+          qty: item.qty,
+          rate: item.rate,
+          amount: item.amount,
+          uom: item.uom,
+          conversion_factor: item.conversion_factor,
+          stock_uom: item.stock_uom,
+          price_list_rate: item.price_list_rate,
+          discount_percentage: item.discount_percentage,
+          discount_amount: item.discount_amount,
+          stock_qty: item.stock_qty,
+          warehouse: item.warehouse,
+          batch_no: item.batch_no,
+          serial_no: item.serial_no,
+          cost_center: this.pos_profile.cost_center
+        })),
+        payments: this.payments.map(payment => ({
+          mode_of_payment: payment.mode_of_payment,
+          amount: payment.amount,
+          account: payment.account,
+          type: payment.type,
+          default: payment.default ? 1 : 0
+        })),
+        taxes: this.taxes || [],
+        total: this.total,
+        grand_total: this.grand_total,
+        rounded_total: this.rounded_total,
+        base_rounded_total: this.base_rounded_total,
+        base_grand_total: this.base_grand_total,
+        discount_amount: this.discount_amount,
+        additional_discount_percentage: this.additional_discount_percentage,
+        posa_pos_opening_shift: this.pos_profile.pos_opening_shift,
+        posa_is_printed: 0,
+        update_stock: 1
+      };
+
+      // Add offline specific flags
+      if (!navigator.onLine) {
+        invoice.offline_pos_name = `OFFPOS${Date.now()}`;
+        invoice.offline_invoice = 1;
+        invoice.offline_sync_status = 'not_synced';
+      }
+
+      return invoice;
+    }
   },
   created() {
     document.addEventListener("keydown", this.shortPay.bind(this));
+    this.submit_dialog = this.debounce(this.submit_dialog, 1000);
   },
   mounted() {
     this.$nextTick(() => {
