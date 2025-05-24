@@ -48,6 +48,11 @@ app_include_meta = [
     '<link rel="manifest" href="/manifest.json">'
 ]
 
+# Set Service-Worker-Allowed header for service worker
+web_server_middlewares = [
+    "posawesome.posawesome.middleware.service_worker_middleware.service_worker_middleware"
+]
+
 # Set up a symlink for manifest.json in the site directory
 website_route_rules = [
     {"from_route": "/manifest.json", "to_route": "assets/posawesome/manifest.json"}
