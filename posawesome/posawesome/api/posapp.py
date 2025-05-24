@@ -706,139 +706,163 @@ def update_invoice(data):
 
 @frappe.whitelist()
 def submit_invoice(invoice, data):
-    data = json.loads(data)
-    invoice = json.loads(invoice)
-    invoice_doc = frappe.get_doc("Sales Invoice", invoice.get("name"))
-    invoice_doc.update(invoice)
-    if invoice.get("posa_delivery_date"):
-        invoice_doc.update_stock = 0
-    mop_cash_list = [
-        i.mode_of_payment
-        for i in invoice_doc.payments
-        if "cash" in i.mode_of_payment.lower() and i.type == "Cash"
-    ]
-    if len(mop_cash_list) > 0:
-        cash_account = get_bank_cash_account(mop_cash_list[0], invoice_doc.company)
-    else:
-        cash_account = {
-            "account": frappe.get_value(
-                "Company", invoice_doc.company, "default_cash_account"
+    """Submit a POS invoice with idempotency handling"""
+    try:
+        invoice_doc = json.loads(invoice) if isinstance(invoice, str) else invoice
+        payment_data = json.loads(data) if isinstance(data, str) else data
+        
+        # Check for idempotency key
+        idempotency_key = invoice_doc.get('idempotency_key')
+        if idempotency_key:
+            existing_doc = frappe.db.get_value(
+                'POS Awesome Sync Log',
+                {'idempotency_key': idempotency_key},
+                ['invoice_name', 'status'],
+                as_dict=1
             )
-        }
-
-    # Update remarks with items details
-    items = []
-    for item in invoice_doc.items:
-        if item.item_name and item.rate and item.qty:
-            total = item.rate * item.qty
-            items.append(f"{item.item_name} - Rate: {item.rate}, Qty: {item.qty}, Amount: {total}")
-    
-    # Add the grand total at the end of remarks
-    grand_total = f"\nGrand Total: {invoice_doc.grand_total}"
-    items.append(grand_total)
-    
-    invoice_doc.remarks = "\n".join(items)
-
-    # creating advance payment
-    if data.get("credit_change"):
-        advance_payment_entry = frappe.get_doc(
-            {
-                "doctype": "Payment Entry",
-                "mode_of_payment": "Cash",
-                "paid_to": cash_account["account"],
-                "payment_type": "Receive",
-                "party_type": "Customer",
-                "party": invoice_doc.get("customer"),
-                "paid_amount": invoice_doc.get("credit_change"),
-                "received_amount": invoice_doc.get("credit_change"),
-                "company": invoice_doc.get("company"),
-            }
-        )
-
-        advance_payment_entry.flags.ignore_permissions = True
-        frappe.flags.ignore_account_permission = True
-        advance_payment_entry.save()
-        advance_payment_entry.submit()
-
-    # calculating cash
-    total_cash = 0
-    if data.get("redeemed_customer_credit"):
-        total_cash = invoice_doc.total - float(data.get("redeemed_customer_credit"))
-
-    is_payment_entry = 0
-    if data.get("redeemed_customer_credit"):
-        for row in data.get("customer_credit_dict"):
-            if row["type"] == "Advance" and row["credit_to_redeem"]:
-                advance = frappe.get_doc("Payment Entry", row["credit_origin"])
-
-                advance_payment = {
-                    "reference_type": "Payment Entry",
-                    "reference_name": advance.name,
-                    "remarks": advance.remarks,
-                    "advance_amount": advance.unallocated_amount,
-                    "allocated_amount": row["credit_to_redeem"],
+            
+            if existing_doc:
+                return {
+                    'status': 1 if existing_doc.status == 'Success' else 0,
+                    'name': existing_doc.invoice_name,
+                    'is_duplicate': True
                 }
+        
+        # Create sync log entry
+        sync_log = frappe.get_doc({
+            'doctype': 'POS Awesome Sync Log',
+            'idempotency_key': idempotency_key,
+            'offline_pos_name': invoice_doc.get('offline_pos_name'),
+            'request_data': json.dumps({
+                'invoice': invoice_doc,
+                'payment_data': payment_data
+            }),
+            'status': 'Processing'
+        })
+        sync_log.insert(ignore_permissions=True)
+        
+        try:
+            # Process the invoice
+            doc = frappe.get_doc({
+                "doctype": "Sales Invoice",
+                **invoice_doc
+            })
+            
+            # Set payments
+            if payment_data.get('payments'):
+                doc.payments = []
+                for payment in payment_data['payments']:
+                    doc.append('payments', payment)
+            
+            # Handle customer credit if applicable
+            if payment_data.get('redeemed_customer_credit'):
+                handle_customer_credit(doc, payment_data)
+            
+            # Save and submit
+            doc.insert(ignore_permissions=True)
+            if invoice_doc.get('offline_submit', False):
+                doc.submit()
+            
+            # Update sync log with success
+            sync_log.invoice_name = doc.name
+            sync_log.status = 'Success'
+            sync_log.error_message = ''
+            sync_log.save(ignore_permissions=True)
+            
+            return {
+                'status': 1 if doc.docstatus == 1 else 0,
+                'name': doc.name
+            }
+            
+        except Exception as e:
+            # Update sync log with error
+            sync_log.status = 'Failed'
+            sync_log.error_message = str(e)
+            sync_log.save(ignore_permissions=True)
+            raise
+            
+    except Exception as e:
+        frappe.log_error(f"Error in submit_invoice: {str(e)}", "POS Awesome Submit Invoice")
+        raise
 
-                invoice_doc.append("advances", advance_payment)
-                invoice_doc.is_pos = 0
-                is_payment_entry = 1
+def handle_customer_credit(doc, payment_data):
+    """Handle customer credit redemption"""
+    if not payment_data.get('customer_credit_dict'):
+        return
+        
+    for credit in payment_data['customer_credit_dict']:
+        if not credit.get('credit_to_redeem'):
+            continue
+            
+        doc.append('pos_awesome_credit_payment', {
+            'credit_origin': credit['credit_origin'],
+            'credit_amount': credit['credit_to_redeem']
+        })
 
-    payments = invoice_doc.payments
-
-    # if frappe.get_value("POS Profile", invoice_doc.pos_profile, "posa_auto_set_batch"):
-    #     set_batch_nos(invoice_doc, "warehouse", throw=True)
-    set_batch_nos_for_bundels(invoice_doc, "warehouse", throw=True)
-
-    invoice_doc.flags.ignore_permissions = True
-    frappe.flags.ignore_account_permission = True
-    invoice_doc.posa_is_printed = 1
-    invoice_doc.save()
-
-    if data.get("due_date"):
-        frappe.db.set_value(
-            "Sales Invoice",
-            invoice_doc.name,
-            "due_date",
-            data.get("due_date"),
-            update_modified=False,
-        )
-
-    if frappe.get_value(
-        "POS Profile",
-        invoice_doc.pos_profile,
-        "posa_allow_submissions_in_background_job",
-    ):
-        invoices_list = frappe.get_all(
-            "Sales Invoice",
-            filters={
-                "posa_pos_opening_shift": invoice_doc.posa_pos_opening_shift,
-                "docstatus": 0,
-                "posa_is_printed": 1,
+# Create POS Awesome Sync Log DocType if not exists
+def create_sync_log_doctype():
+    if not frappe.db.exists('DocType', 'POS Awesome Sync Log'):
+        doc = frappe.new_doc('DocType')
+        doc.name = 'POS Awesome Sync Log'
+        doc.module = 'POSAwesome'
+        doc.custom = 1
+        doc.fields = [
+            {
+                'fieldname': 'idempotency_key',
+                'label': 'Idempotency Key',
+                'fieldtype': 'Data',
+                'unique': 1,
+                'reqd': 1
             },
-        )
-        for invoice in invoices_list:
-            enqueue(
-                method=submit_in_background_job,
-                queue="short",
-                timeout=1000,
-                is_async=True,
-                kwargs={
-                    "invoice": invoice.name,
-                    "data": data,
-                    "is_payment_entry": is_payment_entry,
-                    "total_cash": total_cash,
-                    "cash_account": cash_account,
-                    "payments": payments,
-                },
-            )
-    else:
-        invoice_doc.submit()
-        redeeming_customer_credit(
-            invoice_doc, data, is_payment_entry, total_cash, cash_account, payments
-        )
+            {
+                'fieldname': 'offline_pos_name',
+                'label': 'Offline POS Name',
+                'fieldtype': 'Data'
+            },
+            {
+                'fieldname': 'invoice_name',
+                'label': 'Invoice Name',
+                'fieldtype': 'Data'
+            },
+            {
+                'fieldname': 'request_data',
+                'label': 'Request Data',
+                'fieldtype': 'Code',
+                'options': 'JSON'
+            },
+            {
+                'fieldname': 'status',
+                'label': 'Status',
+                'fieldtype': 'Select',
+                'options': 'Processing\nSuccess\nFailed'
+            },
+            {
+                'fieldname': 'error_message',
+                'label': 'Error Message',
+                'fieldtype': 'Text'
+            },
+            {
+                'fieldname': 'creation',
+                'label': 'Creation',
+                'fieldtype': 'Datetime',
+                'read_only': 1
+            }
+        ]
+        doc.permissions = [
+            {
+                'role': 'System Manager',
+                'read': 1,
+                'write': 1,
+                'create': 1,
+                'delete': 1
+            }
+        ]
+        doc.insert()
 
-    return {"name": invoice_doc.name, "status": invoice_doc.docstatus}
-
+# Call this during installation or upgrade
+def setup_idempotency():
+    create_sync_log_doctype()
+    
 
 def set_batch_nos_for_bundels(doc, warehouse_field, throw=False):
     """Automatically select `batch_no` for outgoing items in item table"""
