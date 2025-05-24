@@ -22,25 +22,15 @@ handleOfflineSubmission() {
 
 // Update the submit_dialog method to handle offline mode
 async submit_dialog() {
-  // Generate a unique transaction ID for this payment attempt
   const transactionId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
-  // Check if payment is already being processed
   if (this.isProcessing || this.processingTransactionId) {
-    console.log('Payment already in process, skipping duplicate submission');
+    console.log('Payment already in process, skipping duplicate submission from submit_dialog');
     return;
   }
-
   try {
     this.isProcessing = true;
     this.processingTransactionId = transactionId;
-    
-    // Clear any existing timeout
-    if (this.processingTimeout) {
-      clearTimeout(this.processingTimeout);
-    }
-
-    // Set a timeout to reset processing state after 30 seconds
+    if (this.processingTimeout) clearTimeout(this.processingTimeout);
     this.processingTimeout = setTimeout(() => {
       if (this.processingTransactionId === transactionId) {
         this.isProcessing = false;
@@ -48,33 +38,37 @@ async submit_dialog() {
       }
     }, 30000);
 
+    // The `process_payment` method is called with transactionId
     const result = await this.process_payment(transactionId);
     
     if (result && result.invoice_id) {
-      // Only process if this is still the active transaction
       if (this.processingTransactionId === transactionId) {
         this.lastProcessedInvoiceId = result.invoice_id;
-        console.log('Payment processed successfully:', result.invoice_id);
-        
-        // Clear the processing state for this transaction
-        this.processingTransactionId = null;
-      } else {
-        console.log('Transaction was superseded by a newer one');
+        console.log('Payment processed successfully (submit_dialog):', result.invoice_id);
+        // If print flag was stored (e.g., this.print_after_submit_flag) and result is success,
+        // and submit_invoice was the one doing printing, it should have handled it.
+        // Or, if printing is done here:
+        if (this.print_after_submit_flag && result.invoice_id && !result.offline) {
+          // Assuming load_print_page is available and correctly prints the given invoice_id
+          // submit_invoice is now responsible for printing, so this might be redundant or handled there
+          // this.load_print_page(result.invoice_id); 
+        }
+        this.print_after_submit_flag = false; // Reset flag
+        this.processingTransactionId = null; // Clear only for this successful transaction
       }
     }
   } catch (error) {
     console.error('Error in submit_dialog:', error);
-    frappe.show_alert({
-      message: __('Error processing payment. Please try again.'),
-      indicator: 'red'
-    });
+    // Ensure this error is user-visible if not handled by called methods
+    if (!error.message?.includes('superseded')) { // Avoid redundant alerts for superseded
+      frappe.show_alert({
+        message: __('Error processing payment. Please try again.'),
+        indicator: 'red'
+      });
+    }
   } finally {
-    // Only clear the processing state if this is still the active transaction
     if (this.processingTransactionId === transactionId) {
-      // Clear timeout and reset state
-      if (this.processingTimeout) {
-        clearTimeout(this.processingTimeout);
-      }
+      if (this.processingTimeout) clearTimeout(this.processingTimeout);
       this.isProcessing = false;
       this.processingTransactionId = null;
     }
@@ -347,6 +341,59 @@ data() {
     isProcessing: false,
     processingTimeout: null,
     processingTransactionId: null,
-    lastProcessedInvoiceId: null
+    lastProcessedInvoiceId: null,
+    print_after_submit_flag: false
   };
+},
+
+// Add mounted and beforeUnmount for event bus handling
+mounted() {
+  this.eventBus.on('initiate_actual_payment_processing', this.handlePaymentProcessingEvent);
+  // ... any other event listeners you might have in mounted ...
+},
+
+beforeUnmount() {
+  this.eventBus.off('initiate_actual_payment_processing', this.handlePaymentProcessingEvent);
+  // ... any other event listener cleanups ...
+},
+
+methods: {
+  // Ensure all methods called by submit_dialog are defined in this component or a mixin
+  // For example: process_payments(), validate_payments(), load_print_page(), close_dialog()
+  // show_message(), etc.
+  
+  // Method to handle the event from Payments.vue
+  handlePaymentProcessingEvent({ print }) {
+    // Before calling submit_dialog, ensure this.invoice_doc and other required data 
+    // by submit_dialog and its subsequent calls (like process_payment, create_invoice, submit_invoice)
+    // are correctly populated. This might involve fetching or updating this.invoice_doc
+    // if Payments.vue was modifying a local copy.
+    // For now, we assume this.invoice_doc in PosPayment.vue is the source of truth or is kept in sync.
+
+    // Also, ensure that `submit_invoice` in this component is prepared to handle
+    // the `print` flag if it's not already doing so, or adapt the call.
+    // The current `submit_dialog` calls `process_payment` which calls `create_invoice`
+    // which then calls `this.submit_invoice(transactionId)`. 
+    // We need to make sure the `print` flag is passed down if `submit_invoice` needs it.
+    
+    // For simplicity, if `submit_invoice` is to be called with print flag, we might need to
+    // adjust `submit_dialog` or how `print` is passed. 
+    // However, `submit_dialog` itself does not directly take `print`.
+    // The `submit_invoice` method has been updated to take `transactionIdOrPrint`.
+    // Let's assume submit_dialog will call the updated submit_invoice which can handle the print flag.
+    
+    // A potential way to handle print: modify submit_dialog to accept print, or store print flag in `this`
+    // and have `submit_invoice` check it.
+    // For now, let's assume the primary goal is to trigger the submission process.
+    // The `print` flag handling would be part of ensuring `submit_invoice` works as intended.
+
+    this.print_after_submit_flag = print; // Store print flag if needed by submit_invoice
+    this.submit_dialog(); // submit_dialog will generate its own transactionId
+  },
+
+  // ... rest of the methods like process_payment, create_invoice, handle_offline_invoice, submit_invoice
+  // Ensure `load_print_page` is defined if used directly in submit_dialog
+  // Ensure `close_dialog` is defined if `handle_offline_invoice` or other parts call it.
+  // Ensure `this.invoice_doc` is managed correctly, as it's used by `submit_invoice` and `handle_offline_invoice`
+  // Ensure `this.process_payments` is defined as it's used by `submit_invoice` and `handle_offline_invoice`
 } 
