@@ -544,6 +544,8 @@ def update_invoice(data):
     
     # Check for submit flag
     should_submit = frappe.form_dict.get("submit")
+    # Check for include_payments flag
+    include_payments = frappe.form_dict.get("include_payments")
     
     if data.get("name"):
         invoice_doc = frappe.get_doc("Sales Invoice", data.get("name"))
@@ -615,6 +617,19 @@ def update_invoice(data):
         
         invoice_doc.remarks = "\n".join(items)
     
+    # Make sure payments are properly included for POS invoices
+    if include_payments and invoice_doc.is_pos == 1:
+        print(f"Including payments in invoice: {include_payments}")
+        invoice_doc.set_missing_values()
+        
+        # If this is a POS invoice with payments, ensure is_pos is set
+        # This will make sure that payments are processed correctly
+        invoice_doc.is_pos = 1
+        
+        # Make sure update_stock is set to 1 for offline POS invoices
+        if data.get("offline_pos_name") or data.get("offline_submit"):
+            invoice_doc.update_stock = 1
+    
     invoice_doc.flags.ignore_permissions = True
     frappe.flags.ignore_account_permission = True
     invoice_doc.docstatus = 0
@@ -627,6 +642,11 @@ def update_invoice(data):
             invoice_doc.docstatus = 1
             invoice_doc.update_stock = 1  # Ensure stock is updated for offline orders
             invoice_doc.posa_is_printed = 1
+            
+            # For offline invoices, make sure is_pos is set correctly before submit
+            if data.get("offline_pos_name") or data.get("offline_submit"):
+                invoice_doc.is_pos = 1
+                
             invoice_doc.submit()
             frappe.db.commit()
             frappe.msgprint(_("Invoice {0} successfully submitted").format(invoice_doc.name))

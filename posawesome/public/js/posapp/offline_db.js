@@ -441,23 +441,33 @@ export async function processPendingInvoices() {
     
     console.log(`Processing ${pendingOrders.length} pending orders`);
     
+    // Create a Set to track orders we've already tried to process in this batch
+    // This helps prevent duplicate processing if there's an issue
+    const processedOrderIds = new Set();
+    
     for (const order of pendingOrders) {
       try {
-        console.log('Processing order:', order.id);
+        // Skip if we've already processed this order in this batch
+        if (processedOrderIds.has(order.id)) {
+          console.log('Skipping already processed order:', order.id);
+          continue;
+        }
         
-        // All orders should be submitted, not saved as draft
-        // This ensures consistent behavior across the application
-        const shouldSubmit = true;
+        // Add to processed set
+        processedOrderIds.add(order.id);
+        
+        console.log('Processing order:', order.id);
         
         // Server expects data in a specific format
         // The API is expecting a string that it will JSON.parse,
         // but we need to send a proper object wrapped in a data field
         const requestData = {
           data: JSON.stringify(order),
-          submit: 1 // Always submit invoices when syncing from offline mode
+          submit: 1, // Always submit invoices when syncing from offline mode
+          include_payments: 1 // Make sure payments are included in the submitted invoice
         };
         
-        console.log('Sending order with submit flag enabled');
+        console.log('Sending order with submit flag enabled and include_payments flag');
         
         // Call the server API to process the order
         const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
