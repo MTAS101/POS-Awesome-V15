@@ -59,6 +59,15 @@
           <v-card-actions v-if="error || complete">
             <v-spacer></v-spacer>
             <v-btn
+              v-if="error && retryCount >= 2"
+              color="warning"
+              variant="elevated"
+              @click="startEmergencyMode"
+              class="mr-2"
+            >
+              {{ __("Emergency Mode") }}
+            </v-btn>
+            <v-btn
               v-if="error"
               color="primary"
               variant="elevated"
@@ -83,7 +92,7 @@
 </template>
 
 <script>
-import { startBootstrap, getBootstrapStatus, isBootstrapComplete, initOfflineStores, checkBootstrapNeeded, getDetailedLog } from '../offline_bootstrap';
+import { startBootstrap, getBootstrapStatus, isBootstrapComplete, initOfflineStores, checkBootstrapNeeded, getDetailedLog, emergencyDatabaseReset, quickBootstrap } from '../offline_bootstrap';
 
 export default {
   name: 'OfflineDataLoader',
@@ -109,7 +118,8 @@ export default {
       stuckAtProgress: null,
       stuckDuration: 0,
       debugMode: false,
-      debugLog: []
+      debugLog: [],
+      emergencyMode: false
     };
   },
   methods: {
@@ -139,7 +149,7 @@ export default {
         this.logDebug('Starting bootstrap initialization');
         
         // If we've already tried multiple times, force a complete reset
-        if (this.retryCount >= 2) {
+        if (this.retryCount >= 2 || this.emergencyMode) {
           this.details = __('Attempting recovery after previous failures...');
           this.logDebug('Multiple retries detected, performing full reset');
           
@@ -169,6 +179,40 @@ export default {
           this.details = __('Performing deep cleanup...');
           await new Promise(resolve => setTimeout(resolve, 2000));
           this.logDebug('Deep cleanup completed');
+          
+          // If in emergency mode, try quick bootstrap
+          if (this.emergencyMode) {
+            this.logDebug('Starting emergency quick bootstrap');
+            this.details = __('Using emergency mode with minimal data...');
+            
+            try {
+              const result = await quickBootstrap(this.pos_profile);
+              
+              if (result) {
+                // Quick bootstrap successful
+                this.loading = false;
+                this.complete = true;
+                this.progress = 100;
+                this.status_message = __('Emergency data ready');
+                this.details = __('Minimal data has been loaded for basic operation. Full data sync will be attempted next time.');
+                this.logDebug('Emergency bootstrap completed successfully');
+                
+                // Clear timeout
+                if (this.progressTimeout) {
+                  clearTimeout(this.progressTimeout);
+                  this.progressTimeout = null;
+                }
+                
+                // Emit completion event
+                this.$emit('bootstrap-progress', 100);
+                return;
+              } else {
+                this.logDebug('Emergency bootstrap failed, will try regular bootstrap');
+              }
+            } catch (emergencyError) {
+              this.logDebug(`Emergency bootstrap error: ${emergencyError.message}`);
+            }
+          }
         }
         
         // Initialize database
@@ -261,6 +305,7 @@ export default {
           this.status_message = __('Offline data ready');
           this.details = __('All master data has been downloaded and verified');
           this.retryCount = 0; // Reset retry count on success
+          this.emergencyMode = false; // Reset emergency mode
           this.logDebug('Bootstrap completed successfully');
           
           // Emit completion event
@@ -274,6 +319,11 @@ export default {
           this.details = __('Please check your connection and try again');
           this.retryCount++; // Increment retry count
           this.logDebug(`Bootstrap failed: ${status.error}`);
+          
+          // If retried multiple times, suggest emergency mode
+          if (this.retryCount >= 2) {
+            this.details = __('Multiple failures occurred. You can try emergency mode to load minimal data.');
+          }
           
           // Show detailed log in debug mode
           if (this.debugMode) {
@@ -302,6 +352,11 @@ export default {
           this.details = __('Network error. Check your internet connection and try again.');
         } else if (error.message.includes('timeout')) {
           this.details = __('Operation timed out. Your browser may be restricting background operations.');
+        }
+        
+        // If retried multiple times, suggest emergency mode
+        if (this.retryCount >= 2) {
+          this.details += ' ' + __('You can try emergency mode to load minimal data.');
         }
         
         // Show detailed log in debug mode
@@ -335,7 +390,7 @@ export default {
           this.loading = false;
           this.error = error.message;
           this.status_message = __('Operation timed out');
-          this.details = __('The database operation is taking too long. Please try again or restart your browser.');
+          this.details = __('The database operation is taking too long. Please try again or use emergency mode for minimal data.');
           this.retryCount++;
           
           // Clear interval
@@ -510,8 +565,22 @@ export default {
       
       // Ask user to confirm clear database on retry
       if (this.retryCount >= 2) {
-        if (confirm(__('Multiple attempts have failed. Would you like to completely reset the offline database? This will clear all cached data.'))) {
-          this.logDebug('User confirmed database reset, starting fresh bootstrap');
+        const options = [
+          __('Try again normally'),
+          __('Reset database and try again'),
+          __('Use emergency mode (minimal data)')
+        ];
+        
+        const selectedOption = confirm(__('Multiple attempts have failed. How would you like to proceed?') + '\n\n' +
+          '1. ' + options[0] + '\n' +
+          '2. ' + options[1] + '\n' +
+          '3. ' + options[2] + '\n\n' +
+          __('Enter 1, 2, or 3:'));
+        
+        if (selectedOption === '3') {
+          // Emergency mode
+          this.logDebug('User selected emergency mode');
+          this.emergencyMode = true;
           
           // Turn on debug mode after multiple failures
           this.debugMode = true;
@@ -520,7 +589,25 @@ export default {
           this.loading = true;
           this.error = null;
           this.progress = 2;
-          this.status_message = __('Resetting offline database...');
+          this.status_message = __('Preparing emergency mode...');
+          this.details = __('Loading minimal data for basic operation...');
+          
+          // Use setTimeout to allow UI to update before starting potentially slow operation
+          setTimeout(() => {
+            this.initializeBootstrap();
+          }, 500);
+        } else if (selectedOption === '2') {
+          // Reset database
+          this.logDebug('User selected database reset');
+          
+          // Turn on debug mode after multiple failures
+          this.debugMode = true;
+          
+          // Show loading state
+          this.loading = true;
+          this.error = null;
+          this.progress = 2;
+          this.status_message = __('Resetting database...');
           this.details = __('Clearing existing data...');
           
           // Use setTimeout to allow UI to update before starting potentially slow operation
@@ -529,6 +616,7 @@ export default {
           }, 500);
         } else {
           // Just retry without clearing database
+          this.logDebug('User selected normal retry');
           this.initializeBootstrap();
         }
       } else {
@@ -542,6 +630,22 @@ export default {
       if (this.debugMode) {
         this.debugLog = getDetailedLog();
       }
+    },
+    
+    startEmergencyMode() {
+      this.emergencyMode = true;
+      this.debugMode = true;
+      this.retryCount = 3; // Force a full reset
+      
+      // Show loading state
+      this.loading = true;
+      this.error = null;
+      this.progress = 2;
+      this.status_message = __('Starting emergency mode...');
+      this.details = __('Attempting to load minimal data...');
+      
+      // Start bootstrap
+      this.initializeBootstrap();
     }
   },
   mounted() {
@@ -553,6 +657,11 @@ export default {
       // Ctrl+Shift+D to toggle debug mode
       if (event.ctrlKey && event.shiftKey && event.key === 'D') {
         this.toggleDebugMode();
+      }
+      
+      // Ctrl+Shift+E to trigger emergency mode
+      if (event.ctrlKey && event.shiftKey && event.key === 'E') {
+        this.startEmergencyMode();
       }
     });
   },

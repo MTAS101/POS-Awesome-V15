@@ -40,6 +40,158 @@ function logDebug(message) {
 }
 
 /**
+ * EMERGENCY DIRECT INDEXEDDB ACCESS
+ * This is a fallback method to directly access IndexedDB
+ * when the regular approach fails
+ */
+export async function emergencyDatabaseReset() {
+  logDebug('EMERGENCY: Attempting direct IndexedDB reset');
+  
+  return new Promise((resolve, reject) => {
+    // Force close any active connections
+    if (activeConnection) {
+      try {
+        activeConnection.close();
+        activeConnection = null;
+        logDebug('EMERGENCY: Closed active connection');
+      } catch (e) {
+        logDebug(`EMERGENCY: Error closing connection: ${e.message}`);
+      }
+    }
+    
+    // Try to delete the database directly
+    const deleteRequest = window.indexedDB.deleteDatabase('posawesome-offline-db');
+    
+    deleteRequest.onsuccess = () => {
+      logDebug('EMERGENCY: Database deleted successfully');
+      
+      // Now create a fresh database with minimal configuration
+      const openRequest = window.indexedDB.open('posawesome-offline-db', REQUIRED_DB_VERSION);
+      
+      openRequest.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        logDebug('EMERGENCY: Creating minimal database structure');
+        
+        // Create minimal stores
+        if (!db.objectStoreNames.contains(CUSTOMERS_STORE)) {
+          db.createObjectStore(CUSTOMERS_STORE, { keyPath: 'name' });
+        }
+        
+        if (!db.objectStoreNames.contains(ITEMS_STORE)) {
+          db.createObjectStore(ITEMS_STORE, { keyPath: 'name' });
+        }
+        
+        if (!db.objectStoreNames.contains(TAXES_STORE)) {
+          db.createObjectStore(TAXES_STORE, { keyPath: 'name' });
+        }
+        
+        if (!db.objectStoreNames.contains(BOOTSTRAP_INFO_STORE)) {
+          db.createObjectStore(BOOTSTRAP_INFO_STORE, { keyPath: 'id' });
+        }
+      };
+      
+      openRequest.onsuccess = (event) => {
+        const db = event.target.result;
+        logDebug('EMERGENCY: Database created successfully');
+        activeConnection = db;
+        resolve(db);
+      };
+      
+      openRequest.onerror = (event) => {
+        logDebug(`EMERGENCY: Failed to create database: ${event.target.error}`);
+        reject(new Error('Emergency database creation failed'));
+      };
+    };
+    
+    deleteRequest.onerror = (event) => {
+      logDebug(`EMERGENCY: Failed to delete database: ${event.target.error}`);
+      reject(new Error('Emergency database deletion failed'));
+    };
+  });
+}
+
+/**
+ * Alternative simplified bootstrap method that skips most checks
+ * To be used when normal bootstrap fails
+ */
+export async function quickBootstrap(posProfile) {
+  try {
+    logDebug('Starting quick bootstrap with minimal data');
+    updateBootstrapStatus('Quick bootstrap in progress...', 10);
+    
+    // Use emergency database reset
+    const db = await emergencyDatabaseReset();
+    
+    // Get only a small amount of essential data
+    try {
+      updateBootstrapStatus('Getting minimal customer data...', 20);
+      const miniCustomerResponse = await frappe.call({
+        method: 'posawesome.posawesome.api.posapp.get_customer_names',
+        args: {
+          pos_profile: JSON.stringify(posProfile),
+          start: 0,
+          page_length: 10 // Get only 10 customers
+        },
+        async: true
+      });
+      
+      if (miniCustomerResponse.message && miniCustomerResponse.message.length > 0) {
+        // Save minimal customer data
+        await saveDataBatch(db, CUSTOMERS_STORE, miniCustomerResponse.message);
+        logDebug(`Quick bootstrap: Saved ${miniCustomerResponse.message.length} customers`);
+      }
+      
+      updateBootstrapStatus('Getting minimal item data...', 50);
+      const miniItemResponse = await frappe.call({
+        method: 'posawesome.posawesome.api.posapp.get_items',
+        args: {
+          pos_profile: JSON.stringify(posProfile),
+          start: 0,
+          page_length: 10 // Get only 10 items
+        },
+        async: true
+      });
+      
+      if (miniItemResponse.message && miniItemResponse.message.length > 0) {
+        // Save minimal item data
+        await saveDataBatch(db, ITEMS_STORE, miniItemResponse.message);
+        logDebug(`Quick bootstrap: Saved ${miniItemResponse.message.length} items`);
+      }
+      
+      // Save bootstrap info
+      const info = {
+        id: 'bootstrap_info',
+        lastUpdated: new Date(),
+        posProfile: posProfile.name,
+        company: posProfile.company,
+        isQuickBootstrap: true,
+        customerCount: miniCustomerResponse.message ? miniCustomerResponse.message.length : 0,
+        itemCount: miniItemResponse.message ? miniItemResponse.message.length : 0
+      };
+      
+      await saveToObjectStore(db, BOOTSTRAP_INFO_STORE, info);
+      
+      // Mark bootstrap as complete
+      bootstrapStatus.isComplete = true;
+      bootstrapStatus.progress = 100;
+      bootstrapStatus.message = 'Quick bootstrap complete';
+      bootstrapStatus.lastUpdated = new Date();
+      
+      logDebug('Quick bootstrap completed successfully');
+      return true;
+    } catch (error) {
+      logDebug(`Quick bootstrap failed: ${error.message}`);
+      throw error;
+    }
+  } catch (error) {
+    logDebug(`Quick bootstrap process failed: ${error.message}`);
+    bootstrapStatus.error = error.message;
+    bootstrapStatus.message = 'Quick bootstrap failed: ' + error.message;
+    return false;
+  }
+}
+
+/**
  * Initialize database with required object stores for master data
  */
 export async function initOfflineStores() {
@@ -88,6 +240,9 @@ export async function initOfflineStores() {
     // Add timeout for database opening to prevent hanging
     const DB_OPEN_TIMEOUT = 15000; // 15 seconds
     
+    // Update progress to show we're starting to open the database
+    updateBootstrapStatus('Opening database...', 3);
+    
     // Create new promise for upgrading database with timeout
     return new Promise((resolve, reject) => {
       logDebug('Opening IndexedDB with fresh version');
@@ -127,6 +282,9 @@ export async function initOfflineStores() {
         clearTimeout(timeoutId);
         const db = event.target.result;
         logDebug(`IndexedDB opened with version: ${db.version}`);
+        
+        // Update progress to show database was opened successfully
+        updateBootstrapStatus('Database opened successfully', 4);
         
         // Store the active connection
         activeConnection = db;
@@ -444,6 +602,7 @@ async function downloadItems(db, posProfile, batchSize) {
     
     // Check if the database connection is valid
     if (!db || !db.objectStoreNames) {
+      logDebug('Invalid database connection for item download');
       throw new Error('Invalid database connection for item download');
     }
     
@@ -464,7 +623,7 @@ async function downloadItems(db, posProfile, batchSize) {
     });
     
     const totalItems = countResponse.message || 0;
-    console.log(`Total items to download: ${totalItems}`);
+    logDebug(`Total items to download: ${totalItems}`);
     
     if (totalItems === 0) {
       updateBootstrapStatus('No items found', 50);
@@ -503,7 +662,7 @@ async function downloadItems(db, posProfile, batchSize) {
     
     updateBootstrapStatus(`Downloaded ${downloadedCount} items`, 75);
   } catch (error) {
-    console.error('Error downloading items:', error);
+    logDebug(`Error downloading items: ${error.message}`);
     throw new Error('Failed to download items: ' + error.message);
   }
 }
@@ -517,6 +676,7 @@ async function downloadTaxes(db, posProfile) {
     
     // Check if the database connection is valid
     if (!db || !db.objectStoreNames) {
+      logDebug('Invalid database connection for tax download');
       throw new Error('Invalid database connection for tax download');
     }
     
@@ -535,7 +695,7 @@ async function downloadTaxes(db, posProfile) {
     });
     
     const taxTemplates = taxTemplatesResponse.message || [];
-    console.log(`Found ${taxTemplates.length} tax templates`);
+    logDebug(`Found ${taxTemplates.length} tax templates`);
     
     // For each template, get the tax details
     for (let i = 0; i < taxTemplates.length; i++) {
@@ -560,7 +720,7 @@ async function downloadTaxes(db, posProfile) {
     
     updateBootstrapStatus(`Downloaded ${taxTemplates.length} tax templates`, 90);
   } catch (error) {
-    console.error('Error downloading taxes:', error);
+    logDebug(`Error downloading taxes: ${error.message}`);
     throw new Error('Failed to download taxes: ' + error.message);
   }
 }
@@ -574,23 +734,24 @@ async function validateData(db) {
     
     // Check if the database connection is valid
     if (!db || !db.objectStoreNames) {
+      logDebug('Invalid database connection for data validation');
       throw new Error('Invalid database connection for data validation');
     }
     
     // Check if we have at least one customer
     const customerCount = await getObjectStoreCount(db, CUSTOMERS_STORE);
-    console.log(`Validated ${customerCount} customers`);
+    logDebug(`Validated ${customerCount} customers`);
     
     // Check if we have at least one item
     const itemCount = await getObjectStoreCount(db, ITEMS_STORE);
-    console.log(`Validated ${itemCount} items`);
+    logDebug(`Validated ${itemCount} items`);
     
     // Log validation results
-    console.log('Data validation completed successfully');
+    logDebug('Data validation completed successfully');
     
     return true;
   } catch (error) {
-    console.error('Error validating data:', error);
+    logDebug(`Error validating data: ${error.message}`);
     throw new Error('Data validation failed: ' + error.message);
   }
 }
@@ -602,6 +763,7 @@ async function saveBootstrapInfo(db, posProfile) {
   try {
     // Check if the database connection is valid
     if (!db || !db.objectStoreNames) {
+      logDebug('Invalid database connection for saving bootstrap info');
       throw new Error('Invalid database connection for saving bootstrap info');
     }
     
@@ -616,9 +778,9 @@ async function saveBootstrapInfo(db, posProfile) {
     };
     
     await saveToObjectStore(db, BOOTSTRAP_INFO_STORE, info);
-    console.log('Saved bootstrap info:', info);
+    logDebug('Saved bootstrap info:', info);
   } catch (error) {
-    console.error('Error saving bootstrap info:', error);
+    logDebug(`Error saving bootstrap info: ${error.message}`);
   }
 }
 
@@ -835,7 +997,7 @@ export async function checkBootstrapNeeded(db, posProfile) {
   try {
     // Verify the database connection is valid
     if (!db || !db.objectStoreNames) {
-      console.log('Invalid database connection, bootstrap needed');
+      logDebug('Invalid database connection, bootstrap needed');
       return true;
     }
     
@@ -843,19 +1005,19 @@ export async function checkBootstrapNeeded(db, posProfile) {
     const info = await getBootstrapInfo(db);
     
     if (!info) {
-      console.log('No bootstrap info found, bootstrap needed');
+      logDebug('No bootstrap info found, bootstrap needed');
       return true;
     }
     
     // Check if POS profile has changed
     if (info.posProfile !== posProfile.name) {
-      console.log('POS profile changed, bootstrap needed');
+      logDebug('POS profile changed, bootstrap needed');
       return true;
     }
     
     // Check if company has changed
     if (info.company !== posProfile.company) {
-      console.log('Company changed, bootstrap needed');
+      logDebug('Company changed, bootstrap needed');
       return true;
     }
     
@@ -865,18 +1027,18 @@ export async function checkBootstrapNeeded(db, posProfile) {
     const hoursSinceUpdate = (now - lastUpdate) / (1000 * 60 * 60);
     
     if (hoursSinceUpdate > 24) {
-      console.log(`Last bootstrap was ${hoursSinceUpdate.toFixed(2)} hours ago, bootstrap needed`);
+      logDebug(`Last bootstrap was ${hoursSinceUpdate.toFixed(2)} hours ago, bootstrap needed`);
       return true;
     }
     
-    console.log('Bootstrap not needed, data is up to date');
+    logDebug('Bootstrap not needed, data is up to date');
     bootstrapStatus.isComplete = true;
     bootstrapStatus.progress = 100;
     bootstrapStatus.message = 'Using cached data';
     
     return false;
   } catch (error) {
-    console.error('Error checking bootstrap need:', error);
+    logDebug(`Error checking bootstrap need: ${error.message}`);
     return true;
   }
 }
@@ -917,7 +1079,7 @@ async function getBootstrapInfo(db) {
       }
     });
   } catch (error) {
-    console.error('Error getting bootstrap info:', error);
+    logDebug(`Error getting bootstrap info: ${error.message}`);
     return null;
   }
 } 
