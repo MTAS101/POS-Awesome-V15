@@ -953,144 +953,104 @@ export default {
         }
       }
       
-      // Rest of the online submission logic remains unchanged
-      this.paying = true;
-      if (!this.customer_credit) {
-        this.customer_credit = {}
-        this.customer_credit.total_credit = 0
-        this.customer_credit.credit_to_redeem = 0
-      }
-      
-      // Handle credit payments 
-      this.check_credit()
-      if (this.credit_pay_amount > 0 && !this.is_return_invoice) {
-        if (this.credit_pay_amount > this.customer_credit.total_credit) {
+      // Handle online submission here
+      try {
+        if (!this.invoice_doc) {
           this.eventBus.emit('show_message', {
-            title: __(`The customer doesn't have enough credit`),
-            color: 'warning',
+            title: __('No invoice to submit'),
+            color: 'error'
           });
-          this.paying = false
-          return
-        }
-      }
-      
-      // Verify card validation status for non-return invoices
-      if (this.require_validation && !this.validation_status && !this.is_return_invoice) {
-        this.valid_msg = __(`Card validation required`);
-        this.paying = false;
-        return;
-      }
-      
-      // Verify payment methods and amounts
-      let active_pay = 0;
-      let pay_amounts = 0;
-      const paying_field = this.is_return_invoice ? 'return_paying_amount' : 'paying_amount';
-      
-      this.pos_profile.payments.forEach((payment) => {
-        if (payment.default) {
-          if (this[payment.mode_of_payment]) {
-            if (flt(this[payment.mode_of_payment][paying_field]) > 0) {
-              active_pay += 1;
-              pay_amounts += flt(this[payment.mode_of_payment][paying_field]);
-            }
-          }
-        }
-      });
-      
-      // Ensure at least one payment method is active with an amount
-      if (active_pay === 0) {
-        this.valid_msg = __(`Please select payment method`);
-        this.paying = false;
-        return;
-      }
-      
-      // For non-return invoices, verify payment amount matches expected amount
-      if (
-        !this.is_return_invoice &&
-        Math.abs(pay_amounts - this.grand_total) > 0.5
-      ) {
-        this.valid_msg = __(`Paid amount does not match`);
-        this.paying = false;
-        return;
-      }
-      
-      // For return invoices, verify return amount is appropriate
-      if (
-        this.is_return_invoice &&
-        Math.abs(pay_amounts) > Math.abs(this.grand_total)
-      ) {
-        this.valid_msg = __(`Return amount cannot be greater than total amount`);
-        this.paying = false;
-        return;
-      }
-      
-      // Submit the invoice with payment details
-      let credit_change = 0;
-      
-      // Calculate change amount if needed
-      if (!this.is_return_invoice && this.grand_total < pay_amounts) {
-        if (this.pos_profile.posa_allow_change) {
-          credit_change = pay_amounts - this.grand_total;
-        } else {
-          this.eventBus.emit('show_message', {
-            title: __(`Paid amount cannot be greater than total amount`),
-            color: 'error',
-          });
-          this.paying = false;
           return;
         }
+        
+        // For return invoices, ensure all payments are negative
+        if (this.invoice_doc.is_return) {
+          this.ensureReturnPaymentsAreNegative();
+        }
+        
+        // Submit the invoice
+        frappe.call({
+          method: 'posawesome.posawesome.api.posapp.submit_invoice',
+          args: {
+            invoice: this.invoice_doc,
+            data: {
+              customer: this.invoice_doc.customer,
+              is_credit_sale: this.is_credit_sale,
+              due_date: this.invoice_doc.due_date,
+              is_write_off_change: this.is_write_off_change,
+              credit_change: this.credit_change,
+              paid_change: this.paid_change
+            }
+          },
+          callback: (r) => {
+            if (r.message) {
+              // Show success message
+              this.eventBus.emit('show_message', {
+                title: __(`${r.message.name} submitted successfully`),
+                color: 'success'
+              });
+              
+              // Clear the form
+              this.clear_form();
+              
+              // Emit payment_completed event to reset Invoice.vue
+              this.eventBus.emit('payment_completed');
+              
+              // Print if requested
+              if (print && this.pos_profile.posa_allow_print_draft_invoices) {
+                this.load_print_page(r.message.name);
+              }
+            }
+          },
+          error: (err) => {
+            console.error('Error submitting invoice:', err);
+            this.eventBus.emit('show_message', {
+              title: __(`Error: ${err.message || 'Unknown error'}`),
+              color: 'error'
+            });
+          },
+          always: () => {
+            this.paying = false;
+          }
+        });
+      } catch (error) {
+        console.error('Error in submit function:', error);
+        this.paying = false;
+        this.eventBus.emit('show_message', {
+          title: __(`Error: ${error.message || 'Unknown error'}`),
+          color: 'error'
+        });
+      }
+    },
+    // Clear the form and reset all fields
+    clear_form() {
+      console.log('Clearing payment form');
+      
+      // Reset payment-related fields
+      this.loyalty_amount = 0;
+      this.redeemed_customer_credit = 0;
+      this.credit_change = 0;
+      this.paid_change = 0;
+      this.is_credit_sale = false;
+      this.is_write_off_change = false;
+      this.redeem_customer_credit = false;
+      this.customer_credit_dict = [];
+      
+      // Reset all payment amounts
+      if (this.invoice_doc && this.invoice_doc.payments) {
+        this.invoice_doc.payments.forEach(payment => {
+          payment.amount = 0;
+          if (payment.base_amount !== undefined) {
+            payment.base_amount = 0;
+          }
+        });
       }
       
-      const data = {
-        customer: this.customer,
-        redeemed_customer_credit: this.credit_pay_amount,
-        customer_credit_dict: this.customer_credit.dict,
-        due_date: this.due_date,
-        credit_change: credit_change,
-      };
+      // Reset sales person
+      this.sales_person = '';
       
-      // Start submission process
-      console.log('Starting invoice submission...');
-      
-      frappe.call({
-        method: 'posawesome.posawesome.api.posapp.submit_invoice',
-        args: {
-          invoice: this.invoice_doc,
-          data: data,
-        },
-        callback: (r) => {
-          if (r.message) {
-            this.eventBus.emit('payment_completed');
-            this.eventBus.emit('show_message', {
-              title: __(`${r.message.name} submitted successfully`),
-              color: 'success',
-            });
-            this.dialog = false;
-            this.paying = false;
-            this.clear_form();
-            
-            // Print invoice if enabled
-            if (this.pos_profile.posa_allow_print_draft_invoices) {
-              this.load_print_page(r.message.name);
-            }
-          } else {
-            this.paying = false;
-            console.error('Failed to submit invoice - no message returned');
-            this.eventBus.emit('show_message', {
-              title: __(`Failed to submit invoice`),
-              color: 'error',
-            });
-          }
-        },
-        error: (err) => {
-          this.paying = false;
-          console.error('Error submitting invoice:', err);
-          this.eventBus.emit('show_message', {
-            title: __(`Error: ${err.message || 'Unknown error'}`),
-            color: 'error',
-          });
-        },
-      });
+      // Hide the payment dialog
+      this.eventBus.emit('show_payment', 'false');
     },
     // Set full amount for a payment method (or negative for returns)
     set_full_amount(idx) {

@@ -4327,15 +4327,18 @@ export default {
       this.new_line = data;
     });
     
-    // Add new event listener for offline payment completion
+    // Add proper handler for payment_completed event
+    this.eventBus.on("payment_completed", () => {
+      console.log("Payment completed event received - clearing invoice form");
+      this.clear_invoice();
+      this.eventBus.emit("reset_posting_date");
+    });
+    
+    // Add handler for offline_payment_completed event
     this.eventBus.on("offline_payment_completed", () => {
-      console.log("Received offline_payment_completed event");
-      // Double ensure the invoice is cleared after offline payment
-      setTimeout(() => {
-        console.log("Clearing invoice after offline payment completion");
-        this.clear_invoice();
-        this.eventBus.emit("reset_posting_date");
-      }, 300);
+      console.log("Offline payment completed event received - clearing invoice form");
+      this.clear_invoice();
+      this.eventBus.emit("reset_posting_date");
     });
     
     if (this.pos_profile.posa_allow_multi_currency) {
@@ -4365,6 +4368,8 @@ export default {
     this.eventBus.off("reset_posting_date");
     // Clean up offline_payment_completed listener
     this.eventBus.off("offline_payment_completed");
+    // Clean up payment_completed listener
+    this.eventBus.off("payment_completed");
     
     // Clean up offline queue listener
     window.removeEventListener('offline-queue-updated');

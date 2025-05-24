@@ -496,8 +496,21 @@ export async function processPendingInvoices() {
     
     console.log(`Processing ${pendingOrders.length} pending orders`);
     
+    // Create a Set to track orders we've already tried to process in this batch
+    // This helps prevent duplicate processing if there's an issue
+    const processedOrderIds = new Set();
+    
     for (const order of pendingOrders) {
       try {
+        // Skip if we've already tried to process this order in this batch
+        if (processedOrderIds.has(order.id)) {
+          console.log(`Skipping already processed order: ${order.id}`);
+          continue;
+        }
+        
+        // Add to our tracking set
+        processedOrderIds.add(order.id);
+        
         console.log('Processing order:', order.id);
         console.log('Order details:', {
           customer: order.customer,
@@ -523,117 +536,60 @@ export async function processPendingInvoices() {
           }
         }
         
-        // Server expects data in a specific format
-        const requestData = {
-          data: JSON.stringify(order),
-          submit: 1,  // Always submit invoices when syncing from offline mode
-          include_payments: 1  // Make sure payments are included in the submitted invoice
-        };
+        // Add the 'submit' flag to ensure this is submitted, not saved as draft
+        // This ensures the offline invoice is properly submitted when synced
+        const shouldSubmit = true;
         
-        console.log('Sending order to server with:');
-        console.log('- Submit flag: enabled');
-        console.log('- Include payments flag: enabled');
-        
-        // Call the server API to process the order
-        const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Frappe-CSRF-Token': frappe.csrf_token
-          },
-          body: JSON.stringify(requestData)
+        // Make API call to update the invoice in the system
+        console.log('Sending order to server for processing');
+        const response = await frappe.call({
+          method: 'posawesome.posawesome.api.posapp.update_invoice',
+          args: {
+            data: order,
+            submit: shouldSubmit,
+            include_payments: true  // Important to include payments in submission
+          }
         });
         
-        const responseText = await response.text();
-        console.log('Server response:', responseText);
-        
-        if (response.ok) {
-          try {
-            const responseData = JSON.parse(responseText);
-            console.log('Successfully processed order:', order.id);
-            console.log('Invoice created with name:', responseData.message?.name);
-            
-            // Mark this order as synced
-            await markOrderSynced(order.id);
-            successCount++;
-            
-            // Show a specific message for this invoice
-            frappe.show_alert({
-              message: __(`Invoice ${responseData.message?.name || 'unknown'} created and submitted.`),
-              indicator: 'green'
-            }, 5);
-          } catch (parseError) {
-            console.error('Error parsing server response:', parseError);
-            errorCount++;
-          }
+        if (response.message) {
+          console.log('Successfully processed order', order.id);
+          console.log('Response:', response.message.name);
+          
+          // Mark this order as synced in the offline database
+          await markOrderSynced(order.id);
+          successCount++;
+          
+          // Emit event to show success message
+          const event = new CustomEvent('offline-invoice-synced', {
+            detail: { success: true, invoice: response.message.name }
+          });
+          window.dispatchEvent(event);
         } else {
-          console.error('Error syncing order:', order.id, responseText);
-          
-          try {
-            // Try to parse error response
-            const errorJson = JSON.parse(responseText);
-            console.error('Server error details:', errorJson);
-            
-            // Show a specific error message
-            frappe.show_alert({
-              message: __(`Error syncing invoice: ${errorJson.exception || errorJson._server_messages || 'Unknown error'}`),
-              indicator: 'red'
-            }, 5);
-          } catch (parseError) {
-            // If parsing fails, just log the raw text
-            console.error('Raw error response:', responseText);
-            
-            // Show a generic error message
-            frappe.show_alert({
-              message: __(`Error syncing invoice: ${responseText.substring(0, 100)}...`),
-              indicator: 'red'
-            }, 5);
-          }
-          
+          console.error('Failed to process order', order.id, '- no response message');
           errorCount++;
         }
       } catch (error) {
-        console.error('Error processing pending order:', order.id, error);
-        
-        // Show a specific error message for this order
-        frappe.show_alert({
-          message: __(`Error processing order: ${error.message}`),
-          indicator: 'red'
-        }, 5);
-        
+        console.error('Error processing order', order.id, ':', error);
         errorCount++;
       }
-      
-      // Add a small delay between processing orders to avoid overwhelming the server
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    if (errorCount > 0) {
-      frappe.show_alert({
-        message: __(`Failed to sync ${errorCount} offline order(s). Check console for details.`),
-        indicator: 'red'
-      }, 7);
-    }
+    // Update the offline queue count
+    const remainingOrders = await getPendingOrders();
+    const event = new CustomEvent('offline-queue-updated', {
+      detail: { count: remainingOrders.length }
+    });
+    window.dispatchEvent(event);
     
-    if (successCount > 0) {
-      frappe.show_alert({
-        message: __(`Successfully synchronized ${successCount} offline order(s).`),
-        indicator: 'green'
-      }, 7);
-    }
-    
-    return {
-      success: errorCount === 0,
+    console.log(`Completed processing: ${successCount} succeeded, ${errorCount} failed`);
+    return { 
+      success: true, 
       processed: successCount,
-      failed: errorCount,
-      total: pendingOrders.length
+      errors: errorCount,
+      remaining: remainingOrders.length
     };
   } catch (error) {
-    console.error('Failed to process pending invoices:', error);
-    frappe.show_alert({
-      message: __(`Error synchronizing orders: ${error.message}`),
-      indicator: 'red'
-    }, 7);
+    console.error('Error processing pending invoices:', error);
     return { success: false, error: error.message };
   }
 }
