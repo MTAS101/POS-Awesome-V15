@@ -583,29 +583,81 @@ export async function processPendingInvoices() {
   }
 }
 
-// Check online status
+// Check online status with more reliable detection
 export function isOnline() {
-  return navigator.onLine;
+  // First quick check using navigator.onLine
+  const navigatorOnlineStatus = navigator.onLine;
+  
+  if (!navigatorOnlineStatus) {
+    // If navigator says we're offline, trust it
+    return false;
+  }
+  
+  // If we have connectivity but need to validate further,
+  // we could perform a lightweight fetch test here in a more
+  // comprehensive implementation
+  
+  return navigatorOnlineStatus;
 }
 
-// Listen for online/offline events
+// Listen for online/offline events with more reliable detection
 export function setupConnectivityListeners(callbacks = {}) {
+  // Store the last known online status
+  let lastKnownStatus = isOnline();
+  
+  const checkNetworkAndNotify = () => {
+    const currentStatus = isOnline();
+    
+    // Only trigger callbacks if status actually changed
+    if (currentStatus !== lastKnownStatus) {
+      lastKnownStatus = currentStatus;
+      
+      if (currentStatus) {
+        console.log('App is online - connectivity restored');
+        if (callbacks.onOnline) callbacks.onOnline();
+      } else {
+        console.log('App is offline - connectivity lost');
+        if (callbacks.onOffline) callbacks.onOffline();
+      }
+    }
+  };
+  
+  // Main event handlers with debouncing
+  let onlineDebounceTimer = null;
+  let offlineDebounceTimer = null;
+  
   const handleOnline = () => {
-    console.log('App is online');
-    if (callbacks.onOnline) callbacks.onOnline();
+    if (onlineDebounceTimer) clearTimeout(onlineDebounceTimer);
+    onlineDebounceTimer = setTimeout(() => {
+      console.log('Online event triggered, checking connectivity...');
+      checkNetworkAndNotify();
+    }, 1000);
   };
   
   const handleOffline = () => {
-    console.log('App is offline');
-    if (callbacks.onOffline) callbacks.onOffline();
+    if (offlineDebounceTimer) clearTimeout(offlineDebounceTimer);
+    offlineDebounceTimer = setTimeout(() => {
+      console.log('Offline event triggered, checking connectivity...');
+      checkNetworkAndNotify();
+    }, 1000);
   };
   
+  // Set up periodic checking for more reliable detection
+  const intervalCheck = setInterval(checkNetworkAndNotify, 30000);
+  
+  // Register event listeners
   window.addEventListener('online', handleOnline);
   window.addEventListener('offline', handleOffline);
+  
+  // Perform initial check
+  checkNetworkAndNotify();
   
   // Return a cleanup function
   return () => {
     window.removeEventListener('online', handleOnline);
     window.removeEventListener('offline', handleOffline);
+    clearInterval(intervalCheck);
+    if (onlineDebounceTimer) clearTimeout(onlineDebounceTimer);
+    if (offlineDebounceTimer) clearTimeout(offlineDebounceTimer);
   };
 } 

@@ -7,7 +7,7 @@
     
     <!-- PWA Components -->
     <update-notification />
-    <connectivity-status />
+    <connectivity-status ref="connectivityStatus" />
   </v-app>
 </template>
 
@@ -36,42 +36,27 @@ export default {
         $('.page-head').remove();
         $('.navbar.navbar-default.navbar-fixed-top').remove();
       });
-    },
-    handleConnectivityChange(isOnline) {
-      if (isOnline) {
-        console.log('Connection restored - online mode');
-        this.syncPendingInvoices();
-      } else {
-        console.log('Connection lost - offline mode');
-        frappe.show_alert({
-          message: __('You are now offline. Your changes will be saved locally.'),
-          indicator: 'orange'
-        });
-      }
-    },
-    async syncPendingInvoices() {
-      try {
-        const { processPendingInvoices } = await import('./offline_db');
-        await processPendingInvoices();
-      } catch (error) {
-        console.error('Error syncing pending invoices:', error);
-      }
-    },
+    }
   },
   mounted() {
     this.remove_frappe_nav();
-    window.addEventListener('online', () => this.handleConnectivityChange(true));
-    window.addEventListener('offline', () => this.handleConnectivityChange(false));
+    
+    // Listen for events that might require sync
+    this.eventBus.on('sync_required', () => {
+      // Delegate to connectivity status component
+      if (this.$refs.connectivityStatus) {
+        this.$refs.connectivityStatus.syncPendingOrders();
+      }
+    });
   },
-  updated() { },
   created: function () {
     setTimeout(() => {
       this.remove_frappe_nav();
     }, 1000);
   },
   beforeUnmount() {
-    window.removeEventListener('online', () => this.handleConnectivityChange(true));
-    window.removeEventListener('offline', () => this.handleConnectivityChange(false));
+    // Clean up event listeners
+    this.eventBus.off('sync_required');
   },
 };
 </script>
