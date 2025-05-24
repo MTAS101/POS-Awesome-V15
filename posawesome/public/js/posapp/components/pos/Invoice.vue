@@ -4107,6 +4107,39 @@ export default {
       this.calc_stock_qty(item, item.qty);
       this.$forceUpdate();
     },
+
+    // Add proper error handling for offline sync
+    async syncPendingOrders() {
+      try {
+        this.is_syncing = true;
+        const result = await processPendingInvoices();
+        this.is_syncing = false;
+        
+        if (result.success) {
+          if (result.processed > 0) {
+            frappe.show_alert({
+              message: __(`${result.processed} offline orders synchronized successfully`),
+              indicator: 'green'
+            });
+          }
+          return result;
+        } else {
+          frappe.show_alert({
+            message: __(`Error synchronizing some orders: ${result.error || 'Unknown error'}`),
+            indicator: 'red'
+          });
+          return result;
+        }
+      } catch (error) {
+        console.error('Error during syncPendingOrders:', error);
+        this.is_syncing = false;
+        frappe.show_alert({
+          message: __(`Failed to synchronize: ${error.message}`),
+          indicator: 'red'
+        });
+        return { success: false, error: error.message };
+      }
+    },
   },
 
   mounted() {
