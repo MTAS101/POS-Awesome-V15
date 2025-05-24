@@ -1,22 +1,12 @@
 // Utility functions for IndexedDB operations
 
-const DB_NAME = 'POS_DB';
-let DB_VERSION = 2; // Increment version for schema update
+const DB_NAME = 'posawesome-offline-db';
+// Use a default version but detect actual version during initialization
+let DB_VERSION = 1;
 const ORDERS_STORE = 'offline-orders';
-const INVOICE_STORE = 'invoices';
-const SEQUENCE_STORE = 'sequences';
 
 // Global reference to the database
 let dbPromise = null;
-
-// Helper to generate UUID
-function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    var r = Math.random() * 16 | 0,
-        v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-}
 
 // Function to detect current database version
 async function getCurrentDbVersion() {
@@ -53,12 +43,8 @@ export async function initDB() {
   if (dbPromise) return dbPromise;
   
   // Detect current database version first
-  let currentVersion;
   try {
-    currentVersion = await getCurrentDbVersion();
-    if (currentVersion > DB_VERSION) {
-      DB_VERSION = currentVersion;
-    }
+    DB_VERSION = await getCurrentDbVersion();
   } catch (error) {
     console.warn('Error detecting database version:', error);
     // Continue with default version
@@ -97,21 +83,6 @@ export async function initDB() {
         store.createIndex('timestamp', 'timestamp', { unique: false });
         store.createIndex('customer', 'customer', { unique: false });
         console.log('Object store created for offline orders');
-      }
-
-      // Create/update invoices store with indexes
-      if (!db.objectStoreNames.contains(INVOICE_STORE)) {
-        const store = db.createObjectStore(INVOICE_STORE, { keyPath: 'offline_uuid' });
-        store.createIndex('offline_pos_name', 'offline_pos_name', { unique: true });
-        store.createIndex('creation_timestamp', 'creation_timestamp');
-        store.createIndex('sync_status', 'sync_status');
-        store.createIndex('idempotency_key', 'idempotency_key', { unique: true });
-      }
-
-      // Create/update sequences store
-      if (!db.objectStoreNames.contains(SEQUENCE_STORE)) {
-        const seqStore = db.createObjectStore(SEQUENCE_STORE, { keyPath: 'name' });
-        seqStore.put({ name: 'invoice_sequence', value: 1 });
       }
     };
   });
@@ -168,60 +139,69 @@ async function ensureStoreExists() {
   }
 }
 
-// Get next sequence number
-async function getNextSequence(db, sequenceName) {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(SEQUENCE_STORE, 'readwrite');
-    const store = transaction.objectStore(SEQUENCE_STORE);
-    
-    const request = store.get(sequenceName);
-    
-    request.onsuccess = () => {
-      const sequence = request.result;
-      const nextValue = sequence.value + 1;
-      
-      store.put({ name: sequenceName, value: nextValue });
-      resolve(sequence.value);
-    };
-    
-    request.onerror = () => reject(request.error);
-  });
-}
-
-// Save invoice to IndexedDB with idempotency
-async function saveInvoiceOffline(invoice) {
+// Save invoice to IndexedDB for offline storage
+export async function saveInvoiceOffline(invoice) {
   try {
-    const db = await initDB();
-    const sequence = await getNextSequence(db, 'invoice_sequence');
+    const db = await ensureStoreExists();
     
-    // Generate persistent unique identifiers
-    const timestamp = Date.now();
-    const uuid = generateUUID();
-    const idempotencyKey = `${uuid}-${timestamp}`;
-    
-    // Prepare invoice data with identifiers
-    const invoiceData = {
-      ...invoice,
-      offline_uuid: uuid,
-      offline_pos_name: `OFFPOS${sequence}`,
-      creation_timestamp: timestamp,
-      sync_status: 'pending',
-      sync_attempts: 0,
-      idempotency_key: idempotencyKey,
-      offline_mode: true
-    };
-
     return new Promise((resolve, reject) => {
-      const transaction = db.transaction(INVOICE_STORE, 'readwrite');
-      const store = transaction.objectStore(INVOICE_STORE);
+      // Verify the store exists before creating transaction
+      if (!db.objectStoreNames.contains(ORDERS_STORE)) {
+        reject(new Error(`Object store '${ORDERS_STORE}' does not exist`));
+        return;
+      }
       
-      const request = store.add(invoiceData);
+      const transaction = db.transaction([ORDERS_STORE], 'readwrite');
+      const store = transaction.objectStore(ORDERS_STORE);
       
-      request.onsuccess = () => resolve(invoiceData.offline_pos_name);
-      request.onerror = () => reject(request.error);
+      // Sanitize the invoice to remove non-serializable data and circular references
+      const sanitizedInvoice = sanitizeForStorage(invoice);
+      
+      // Add timestamp for sorting/tracking and set offline_submit flag to true
+      // so invoice will be submitted when synced online, not saved as draft
+      const order = {
+        ...sanitizedInvoice,
+        timestamp: Date.now(),
+        synced: false,
+        offline_submit: true // Always set to true to ensure invoice is submitted when synced
+      };
+      
+      const request = store.add(order);
+      
+      request.onsuccess = () => {
+        console.log('Invoice saved offline:', request.result);
+        
+        // Try to sync with service worker if available
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+          navigator.serviceWorker.ready.then(registration => {
+            registration.sync.register('sync-orders').catch(err => {
+              console.error('Background sync registration failed:', err);
+            });
+            
+            // Also send a message to the service worker
+            navigator.serviceWorker.controller?.postMessage({
+              type: 'STORE_OFFLINE_ORDER',
+              payload: { id: request.result, timestamp: Date.now() }
+            });
+          });
+        }
+        
+        resolve(request.result);
+      };
+      
+      request.onerror = (event) => {
+        console.error('Error saving invoice offline:', event.target.error);
+        reject(event.target.error);
+      };
+      
+      // Handle transaction errors
+      transaction.onerror = (event) => {
+        console.error('Transaction error:', event.target.error);
+        reject(event.target.error);
+      };
     });
   } catch (error) {
-    console.error('Error saving invoice offline:', error);
+    console.error('Failed to save invoice offline:', error);
     throw error;
   }
 }
@@ -506,10 +486,11 @@ const connectivityService = {
 // Initialize connectivity service
 connectivityService.init();
 
-// Remove individual exports
-const ConnectivityService = connectivityService;
+// Export connectivity service
+export const ConnectivityService = connectivityService;
 
-function setupConnectivityListeners(callbacks = {}) {
+// Update existing setupConnectivityListeners function
+export function setupConnectivityListeners(callbacks = {}) {
   const handleStatus = (status) => {
     if (status === 'online' && callbacks.onOnline) {
       callbacks.onOnline();
@@ -521,21 +502,97 @@ function setupConnectivityListeners(callbacks = {}) {
   return ConnectivityService.addListener(handleStatus);
 }
 
-function isOnline() {
+// Export isOnline function that uses the service
+export function isOnline() {
   return ConnectivityService.isOnline;
 }
 
-// Export all functions at the end
-export {
-  initDB,
-  saveInvoiceOffline,
-  getPendingInvoices, 
-  updateInvoiceSyncStatus,
-  generateUUID,
-  ConnectivityService,
-  setupConnectivityListeners,
-  isOnline,
-  processPendingInvoices,
-  getPendingOrders,
-  markOrderSynced
-}; 
+// Function to submit an invoice to the server
+async function submitInvoice(invoice) {
+  try {
+    // Prepare the invoice data for submission
+    const requestData = {
+      data: JSON.stringify({
+        ...invoice,
+        is_pos: 1,  // Force this to be a POS invoice
+        update_stock: 1,  // Ensure stock is updated
+        offline_submit: true // Flag to indicate this is an offline submission
+      }),
+      submit: 1,  // Always submit invoices when syncing from offline mode
+      include_payments: 1  // Make sure payments are included
+    };
+
+    // Call the server API to process the invoice
+    const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Frappe-CSRF-Token': frappe.csrf_token
+      },
+      body: JSON.stringify(requestData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Server error response:', errorText);
+      throw new Error(`Server error: ${errorText}`);
+    }
+
+    const responseData = await response.json();
+    console.log('Server response:', responseData);
+
+    if (responseData.message?.name) {
+      // Mark the invoice as synced in IndexedDB
+      await markOrderSynced(invoice.id);
+      
+      // Show success message
+      frappe.show_alert({
+        message: __(`Invoice ${responseData.message.name} created and submitted`),
+        indicator: 'green'
+      }, 5);
+
+      return responseData.message;
+    } else {
+      throw new Error('Invalid server response');
+    }
+  } catch (error) {
+    console.error('Error submitting invoice:', error);
+    
+    // Show error message
+    frappe.show_alert({
+      message: __(`Error syncing invoice: ${error.message}`),
+      indicator: 'red'
+    }, 5);
+    
+    throw error;
+  }
+}
+
+// Update processPendingInvoices to use the service
+export async function processPendingInvoices() {
+  const result = { processed: 0, failed: 0 };
+  
+  try {
+    const pendingInvoices = await getPendingOrders();
+    
+    for (const invoice of pendingInvoices) {
+      const syncFn = async () => {
+        try {
+          await submitInvoice(invoice);
+          result.processed++;
+        } catch (error) {
+          console.error('Failed to sync invoice:', error);
+          result.failed++;
+          throw error; // Rethrow to trigger retry
+        }
+      };
+      
+      ConnectivityService.addPendingSync(syncFn);
+    }
+  } catch (error) {
+    console.error('Error processing pending invoices:', error);
+    throw error;
+  }
+  
+  return result;
+} 
