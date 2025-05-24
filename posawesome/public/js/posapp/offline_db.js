@@ -522,6 +522,37 @@ export function isOnline() {
   return ConnectivityService.isOnline;
 }
 
+// Function to handle API errors
+async function handleApiError(error, context) {
+  console.error(`Error in ${context}:`, error);
+  
+  // Check if it's a network error
+  if (!navigator.onLine) {
+    return {
+      error: true,
+      message: 'Network connection lost',
+      type: 'network'
+    };
+  }
+
+  // Check if it's a server error (417, etc)
+  if (error.response) {
+    return {
+      error: true,
+      message: `Server error: ${error.response.status}`,
+      type: 'server',
+      status: error.response.status
+    };
+  }
+
+  // Generic error
+  return {
+    error: true,
+    message: error.message || 'Unknown error occurred',
+    type: 'unknown'
+  };
+}
+
 // Function to submit an invoice to the server
 async function submitInvoice(invoice) {
   try {
@@ -625,36 +656,79 @@ async function checkIfInvoiceExists(invoice) {
   try {
     // First check if this is a sales order conversion
     if (invoice.order_id) {
-      const orderResponse = await fetch(`/api/method/frappe.client.get_list`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Frappe-CSRF-Token': frappe.csrf_token
-        },
-        body: JSON.stringify({
-          doctype: 'Sales Invoice',
-          filters: {
-            order_id: invoice.order_id,
-            docstatus: ['!=', 2] // Not cancelled
+      try {
+        const orderResponse = await fetch(`/api/method/frappe.client.get_list`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Frappe-CSRF-Token': frappe.csrf_token
           },
-          fields: ['name', 'docstatus', 'order_id']
-        })
-      });
+          body: JSON.stringify({
+            doctype: 'Sales Invoice',
+            filters: {
+              order_id: invoice.order_id,
+              docstatus: ['!=', 2] // Not cancelled
+            },
+            fields: ['name', 'docstatus', 'order_id']
+          })
+        });
 
-      if (!orderResponse.ok) {
-        throw new Error('Failed to check existing order invoice');
-      }
-
-      const orderResult = await orderResponse.json();
-      if (orderResult.message && orderResult.message.length > 0) {
-        console.log('Invoice already exists for order:', invoice.order_id);
-        return orderResult.message[0];
+        if (!orderResponse.ok) {
+          const error = await handleApiError(orderResponse, 'checkIfInvoiceExists - order check');
+          console.warn('Order check failed:', error);
+          // Continue to next check instead of failing
+        } else {
+          const orderResult = await orderResponse.json();
+          if (orderResult.message && orderResult.message.length > 0) {
+            console.log('Invoice already exists for order:', invoice.order_id);
+            return orderResult.message[0];
+          }
+        }
+      } catch (orderError) {
+        console.warn('Error checking order:', orderError);
+        // Continue to next check
       }
     }
 
-    // Then check by offline_pos_name
+    // Then check by offline_pos_name with error handling
     if (invoice.offline_pos_name) {
-      const response = await fetch(`/api/method/frappe.client.get_list`, {
+      try {
+        const response = await fetch(`/api/method/frappe.client.get_list`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Frappe-CSRF-Token': frappe.csrf_token
+          },
+          body: JSON.stringify({
+            doctype: 'Sales Invoice',
+            filters: {
+              offline_pos_name: invoice.offline_pos_name,
+              docstatus: ['!=', 2] // Not cancelled
+            },
+            fields: ['name', 'docstatus', 'offline_pos_name']
+          })
+        });
+
+        if (!response.ok) {
+          const error = await handleApiError(response, 'checkIfInvoiceExists - offline_pos_name check');
+          console.warn('Offline POS name check failed:', error);
+          // Continue to next check instead of failing
+        } else {
+          const result = await response.json();
+          if (result.message && result.message.length > 0) {
+            console.log('Invoice already exists with offline_pos_name:', invoice.offline_pos_name);
+            return result.message[0];
+          }
+        }
+      } catch (posNameError) {
+        console.warn('Error checking offline_pos_name:', posNameError);
+        // Continue to next check
+      }
+    }
+
+    // Finally check by exact match of key fields with error handling
+    try {
+      const keyFieldsResponse = await fetch(`/api/method/frappe.client.get_list`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -663,58 +737,39 @@ async function checkIfInvoiceExists(invoice) {
         body: JSON.stringify({
           doctype: 'Sales Invoice',
           filters: {
-            offline_pos_name: invoice.offline_pos_name,
-            docstatus: ['!=', 2] // Not cancelled
+            posting_date: invoice.posting_date,
+            customer: invoice.customer,
+            total: invoice.total,
+            grand_total: invoice.grand_total,
+            docstatus: ['!=', 2],
+            creation: ['>=', frappe.datetime.add_minutes(frappe.datetime.now_datetime(), -5)]
           },
-          fields: ['name', 'docstatus', 'offline_pos_name']
+          fields: ['name', 'docstatus', 'offline_pos_name', 'customer', 'grand_total']
         })
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to check existing invoice');
+      if (!keyFieldsResponse.ok) {
+        const error = await handleApiError(keyFieldsResponse, 'checkIfInvoiceExists - key fields check');
+        console.warn('Key fields check failed:', error);
+        // Return null instead of failing
+        return null;
       }
 
-      const result = await response.json();
-      if (result.message && result.message.length > 0) {
-        console.log('Invoice already exists with offline_pos_name:', invoice.offline_pos_name);
-        return result.message[0];
+      const keyFieldsResult = await keyFieldsResponse.json();
+      if (keyFieldsResult.message && keyFieldsResult.message.length > 0) {
+        console.log('Found matching recent invoice:', keyFieldsResult.message[0]);
+        return keyFieldsResult.message[0];
       }
-    }
-
-    // Finally check by exact match of key fields
-    const keyFieldsResponse = await fetch(`/api/method/frappe.client.get_list`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Frappe-CSRF-Token': frappe.csrf_token
-      },
-      body: JSON.stringify({
-        doctype: 'Sales Invoice',
-        filters: {
-          posting_date: invoice.posting_date,
-          customer: invoice.customer,
-          total: invoice.total,
-          grand_total: invoice.grand_total,
-          docstatus: ['!=', 2],
-          creation: ['>=', frappe.datetime.add_minutes(frappe.datetime.now_datetime(), -5)]
-        },
-        fields: ['name', 'docstatus', 'offline_pos_name', 'customer', 'grand_total']
-      })
-    });
-
-    if (!keyFieldsResponse.ok) {
-      throw new Error('Failed to check existing invoice by key fields');
-    }
-
-    const keyFieldsResult = await keyFieldsResponse.json();
-    if (keyFieldsResult.message && keyFieldsResult.message.length > 0) {
-      console.log('Found matching recent invoice:', keyFieldsResult.message[0]);
-      return keyFieldsResult.message[0];
+    } catch (keyFieldsError) {
+      console.warn('Error checking key fields:', keyFieldsError);
+      // Return null instead of failing
+      return null;
     }
 
     return null;
   } catch (error) {
-    console.error('Error checking existing invoice:', error);
+    console.error('Error in checkIfInvoiceExists:', error);
+    // Return null instead of failing to allow offline operation
     return null;
   }
 }

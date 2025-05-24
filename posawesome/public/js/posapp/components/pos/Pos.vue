@@ -19,7 +19,7 @@
         <PosCoupons></PosCoupons>
       </v-col>
       <v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pr-0">
-        <Payments></Payments>
+        <Payments ref="paymentComponent"></Payments>
       </v-col>
 
       <v-col xl="7" lg="7" md="7" sm="7" cols="12" class="pos">
@@ -149,6 +149,17 @@ export default {
       frappe.db.get_doc('POS Settings', undefined).then((doc) => {
         this.eventBus.emit('set_pos_settings', doc);
       });
+    },
+    handlePayButtonClick() {
+      if (!this.invoice_doc) {
+        this.eventBus.emit('show_message', {
+          title: __('No invoice to process'),
+          color: 'error'
+        });
+        return;
+      }
+
+      this.$refs.paymentComponent.handlePayClick();
     },
   },
 

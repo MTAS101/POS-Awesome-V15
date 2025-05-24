@@ -88,6 +88,15 @@ async submit_dialog() {
       return;
     }
 
+    // Validate payments before submission
+    if (!this.validatePayments()) {
+      this.eventBus.emit('show_message', {
+        title: __('Please enter valid payment amounts'),
+        color: 'error'
+      });
+      return;
+    }
+
     const result = await this.process_payment();
     
     if (result && result.invoice_id) {
@@ -111,6 +120,25 @@ async submit_dialog() {
       this.submissionLock = false;
     }, 2000); // Add delay before allowing new submission
   }
+},
+
+// Validate payments before submission
+validatePayments() {
+  if (!this.invoice_doc || !this.invoice_doc.payments) {
+    return false;
+  }
+
+  // Check if any payment method has an amount
+  const hasPayment = this.invoice_doc.payments.some(payment => 
+    payment.amount && parseFloat(payment.amount) > 0
+  );
+
+  if (!hasPayment) {
+    return false;
+  }
+
+  // Additional validation logic can be added here
+  return true;
 },
 
 data() {
@@ -158,6 +186,13 @@ methods: {
       title: __('You are offline. Payment will be processed locally.'),
       color: 'warning'
     });
+  },
+
+  // Method to handle pay button click
+  handlePayClick() {
+    // Show payment dialog first
+    this.eventBus.emit("show_payment", true);
+    this.eventBus.emit("set_customer_readonly", true);
   },
 
   // ... existing code ...
