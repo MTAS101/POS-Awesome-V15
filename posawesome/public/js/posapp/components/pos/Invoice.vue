@@ -1,17 +1,6 @@
 <template>
   <!-- Main Invoice Wrapper -->
   <div>
-    <!-- Offline Status Indicator -->
-    <v-snackbar v-model="isOffline" :timeout="-1" color="warning" position="top">
-      <div class="d-flex align-center">
-        <v-icon icon="mdi-wifi-off" class="mr-2"></v-icon>
-        <span>{{ __("You are offline. Invoices will be saved locally.") }}</span>
-        <div v-if="pendingSyncCount > 0" class="ml-4 px-2 py-1 bg-white text-warning rounded">
-          {{ __("Pending: ") }} {{ pendingSyncCount }}
-        </div>
-      </div>
-    </v-snackbar>
-    
     <!-- Cancel Sale Confirmation Dialog -->
     <v-dialog v-model="cancel_dialog" max-width="330">
       <v-card>
@@ -506,8 +495,6 @@ export default {
       selected_currency: "", // Currently selected currency
       exchange_rate: 1, // Current exchange rate
       available_currencies: [], // List of available currencies
-      isOffline: !navigator.onLine,
-      pendingSyncCount: 0,
     };
   },
 
@@ -4085,173 +4072,6 @@ export default {
       this.calc_stock_qty(item, item.qty);
       this.$forceUpdate();
     },
-
-    // Handle online/offline status changes
-    handleOnlineStatusChange() {
-      this.isOffline = !navigator.onLine;
-      
-      if (navigator.onLine) {
-        // We're back online, try to sync pending invoices
-        this.syncPendingInvoices();
-        frappe.show_alert({
-          message: __('Back online! Syncing pending invoices...'),
-          indicator: 'green'
-        });
-      } else {
-        frappe.show_alert({
-          message: __('You are offline. Invoices will be saved locally.'),
-          indicator: 'orange'
-        });
-      }
-    },
-    
-    // Handle messages from service worker
-    handleServiceWorkerMessage(event) {
-      const data = event.data;
-      
-      if (data.type === 'INVOICE_SYNCED') {
-        this.checkPendingInvoices(); // Update the pending count
-        frappe.show_alert({
-          message: __('Invoice successfully synced with the server.'),
-          indicator: 'green'
-        });
-      } else if (data.type === 'INVOICE_SYNC_FAILED') {
-        frappe.show_alert({
-          message: __(`Failed to sync invoice: ${data.error}`),
-          indicator: 'red'
-        });
-      }
-    },
-    
-    // Check for pending invoices in IndexedDB
-    async checkPendingInvoices() {
-      if (!('indexedDB' in window)) return;
-      
-      try {
-        const dbName = 'posawesome-offline-db';
-        const storeName = 'pendingInvoices';
-        
-        const db = await new Promise((resolve, reject) => {
-          const request = indexedDB.open(dbName);
-          request.onerror = () => resolve(null);
-          request.onsuccess = () => resolve(request.result);
-        });
-        
-        if (!db) return;
-        
-        const count = await new Promise((resolve) => {
-          if (!db.objectStoreNames.contains(storeName)) {
-            resolve(0);
-            return;
-          }
-          
-          const transaction = db.transaction([storeName], 'readonly');
-          const store = transaction.objectStore(storeName);
-          const countRequest = store.count();
-          
-          countRequest.onsuccess = () => resolve(countRequest.result);
-          countRequest.onerror = () => resolve(0);
-        });
-        
-        this.pendingSyncCount = count;
-        
-        if (count > 0 && navigator.onLine) {
-          // We have pending invoices and we're online, try to sync
-          this.syncPendingInvoices();
-        }
-      } catch (error) {
-        console.error('Error checking pending invoices:', error);
-      }
-    },
-    
-    // Trigger sync of pending invoices
-    syncPendingInvoices() {
-      if ('serviceWorker' in navigator && 'SyncManager' in window) {
-        navigator.serviceWorker.ready.then(registration => {
-          registration.sync.register('sync-invoices')
-            .catch(err => console.error('Sync registration failed:', err));
-        });
-      }
-    },
-    
-    // Save invoice offline if we're offline
-    async saveInvoiceOffline(doc) {
-      if (!('indexedDB' in window)) {
-        frappe.throw(__('Your browser does not support offline storage. Please check your connection.'));
-        return null;
-      }
-      
-      try {
-        // Create a message to send to the service worker
-        const message = {
-          data: doc,
-          csrf_token: frappe.csrf_token
-        };
-        
-        // Use the service worker to save the invoice
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          // Store directly through the service worker's fetch handler
-          const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Frappe-CSRF-Token': frappe.csrf_token,
-            },
-            body: JSON.stringify(doc),
-          });
-          
-          const result = await response.json();
-          
-          if (result.status === 'queued') {
-            // Update UI to show pending status
-            this.checkPendingInvoices();
-            
-            // Return a fake successful response
-            return {
-              message: {
-                name: `OFFLINE-${Date.now()}`,
-                status: 'Draft',
-                offline: true,
-                ...doc
-              }
-            };
-          } else {
-            throw new Error(result.message || 'Failed to save invoice offline');
-          }
-        } else {
-          throw new Error('Service worker not active. Cannot save offline.');
-        }
-      } catch (error) {
-        console.error('Error saving invoice offline:', error);
-        frappe.throw(__(`Failed to save invoice offline: ${error.message}`));
-        return null;
-      }
-    },
-    
-    // Modified update_invoice to support offline functionality
-    async update_invoice(doc) {
-      // If offline, save to IndexedDB via service worker
-      if (!navigator.onLine) {
-        return this.saveInvoiceOffline(doc);
-      }
-      
-      // Original implementation for online mode
-      try {
-        const response = await frappe.call({
-          method: "posawesome.posawesome.api.posapp.update_invoice",
-          args: { data: doc },
-          freeze: true,
-          freeze_message: __("Updating Invoice..."),
-        });
-        return response;
-      } catch (error) {
-        // If the online request fails due to network issues, try offline storage
-        if (error.statusCode === 503 || error.statusCode === 0 || !navigator.onLine) {
-          return this.saveInvoiceOffline(doc);
-        }
-        throw error;
-      }
-    },
   },
 
   mounted() {
@@ -4369,18 +4189,6 @@ export default {
     this.eventBus.on("reset_posting_date", () => {
       this.posting_date = frappe.datetime.nowdate();
     });
-    
-    // Add offline event listeners
-    window.addEventListener('online', this.handleOnlineStatusChange);
-    window.addEventListener('offline', this.handleOnlineStatusChange);
-    
-    // Check for any pending invoices
-    this.checkPendingInvoices();
-    
-    // Listen for service worker messages
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.addEventListener('message', this.handleServiceWorkerMessage);
-    }
   },
   // Cleanup event listeners before component is destroyed
   beforeUnmount() {
@@ -4392,15 +4200,6 @@ export default {
     this.eventBus.off("clear_invoice");
     // Cleanup reset_posting_date listener
     this.eventBus.off("reset_posting_date");
-    
-    // Remove offline event listeners
-    window.removeEventListener('online', this.handleOnlineStatusChange);
-    window.removeEventListener('offline', this.handleOnlineStatusChange);
-    
-    // Remove service worker listener
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.removeEventListener('message', this.handleServiceWorkerMessage);
-    }
   },
   // Register global keyboard shortcuts when component is created
   created() {
