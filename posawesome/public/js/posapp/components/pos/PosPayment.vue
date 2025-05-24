@@ -144,15 +144,35 @@ async create_invoice(transactionId) {
   }
 },
 
-async submit_invoice(transactionId) {
-  // Verify this is still the active transaction
-  if (this.processingTransactionId !== transactionId) {
-    console.log('Transaction was superseded, aborting invoice submission');
-    return null;
+async submit_invoice(print) {
+  if (!this.validate_payments()) {
+    return;
+  }
+
+  // Generate unique transaction ID if not exists
+  if (!this.invoice_doc.posa_transaction_id) {
+    this.invoice_doc.posa_transaction_id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
   try {
+    if (this.isProcessing) {
+      console.log('Payment already in process, skipping duplicate submission');
+      return;
+    }
+
+    this.isProcessing = true;
     this.saving = true;
+    
+    // Clear any existing timeout
+    if (this.processingTimeout) {
+      clearTimeout(this.processingTimeout);
+    }
+
+    // Set timeout to reset processing state after 30 seconds
+    this.processingTimeout = setTimeout(() => {
+      this.isProcessing = false;
+      this.saving = false;
+    }, 30000);
     
     // Prepare invoice data
     const invoice = JSON.stringify(this.invoice_doc);
@@ -169,9 +189,11 @@ async submit_invoice(transactionId) {
         is_credit_sale: this.is_credit_sale,
         is_write_off_change: this.is_write_off_change,
         is_cashback: this.is_cashback,
-        transaction_id: transactionId // Add transaction ID to server request
+        transaction_id: this.invoice_doc.posa_transaction_id
       }
     };
+
+    console.log('Submitting invoice with transaction ID:', this.invoice_doc.posa_transaction_id);
 
     const result = await frappe.call({
       method: "posawesome.posawesome.api.posapp.submit_invoice",
@@ -179,55 +201,45 @@ async submit_invoice(transactionId) {
     });
 
     if (result.message) {
-      // Only process if this is still the active transaction
-      if (this.processingTransactionId === transactionId) {
-        if (result.message.status === 1) {
+      if (result.message.status === 1) {
+        this.invoiceDialog = false;
+        this.dialog = false;
+        this.eventBus.emit("clear_invoice");
+        if (print) {
+          this.load_print_page(result.message.name);
+        }
+        
+        this.eventBus.emit('payment_completed', {
+          success: true,
+          offline: false,
+          invoice_id: result.message.name,
+          transaction_id: this.invoice_doc.posa_transaction_id
+        });
+      } else {
+        const draft = await frappe.call({
+          method: "frappe.client.get",
+          args: {
+            doctype: "Sales Invoice",
+            name: result.message.name,
+          }
+        });
+
+        if (draft.message) {
           this.invoiceDialog = false;
           this.dialog = false;
           this.eventBus.emit("clear_invoice");
-          if (this.print_after_submit) {
-            this.load_print_page(result.message.name);
-          }
+          this.eventBus.emit("load_invoice", draft.message);
           
           this.eventBus.emit('payment_completed', {
             success: true,
             offline: false,
-            invoice_id: result.message.name,
-            transactionId: transactionId
+            invoice_id: draft.message.name,
+            draft: true,
+            transaction_id: this.invoice_doc.posa_transaction_id
           });
-          
-          return result.message;
-        } else {
-          const draft = await frappe.call({
-            method: "frappe.client.get",
-            args: {
-              doctype: "Sales Invoice",
-              name: result.message.name,
-            }
-          });
-
-          if (draft.message) {
-            this.invoiceDialog = false;
-            this.dialog = false;
-            this.eventBus.emit("clear_invoice");
-            this.eventBus.emit("load_invoice", draft.message);
-            
-            this.eventBus.emit('payment_completed', {
-              success: true,
-              offline: false,
-              invoice_id: draft.message.name,
-              draft: true,
-              transactionId: transactionId
-            });
-            
-            return draft.message;
-          }
         }
-      } else {
-        console.log('Transaction was superseded during server response processing');
       }
     }
-    return null;
   } catch (error) {
     console.error('Error submitting invoice:', error);
     this.eventBus.emit('show_message', {
@@ -235,12 +247,13 @@ async submit_invoice(transactionId) {
       color: 'error',
       message: error.message
     });
-    throw error;
   } finally {
-    // Only clear saving state if this is still the active transaction
-    if (this.processingTransactionId === transactionId) {
-      this.saving = false;
+    // Clear timeout and reset states
+    if (this.processingTimeout) {
+      clearTimeout(this.processingTimeout);
     }
+    this.isProcessing = false;
+    this.saving = false;
   }
 },
 
