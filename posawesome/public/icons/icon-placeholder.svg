@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background -->
+    <rect width="512" height="512" rx="100" fill="#0097A7"/>
+    
+    <!-- POS Text -->
+    <text x="256" y="220" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="white" text-anchor="middle">POS</text>
+    
+    <!-- Awesome Text -->
+    <text x="256" y="320" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="white" text-anchor="middle">Awesome</text>
+    
+    <!-- Shopping Cart Icon -->
+    <path d="M380 380H180L140 180H420L380 380Z" stroke="white" stroke-width="20" fill="none"/>
+    <circle cx="220" cy="420" r="20" fill="white"/>
+    <circle cx="340" cy="420" r="20" fill="white"/>
+    
+    <!-- Receipt Lines -->
+    <line x1="180" y1="220" x2="380" y2="220" stroke="white" stroke-width="10"/>
+    <line x1="180" y1="260" x2="380" y2="260" stroke="white" stroke-width="10"/>
+    <line x1="180" y1="300" x2="380" y2="300" stroke="white" stroke-width="10"/>
+</svg> 
