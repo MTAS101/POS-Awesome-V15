@@ -1,5 +1,6 @@
 import { EventBus } from '../event_bus';
 import { InvoiceQueue } from './InvoiceQueue';
+import { SocketService } from './SocketService';
 
 export class NetworkService {
   static isOnline = navigator.onLine;
@@ -7,6 +8,7 @@ export class NetworkService {
   static MAX_RECONNECT_ATTEMPTS = 5;
   static RECONNECT_INTERVAL = 5000;
   static reconnectTimer = null;
+  static SOCKET_URL = 'wss://erp.hamrooqcosmo.com:9000';
 
   /**
    * Initialize network monitoring
@@ -15,6 +17,9 @@ export class NetworkService {
     // Listen for online/offline events
     window.addEventListener('online', () => this.handleOnline());
     window.addEventListener('offline', () => this.handleOffline());
+    
+    // Initialize socket connection
+    SocketService.init(this.SOCKET_URL);
     
     // Initial check
     this.checkConnection();
@@ -33,6 +38,11 @@ export class NetworkService {
     
     // Process any queued operations
     await InvoiceQueue.processQueue();
+    
+    // Reconnect socket if needed
+    if (!SocketService.isConnected) {
+      SocketService.attemptReconnect();
+    }
     
     // Refresh critical data
     this.refreshData();
@@ -104,8 +114,25 @@ export class NetworkService {
   static getState() {
     return {
       isOnline: this.isOnline,
-      reconnectAttempts: this.reconnectAttempts
+      reconnectAttempts: this.reconnectAttempts,
+      socketConnected: SocketService.isConnected,
+      socketTransport: SocketService.getState().transport
     };
+  }
+
+  /**
+   * Clean up network monitoring
+   */
+  static cleanup() {
+    window.removeEventListener('online', this.handleOnline);
+    window.removeEventListener('offline', this.handleOffline);
+    
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    SocketService.cleanup();
   }
 }
 
