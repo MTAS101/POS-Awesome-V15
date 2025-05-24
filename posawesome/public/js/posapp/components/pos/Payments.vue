@@ -1773,6 +1773,12 @@ export default {
         );
         this.is_credit_sale = false;
         this.is_write_off_change = false;
+
+        // Handle offline mode
+        if (invoice_doc.offline_mode) {
+          this.dialog = true; // Ensure payment dialog is shown
+        }
+
         if (invoice_doc.is_return) {
           this.is_return = true;
           invoice_doc.payments.forEach((payment) => {
@@ -1799,41 +1805,28 @@ export default {
         }
         this.get_sales_person_names();
       });
+
+      this.eventBus.on("show_payment", (show) => {
+        // Ensure dialog is shown/hidden based on event
+        this.dialog = show === true;
+        
+        // If showing payment in offline mode, ensure UI is ready
+        if (show && this.invoice_doc?.offline_mode) {
+          this.$nextTick(() => {
+            // Force UI update to ensure payment methods are displayed
+            this.$forceUpdate();
+          });
+        }
+      });
+
       this.eventBus.on("register_pos_profile", (data) => {
         this.pos_profile = data.pos_profile;
         this.get_mpesa_modes();
       });
+      
       this.eventBus.on("add_the_new_address", (data) => {
         this.addresses.push(data);
         this.$forceUpdate();
-      });
-      this.eventBus.on("update_invoice_type", (data) => {
-        this.invoiceType = data;
-        if (this.invoice_doc && data !== "Order") {
-          this.invoice_doc.posa_delivery_date = null;
-          this.invoice_doc.posa_notes = null;
-          this.invoice_doc.shipping_address_name = null;
-        }
-        if (this.invoice_doc && data === "Return") {
-          this.invoice_doc.is_return = 1;
-          this.ensureReturnPaymentsAreNegative();
-        }
-      });
-      this.eventBus.on("update_customer", (customer) => {
-        if (this.customer !== customer) {
-          this.customer_credit_dict = [];
-          this.redeem_customer_credit = false;
-          this.is_cashback = true;
-        }
-      });
-      this.eventBus.on("set_pos_settings", (data) => {
-        this.pos_settings = data;
-      });
-      this.eventBus.on("set_customer_info_to_edit", (data) => {
-        this.customer_info = data;
-      });
-      this.eventBus.on("set_mpesa_payment", (data) => {
-        this.set_mpesa_payment(data);
       });
     });
   },

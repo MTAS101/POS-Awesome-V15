@@ -1667,6 +1667,9 @@ export default {
           return;
         }
 
+        // Check if offline
+        const isOfflineMode = !navigator.onLine;
+        
         // Set currency info
         invoice_doc.currency = this.selected_currency || this.pos_profile.currency;
         invoice_doc.conversion_rate = this.exchange_rate || 1;
@@ -1679,8 +1682,7 @@ export default {
         invoice_doc.base_grand_total = this.subtotal * (1 / this.exchange_rate || 1);
         invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
 
-        // Check if offline
-        const isOfflineMode = !navigator.onLine;
+        // Handle offline mode
         if (isOfflineMode) {
           invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
           invoice_doc.is_pos = 1;
@@ -1706,9 +1708,9 @@ export default {
           }
         }
 
-        // Show payment dialog
-        this.eventBus.emit("show_payment", true);
+        // Show payment dialog - IMPORTANT: Emit these events in correct order
         this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
+        this.eventBus.emit("show_payment", true);
 
         // Listen for payment completion
         this.eventBus.on("payment_completed", (result) => {
