@@ -564,9 +564,9 @@ def update_invoice(data):
         selected_currency = data.get("currency")
         
         # Handle POS invoices correctly
-        if 'is_pos' in data:
-            invoice_doc.is_pos = data.get('is_pos')
-            print(f"Setting is_pos from data: {invoice_doc.is_pos}")
+        if data.get('is_pos'):
+            invoice_doc.is_pos = 1
+            print(f"Setting is_pos=1 from data")
         elif include_payments:
             # If include_payments is set, this is likely a POS invoice
             invoice_doc.is_pos = 1
@@ -576,67 +576,13 @@ def update_invoice(data):
         if data.get("update_stock") or data.get("offline_pos_name") or data.get("offline_submit"):
             invoice_doc.update_stock = 1
             print(f"Setting update_stock=1 for offline invoice")
+            
+            # For offline invoices, ensure these flags are set
+            invoice_doc.is_pos = 1
+            invoice_doc.offline_mode = True
         
         # Set missing values first
         invoice_doc.set_missing_values()
-        
-        # Ensure selected currency is preserved after set_missing_values
-        if selected_currency:
-            invoice_doc.currency = selected_currency
-            # Get default conversion rate from ERPNext if currency is different from company currency
-            if invoice_doc.currency != frappe.get_cached_value("Company", invoice_doc.company, "default_currency"):
-                company_currency = frappe.get_cached_value("Company", invoice_doc.company, "default_currency")
-                # Get exchange rate from selected currency to base currency
-                exchange_rate = get_exchange_rate(
-                    invoice_doc.currency,
-                    company_currency,
-                    invoice_doc.posting_date
-                )
-                invoice_doc.conversion_rate = exchange_rate
-                invoice_doc.plc_conversion_rate = exchange_rate
-                invoice_doc.price_list_currency = selected_currency
-
-                # Update rates and amounts for all items using multiplication
-                for item in invoice_doc.items:
-                    if item.price_list_rate:
-                        # If exchange rate is 285 PKR = 1 USD
-                        # To convert USD to PKR: multiply by exchange rate
-                        # Example: 0.35 USD * 285 = 100 PKR
-                        item.base_price_list_rate = flt(item.price_list_rate * exchange_rate, item.precision("base_price_list_rate"))
-                    if item.rate:
-                        item.base_rate = flt(item.rate * exchange_rate, item.precision("base_rate"))
-                    if item.amount:
-                        item.base_amount = flt(item.amount * exchange_rate, item.precision("base_amount"))
-
-                # Update payment amounts
-                for payment in invoice_doc.payments:
-                    payment.base_amount = flt(payment.amount * exchange_rate, payment.precision("base_amount"))
-
-                # Update invoice level amounts
-                invoice_doc.base_total = flt(invoice_doc.total * exchange_rate, invoice_doc.precision("base_total"))
-                invoice_doc.base_net_total = flt(invoice_doc.net_total * exchange_rate, invoice_doc.precision("base_net_total"))
-                invoice_doc.base_grand_total = flt(invoice_doc.grand_total * exchange_rate, invoice_doc.precision("base_grand_total"))
-                invoice_doc.base_rounded_total = flt(invoice_doc.rounded_total * exchange_rate, invoice_doc.precision("base_rounded_total"))
-                invoice_doc.base_in_words = money_in_words(invoice_doc.base_rounded_total, invoice_doc.company_currency)
-
-                # Update data to be sent back to frontend
-                data["conversion_rate"] = exchange_rate
-                data["plc_conversion_rate"] = exchange_rate
-
-        # Process remarks if this is an offline order coming online
-        if data.get("offline_pos_name") or data.get("offline_submit"):
-            # Update remarks with items details for offline orders
-            items = []
-            for item in invoice_doc.items:
-                if item.item_name and item.rate and item.qty:
-                    total = item.rate * item.qty
-                    items.append(f"{item.item_name} - Rate: {item.rate}, Qty: {item.qty}, Amount: {total}")
-            
-            # Add the grand total at the end of remarks
-            grand_total = f"\nGrand Total: {invoice_doc.grand_total}"
-            items.append(grand_total)
-            
-            invoice_doc.remarks = "\n".join(items)
         
         # Make sure payments are properly included for POS invoices
         if include_payments or invoice_doc.is_pos == 1:
@@ -652,6 +598,7 @@ def update_invoice(data):
             # Make sure update_stock is set to 1 for offline POS invoices
             if data.get("offline_pos_name") or data.get("offline_submit"):
                 invoice_doc.update_stock = 1
+                invoice_doc.offline_mode = True
         
         # Final settings before save
         invoice_doc.flags.ignore_permissions = True
@@ -674,6 +621,7 @@ def update_invoice(data):
                 # For offline invoices, make sure is_pos is set correctly before submit
                 if data.get("offline_pos_name") or data.get("offline_submit"):
                     invoice_doc.is_pos = 1
+                    invoice_doc.offline_mode = True
                 
                 print(f"Submitting invoice {invoice_doc.name} with is_pos={invoice_doc.is_pos}, update_stock={invoice_doc.update_stock}")
                 invoice_doc.submit()
@@ -694,14 +642,11 @@ def update_invoice(data):
         response["conversion_rate"] = invoice_doc.conversion_rate
         response["plc_conversion_rate"] = invoice_doc.conversion_rate
         return response
-        
     except Exception as e:
         frappe.db.rollback()
-        error_message = str(e)
-        print(f"Error in update_invoice: {error_message}")
-        frappe.log_error(f"Error in update_invoice: {error_message}")
-        frappe.msgprint(_("Error updating invoice: {0}").format(error_message), indicator="red")
-        return {"error": error_message}
+        print(f"Error in update_invoice: {str(e)}")
+        frappe.log_error(f"Failed to update/create invoice: {str(e)}")
+        raise
 
 
 @frappe.whitelist()

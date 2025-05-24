@@ -1451,7 +1451,7 @@ export default {
           return;
         }
         
-        const hasValidPayment = invoice_doc.payments.some(p => p.amount !== 0);
+        const hasValidPayment = invoice_doc.payments.some(p => p.amount > 0);
         if (!hasValidPayment) {
           console.log('No payment amount entered');
           this.eventBus.emit('show_message', {
@@ -1461,6 +1461,14 @@ export default {
           this.saving = false;
           return;
         }
+
+        // Add offline flags
+        invoice_doc.offline_pos_name = `OFFPOS${Date.now()}`;
+        invoice_doc.offline_mode = true;
+        invoice_doc.offline_sync_status = 'not_synced';
+        invoice_doc.offline_submit = true;
+        invoice_doc.is_pos = 1;
+        invoice_doc.update_stock = 1;
         
         console.log('Saving invoice offline with payment data:', invoice_doc.payments);
         
@@ -1674,8 +1682,15 @@ export default {
     },
     async handle_offline_invoice() {
       try {
-        const { saveInvoiceOffline } = await import('../../offline_db');
         const invoice = this.prepare_invoice_data();
+        
+        // Add offline flags
+        invoice.offline_pos_name = `OFFPOS${Date.now()}`;
+        invoice.offline_mode = true;
+        invoice.offline_sync_status = 'not_synced';
+        invoice.offline_submit = true;
+        invoice.is_pos = 1;
+        invoice.update_stock = 1;
         
         const result = await saveInvoiceOffline(invoice);
         if (result) {

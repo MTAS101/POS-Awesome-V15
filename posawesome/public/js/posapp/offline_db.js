@@ -158,12 +158,13 @@ export async function saveInvoiceOffline(invoice) {
       const sanitizedInvoice = sanitizeForStorage(invoice);
       
       // Add timestamp for sorting/tracking and set offline_submit flag to true
-      // so invoice will be submitted when synced online, not saved as draft
       const order = {
         ...sanitizedInvoice,
         timestamp: Date.now(),
         synced: false,
-        offline_submit: true // Always set to true to ensure invoice is submitted when synced
+        offline_submit: true,
+        is_pos: 1,
+        update_stock: 1
       };
       
       const request = store.add(order);
@@ -185,6 +186,11 @@ export async function saveInvoiceOffline(invoice) {
             });
           });
         }
+        
+        // Update offline queue count
+        window.dispatchEvent(new CustomEvent('offline-queue-updated', {
+          detail: { count: 1 }
+        }));
         
         resolve(request.result);
       };
@@ -514,12 +520,13 @@ async function submitInvoice(invoice) {
     const requestData = {
       data: JSON.stringify({
         ...invoice,
-        is_pos: 1,  // Force this to be a POS invoice
-        update_stock: 1,  // Ensure stock is updated
-        offline_submit: true // Flag to indicate this is an offline submission
+        is_pos: 1,
+        update_stock: 1,
+        offline_submit: true,
+        offline_mode: true
       }),
-      submit: 1,  // Always submit invoices when syncing from offline mode
-      include_payments: 1  // Make sure payments are included
+      submit: 1,
+      include_payments: 1
     };
 
     // Call the server API to process the invoice
@@ -544,6 +551,12 @@ async function submitInvoice(invoice) {
     if (responseData.message?.name) {
       // Mark the invoice as synced in IndexedDB
       await markOrderSynced(invoice.id);
+      
+      // Update offline queue count
+      const pendingCount = await getPendingOrdersCount();
+      window.dispatchEvent(new CustomEvent('offline-queue-updated', {
+        detail: { count: pendingCount }
+      }));
       
       // Show success message
       frappe.show_alert({
@@ -570,29 +583,50 @@ async function submitInvoice(invoice) {
 
 // Update processPendingInvoices to use the service
 export async function processPendingInvoices() {
-  const result = { processed: 0, failed: 0 };
+  const result = { processed: 0, failed: 0, success: true };
   
   try {
     const pendingInvoices = await getPendingOrders();
     
     for (const invoice of pendingInvoices) {
-      const syncFn = async () => {
-        try {
-          await submitInvoice(invoice);
-          result.processed++;
-        } catch (error) {
-          console.error('Failed to sync invoice:', error);
-          result.failed++;
-          throw error; // Rethrow to trigger retry
-        }
-      };
-      
-      ConnectivityService.addPendingSync(syncFn);
+      try {
+        await submitInvoice(invoice);
+        result.processed++;
+      } catch (error) {
+        console.error('Failed to sync invoice:', error);
+        result.failed++;
+        result.success = false;
+        result.error = error.message;
+      }
     }
+    
+    // Update offline queue count after processing
+    const pendingCount = await getPendingOrdersCount();
+    window.dispatchEvent(new CustomEvent('offline-queue-updated', {
+      detail: { count: pendingCount }
+    }));
+    
+    return result;
   } catch (error) {
     console.error('Error processing pending invoices:', error);
     throw error;
   }
-  
-  return result;
+}
+
+// Get count of pending orders
+async function getPendingOrdersCount() {
+  try {
+    const db = await ensureStoreExists();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([ORDERS_STORE], 'readonly');
+      const store = transaction.objectStore(ORDERS_STORE);
+      const request = store.count();
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Error getting pending orders count:', error);
+    return 0;
+  }
 } 
