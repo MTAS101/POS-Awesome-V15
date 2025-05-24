@@ -5,17 +5,10 @@
   // Check if service workers are supported
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-      // Try registering with root scope first, if that fails, fallback to default scope
+      // Register service worker with root scope
       registerServiceWorker('/', function(err) {
         if (err) {
-          console.warn('Failed to register service worker with root scope, falling back to default scope.', err);
-          
-          // Fallback to default scope (the directory where the service worker is)
-          registerServiceWorker('/assets/posawesome/js/', function(fallbackErr) {
-            if (fallbackErr) {
-              console.error('Service Worker registration failed with all scopes:', fallbackErr);
-            }
-          });
+          console.error('Service Worker registration failed:', err);
         }
       });
       
@@ -42,7 +35,7 @@
   
   // Helper function to register service worker with a specific scope
   function registerServiceWorker(scope, callback) {
-    navigator.serviceWorker.register('/assets/posawesome/js/service-worker.js', {
+    navigator.serviceWorker.register('/service-worker.js', {
       scope: scope
     })
     .then(function(registration) {
