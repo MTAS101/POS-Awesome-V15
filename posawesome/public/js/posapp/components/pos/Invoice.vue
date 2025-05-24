@@ -1528,68 +1528,92 @@ export default {
     async process_invoice() {
       const doc = this.get_invoice_doc();
       
-      // Check if we're offline
-      if (!isOnline()) {
-        try {
-          this.is_processing_offline = true;
-          
-          // Save invoice offline
-          await saveInvoiceOffline(doc);
-          
-          // Show success message
-          this.eventBus.emit('show_message', {
-            title: __('Invoice saved offline and will be synced when online'),
-            color: 'info'
-          });
-          
-          this.is_processing_offline = false;
-          return doc; // Return the doc to continue with payment UI
-        } catch (error) {
-          console.error('Error saving invoice offline:', error);
-          this.is_processing_offline = false;
-          
-          this.eventBus.emit('show_message', {
-            title: __(error.message || 'Error saving invoice offline'),
-            color: 'error'
-          });
-          
-          return false;
-        }
-      }
-      
-      // Online mode - proceed with normal flow
-      if (doc.name) {
-        try {
-          const updated_doc = this.update_invoice(doc);
-          // Update posting date after invoice update
-          if (updated_doc && updated_doc.posting_date) {
-            this.posting_date = updated_doc.posting_date;
+      try {
+        // Check if we're offline
+        if (!isOnline()) {
+          try {
+            this.is_processing_offline = true;
+            
+            // Show info message about offline processing
+            this.eventBus.emit('show_message', {
+              title: __('You are offline. Processing invoice for local storage...'),
+              color: 'info'
+            });
+            
+            // Validate offline data - make sure we have the minimal required fields
+            if (!doc.customer) {
+              throw new Error('Customer is required for offline invoices');
+            }
+            
+            if (!doc.items || !doc.items.length) {
+              throw new Error('No items in invoice');
+            }
+            
+            // Save invoice offline
+            const result = await saveInvoiceOffline(doc);
+            
+            // Show success message
+            this.eventBus.emit('show_message', {
+              title: __('Invoice saved offline and will be synced when online'),
+              color: 'success'
+            });
+            
+            this.is_processing_offline = false;
+            return doc; // Return the doc to continue with payment UI
+          } catch (error) {
+            console.error('Error saving invoice offline:', error);
+            this.is_processing_offline = false;
+            
+            this.eventBus.emit('show_message', {
+              title: __(error.message || 'Error saving invoice offline'),
+              color: 'error'
+            });
+            
+            return false;
           }
-          return updated_doc;
-        } catch (error) {
-          console.error('Error in process_invoice:', error);
-          this.eventBus.emit('show_message', {
-            title: __(error.message || 'Error processing invoice'),
-            color: 'error'
-          });
-          return false;
         }
-      } else {
-        try {
-          const updated_doc = this.update_invoice(doc);
-          // Update posting date after invoice creation
-          if (updated_doc && updated_doc.posting_date) {
-            this.posting_date = updated_doc.posting_date;
+        
+        // Online mode - proceed with normal flow
+        if (doc.name) {
+          try {
+            const updated_doc = this.update_invoice(doc);
+            // Update posting date after invoice update
+            if (updated_doc && updated_doc.posting_date) {
+              this.posting_date = updated_doc.posting_date;
+            }
+            return updated_doc;
+          } catch (error) {
+            console.error('Error in process_invoice:', error);
+            this.eventBus.emit('show_message', {
+              title: __(error.message || 'Error processing invoice'),
+              color: 'error'
+            });
+            return false;
           }
-          return updated_doc;
-        } catch (error) {
-          console.error('Error in process_invoice:', error);
-          this.eventBus.emit('show_message', {
-            title: __(error.message || 'Error processing invoice'),
-            color: 'error'
-          });
-          return false;
+        } else {
+          try {
+            const updated_doc = this.update_invoice(doc);
+            // Update posting date after invoice creation
+            if (updated_doc && updated_doc.posting_date) {
+              this.posting_date = updated_doc.posting_date;
+            }
+            return updated_doc;
+          } catch (error) {
+            console.error('Error in process_invoice:', error);
+            this.eventBus.emit('show_message', {
+              title: __(error.message || 'Error processing invoice'),
+              color: 'error'
+            });
+            return false;
+          }
         }
+      } catch (error) {
+        console.error('Unexpected error in process_invoice:', error);
+        this.eventBus.emit('show_message', {
+          title: __('Unexpected error processing invoice'),
+          color: 'error'
+        });
+        return false;
       }
     },
 

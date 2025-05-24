@@ -111,9 +111,12 @@ export async function saveInvoiceOffline(invoice) {
       const transaction = db.transaction([ORDERS_STORE], 'readwrite');
       const store = transaction.objectStore(ORDERS_STORE);
       
+      // Sanitize the invoice to remove non-serializable data and circular references
+      const sanitizedInvoice = sanitizeForStorage(invoice);
+      
       // Add timestamp for sorting/tracking
       const order = {
-        ...invoice,
+        ...sanitizedInvoice,
         timestamp: Date.now(),
         synced: false
       };
@@ -133,7 +136,7 @@ export async function saveInvoiceOffline(invoice) {
             // Also send a message to the service worker
             navigator.serviceWorker.controller?.postMessage({
               type: 'STORE_OFFLINE_ORDER',
-              payload: order
+              payload: { id: request.result, timestamp: Date.now() }
             });
           });
         }
@@ -158,6 +161,101 @@ export async function saveInvoiceOffline(invoice) {
   }
 }
 
+// Function to sanitize invoice data for storage
+function sanitizeForStorage(invoice) {
+  // Create a deep clone of the invoice to avoid modifying the original
+  const sanitized = JSON.parse(JSON.stringify({
+    // Only include necessary fields with proper serialization
+    doctype: invoice.doctype,
+    name: invoice.name || null,
+    customer: invoice.customer,
+    posting_date: invoice.posting_date,
+    due_date: invoice.due_date,
+    currency: invoice.currency,
+    conversion_rate: invoice.conversion_rate,
+    is_return: invoice.is_return ? 1 : 0,
+    total: invoice.total,
+    net_total: invoice.net_total,
+    base_total: invoice.base_total,
+    base_net_total: invoice.base_net_total,
+    discount_amount: invoice.discount_amount,
+    base_discount_amount: invoice.base_discount_amount,
+    additional_discount_percentage: invoice.additional_discount_percentage,
+    grand_total: invoice.grand_total,
+    base_grand_total: invoice.base_grand_total,
+    rounded_total: invoice.rounded_total,
+    base_rounded_total: invoice.base_rounded_total,
+    company: invoice.company,
+    pos_profile: invoice.pos_profile,
+    posa_pos_opening_shift: invoice.posa_pos_opening_shift,
+    posa_is_offer_applied: invoice.posa_is_offer_applied ? 1 : 0,
+    return_against: invoice.return_against || null,
+    
+    // Clean items array - ensure only serializable data
+    items: (invoice.items || []).map(item => ({
+      item_code: item.item_code,
+      item_name: item.item_name,
+      qty: item.qty,
+      rate: item.rate,
+      base_rate: item.base_rate,
+      amount: item.amount,
+      base_amount: item.base_amount,
+      discount_percentage: item.discount_percentage,
+      discount_amount: item.discount_amount,
+      base_discount_amount: item.base_discount_amount,
+      stock_qty: item.stock_qty,
+      uom: item.uom,
+      conversion_factor: item.conversion_factor,
+      stock_uom: item.stock_uom,
+      price_list_rate: item.price_list_rate,
+      base_price_list_rate: item.base_price_list_rate,
+      serial_no: item.serial_no,
+      batch_no: item.batch_no,
+      posa_notes: item.posa_notes,
+      posa_delivery_date: item.posa_delivery_date,
+      posa_offers: typeof item.posa_offers === 'string' ? item.posa_offers : JSON.stringify([]),
+      posa_offer_applied: item.posa_offer_applied ? 1 : 0,
+      posa_is_offer: item.posa_is_offer ? 1 : 0,
+      posa_is_replace: item.posa_is_replace || null,
+      is_free_item: item.is_free_item ? 1 : 0
+    })),
+    
+    // Clean payments array
+    payments: (invoice.payments || []).map(payment => ({
+      mode_of_payment: payment.mode_of_payment,
+      amount: payment.amount,
+      base_amount: payment.base_amount,
+      type: payment.type,
+      account: payment.account,
+      default: payment.default ? 1 : 0,
+      currency: payment.currency,
+      conversion_rate: payment.conversion_rate
+    })),
+    
+    // Clean offers data to avoid circular references
+    posa_offers: (invoice.posa_offers || []).map(offer => ({
+      offer_name: offer.offer_name,
+      row_id: offer.row_id,
+      apply_on: offer.apply_on,
+      offer: offer.offer,
+      items: typeof offer.items === 'string' ? offer.items : JSON.stringify(offer.items || []),
+      give_item: offer.give_item,
+      give_item_row_id: offer.give_item_row_id,
+      offer_applied: offer.offer_applied ? 1 : 0,
+      coupon_based: offer.coupon_based ? 1 : 0,
+      coupon: offer.coupon
+    })),
+    
+    // Other necessary data
+    posa_coupons: invoice.posa_coupons || [],
+    taxes: invoice.taxes || [],
+    posa_delivery_charges: invoice.posa_delivery_charges || null,
+    posa_delivery_charges_rate: invoice.posa_delivery_charges_rate || 0
+  }));
+  
+  return sanitized;
+}
+
 // Get all pending offline orders
 export async function getPendingOrders() {
   try {
@@ -171,28 +269,52 @@ export async function getPendingOrders() {
         return;
       }
       
-      const transaction = db.transaction([ORDERS_STORE], 'readonly');
-      const store = transaction.objectStore(ORDERS_STORE);
-      const index = store.index('timestamp');
-      
-      const request = index.getAll();
-      
-      request.onsuccess = () => {
-        const pendingOrders = request.result ? request.result.filter(order => !order.synced) : [];
-        console.log(`Found ${pendingOrders.length} pending orders`);
-        resolve(pendingOrders);
-      };
-      
-      request.onerror = (event) => {
-        console.error('Error getting pending orders:', event.target.error);
-        reject(event.target.error);
-      };
-      
-      // Handle transaction errors
-      transaction.onerror = (event) => {
-        console.error('Transaction error when getting pending orders:', event.target.error);
-        reject(event.target.error);
-      };
+      // Use a try/catch block inside the promise for better error handling
+      try {
+        const transaction = db.transaction([ORDERS_STORE], 'readonly');
+        const store = transaction.objectStore(ORDERS_STORE);
+        
+        // Handle transaction errors
+        transaction.onerror = (event) => {
+          console.error('Transaction error when getting pending orders:', event.target.error);
+          reject(event.target.error);
+        };
+        
+        // Use the timestamp index if it exists
+        let request;
+        try {
+          const index = store.index('timestamp');
+          request = index.getAll();
+        } catch (indexError) {
+          console.warn('Index not found, falling back to getAll() on store:', indexError);
+          request = store.getAll();
+        }
+        
+        request.onsuccess = () => {
+          try {
+            // Filter out synced orders, handle empty result
+            const pendingOrders = request.result ? 
+              request.result.filter(order => !order.synced) : 
+              [];
+            
+            console.log(`Found ${pendingOrders.length} pending orders`);
+            resolve(pendingOrders);
+          } catch (filterError) {
+            console.error('Error filtering pending orders:', filterError);
+            // Return empty array instead of failing completely
+            resolve([]);
+          }
+        };
+        
+        request.onerror = (event) => {
+          console.error('Error getting pending orders:', event.target.error);
+          reject(event.target.error);
+        };
+      } catch (transactionError) {
+        console.error('Error creating transaction:', transactionError);
+        // Return empty array instead of rejecting
+        resolve([]);
+      }
     });
   } catch (error) {
     console.error('Failed to get pending orders:', error);
