@@ -1696,6 +1696,16 @@ export default {
         invoice_doc.base_grand_total = this.subtotal * (1 / this.exchange_rate || 1);
         invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
         
+        // Check if we're offline
+        const isOfflineMode = !isOnline();
+        
+        // If offline, add a flag to indicate this should be submitted, not saved as draft
+        if (isOfflineMode) {
+          invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
+          invoice_doc.is_pos = 1;
+          invoice_doc.offline_submit = true; // Flag to indicate this should be submitted when synced
+        }
+        
         // Check if this is a return invoice
         if (this.invoiceType === 'Return' || invoice_doc.is_return) {
           console.log('Preparing RETURN invoice for payment with:', {
@@ -1739,6 +1749,13 @@ export default {
         }
 
         console.log('Showing payment dialog with currency:', invoice_doc.currency);
+        
+        // In offline mode, make sure to tell the payment component we're offline
+        if (isOfflineMode) {
+          console.log('Operating in offline mode for payment');
+          invoice_doc.offline_mode = true;
+        }
+        
         this.eventBus.emit("show_payment", "true");
         this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
 

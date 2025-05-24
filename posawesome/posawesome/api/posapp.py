@@ -538,7 +538,13 @@ def validate_return_items(original_invoice_name, return_items):
     
 @frappe.whitelist()
 def update_invoice(data):
-    data = json.loads(data)
+    # Check if data is a string (from offline mode) or dict
+    if isinstance(data, str):
+        data = json.loads(data)
+    
+    # Check for submit flag
+    should_submit = frappe.form_dict.get("submit")
+    
     if data.get("name"):
         invoice_doc = frappe.get_doc("Sales Invoice", data.get("name"))
         invoice_doc.update(data)
@@ -594,10 +600,40 @@ def update_invoice(data):
             data["conversion_rate"] = exchange_rate
             data["plc_conversion_rate"] = exchange_rate
 
+    # Process remarks if this is an offline order coming online
+    if data.get("offline_pos_name") or data.get("offline_submit"):
+        # Update remarks with items details for offline orders
+        items = []
+        for item in invoice_doc.items:
+            if item.item_name and item.rate and item.qty:
+                total = item.rate * item.qty
+                items.append(f"{item.item_name} - Rate: {item.rate}, Qty: {item.qty}, Amount: {total}")
+        
+        # Add the grand total at the end of remarks
+        grand_total = f"\nGrand Total: {invoice_doc.grand_total}"
+        items.append(grand_total)
+        
+        invoice_doc.remarks = "\n".join(items)
+    
     invoice_doc.flags.ignore_permissions = True
     frappe.flags.ignore_account_permission = True
     invoice_doc.docstatus = 0
     invoice_doc.save()
+    
+    # Submit the invoice if requested
+    if should_submit:
+        try:
+            frappe.flags.ignore_account_permission = True
+            invoice_doc.docstatus = 1
+            invoice_doc.update_stock = 1  # Ensure stock is updated for offline orders
+            invoice_doc.posa_is_printed = 1
+            invoice_doc.submit()
+            frappe.db.commit()
+            frappe.msgprint(_("Invoice {0} successfully submitted").format(invoice_doc.name))
+        except Exception as e:
+            frappe.db.rollback()
+            frappe.log_error(f"Failed to submit offline invoice: {str(e)}")
+            frappe.msgprint(_("Error submitting invoice: {0}").format(str(e)), indicator="red")
 
     # Return both the invoice doc and the updated data
     response = invoice_doc.as_dict()

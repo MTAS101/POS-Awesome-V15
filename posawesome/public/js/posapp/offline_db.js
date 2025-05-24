@@ -443,12 +443,18 @@ export async function processPendingInvoices() {
       try {
         console.log('Processing order:', order.id);
         
+        // Check if this invoice should be submitted (not just saved as draft)
+        const shouldSubmit = order.offline_submit === true;
+        
         // Server expects data in a specific format
         // The API is expecting a string that it will JSON.parse,
         // but we need to send a proper object wrapped in a data field
         const requestData = {
-          data: JSON.stringify(order)
+          data: JSON.stringify(order),
+          submit: shouldSubmit ? 1 : 0  // Add submit flag if this should be submitted
         };
+        
+        console.log('Sending order with submit flag:', shouldSubmit);
         
         // Call the server API to process the order
         const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
