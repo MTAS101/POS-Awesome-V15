@@ -641,6 +641,8 @@ export default {
       isProcessing: false,
       processingTimeout: null,
       lastProcessedInvoiceId: null,
+      isOffline: !navigator.onLine,
+      offlineListener: null
     };
   },
   computed: {
@@ -868,113 +870,144 @@ export default {
       });
     },
     submit(event, payment_received = false, print = false) {
-      if (this.invoice_doc.is_return) {
-        this.ensureReturnPaymentsAreNegative();
-      }
-      if (!this.is_credit_sale && !this.invoice_doc.is_return && 
-          this.total_payments <= 0 && 
-          (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0) {
-        this.eventBus.emit("show_message", {
-          title: `Please enter payment amount`,
-          color: "error",
-        });
-        frappe.utils.play_sound("error");
+      if (this.isProcessing) {
+        console.log('Payment already in process, preventing duplicate submission');
         return;
       }
-      if (!this.is_credit_sale && !this.invoice_doc.is_return) {
-        let has_cash_payment = false;
-        let cash_amount = 0;
-        this.invoice_doc.payments.forEach((payment) => {
-          if (payment.mode_of_payment.toLowerCase().includes('cash')) {
-            has_cash_payment = true;
-            cash_amount = this.flt(payment.amount);
+
+      try {
+        this.isProcessing = true;
+        
+        // Clear any existing timeout
+        if (this.processingTimeout) {
+          clearTimeout(this.processingTimeout);
+        }
+
+        // Set a timeout to reset processing state after 30 seconds
+        this.processingTimeout = setTimeout(() => {
+          this.isProcessing = false;
+        }, 30000);
+
+        if (this.invoice_doc.is_return) {
+          this.ensureReturnPaymentsAreNegative();
+        }
+        if (!this.is_credit_sale && !this.invoice_doc.is_return && 
+            this.total_payments <= 0 && 
+            (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0) {
+          this.eventBus.emit("show_message", {
+            title: `Please enter payment amount`,
+            color: "error",
+          });
+          frappe.utils.play_sound("error");
+          return;
+        }
+        if (!this.is_credit_sale && !this.invoice_doc.is_return) {
+          let has_cash_payment = false;
+          let cash_amount = 0;
+          this.invoice_doc.payments.forEach((payment) => {
+            if (payment.mode_of_payment.toLowerCase().includes('cash')) {
+              has_cash_payment = true;
+              cash_amount = this.flt(payment.amount);
+            }
+          });
+          if (has_cash_payment) {
+            if (!this.pos_profile.posa_allow_partial_payment && 
+                cash_amount < (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) &&
+                (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0) {
+              this.eventBus.emit("show_message", {
+                title: `Cash payment cannot be less than invoice total when partial payment is not allowed`,
+                color: "error",
+              });
+              frappe.utils.play_sound("error");
+              return;
+            }
           }
-        });
-        if (has_cash_payment) {
-          if (!this.pos_profile.posa_allow_partial_payment && 
-              cash_amount < (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) &&
-              (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0) {
+        }
+        if (
+          !this.is_credit_sale &&
+          !this.pos_profile.posa_allow_partial_payment &&
+          this.total_payments < (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) &&
+          (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0
+        ) {
+          this.eventBus.emit("show_message", {
+            title: `The amount paid is not complete`,
+            color: "error",
+          });
+          frappe.utils.play_sound("error");
+          return;
+        }
+        let phone_payment_is_valid = true;
+        if (!payment_received) {
+          this.invoice_doc.payments.forEach((payment) => {
+            if (
+              payment.type === "Phone" &&
+              ![0, "0", "", null, undefined].includes(payment.amount)
+            ) {
+              phone_payment_is_valid = false;
+            }
+          });
+          if (!phone_payment_is_valid) {
             this.eventBus.emit("show_message", {
-              title: `Cash payment cannot be less than invoice total when partial payment is not allowed`,
+              title: __("Please request phone payment or use another payment method"),
               color: "error",
             });
             frappe.utils.play_sound("error");
             return;
           }
         }
-      }
-      if (
-        !this.is_credit_sale &&
-        !this.pos_profile.posa_allow_partial_payment &&
-        this.total_payments < (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) &&
-        (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0
-      ) {
-        this.eventBus.emit("show_message", {
-          title: `The amount paid is not complete`,
-          color: "error",
-        });
-        frappe.utils.play_sound("error");
-        return;
-      }
-      let phone_payment_is_valid = true;
-      if (!payment_received) {
-        this.invoice_doc.payments.forEach((payment) => {
-          if (
-            payment.type === "Phone" &&
-            ![0, "0", "", null, undefined].includes(payment.amount)
-          ) {
-            phone_payment_is_valid = false;
-          }
-        });
-        if (!phone_payment_is_valid) {
+        if (this.paid_change > -this.diff_payment) {
           this.eventBus.emit("show_message", {
-            title: __("Please request phone payment or use another payment method"),
+            title: `Paid change cannot be greater than total change!`,
             color: "error",
           });
           frappe.utils.play_sound("error");
           return;
         }
-      }
-      if (this.paid_change > -this.diff_payment) {
-        this.eventBus.emit("show_message", {
-          title: `Paid change cannot be greater than total change!`,
-          color: "error",
+        let total_change = this.flt(this.flt(this.paid_change) + this.flt(-this.credit_change));
+        if (this.is_cashback && total_change !== -this.diff_payment) {
+          this.eventBus.emit("show_message", {
+            title: `Error in change calculations!`,
+            color: "error",
+          });
+          frappe.utils.play_sound("error");
+          return;
+        }
+        let credit_calc_check = this.customer_credit_dict.filter((row) => {
+          return this.flt(row.credit_to_redeem) > this.flt(row.total_credit);
         });
-        frappe.utils.play_sound("error");
-        return;
-      }
-      let total_change = this.flt(this.flt(this.paid_change) + this.flt(-this.credit_change));
-      if (this.is_cashback && total_change !== -this.diff_payment) {
-        this.eventBus.emit("show_message", {
-          title: `Error in change calculations!`,
-          color: "error",
+        if (credit_calc_check.length > 0) {
+          this.eventBus.emit("show_message", {
+            title: `Redeemed credit cannot be greater than its total.`,
+            color: "error",
+          });
+          frappe.utils.play_sound("error");
+          return;
+        }
+        if (
+          !this.invoice_doc.is_return &&
+          this.redeemed_customer_credit > (this.invoice_doc.rounded_total || this.invoice_doc.grand_total)
+        ) {
+          this.eventBus.emit("show_message", {
+            title: `Cannot redeem customer credit more than invoice total`,
+            color: "error",
+          });
+          frappe.utils.play_sound("error");
+          return;
+        }
+        this.submit_invoice(print);
+      } catch (error) {
+        console.error('Error in submit:', error);
+        this.eventBus.emit('show_message', {
+          title: __('Error processing payment. Please try again.'),
+          color: 'error'
         });
-        frappe.utils.play_sound("error");
-        return;
+      } finally {
+        // Clear timeout and reset state
+        if (this.processingTimeout) {
+          clearTimeout(this.processingTimeout);
+        }
+        this.isProcessing = false;
       }
-      let credit_calc_check = this.customer_credit_dict.filter((row) => {
-        return this.flt(row.credit_to_redeem) > this.flt(row.total_credit);
-      });
-      if (credit_calc_check.length > 0) {
-        this.eventBus.emit("show_message", {
-          title: `Redeemed credit cannot be greater than its total.`,
-          color: "error",
-        });
-        frappe.utils.play_sound("error");
-        return;
-      }
-      if (
-        !this.invoice_doc.is_return &&
-        this.redeemed_customer_credit > (this.invoice_doc.rounded_total || this.invoice_doc.grand_total)
-      ) {
-        this.eventBus.emit("show_message", {
-          title: `Cannot redeem customer credit more than invoice total`,
-          color: "error",
-        });
-        frappe.utils.play_sound("error");
-        return;
-      }
-      this.submit_invoice(print);
     },
     async submit_invoice(print) {
       if (!this.validate_payments()) {
@@ -1773,11 +1806,27 @@ export default {
       }
 
       return invoice;
-    }
+    },
+    handleOfflineMode() {
+      console.log('Handling offline mode in payments');
+      this.eventBus.emit('show_message', {
+        title: __('You are offline. Payments will be processed locally.'),
+        color: 'warning'
+      });
+    },
   },
   created() {
     document.addEventListener("keydown", this.shortPay.bind(this));
     this.submit_dialog = this.debounce(this.submit_dialog, 1000);
+    // Add offline/online event listeners
+    this.offlineListener = () => {
+      this.isOffline = !navigator.onLine;
+      if (!navigator.onLine) {
+        this.handleOfflineMode();
+      }
+    };
+    window.addEventListener('online', this.offlineListener);
+    window.addEventListener('offline', this.offlineListener);
   },
   mounted() {
     this.$nextTick(() => {
@@ -1861,6 +1910,15 @@ export default {
     this.eventBus.off("set_pos_settings");
     this.eventBus.off("set_customer_info_to_edit");
     this.eventBus.off("set_mpesa_payment");
+    // Remove event listeners
+    if (this.offlineListener) {
+      window.removeEventListener('online', this.offlineListener);
+      window.removeEventListener('offline', this.offlineListener);
+    }
+    // Clear any pending timeouts
+    if (this.processingTimeout) {
+      clearTimeout(this.processingTimeout);
+    }
   },
   unmounted() {
     document.removeEventListener("keydown", this.shortPay);

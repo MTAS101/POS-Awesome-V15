@@ -53,32 +53,95 @@ async handleOfflineSubmission() {
 
 // Update the submit_dialog method to handle offline mode
 async submit_dialog() {
+  if (this.isProcessing) {
+    console.log('Payment already in process, preventing duplicate submission');
+    return;
+  }
+
   try {
-    // Basic validation
-    if (!this.customer) {
-      this.show_message("Select A Customer", "error");
-      return;
+    this.isProcessing = true;
+    
+    // Clear any existing timeout
+    if (this.processingTimeout) {
+      clearTimeout(this.processingTimeout);
     }
 
-    if (this.balance !== 0) {
-      this.show_message("There is a pending amount to be paid", "error");
-      return;
-    }
+    // Set a timeout to reset processing state after 30 seconds
+    this.processingTimeout = setTimeout(() => {
+      this.isProcessing = false;
+    }, 30000);
 
     // Check if we're offline
-    if (this.isOffline()) {
+    if (!navigator.onLine) {
       await this.handleOfflineSubmission();
       return;
     }
 
-    // Online submission
-    const res = await this.submit_invoice();
-    if (res) {
-      this.close_dialog();
-      this.show_print(res);
+    const result = await this.process_payment();
+    
+    if (result && result.invoice_id) {
+      // Store the last processed invoice ID to prevent duplicates
+      this.lastProcessedInvoiceId = result.invoice_id;
+      console.log('Payment processed successfully:', result.invoice_id);
     }
   } catch (error) {
     console.error('Error in submit_dialog:', error);
-    this.show_message(error.message || "Error processing payment", "error");
+    this.eventBus.emit('show_message', {
+      title: __('Error processing payment. Please try again.'),
+      color: 'error'
+    });
+  } finally {
+    // Clear timeout and reset state
+    if (this.processingTimeout) {
+      clearTimeout(this.processingTimeout);
+    }
+    this.isProcessing = false;
   }
-}, 
+},
+
+data() {
+  return {
+    isProcessing: false,
+    processingTimeout: null,
+    lastProcessedInvoiceId: null,
+    isOffline: !navigator.onLine,
+    offlineListener: null
+  };
+},
+
+created() {
+  // Add offline/online event listeners
+  this.offlineListener = () => {
+    this.isOffline = !navigator.onLine;
+    if (!navigator.onLine) {
+      this.handleOfflineMode();
+    }
+  };
+  window.addEventListener('online', this.offlineListener);
+  window.addEventListener('offline', this.offlineListener);
+},
+
+beforeUnmount() {
+  // Remove event listeners
+  if (this.offlineListener) {
+    window.removeEventListener('online', this.offlineListener);
+    window.removeEventListener('offline', this.offlineListener);
+  }
+  
+  // Clear any pending timeouts
+  if (this.processingTimeout) {
+    clearTimeout(this.processingTimeout);
+  }
+},
+
+methods: {
+  handleOfflineMode() {
+    console.log('Handling offline mode in payment');
+    this.eventBus.emit('show_message', {
+      title: __('You are offline. Payment will be processed locally.'),
+      color: 'warning'
+    });
+  },
+
+  // ... existing code ...
+} 

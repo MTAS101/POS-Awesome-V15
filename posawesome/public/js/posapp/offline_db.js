@@ -516,6 +516,14 @@ export function isOnline() {
 // Function to submit an invoice to the server
 async function submitInvoice(invoice) {
   try {
+    // Check if invoice was already synced
+    const existingInvoice = await checkIfInvoiceExists(invoice);
+    if (existingInvoice) {
+      console.log('Invoice already exists:', existingInvoice);
+      await markOrderSynced(invoice.id);
+      return existingInvoice;
+    }
+
     // Prepare the invoice data for submission
     const requestData = {
       data: JSON.stringify({
@@ -581,6 +589,41 @@ async function submitInvoice(invoice) {
   }
 }
 
+// Check if invoice already exists on server
+async function checkIfInvoiceExists(invoice) {
+  try {
+    const response = await fetch(`/api/method/frappe.client.get_list`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Frappe-CSRF-Token': frappe.csrf_token
+      },
+      body: JSON.stringify({
+        doctype: 'Sales Invoice',
+        filters: {
+          offline_pos_name: invoice.offline_pos_name,
+          docstatus: ['!=', 2] // Not cancelled
+        },
+        fields: ['name', 'docstatus']
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to check existing invoice');
+    }
+
+    const result = await response.json();
+    if (result.message && result.message.length > 0) {
+      return result.message[0];
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error checking existing invoice:', error);
+    return null;
+  }
+}
+
 // Update processPendingInvoices to use the service
 export async function processPendingInvoices() {
   const result = { processed: 0, failed: 0, success: true };
@@ -590,6 +633,15 @@ export async function processPendingInvoices() {
     
     for (const invoice of pendingInvoices) {
       try {
+        // Check if invoice was already synced
+        const existingInvoice = await checkIfInvoiceExists(invoice);
+        if (existingInvoice) {
+          console.log('Invoice already exists:', existingInvoice);
+          await markOrderSynced(invoice.id);
+          result.processed++;
+          continue;
+        }
+
         await submitInvoice(invoice);
         result.processed++;
       } catch (error) {
