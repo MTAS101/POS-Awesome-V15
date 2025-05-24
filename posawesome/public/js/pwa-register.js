@@ -35,7 +35,7 @@
   
   // Helper function to register service worker with a specific scope
   function registerServiceWorker(scope, callback) {
-    navigator.serviceWorker.register('/service-worker.js', {
+    navigator.serviceWorker.register('/assets/posawesome/js/service-worker.js', {
       scope: scope
     })
     .then(function(registration) {

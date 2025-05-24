@@ -3,7 +3,7 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 
 const APP_CACHE = 'posawesome-cache-v1';
 const DATA_CACHE = 'posawesome-data-cache-v1';
-const OFFLINE_URL = '/app/offline.html';
+const OFFLINE_URL = '/assets/posawesome/js/offline.html';
 
 // Listen for the skip waiting message from the client
 self.addEventListener('message', (event) => {

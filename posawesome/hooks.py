@@ -48,10 +48,9 @@ app_include_meta = [
     '<link rel="manifest" href="/manifest.json">'
 ]
 
-# Set up a symlink for service-worker.js and manifest.json in the site directory
+# Set up a symlink for manifest.json in the site directory
 website_route_rules = [
-    {"from_route": "/manifest.json", "to_route": "assets/posawesome/manifest.json"},
-    {"from_route": "/service-worker.js", "to_route": "public/service-worker.js"}
+    {"from_route": "/manifest.json", "to_route": "assets/posawesome/manifest.json"}
 ]
 
 # include js, css files in header of web template
