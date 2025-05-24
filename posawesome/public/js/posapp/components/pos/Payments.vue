@@ -981,81 +981,78 @@ export default {
         return;
       }
 
-      if (this.invoice_doc.offline_mode || !isOnline()) {
-        console.log('Offline mode detected, using offline processing');
-        await this.process_offline();
-        return;
-      }
-      
       try {
         this.saving = true;
         
-        const vm = this;
-        const ref_doc = JSON.stringify(this.invoice_doc);
+        // Prepare invoice data
+        const invoice = JSON.stringify(this.invoice_doc);
         const payments = this.process_payments();
         
         const data = {
-          doc: ref_doc,
-          args: {
-            payments,
+          invoice: invoice,
+          data: {
+            payments: payments,
             redeemed_customer_credit: this.redeemed_customer_credit,
             customer_credit_dict: this.customer_credit_dict,
-            credit_change: flt(this.change_amount),
-            due_date: this.due_date,
-          },
+            credit_change: this.credit_change,
+            paid_change: this.paid_change,
+            is_credit_sale: this.is_credit_sale,
+            is_write_off_change: this.is_write_off_change,
+            is_cashback: this.is_cashback
+          }
         };
-        
+
         console.log('Submitting invoice with data:', {
           doc_name: this.invoice_doc.name,
           payment_count: payments.length,
           total_payment: this.total_payments
         });
-        
-        frappe.call({
+
+        const result = await frappe.call({
           method: "posawesome.posawesome.api.posapp.submit_invoice",
-          args: data,
-          callback: function (r) {
-            if (r.message) {
-              if (r.message.status == 1) {
-                vm.invoiceDialog = false;
-                vm.dialog = false;
-                vm.eventBus.emit("clear_invoice");
-                vm.load_print_page(r.message.name);
-                vm.saving = false;
-                
-                vm.eventBus.emit('payment_completed', {
-                  success: true,
-                  offline: false,
-                  invoice_id: r.message.name
-                });
-              } else {
-                frappe.call({
-                  method: "frappe.client.get",
-                  args: {
-                    doctype: "Sales Invoice",
-                    name: r.message.name,
-                  },
-                  callback: function (r) {
-                    if (r.message) {
-                      vm.invoiceDialog = false;
-                      vm.dialog = false;
-                      vm.eventBus.emit("clear_invoice");
-                      vm.eventBus.emit("load_invoice", r.message);
-                      vm.saving = false;
-                      
-                      vm.eventBus.emit('payment_completed', {
-                        success: true,
-                        offline: false,
-                        invoice_id: r.message.name,
-                        draft: true
-                      });
-                    }
-                  },
-                });
-              }
-            }
-          },
+          args: data
         });
+
+        if (result.message) {
+          if (result.message.status === 1) {
+            this.invoiceDialog = false;
+            this.dialog = false;
+            this.eventBus.emit("clear_invoice");
+            if (print) {
+              this.load_print_page(result.message.name);
+            }
+            this.saving = false;
+            
+            this.eventBus.emit('payment_completed', {
+              success: true,
+              offline: false,
+              invoice_id: result.message.name
+            });
+          } else {
+            const draft = await frappe.call({
+              method: "frappe.client.get",
+              args: {
+                doctype: "Sales Invoice",
+                name: result.message.name,
+              }
+            });
+
+            if (draft.message) {
+              this.invoiceDialog = false;
+              this.dialog = false;
+              this.eventBus.emit("clear_invoice");
+              this.eventBus.emit("load_invoice", draft.message);
+              this.saving = false;
+              
+              this.eventBus.emit('payment_completed', {
+                success: true,
+                offline: false,
+                invoice_id: draft.message.name,
+                draft: true
+              });
+            }
+          }
+        }
       } catch (error) {
         console.error('Error submitting invoice:', error);
         this.eventBus.emit('show_message', {
