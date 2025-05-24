@@ -1549,6 +1549,9 @@ export default {
               throw new Error('No items in invoice');
             }
             
+            // Generate a unique offline ID if not already set
+            doc.offline_pos_name = doc.offline_pos_name || ('Offline-' + Date.now());
+            
             // Save invoice offline
             const result = await saveInvoiceOffline(doc);
             
@@ -1558,7 +1561,14 @@ export default {
               color: 'success'
             });
             
-            this.is_processing_offline = false;
+            // IMPORTANT: Reset the form after successful offline submission
+            setTimeout(() => {
+              console.log('Clearing invoice after offline submission');
+              this.clear_invoice();
+              // Reset the processing flag
+              this.is_processing_offline = false;
+            }, 1000);
+            
             return doc; // Return the doc to continue with payment UI
           } catch (error) {
             console.error('Error saving invoice offline:', error);
@@ -4316,6 +4326,18 @@ export default {
     this.eventBus.on("set_new_line", (data) => {
       this.new_line = data;
     });
+    
+    // Add new event listener for offline payment completion
+    this.eventBus.on("offline_payment_completed", () => {
+      console.log("Received offline_payment_completed event");
+      // Double ensure the invoice is cleared after offline payment
+      setTimeout(() => {
+        console.log("Clearing invoice after offline payment completion");
+        this.clear_invoice();
+        this.eventBus.emit("reset_posting_date");
+      }, 300);
+    });
+    
     if (this.pos_profile.posa_allow_multi_currency) {
       this.fetch_available_currencies();
     }
@@ -4341,6 +4363,8 @@ export default {
     this.eventBus.off("clear_invoice");
     // Cleanup reset_posting_date listener
     this.eventBus.off("reset_posting_date");
+    // Clean up offline_payment_completed listener
+    this.eventBus.off("offline_payment_completed");
     
     // Clean up offline queue listener
     window.removeEventListener('offline-queue-updated');

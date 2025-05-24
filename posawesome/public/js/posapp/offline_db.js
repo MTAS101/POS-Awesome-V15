@@ -144,6 +144,11 @@ export async function saveInvoiceOffline(invoice) {
   try {
     const db = await ensureStoreExists();
     
+    // Generate a unique ID for tracking if not already set
+    if (!invoice.offline_pos_name) {
+      invoice.offline_pos_name = 'Offline-' + Date.now();
+    }
+    
     return new Promise((resolve, reject) => {
       // Verify the store exists before creating transaction
       if (!db.objectStoreNames.contains(ORDERS_STORE)) {
@@ -154,44 +159,94 @@ export async function saveInvoiceOffline(invoice) {
       const transaction = db.transaction([ORDERS_STORE], 'readwrite');
       const store = transaction.objectStore(ORDERS_STORE);
       
-      // Sanitize the invoice to remove non-serializable data and circular references
-      const sanitizedInvoice = sanitizeForStorage(invoice);
+      // First check if this invoice already exists
+      // We'll use offline_pos_name as a unique identifier
+      const getAllRequest = store.getAll();
       
-      // Add timestamp for sorting/tracking and set offline_submit flag to true
-      // so invoice will be submitted when synced online, not saved as draft
-      const order = {
-        ...sanitizedInvoice,
-        timestamp: Date.now(),
-        synced: false,
-        offline_submit: true // Always set to true to ensure invoice is submitted when synced
-      };
-      
-      const request = store.add(order);
-      
-      request.onsuccess = () => {
-        console.log('Invoice saved offline:', request.result);
+      getAllRequest.onsuccess = () => {
+        const existingOrders = getAllRequest.result || [];
+        const isDuplicate = existingOrders.some(order => 
+          order.offline_pos_name === invoice.offline_pos_name ||
+          // Also check for invoices with same customer and item details in the last few minutes
+          // to prevent duplicates from rapid clicking
+          (order.customer === invoice.customer && 
+           order.items.length === invoice.items.length &&
+           Date.now() - order.timestamp < 60000) // Within last minute
+        );
         
-        // Try to sync with service worker if available
-        if ('serviceWorker' in navigator && 'SyncManager' in window) {
-          navigator.serviceWorker.ready.then(registration => {
-            registration.sync.register('sync-orders').catch(err => {
-              console.error('Background sync registration failed:', err);
-            });
-            
-            // Also send a message to the service worker
-            navigator.serviceWorker.controller?.postMessage({
-              type: 'STORE_OFFLINE_ORDER',
-              payload: { id: request.result, timestamp: Date.now() }
-            });
-          });
+        if (isDuplicate) {
+          console.log('Invoice appears to be a duplicate, not saving again:', invoice.offline_pos_name);
+          resolve(null); // Resolve with null to indicate no new invoice was created
+          return;
         }
+      
+        // Sanitize the invoice to remove non-serializable data and circular references
+        const sanitizedInvoice = sanitizeForStorage(invoice);
         
-        resolve(request.result);
+        // Add timestamp for sorting/tracking and set offline_submit flag to true
+        // so invoice will be submitted when synced online, not saved as draft
+        const order = {
+          ...sanitizedInvoice,
+          timestamp: Date.now(),
+          synced: false,
+          offline_submit: true // Always set to true to ensure invoice is submitted when synced
+        };
+        
+        const request = store.add(order);
+        
+        request.onsuccess = () => {
+          console.log('Invoice saved offline:', request.result);
+          
+          // Try to sync with service worker if available
+          if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            navigator.serviceWorker.ready.then(registration => {
+              registration.sync.register('sync-orders').catch(err => {
+                console.error('Background sync registration failed:', err);
+              });
+              
+              // Also send a message to the service worker
+              navigator.serviceWorker.controller?.postMessage({
+                type: 'STORE_OFFLINE_ORDER',
+                payload: { id: request.result, timestamp: Date.now() }
+              });
+            });
+          }
+          
+          resolve(request.result);
+        };
+        
+        request.onerror = (event) => {
+          console.error('Error saving invoice offline:', event.target.error);
+          reject(event.target.error);
+        };
       };
       
-      request.onerror = (event) => {
-        console.error('Error saving invoice offline:', event.target.error);
-        reject(event.target.error);
+      getAllRequest.onerror = (event) => {
+        console.error('Error checking for duplicates:', event.target.error);
+        // Continue with saving anyway since we failed at duplicate check
+        
+        // Sanitize the invoice to remove non-serializable data and circular references
+        const sanitizedInvoice = sanitizeForStorage(invoice);
+        
+        // Add timestamp for sorting/tracking and set offline_submit flag to true
+        const order = {
+          ...sanitizedInvoice,
+          timestamp: Date.now(),
+          synced: false,
+          offline_submit: true // Always set to true to ensure invoice is submitted when synced
+        };
+        
+        const request = store.add(order);
+        
+        request.onsuccess = () => {
+          console.log('Invoice saved offline (after duplicate check failed):', request.result);
+          resolve(request.result);
+        };
+        
+        request.onerror = (event) => {
+          console.error('Error saving invoice offline:', event.target.error);
+          reject(event.target.error);
+        };
       };
       
       // Handle transaction errors
