@@ -1,0 +1,11 @@
+# Add this to your Nginx server block for the site
+# This will set the Service-Worker-Allowed header directly at the Nginx level
+
+location /assets/posawesome/js/service-worker.js {
+    add_header Service-Worker-Allowed /app/;
+}
+
+# Alternative approach: Add this to your site-config.json
+# "http_headers": [
+#   ["Service-Worker-Allowed", "/app/"]
+# ] 

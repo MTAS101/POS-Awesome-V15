@@ -315,3 +315,7 @@ fixtures = [
         ]
     }
 ]
+
+# Setup hooks for copying service worker to root level
+after_install = "posawesome.setup.setup_service_worker.after_install"
+after_migrate = "posawesome.setup.setup_service_worker.after_migrate"
