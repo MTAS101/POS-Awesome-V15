@@ -550,12 +550,12 @@
     <v-card flat class="cards mb-0 mt-3 py-0">
       <v-row align="start" no-gutters>
         <v-col cols="6">
-          <v-btn block size="large" color="primary" theme="dark" @click="submit" :disabled="vaildatPayment">
+          <v-btn block size="large" color="primary" theme="dark" @click="submit($event)" :disabled="vaildatPayment">
             {{ __("Submit") }}
           </v-btn>
         </v-col>
         <v-col cols="6" class="pl-1">
-          <v-btn block size="large" color="success" theme="dark" @click="submit(undefined, false, true)" :disabled="vaildatPayment">
+          <v-btn block size="large" color="success" theme="dark" @click="submit($event, false, true)" :disabled="vaildatPayment">
             {{ __("Submit & Print") }}
           </v-btn>
         </v-col>
@@ -902,59 +902,19 @@ export default {
         }
       });
     },
-    // Submit payment after validation
+    // Submit the invoice function
     submit(event, payment_received = false, print = false) {
-      console.log('Starting submit process in Payments.vue');
-      console.log('Invoice state:', {
-        is_return: this.invoice_doc.is_return,
-        offline_mode: this.invoice_doc.offline_mode,
-        customer: this.invoice_doc.customer,
-        items_count: this.invoice_doc.items?.length || 0
-      });
-      
-      if (this.invoice_doc.offline_mode) {
-        console.log('Processing offline mode payment submission');
-        
-        // For offline mode, we just emit payment_completed event
-        // The rest is handled by the offline storage system
-        try {
-          this.paying = true;
-          
-          // Show specific offline mode message
-          this.eventBus.emit('show_message', {
-            title: __('Your invoice has been saved offline'),
-            color: 'success',
-            message: __('It will be synchronized automatically when you go online')
-          });
-          
-          // Close payment dialog immediately for offline mode
-          this.eventBus.emit('payment_completed');
-          this.dialog = false;
-          this.paying = false;
-          
-          // Clear any validation messages
-          this.valid_msg = '';
-          
-          // Reset form
-          this.clear_form();
-          
-          // Emit event to trigger form reset in Invoice.vue
-          this.eventBus.emit('offline_payment_completed');
-          
-          return;
-        } catch (error) {
-          console.error('Error in offline payment submission:', error);
-          this.paying = false;
-          this.eventBus.emit('show_message', {
-            title: __('Error processing offline payment'),
-            color: 'error'
-          });
-          return;
-        }
-      }
-      
-      // Handle online submission here
       try {
+        console.log('Starting submit process in Payments.vue');
+        console.log('Submit params:', { payment_received, print });
+        console.log('Invoice state:', {
+          is_return: this.invoice_doc?.is_return,
+          offline_mode: this.invoice_doc?.offline_mode,
+          customer: this.invoice_doc?.customer,
+          items_count: this.invoice_doc?.items?.length || 0
+        });
+        
+        // Validate invoice exists
         if (!this.invoice_doc) {
           this.eventBus.emit('show_message', {
             title: __('No invoice to submit'),
@@ -963,23 +923,62 @@ export default {
           return;
         }
         
-        // For return invoices, ensure all payments are negative
-        if (this.invoice_doc.is_return) {
-          this.ensureReturnPaymentsAreNegative();
+        // Handle offline mode specially
+        if (this.invoice_doc.offline_mode) {
+          console.log('Processing offline mode payment submission');
+          
+          // For offline mode, we just emit payment_completed event
+          // The rest is handled by the offline storage system
+          try {
+            this.paying = true;
+            
+            // Show specific offline mode message
+            this.eventBus.emit('show_message', {
+              title: __('Your invoice has been saved offline'),
+              color: 'success',
+              message: __('It will be synchronized automatically when you go online')
+            });
+            
+            // Close payment dialog immediately for offline mode
+            this.eventBus.emit('offline_payment_completed');
+            this.back_to_invoice();
+            this.paying = false;
+            
+            return;
+          } catch (error) {
+            console.error('Error in offline payment submission:', error);
+            this.paying = false;
+            this.eventBus.emit('show_message', {
+              title: __('Error processing offline payment'),
+              color: 'error'
+            });
+            return;
+          }
         }
         
-        // Submit the invoice
-        frappe.call({
-          method: 'posawesome.posawesome.api.posapp.submit_invoice',
-          args: {
-            invoice: this.invoice_doc,
-            data: {
-              customer: this.invoice_doc.customer,
-              is_credit_sale: this.is_credit_sale,
-              due_date: this.invoice_doc.due_date,
-              is_write_off_change: this.is_write_off_change,
-              credit_change: this.credit_change,
-              paid_change: this.paid_change
+        // Handle online submission here
+        try {
+          // For return invoices, ensure all payments are negative
+          if (this.invoice_doc.is_return) {
+            this.ensureReturnPaymentsAreNegative();
+          }
+          
+          // Mark as paying to prevent double submission
+          this.paying = true;
+          
+          // Submit the invoice via API call
+          frappe.call({
+            method: 'posawesome.posawesome.api.posapp.submit_invoice',
+            args: {
+              invoice: this.invoice_doc,
+              data: {
+                customer: this.invoice_doc.customer,
+                is_credit_sale: this.is_credit_sale,
+                due_date: this.invoice_doc.due_date,
+                is_write_off_change: this.is_write_off_change,
+                credit_change: this.credit_change,
+                paid_change: this.paid_change
+              }
             }
           },
           callback: (r) => {

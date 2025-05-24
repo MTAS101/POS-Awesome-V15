@@ -1697,6 +1697,7 @@ export default {
           online: isOnline()
         });
 
+        // Basic validations first
         if (!this.customer) {
           console.log('Customer validation failed');
           this.eventBus.emit("show_message", {
@@ -1724,17 +1725,27 @@ export default {
           return;
         }
 
+        // Process the invoice based on type
         let invoice_doc;
-        if (this.invoice_doc.doctype == "Sales Order") {
-          console.log('Processing Sales Order payment');
-          invoice_doc = await this.process_invoice_from_order();
-        } else {
-          console.log('Processing regular invoice');
-          invoice_doc = await this.process_invoice();
-        }
+        try {
+          if (this.invoice_doc && this.invoice_doc.doctype === "Sales Order") {
+            console.log('Processing Sales Order payment');
+            invoice_doc = await this.process_invoice_from_order();
+          } else {
+            console.log('Processing regular invoice');
+            invoice_doc = await this.process_invoice();
+          }
 
-        if (!invoice_doc) {
-          console.log('Failed to process invoice');
+          if (!invoice_doc) {
+            console.error('Failed to process invoice - no document returned');
+            return;
+          }
+        } catch (processError) {
+          console.error('Error processing invoice:', processError);
+          this.eventBus.emit("show_message", {
+            title: __(`Error processing invoice: ${processError.message}`),
+            color: "error",
+          });
           return;
         }
 
@@ -1758,49 +1769,25 @@ export default {
         // If offline, add a flag to indicate this should be submitted, not saved as draft
         if (isOfflineMode) {
           // Generate a unique name for offline invoice
-          invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
+          invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now() + '-' + Math.floor(Math.random() * 1000));
           
           // Set important flags for offline processing
           invoice_doc.is_pos = 1;  // This is a POS invoice
           invoice_doc.update_stock = 1; // Update stock when syncing
+          invoice_doc.offline_mode = true; // Mark as offline mode for payment component
           invoice_doc.offline_submit = true; // Submit when synced online
           
-          console.log('Invoice flagged for automatic submission when online');
-          
-          // Show info message about offline mode
-          this.eventBus.emit('show_message', {
-            title: __('You are offline. Invoice will be submitted automatically when online.'),
-            color: 'info'
-          });
+          console.log('Invoice flagged for offline mode:', invoice_doc.offline_pos_name);
         }
         
         // Check if this is a return invoice
         if (this.invoiceType === 'Return' || invoice_doc.is_return) {
-          console.log('Preparing RETURN invoice for payment with:', {
-            is_return: invoice_doc.is_return,
-            invoiceType: this.invoiceType,
-            return_against: invoice_doc.return_against,
-            items: invoice_doc.items.length,
-            grand_total: invoice_doc.grand_total
-          });
+          console.log('Preparing RETURN invoice for payment');
           
           // For return invoices, explicitly ensure all amounts are negative
           invoice_doc.is_return = 1;
           if (invoice_doc.grand_total > 0) invoice_doc.grand_total = -Math.abs(invoice_doc.grand_total);
           if (invoice_doc.rounded_total > 0) invoice_doc.rounded_total = -Math.abs(invoice_doc.rounded_total);
-          if (invoice_doc.total > 0) invoice_doc.total = -Math.abs(invoice_doc.total);
-          if (invoice_doc.base_grand_total > 0) invoice_doc.base_grand_total = -Math.abs(invoice_doc.base_grand_total);
-          if (invoice_doc.base_rounded_total > 0) invoice_doc.base_rounded_total = -Math.abs(invoice_doc.base_rounded_total);
-          if (invoice_doc.base_total > 0) invoice_doc.base_total = -Math.abs(invoice_doc.base_total);
-          
-          // Ensure all items have negative quantity and amount
-          if (invoice_doc.items && invoice_doc.items.length) {
-            invoice_doc.items.forEach(item => {
-              if (item.qty > 0) item.qty = -Math.abs(item.qty);
-              if (item.stock_qty > 0) item.stock_qty = -Math.abs(item.stock_qty);
-              if (item.amount > 0) item.amount = -Math.abs(item.amount);
-            });
-          }
         }
         
         // Get payments with correct sign (positive/negative) and ensure at least one payment method
@@ -1818,27 +1805,19 @@ export default {
           }
         }
         
-        console.log('Final payment data:', invoice_doc.payments);
-
-        // Double-check return invoice payments are negative
-        if ((this.invoiceType === 'Return' || invoice_doc.is_return) && invoice_doc.payments.length) {
-          invoice_doc.payments.forEach(payment => {
-            if (payment.amount > 0) payment.amount = -Math.abs(payment.amount);
-            if (payment.base_amount > 0) payment.base_amount = -Math.abs(payment.base_amount);
-          });
-          console.log('Ensured negative payment amounts for return:', invoice_doc.payments);
-        }
-
-        console.log('Showing payment dialog with currency:', invoice_doc.currency);
+        console.log('Final payment data prepared, showing payment dialog');
         
-        // In offline mode, make sure to tell the payment component we're offline
-        if (isOfflineMode) {
-          console.log('Operating in offline mode for payment');
-          invoice_doc.offline_mode = true;
-        }
+        // Now emit events to show payment screen
+        // First update the flag
+        this.show_payment = true;
         
-        this.eventBus.emit("show_payment", "true");
-        this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
+        // Use nextTick to ensure reactivity updates have propagated
+        this.$nextTick(() => {
+          // Then emit events to send data to payment component
+          this.eventBus.emit("show_payment", "true");
+          this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
+          console.log('Payment events emitted successfully');
+        });
 
       } catch (error) {
         console.error('Error in show_payment:', error);
