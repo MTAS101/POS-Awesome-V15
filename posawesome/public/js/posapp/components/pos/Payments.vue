@@ -550,12 +550,12 @@
     <v-card flat class="cards mb-0 mt-3 py-0">
       <v-row align="start" no-gutters>
         <v-col cols="6">
-          <v-btn block size="large" color="primary" theme="dark" @click="submit($event)" :disabled="vaildatPayment">
+          <v-btn block size="large" color="primary" theme="dark" @click="submit" :disabled="vaildatPayment">
             {{ __("Submit") }}
           </v-btn>
         </v-col>
         <v-col cols="6" class="pl-1">
-          <v-btn block size="large" color="success" theme="dark" @click="submit($event, false, true)" :disabled="vaildatPayment">
+          <v-btn block size="large" color="success" theme="dark" @click="submit(undefined, false, true)" :disabled="vaildatPayment">
             {{ __("Submit & Print") }}
           </v-btn>
         </v-col>
@@ -902,154 +902,217 @@ export default {
         }
       });
     },
-    // Submit the invoice function
+    // Submit payment after validation
     submit(event, payment_received = false, print = false) {
-      try {
-        console.log('Starting submit process in Payments.vue');
-        console.log('Submit params:', { payment_received, print });
-        console.log('Invoice state:', {
-          is_return: this.invoice_doc?.is_return,
-          offline_mode: this.invoice_doc?.offline_mode,
-          customer: this.invoice_doc?.customer,
-          items_count: this.invoice_doc?.items?.length || 0
+      // For return invoices, ensure payment amounts are negative
+      if (this.invoice_doc.is_return) {
+        this.ensureReturnPaymentsAreNegative();
+      }
+      // Validate total payments only if not credit sale and invoice total is not zero
+      if (!this.is_credit_sale && !this.invoice_doc.is_return && 
+          this.total_payments <= 0 && 
+          (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0) {
+        this.eventBus.emit("show_message", {
+          title: `Please enter payment amount`,
+          color: "error",
         });
-        
-        // Validate invoice exists
-        if (!this.invoice_doc) {
-          this.eventBus.emit('show_message', {
-            title: __('No invoice to submit'),
-            color: 'error'
+        frappe.utils.play_sound("error");
+        return;
+      }
+      // Validate cash payments when credit sale is off
+      if (!this.is_credit_sale && !this.invoice_doc.is_return) {
+        let has_cash_payment = false;
+        let cash_amount = 0;
+        this.invoice_doc.payments.forEach((payment) => {
+          if (payment.mode_of_payment.toLowerCase().includes('cash')) {
+            has_cash_payment = true;
+            cash_amount = this.flt(payment.amount);
+          }
+        });
+        if (has_cash_payment) {
+          if (!this.pos_profile.posa_allow_partial_payment && 
+              cash_amount < (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) &&
+              (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0) {
+            this.eventBus.emit("show_message", {
+              title: `Cash payment cannot be less than invoice total when partial payment is not allowed`,
+              color: "error",
+            });
+            frappe.utils.play_sound("error");
+            return;
+          }
+        }
+      }
+      // Validate partial payments only if not credit sale and invoice total is not zero
+      if (
+        !this.is_credit_sale &&
+        !this.pos_profile.posa_allow_partial_payment &&
+        this.total_payments < (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) &&
+        (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0
+      ) {
+        this.eventBus.emit("show_message", {
+          title: `The amount paid is not complete`,
+          color: "error",
+        });
+        frappe.utils.play_sound("error");
+        return;
+      }
+      // Validate phone payment
+      let phone_payment_is_valid = true;
+      if (!payment_received) {
+        this.invoice_doc.payments.forEach((payment) => {
+          if (
+            payment.type === "Phone" &&
+            ![0, "0", "", null, undefined].includes(payment.amount)
+          ) {
+            phone_payment_is_valid = false;
+          }
+        });
+        if (!phone_payment_is_valid) {
+          this.eventBus.emit("show_message", {
+            title: __("Please request phone payment or use another payment method"),
+            color: "error",
           });
+          frappe.utils.play_sound("error");
           return;
         }
-        
-        // Handle offline mode specially
-        if (this.invoice_doc.offline_mode) {
-          console.log('Processing offline mode payment submission');
-          
-          // For offline mode, we just emit payment_completed event
-          // The rest is handled by the offline storage system
-          try {
-            this.paying = true;
-            
-            // Show specific offline mode message
-            this.eventBus.emit('show_message', {
-              title: __('Your invoice has been saved offline'),
-              color: 'success',
-              message: __('It will be synchronized automatically when you go online')
-            });
-            
-            // Close payment dialog immediately for offline mode
-            this.eventBus.emit('offline_payment_completed');
-            this.back_to_invoice();
-            this.paying = false;
-            
-            return;
-          } catch (error) {
-            console.error('Error in offline payment submission:', error);
-            this.paying = false;
-            this.eventBus.emit('show_message', {
-              title: __('Error processing offline payment'),
-              color: 'error'
-            });
-            return;
-          }
-        }
-        
-        // Handle online submission here
-        try {
-          // For return invoices, ensure all payments are negative
-          if (this.invoice_doc.is_return) {
-            this.ensureReturnPaymentsAreNegative();
-          }
-          
-          // Mark as paying to prevent double submission
-          this.paying = true;
-          
-          // Submit the invoice via API call
-          frappe.call({
-            method: 'posawesome.posawesome.api.posapp.submit_invoice',
-            args: {
-              invoice: this.invoice_doc,
-              data: {
-                customer: this.invoice_doc.customer,
-                is_credit_sale: this.is_credit_sale,
-                due_date: this.invoice_doc.due_date,
-                is_write_off_change: this.is_write_off_change,
-                credit_change: this.credit_change,
-                paid_change: this.paid_change
-              }
-            }
-          },
-          callback: (r) => {
-            if (r.message) {
-              // Show success message
-              this.eventBus.emit('show_message', {
-                title: __(`${r.message.name} submitted successfully`),
-                color: 'success'
-              });
-              
-              // Clear the form
-              this.clear_form();
-              
-              // Emit payment_completed event to reset Invoice.vue
-              this.eventBus.emit('payment_completed');
-              
-              // Print if requested
-              if (print && this.pos_profile.posa_allow_print_draft_invoices) {
-                this.load_print_page(r.message.name);
-              }
-            }
-          },
-          error: (err) => {
-            console.error('Error submitting invoice:', err);
-            this.eventBus.emit('show_message', {
-              title: __(`Error: ${err.message || 'Unknown error'}`),
-              color: 'error'
-            });
-          },
-          always: () => {
-            this.paying = false;
-          }
-        });
-      } catch (error) {
-        console.error('Error in submit function:', error);
-        this.paying = false;
-        this.eventBus.emit('show_message', {
-          title: __(`Error: ${error.message || 'Unknown error'}`),
-          color: 'error'
-        });
       }
+      // Validate paid_change
+      if (this.paid_change > -this.diff_payment) {
+        this.eventBus.emit("show_message", {
+          title: `Paid change cannot be greater than total change!`,
+          color: "error",
+        });
+        frappe.utils.play_sound("error");
+        return;
+      }
+      // Validate cashback
+      let total_change = this.flt(this.flt(this.paid_change) + this.flt(-this.credit_change));
+      if (this.is_cashback && total_change !== -this.diff_payment) {
+        this.eventBus.emit("show_message", {
+          title: `Error in change calculations!`,
+          color: "error",
+        });
+        frappe.utils.play_sound("error");
+        return;
+      }
+      // Validate customer credit redemption
+      let credit_calc_check = this.customer_credit_dict.filter((row) => {
+        return this.flt(row.credit_to_redeem) > this.flt(row.total_credit);
+      });
+      if (credit_calc_check.length > 0) {
+        this.eventBus.emit("show_message", {
+          title: `Redeemed credit cannot be greater than its total.`,
+          color: "error",
+        });
+        frappe.utils.play_sound("error");
+        return;
+      }
+      if (
+        !this.invoice_doc.is_return &&
+        this.redeemed_customer_credit > (this.invoice_doc.rounded_total || this.invoice_doc.grand_total)
+      ) {
+        this.eventBus.emit("show_message", {
+          title: `Cannot redeem customer credit more than invoice total`,
+          color: "error",
+        });
+        frappe.utils.play_sound("error");
+        return;
+      }
+      // Proceed to submit the invoice
+      this.submit_invoice(print);
     },
-    // Clear the form and reset all fields
-    clear_form() {
-      console.log('Clearing payment form');
-      
-      // Reset payment-related fields
-      this.loyalty_amount = 0;
-      this.redeemed_customer_credit = 0;
-      this.credit_change = 0;
-      this.paid_change = 0;
-      this.is_credit_sale = false;
-      this.is_write_off_change = false;
-      this.redeem_customer_credit = false;
-      this.customer_credit_dict = [];
-      
-      // Reset all payment amounts
-      if (this.invoice_doc && this.invoice_doc.payments) {
-        this.invoice_doc.payments.forEach(payment => {
-          payment.amount = 0;
-          if (payment.base_amount !== undefined) {
-            payment.base_amount = 0;
-          }
+    // Submit invoice to backend after all validations
+    submit_invoice(print) {
+      // For return invoices, ensure payments are negative one last time
+      if (this.invoice_doc.is_return) {
+        this.ensureReturnPaymentsAreNegative();
+      }
+      let totalPayedAmount = 0;
+      this.invoice_doc.payments.forEach((payment) => {
+        payment.amount = this.flt(payment.amount);
+        totalPayedAmount += payment.amount;
+      });
+      if (this.invoice_doc.is_return && totalPayedAmount === 0) {
+        this.invoice_doc.is_pos = 0;
+      }
+      if (this.customer_credit_dict.length) {
+        this.customer_credit_dict.forEach((row) => {
+          row.credit_to_redeem = this.flt(row.credit_to_redeem);
         });
       }
-      
-      // Reset sales person
-      this.sales_person = '';
-      
-      // Hide the payment dialog
-      this.eventBus.emit('show_payment', 'false');
+      let data = {
+        total_change: !this.invoice_doc.is_return ? -this.diff_payment : 0,
+        paid_change: !this.invoice_doc.is_return ? this.paid_change : 0,
+        credit_change: -this.credit_change,
+        redeemed_customer_credit: this.redeemed_customer_credit,
+        customer_credit_dict: this.customer_credit_dict,
+        is_cashback: this.is_cashback,
+      };
+      const vm = this;
+      frappe.call({
+        method: "posawesome.posawesome.api.posapp.submit_invoice",
+        args: {
+          data: data,
+          invoice: this.invoice_doc,
+        },
+        callback: function (r) {
+          if (r.exc) {
+            console.error("Error submitting invoice:", r.exc);
+            // Show detailed error message to help debugging
+            let errorMsg = r.exc.toString();
+            if (errorMsg.includes("Amount must be negative")) {
+              vm.eventBus.emit("show_message", {
+                title: __("Fixing payment amounts for return invoice..."),
+                color: "warning",
+              });
+              // Force fix the amounts
+              vm.invoice_doc.payments.forEach((payment) => {
+                if (payment.amount > 0) {
+                  payment.amount = -Math.abs(payment.amount);
+                }
+                if (payment.base_amount > 0) {
+                  payment.base_amount = -Math.abs(payment.base_amount);
+                }
+              });
+              // Retry submission once
+              console.log("Retrying submission with fixed payment amounts");
+              setTimeout(() => {
+                vm.submit_invoice(print);
+              }, 500);
+            } else {
+              vm.eventBus.emit("show_message", {
+                title: __("Error submitting invoice: ") + errorMsg,
+                color: "error",
+              });
+            }
+            return;
+          }
+          if (!r.message) {
+            vm.eventBus.emit("show_message", {
+              title: __("Error submitting invoice: No response from server"),
+              color: "error",
+            });
+            return;
+          }
+          if (print) {
+            vm.load_print_page();
+          }
+          vm.customer_credit_dict = [];
+          vm.redeem_customer_credit = false;
+          vm.is_cashback = true;
+          vm.sales_person = "";
+          vm.eventBus.emit("set_last_invoice", vm.invoice_doc.name);
+          vm.eventBus.emit("show_message", {
+            title: __("Invoice {0} is Submitted", [r.message.name]),
+            color: "success",
+          });
+          frappe.utils.play_sound("submit");
+          vm.addresses = [];
+          vm.eventBus.emit("clear_invoice");
+          vm.eventBus.emit("reset_posting_date");
+          vm.back_to_invoice();
+        }
+      });
     },
     // Set full amount for a payment method (or negative for returns)
     set_full_amount(idx) {

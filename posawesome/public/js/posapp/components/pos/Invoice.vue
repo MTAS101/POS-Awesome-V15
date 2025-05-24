@@ -855,73 +855,27 @@ export default {
 
     // Reset all invoice fields to default/empty values
     clear_invoice() {
-      console.log('Clearing invoice completely');
-      
-      // Clear items array completely
       this.items = [];
-      
-      // Reset invoice document
-      this.invoice_doc = {
-        doctype: "Sales Invoice",
-        is_pos: 1,
-        is_return: 0,
-        ignore_pricing_rule: 1,
-        docstatus: 0,
-        items: [],
-        payments: [],
-        taxes: [],
-        pos_profile: this.pos_profile ? this.pos_profile.name : '',
-        company: this.pos_profile ? this.pos_profile.company : '',
-        customer: this.customer || '',
-        currency: this.selected_currency || (this.pos_profile ? this.pos_profile.currency : '')
-      };
-      
-      // Reset offline-specific flags
-      this.is_offline_invoice = false;
-      this.is_processing_offline = false;
-      
-      // Reset state variables
-      this.search_item = "";
-      this.search_invoice_open = false;
-      this.items_search_open = false;
-      
-      // Reset payment-related fields
-      this.payments = [];
+      this.posa_offers = [];
+      this.expanded = [];
+      this.eventBus.emit("set_pos_coupons", []);
+      this.posa_coupons = [];
+      this.invoice_doc = "";
+      this.return_doc = "";
       this.discount_amount = 0;
+      this.additional_discount = 0;  // Added for additional discount
       this.additional_discount_percentage = 0;
-      this.tax_amount = 0;
-      this.paid_amount = 0;
-      this.outstanding_amount = 0;
-      
-      // Clear return-related data
-      this.is_return = false;
-      this.return_against = "";
-      this.return_doc = null;
-      
-      // Reset selected items UI
-      this.selected_items = [];
-      
-      // Reset totals
-      this.subtotal = 0;
-      this.total_items_qty = 0;
-      this.Total = 0;
-      
-      // Update UI state
-      this.eventBus.emit("update_totals");
-      
-      // Reset the form state and focus
-      this.$nextTick(() => {
-        // Set focus back to search field
-        const searchInput = document.getElementById('search-items');
-        if (searchInput) {
-          searchInput.focus();
-        }
-        
-        // Force UI refresh
-        this.$forceUpdate();
-      });
-      
-      console.log('Invoice cleared successfully');
+      this.delivery_charges_rate = 0;
+      this.selected_delivery_charge = "";
+      // Reset posting date to today
+      this.posting_date = frappe.datetime.nowdate();
+
+      // Always reset to default customer after invoice
+      this.customer = this.pos_profile.customer;
+
+      this.eventBus.emit("set_customer_readonly", false);
+      this.invoiceType = this.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
+      this.invoiceTypes = ["Invoice", "Order"];
     },
 
     // Fetch customer balance from backend
@@ -1595,9 +1549,6 @@ export default {
               throw new Error('No items in invoice');
             }
             
-            // Generate a unique offline ID if not already set
-            doc.offline_pos_name = doc.offline_pos_name || ('Offline-' + Date.now());
-            
             // Save invoice offline
             const result = await saveInvoiceOffline(doc);
             
@@ -1607,14 +1558,7 @@ export default {
               color: 'success'
             });
             
-            // IMPORTANT: Reset the form after successful offline submission
-            setTimeout(() => {
-              console.log('Clearing invoice after offline submission');
-              this.clear_invoice();
-              // Reset the processing flag
-              this.is_processing_offline = false;
-            }, 1000);
-            
+            this.is_processing_offline = false;
             return doc; // Return the doc to continue with payment UI
           } catch (error) {
             console.error('Error saving invoice offline:', error);
@@ -1697,7 +1641,6 @@ export default {
           online: isOnline()
         });
 
-        // Basic validations first
         if (!this.customer) {
           console.log('Customer validation failed');
           this.eventBus.emit("show_message", {
@@ -1725,27 +1668,17 @@ export default {
           return;
         }
 
-        // Process the invoice based on type
         let invoice_doc;
-        try {
-          if (this.invoice_doc && this.invoice_doc.doctype === "Sales Order") {
-            console.log('Processing Sales Order payment');
-            invoice_doc = await this.process_invoice_from_order();
-          } else {
-            console.log('Processing regular invoice');
-            invoice_doc = await this.process_invoice();
-          }
+        if (this.invoice_doc.doctype == "Sales Order") {
+          console.log('Processing Sales Order payment');
+          invoice_doc = await this.process_invoice_from_order();
+        } else {
+          console.log('Processing regular invoice');
+          invoice_doc = await this.process_invoice();
+        }
 
-          if (!invoice_doc) {
-            console.error('Failed to process invoice - no document returned');
-            return;
-          }
-        } catch (processError) {
-          console.error('Error processing invoice:', processError);
-          this.eventBus.emit("show_message", {
-            title: __(`Error processing invoice: ${processError.message}`),
-            color: "error",
-          });
+        if (!invoice_doc) {
+          console.log('Failed to process invoice');
           return;
         }
 
@@ -1769,25 +1702,49 @@ export default {
         // If offline, add a flag to indicate this should be submitted, not saved as draft
         if (isOfflineMode) {
           // Generate a unique name for offline invoice
-          invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now() + '-' + Math.floor(Math.random() * 1000));
+          invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
           
           // Set important flags for offline processing
           invoice_doc.is_pos = 1;  // This is a POS invoice
           invoice_doc.update_stock = 1; // Update stock when syncing
-          invoice_doc.offline_mode = true; // Mark as offline mode for payment component
           invoice_doc.offline_submit = true; // Submit when synced online
           
-          console.log('Invoice flagged for offline mode:', invoice_doc.offline_pos_name);
+          console.log('Invoice flagged for automatic submission when online');
+          
+          // Show info message about offline mode
+          this.eventBus.emit('show_message', {
+            title: __('You are offline. Invoice will be submitted automatically when online.'),
+            color: 'info'
+          });
         }
         
         // Check if this is a return invoice
         if (this.invoiceType === 'Return' || invoice_doc.is_return) {
-          console.log('Preparing RETURN invoice for payment');
+          console.log('Preparing RETURN invoice for payment with:', {
+            is_return: invoice_doc.is_return,
+            invoiceType: this.invoiceType,
+            return_against: invoice_doc.return_against,
+            items: invoice_doc.items.length,
+            grand_total: invoice_doc.grand_total
+          });
           
           // For return invoices, explicitly ensure all amounts are negative
           invoice_doc.is_return = 1;
           if (invoice_doc.grand_total > 0) invoice_doc.grand_total = -Math.abs(invoice_doc.grand_total);
           if (invoice_doc.rounded_total > 0) invoice_doc.rounded_total = -Math.abs(invoice_doc.rounded_total);
+          if (invoice_doc.total > 0) invoice_doc.total = -Math.abs(invoice_doc.total);
+          if (invoice_doc.base_grand_total > 0) invoice_doc.base_grand_total = -Math.abs(invoice_doc.base_grand_total);
+          if (invoice_doc.base_rounded_total > 0) invoice_doc.base_rounded_total = -Math.abs(invoice_doc.base_rounded_total);
+          if (invoice_doc.base_total > 0) invoice_doc.base_total = -Math.abs(invoice_doc.base_total);
+          
+          // Ensure all items have negative quantity and amount
+          if (invoice_doc.items && invoice_doc.items.length) {
+            invoice_doc.items.forEach(item => {
+              if (item.qty > 0) item.qty = -Math.abs(item.qty);
+              if (item.stock_qty > 0) item.stock_qty = -Math.abs(item.stock_qty);
+              if (item.amount > 0) item.amount = -Math.abs(item.amount);
+            });
+          }
         }
         
         // Get payments with correct sign (positive/negative) and ensure at least one payment method
@@ -1805,19 +1762,27 @@ export default {
           }
         }
         
-        console.log('Final payment data prepared, showing payment dialog');
+        console.log('Final payment data:', invoice_doc.payments);
+
+        // Double-check return invoice payments are negative
+        if ((this.invoiceType === 'Return' || invoice_doc.is_return) && invoice_doc.payments.length) {
+          invoice_doc.payments.forEach(payment => {
+            if (payment.amount > 0) payment.amount = -Math.abs(payment.amount);
+            if (payment.base_amount > 0) payment.base_amount = -Math.abs(payment.base_amount);
+          });
+          console.log('Ensured negative payment amounts for return:', invoice_doc.payments);
+        }
+
+        console.log('Showing payment dialog with currency:', invoice_doc.currency);
         
-        // Now emit events to show payment screen
-        // First update the flag
-        this.show_payment = true;
+        // In offline mode, make sure to tell the payment component we're offline
+        if (isOfflineMode) {
+          console.log('Operating in offline mode for payment');
+          invoice_doc.offline_mode = true;
+        }
         
-        // Use nextTick to ensure reactivity updates have propagated
-        this.$nextTick(() => {
-          // Then emit events to send data to payment component
-          this.eventBus.emit("show_payment", "true");
-          this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
-          console.log('Payment events emitted successfully');
-        });
+        this.eventBus.emit("show_payment", "true");
+        this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
 
       } catch (error) {
         console.error('Error in show_payment:', error);
@@ -4259,196 +4224,110 @@ export default {
 
       // Add this block to handle currency initialization
       if (this.pos_profile.posa_allow_multi_currency) {
-        if (this.pos_profile.posa_default_currency) {
-          this.selected_currency = this.pos_profile.posa_default_currency;
-        }
+        this.fetch_available_currencies().then(() => {
+          // Set default currency after currencies are loaded
+          this.selected_currency = this.pos_profile.currency;
+          this.exchange_rate = 1;
+        }).catch(error => {
+          console.error("Error initializing currencies:", error);
+          this.eventBus.emit("show_message", {
+            title: __("Error loading currencies"),
+            color: "error"
+          });
+        });
       }
-
-      this.invoiceTypes = ["Invoice", "Order"];
-      if (this.pos_profile.posa_allow_returns) {
-        this.invoiceTypes.push("Return");
-      }
-      if (this.pos_profile.posa_allow_sales_return) {
-        this.invoiceTypes.push("Sales Return");
-      }
-      this.generate_invoice_keys();
     });
-
     this.eventBus.on("add_item", (item) => {
       this.add_item(item);
     });
-
-    this.eventBus.on("get_invoice_data", () => {
-      this.eventBus.emit("send_invoice_data", this.invoice_doc);
-    });
-
-    this.eventBus.on("set_tax", (data) => {
-      this.override_tax = data.override_tax;
-      this.tax_rate = data.tax_rate;
-      this.calculate_taxes();
-      this.update_totals();
-    });
-
-    this.eventBus.on("set_add_disc", (data) => {
-      this.additional_discount_percentage = data.additional_discount;
-      this.discount_amount = data.discount_amount;
-      this.calculate_taxes();
-      this.update_totals();
-    });
-
-    this.eventBus.on("set_pos_coupons", (data) => {
-      this.posa_coupons = data;
-      this.calculate_taxes();
-      this.update_totals();
-    });
-
-    // Listen for offers to apply
-    this.eventBus.on("set_offers", (data) => {
-      this.posa_offers = data;
-      this.calculate_taxes();
-      this.update_totals();
-    });
-
-    // Listen for delivery charges
-    this.eventBus.on("set_delivery_charges", (data) => {
-      if (data) {
-        this.delivery_charges_rate = data.rate;
-        this.selected_delivery_charge = data.name;
-      } else {
-        this.delivery_charges_rate = 0;
-        this.selected_delivery_charge = "";
-      }
-      this.calculate_taxes();
-      this.update_totals();
-    });
-
-    // Listen for customer update
     this.eventBus.on("update_customer", (customer) => {
       this.customer = customer;
     });
-
-    // Listen for update invoice type
-    this.eventBus.on("update_invoice_type", (type) => {
-      this.update_invoice_type(type);
+    this.eventBus.on("fetch_customer_details", () => {
+      this.fetch_customer_details();
     });
-
-    // Listen for customer select event
-    this.eventBus.on("Customer", (customer) => {
-      if (this.customer != customer.customer_name) {
-        this.clear_invoice();
-        this.customer = customer.customer_name;
-      }
-    });
-
-    // Listen for payment completed event
-    this.eventBus.on("payment_completed", () => {
-      this.clear_invoice();
-    });
-    
-    // Listen for offline payment completed event
-    this.eventBus.on("offline_payment_completed", () => {
-      console.log('Received offline_payment_completed event, clearing invoice');
-      // Force a complete reset of the invoice form
-      this.clear_invoice();
-      // Reset to default view
-      this.invoiceType = this.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
-      // Reset customer to default if configured
-      if (this.pos_profile.customer) {
-        this.customer = this.pos_profile.customer;
-      } else {
-        this.customer = "";
-      }
-      // Reset any other state that needs to be cleared
-      this.discount_amount = 0;
-      this.additional_discount_percentage = 0;
-      this.grand_total = 0;
-      this.total = 0;
-      this.tax_amount = 0;
-      this.paid_amount = 0;
-      this.outstanding_amount = 0;
-      this.is_return = false;
-      this.return_against = "";
-      this.return_doc = null;
-      
-      // Refresh UI components
-      this.$nextTick(() => {
-        this.eventBus.emit("update_totals");
-        this.eventBus.emit("update_customer", this.customer);
-      });
-    });
-
-    // Listen for show payment event
-    this.eventBus.on("show_payment", (data) => {
-      this.show_payment = data;
-    });
-
-    // Listen for pay exact amount event
-    this.eventBus.on("pay_exact_amount", (data) => {
-      this.pay_exact_amount = data;
-    });
-
-    // Listen for selected items update
-    this.eventBus.on("update_selected_item", (data) => {
-      this.selected_items = data;
-    });
-
-    // Listen for set customer readonly
-    this.eventBus.on("set_customer_readonly", (data) => {
-      this.customer_readonly = data;
-    });
-
-    // Listen for clear invoice event
     this.eventBus.on("clear_invoice", () => {
       this.clear_invoice();
     });
-
-    // Listen for edit order event
-    this.eventBus.on("edit_order", (data) => {
-      this.update_invoice_from_order(data);
+    this.eventBus.on("load_invoice", (data) => {
+      this.load_invoice(data);
     });
-
-    // Listen for edit invoice event
-    this.eventBus.on("edit_invoice", (data) => {
-      this.update_invoice_from_data(data);
+    this.eventBus.on("load_order", (data) => {
+      this.new_order(data);
+      // this.eventBus.emit("set_pos_coupons", data.posa_coupons);
     });
-
-    // Listen for return against event
-    this.eventBus.on("return_against", (data) => {
-      this.return_against = data;
-      this.update_invoice_type("Return", data);
+    this.eventBus.on("set_offers", (data) => {
+      this.posOffers = data;
     });
-
-    // Listen for sales return against event
-    this.eventBus.on("sales_return_against", (data) => {
-      this.update_invoice_type("Sales Return", data);
+    this.eventBus.on("update_invoice_offers", (data) => {
+      this.updateInvoiceOffers(data);
     });
-
-    // Listen for multi-currency changes
-    this.eventBus.on("update_selected_currency", (data) => {
-      this.selected_currency = data.currency;
-      this.exchange_rate = data.conversion_rate;
-      
-      // When currency changes, all item rates need to be updated
-      this.update_rates_based_on_currency();
-      
-      // Also update all calculations
-      this.calculate_taxes();
-      this.update_totals();
+    this.eventBus.on("update_invoice_coupons", (data) => {
+      this.posa_coupons = data;
+      this.handelOffers();
     });
-
-    // Listen for new date selection event
-    this.eventBus.on("set_posting_date", (data) => {
-      this.posting_date = data;
+    this.eventBus.on("set_all_items", (data) => {
+      this.allItems = data;
+      this.items.forEach((item) => {
+        this.update_item_detail(item);
+      });
     });
-
-    // Add keyboard shortcuts
-    document.addEventListener("keydown", this.keyShortcut);
+    this.eventBus.on("load_return_invoice", (data) => {
+      // Handle loading of return invoice and set all related fields
+      console.log("Invoice component received load_return_invoice event with data:", data);
+      this.load_invoice(data.invoice_doc);
+      // Explicitly mark as return invoice
+      this.invoiceType = "Return";
+      this.invoiceTypes = ["Return"];
+      this.invoice_doc.is_return = 1;
+      // Ensure negative values for returns
+      if (this.items && this.items.length) {
+        this.items.forEach(item => {
+          // Ensure item quantities are negative
+          if (item.qty > 0) item.qty = -Math.abs(item.qty);
+          if (item.stock_qty > 0) item.stock_qty = -Math.abs(item.stock_qty);
+        });
+      }
+      if (data.return_doc) {
+        console.log("Return against existing invoice:", data.return_doc.name);
+        // Ensure negative discount amounts
+        this.discount_amount = data.return_doc.discount_amount > 0 ? 
+          -Math.abs(data.return_doc.discount_amount) : 
+          data.return_doc.discount_amount;
+        this.additional_discount_percentage = data.return_doc.additional_discount_percentage > 0 ?
+          -Math.abs(data.return_doc.additional_discount_percentage) :
+          data.return_doc.additional_discount_percentage;
+        this.return_doc = data.return_doc;
+        // Set return_against reference
+        this.invoice_doc.return_against = data.return_doc.name;
+      } else {
+        console.log("Return without invoice reference");
+        // For return without invoice, reset discount values
+        this.discount_amount = 0;
+        this.additional_discount_percentage = 0;
+      }
+      console.log("Invoice state after loading return:", {
+        invoiceType: this.invoiceType,
+        is_return: this.invoice_doc.is_return,
+        items: this.items.length,
+        customer: this.customer
+      });
+    });
+    this.eventBus.on("set_new_line", (data) => {
+      this.new_line = data;
+    });
+    if (this.pos_profile.posa_allow_multi_currency) {
+      this.fetch_available_currencies();
+    }
+    // Listen for reset_posting_date to reset posting date after invoice submission
+    this.eventBus.on("reset_posting_date", () => {
+      this.posting_date = frappe.datetime.nowdate();
+    });
     
-    // Auto-focus search when mounted
-    this.$nextTick(() => {
-      const searchInput = document.getElementById('search-items');
-      if (searchInput) {
-        searchInput.focus();
+    // Listen for offline queue count updates
+    window.addEventListener('offline-queue-updated', (event) => {
+      if (event.detail && typeof event.detail.count === 'number') {
+        this.offline_queue_count = event.detail.count;
       }
     });
   },
@@ -4462,10 +4341,6 @@ export default {
     this.eventBus.off("clear_invoice");
     // Cleanup reset_posting_date listener
     this.eventBus.off("reset_posting_date");
-    // Clean up offline_payment_completed listener
-    this.eventBus.off("offline_payment_completed");
-    // Clean up payment_completed listener
-    this.eventBus.off("payment_completed");
     
     // Clean up offline queue listener
     window.removeEventListener('offline-queue-updated');
