@@ -1,19 +1,58 @@
 // Utility functions for IndexedDB operations
 
 const DB_NAME = 'posawesome-offline-db';
-const DB_VERSION = 1;
+// Use a default version but detect actual version during initialization
+let DB_VERSION = 1;
 const ORDERS_STORE = 'offline-orders';
 
 // Global reference to the database
 let dbPromise = null;
+
+// Function to detect current database version
+async function getCurrentDbVersion() {
+  return new Promise((resolve) => {
+    // Open with a dummy version to just check existing version
+    const request = indexedDB.open(DB_NAME);
+    
+    request.onsuccess = (event) => {
+      const db = event.target.result;
+      const currentVersion = db.version;
+      console.log('Current IndexedDB version:', currentVersion);
+      db.close();
+      resolve(currentVersion);
+    };
+    
+    request.onupgradeneeded = (event) => {
+      // This shouldn't happen when just checking version
+      // If it does, it means the DB doesn't exist yet
+      const db = event.target.result;
+      db.close();
+      resolve(1); // Default to version 1 if DB doesn't exist
+    };
+    
+    request.onerror = () => {
+      console.warn('Error checking DB version, using default version:', DB_VERSION);
+      resolve(DB_VERSION); // Default to current version if error
+    };
+  });
+}
 
 // Initialize the database
 export async function initDB() {
   // Return existing promise if already initializing
   if (dbPromise) return dbPromise;
   
+  // Detect current database version first
+  try {
+    DB_VERSION = await getCurrentDbVersion();
+  } catch (error) {
+    console.warn('Error detecting database version:', error);
+    // Continue with default version
+  }
+  
   // Create new promise for initialization
   dbPromise = new Promise((resolve, reject) => {
+    console.log('Opening IndexedDB with version:', DB_VERSION);
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     
     request.onerror = (event) => {
@@ -24,7 +63,7 @@ export async function initDB() {
     
     request.onsuccess = (event) => {
       const db = event.target.result;
-      console.log('IndexedDB initialized successfully');
+      console.log('IndexedDB initialized successfully with version:', db.version);
       
       // Add error handler for database
       db.onerror = (event) => {
@@ -36,6 +75,7 @@ export async function initDB() {
     
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
+      console.log('Upgrading IndexedDB to version:', event.newVersion);
       
       // Create object stores for offline orders
       if (!db.objectStoreNames.contains(ORDERS_STORE)) {
@@ -61,8 +101,10 @@ async function ensureStoreExists() {
       dbPromise = null; // Reset promise
       
       // Reopen with incremented version
+      const newVersion = db.version + 1;
+      console.log('Store missing, reopening with version:', newVersion);
+      
       dbPromise = new Promise((resolve, reject) => {
-        const newVersion = DB_VERSION + 1;
         const request = indexedDB.open(DB_NAME, newVersion);
         
         request.onerror = (event) => {
@@ -71,6 +113,7 @@ async function ensureStoreExists() {
         };
         
         request.onsuccess = (event) => {
+          console.log('Successfully reopened database with version:', newVersion);
           resolve(event.target.result);
         };
         
