@@ -145,31 +145,61 @@ async create_invoice(transactionId) {
 },
 
 async submit_invoice(print) {
+  const debugLog = (msg, data = null) => {
+    const timestamp = new Date().toISOString();
+    const logMsg = `[${timestamp}] ${msg}`;
+    console.log(logMsg);
+    if (data) {
+      console.log('Debug data:', data);
+    }
+    // Save to localStorage for debugging
+    const logs = JSON.parse(localStorage.getItem('posa_debug_logs') || '[]');
+    logs.push({ timestamp, msg, data });
+    localStorage.setItem('posa_debug_logs', JSON.stringify(logs));
+  };
+
+  debugLog('Starting submit_invoice process');
+
   if (!this.validate_payments()) {
+    debugLog('Payment validation failed');
     return;
   }
 
   // Generate unique transaction ID if not exists
   if (!this.invoice_doc.posa_transaction_id) {
     this.invoice_doc.posa_transaction_id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    debugLog('Generated new transaction ID', {
+      transaction_id: this.invoice_doc.posa_transaction_id
+    });
+  } else {
+    debugLog('Using existing transaction ID', {
+      transaction_id: this.invoice_doc.posa_transaction_id
+    });
   }
 
   try {
     if (this.isProcessing) {
-      console.log('Payment already in process, skipping duplicate submission');
+      debugLog('Payment already in process - preventing duplicate submission', {
+        transaction_id: this.invoice_doc.posa_transaction_id,
+        isProcessing: this.isProcessing,
+        processingTimeout: this.processingTimeout ? 'exists' : 'none'
+      });
       return;
     }
 
+    debugLog('Setting processing flags');
     this.isProcessing = true;
     this.saving = true;
     
     // Clear any existing timeout
     if (this.processingTimeout) {
+      debugLog('Clearing existing processing timeout');
       clearTimeout(this.processingTimeout);
     }
 
     // Set timeout to reset processing state after 30 seconds
     this.processingTimeout = setTimeout(() => {
+      debugLog('Processing timeout reached - resetting states');
       this.isProcessing = false;
       this.saving = false;
     }, 30000);
@@ -178,6 +208,11 @@ async submit_invoice(print) {
     const invoice = JSON.stringify(this.invoice_doc);
     const payments = this.process_payments();
     
+    debugLog('Prepared payment data', {
+      payment_count: payments.length,
+      total_amount: payments.reduce((sum, p) => sum + (p.amount || 0), 0)
+    });
+
     const data = {
       invoice: invoice,
       data: {
@@ -193,22 +228,34 @@ async submit_invoice(print) {
       }
     };
 
-    console.log('Submitting invoice with transaction ID:', this.invoice_doc.posa_transaction_id);
+    debugLog('Calling submit_invoice API', {
+      transaction_id: this.invoice_doc.posa_transaction_id,
+      customer: this.invoice_doc.customer,
+      grand_total: this.invoice_doc.grand_total
+    });
 
     const result = await frappe.call({
       method: "posawesome.posawesome.api.posapp.submit_invoice",
       args: data
     });
 
+    debugLog('Received API response', {
+      status: result.message?.status,
+      invoice_name: result.message?.name
+    });
+
     if (result.message) {
       if (result.message.status === 1) {
+        debugLog('Invoice submitted successfully');
         this.invoiceDialog = false;
         this.dialog = false;
         this.eventBus.emit("clear_invoice");
         if (print) {
+          debugLog('Initiating print process');
           this.load_print_page(result.message.name);
         }
         
+        debugLog('Emitting payment_completed event - Success');
         this.eventBus.emit('payment_completed', {
           success: true,
           offline: false,
@@ -216,6 +263,7 @@ async submit_invoice(print) {
           transaction_id: this.invoice_doc.posa_transaction_id
         });
       } else {
+        debugLog('Getting draft invoice details');
         const draft = await frappe.call({
           method: "frappe.client.get",
           args: {
@@ -225,11 +273,13 @@ async submit_invoice(print) {
         });
 
         if (draft.message) {
+          debugLog('Processing draft invoice');
           this.invoiceDialog = false;
           this.dialog = false;
           this.eventBus.emit("clear_invoice");
           this.eventBus.emit("load_invoice", draft.message);
           
+          debugLog('Emitting payment_completed event - Draft');
           this.eventBus.emit('payment_completed', {
             success: true,
             offline: false,
@@ -241,6 +291,10 @@ async submit_invoice(print) {
       }
     }
   } catch (error) {
+    debugLog('Error in submit_invoice', {
+      error_message: error.message,
+      error_stack: error.stack
+    });
     console.error('Error submitting invoice:', error);
     this.eventBus.emit('show_message', {
       title: __('Error submitting invoice'),
@@ -248,6 +302,7 @@ async submit_invoice(print) {
       message: error.message
     });
   } finally {
+    debugLog('Cleaning up processing state');
     // Clear timeout and reset states
     if (this.processingTimeout) {
       clearTimeout(this.processingTimeout);
@@ -255,6 +310,15 @@ async submit_invoice(print) {
     this.isProcessing = false;
     this.saving = false;
   }
+},
+
+// Add debug helper method
+getDebugLogs() {
+  return JSON.parse(localStorage.getItem('posa_debug_logs') || '[]');
+},
+
+clearDebugLogs() {
+  localStorage.removeItem('posa_debug_logs');
 },
 
 data() {
