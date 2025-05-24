@@ -4,6 +4,7 @@ importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox
 const APP_CACHE = 'posawesome-cache-v1';
 const DATA_CACHE = 'posawesome-data-cache-v1';
 const OFFLINE_URL = '/assets/posawesome/js/offline.html';
+const APP_SCOPE = '/app/';
 
 // Listen for the skip waiting message from the client
 self.addEventListener('message', (event) => {
@@ -15,18 +16,7 @@ self.addEventListener('message', (event) => {
 // Skip waiting and claim clients immediately
 self.addEventListener('install', (event) => {
   console.log('[Service Worker] Installed');
-  event.waitUntil(
-    caches.open(APP_CACHE).then((cache) => {
-      console.log('[Service Worker] Caching app shell');
-      return cache.addAll([
-        '/assets/posawesome/js/posapp.bundle.js',
-        '/assets/posawesome/css/posawesome.css',
-        '/assets/posawesome/icons/icon-192x192.png',
-        '/assets/posawesome/manifest.json',
-        OFFLINE_URL,
-      ]);
-    })
-  );
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener('activate', (event) => {
@@ -54,49 +44,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Precache static assets
-workbox.precaching.precacheAndRoute([
-  { url: '/assets/posawesome/js/posapp.bundle.js', revision: '1.0.0' },
-  { url: '/assets/posawesome/css/posawesome.css', revision: '1.0.0' },
-  { url: '/assets/posawesome/icons/icon-192x192.png', revision: '1.0.0' },
-  { url: '/assets/posawesome/manifest.json', revision: '1.0.0' },
-  { url: OFFLINE_URL, revision: '1.0.0' },
-]);
+// Correctly set up workbox
+workbox.setConfig({
+  debug: false
+});
 
-// Cache CSS, JS, and Web Worker requests with a Stale While Revalidate strategy
+// Use Cache First for static assets
 workbox.routing.registerRoute(
-  ({ request }) => 
-    request.destination === 'style' || 
-    request.destination === 'script' || 
-    request.destination === 'worker',
-  new workbox.strategies.StaleWhileRevalidate({
-    cacheName: APP_CACHE,
-  })
-);
-
-// Cache images with a Cache First strategy
-workbox.routing.registerRoute(
-  ({ request }) => request.destination === 'image',
+  new RegExp('/assets/.*\\.(?:js|css|png|jpg|jpeg|svg|gif|woff2|ttf|woff)$'),
   new workbox.strategies.CacheFirst({
     cacheName: APP_CACHE,
     plugins: [
       new workbox.expiration.ExpirationPlugin({
-        maxEntries: 60,
+        maxEntries: 100,
         maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
-      }),
-    ],
-  })
-);
-
-// Cache fonts with a Cache First strategy
-workbox.routing.registerRoute(
-  ({ request }) => request.destination === 'font',
-  new workbox.strategies.CacheFirst({
-    cacheName: APP_CACHE,
-    plugins: [
-      new workbox.expiration.ExpirationPlugin({
-        maxEntries: 30,
-        maxAgeSeconds: 60 * 24 * 60 * 60, // 60 Days
       }),
     ],
   })
@@ -104,7 +65,7 @@ workbox.routing.registerRoute(
 
 // Use Network First for API calls
 workbox.routing.registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/'),
+  new RegExp('/api/.*'),
   new workbox.strategies.NetworkFirst({
     cacheName: DATA_CACHE,
     plugins: [
@@ -118,7 +79,7 @@ workbox.routing.registerRoute(
 
 // Special handling for invoice-related API calls
 workbox.routing.registerRoute(
-  ({ url }) => url.pathname.includes('/api/method/posawesome.posawesome.api.posapp.update_invoice'),
+  new RegExp('/api/method/posawesome\\.posawesome\\.api\\.posapp\\.update_invoice'),
   new workbox.strategies.NetworkOnly({
     plugins: [
       new workbox.backgroundSync.BackgroundSyncPlugin('pos-invoice-queue', {
@@ -258,7 +219,7 @@ async function syncPendingInvoices() {
 
 // Special handling for offline navigation to app URLs
 workbox.routing.registerRoute(
-  ({ url }) => url.pathname.startsWith('/app/'),
+  new RegExp('/app/.*'),
   async ({ url, request, event, params }) => {
     try {
       // Try network first
@@ -274,6 +235,27 @@ workbox.routing.registerRoute(
       });
     }
   }
+);
+
+// Specifically handle POS app route
+workbox.routing.registerRoute(
+  new RegExp('/app/posapp.*'),
+  async ({ url, request, event, params }) => {
+    try {
+      // Try network first
+      const networkResponse = await fetch(request);
+      return networkResponse;
+    } catch (error) {
+      console.log('[Service Worker] Serving offline page for POS app route:', url.pathname);
+      // If offline, return the offline page
+      const cache = await caches.open(APP_CACHE);
+      const cachedResponse = await cache.match(OFFLINE_URL);
+      return cachedResponse || new Response('You are offline. Please check your connection.', {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+  },
+  'pos-app-route'
 );
 
 // Intercept fetch requests for offline handling

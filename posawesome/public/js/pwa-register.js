@@ -5,8 +5,8 @@
   // Check if service workers are supported
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-      // Register service worker with root scope
-      registerServiceWorker('/', function(err) {
+      // Register service worker with app scope
+      registerServiceWorker('/app/', function(err) {
         if (err) {
           console.error('Service Worker registration failed:', err);
         }
