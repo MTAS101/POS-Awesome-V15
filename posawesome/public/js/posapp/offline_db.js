@@ -157,19 +157,13 @@ export async function saveInvoiceOffline(invoice) {
       // Sanitize the invoice to remove non-serializable data and circular references
       const sanitizedInvoice = sanitizeForStorage(invoice);
       
-      // Generate unique offline_pos_name if not exists
-      if (!sanitizedInvoice.offline_pos_name) {
-        sanitizedInvoice.offline_pos_name = `OFFPOS${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      }
-      
       // Add timestamp for sorting/tracking and set offline_submit flag to true
+      // so invoice will be submitted when synced online, not saved as draft
       const order = {
         ...sanitizedInvoice,
         timestamp: Date.now(),
         synced: false,
-        offline_submit: true,
-        is_pos: 1,
-        update_stock: 1
+        offline_submit: true // Always set to true to ensure invoice is submitted when synced
       };
       
       const request = store.add(order);
@@ -187,19 +181,10 @@ export async function saveInvoiceOffline(invoice) {
             // Also send a message to the service worker
             navigator.serviceWorker.controller?.postMessage({
               type: 'STORE_OFFLINE_ORDER',
-              payload: { 
-                id: request.result, 
-                timestamp: Date.now(),
-                offline_pos_name: order.offline_pos_name
-              }
+              payload: { id: request.result, timestamp: Date.now() }
             });
           });
         }
-        
-        // Update offline queue count
-        window.dispatchEvent(new CustomEvent('offline-queue-updated', {
-          detail: { count: 1 }
-        }));
         
         resolve(request.result);
       };
@@ -522,74 +507,20 @@ export function isOnline() {
   return ConnectivityService.isOnline;
 }
 
-// Function to handle API errors
-async function handleApiError(error, context) {
-  console.error(`Error in ${context}:`, error);
-  
-  // Check if it's a network error
-  if (!navigator.onLine) {
-    return {
-      error: true,
-      message: 'Network connection lost',
-      type: 'network'
-    };
-  }
-
-  // Check if it's a server error (417, etc)
-  if (error.response) {
-    return {
-      error: true,
-      message: `Server error: ${error.response.status}`,
-      type: 'server',
-      status: error.response.status
-    };
-  }
-
-  // Generic error
-  return {
-    error: true,
-    message: error.message || 'Unknown error occurred',
-    type: 'unknown'
-  };
-}
-
 // Function to submit an invoice to the server
 async function submitInvoice(invoice) {
   try {
-    // Check if invoice was already synced
-    const existingInvoice = await checkIfInvoiceExists(invoice);
-    if (existingInvoice) {
-      console.log('Invoice already exists:', existingInvoice);
-      await markOrderSynced(invoice.id);
-      return existingInvoice;
-    }
-
-    // Generate a unique offline_pos_name if not exists
-    if (!invoice.offline_pos_name) {
-      invoice.offline_pos_name = `OFFPOS${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    }
-
     // Prepare the invoice data for submission
     const requestData = {
       data: JSON.stringify({
         ...invoice,
-        is_pos: 1,
-        update_stock: 1,
-        offline_submit: true,
-        offline_mode: true,
-        offline_pos_name: invoice.offline_pos_name // Ensure this is included
+        is_pos: 1,  // Force this to be a POS invoice
+        update_stock: 1,  // Ensure stock is updated
+        offline_submit: true // Flag to indicate this is an offline submission
       }),
-      submit: 1,
-      include_payments: 1
+      submit: 1,  // Always submit invoices when syncing from offline mode
+      include_payments: 1  // Make sure payments are included
     };
-
-    // Double check for existing invoice before submitting
-    const doubleCheck = await checkIfInvoiceExists(invoice);
-    if (doubleCheck) {
-      console.log('Invoice already exists (double check):', doubleCheck);
-      await markOrderSynced(invoice.id);
-      return doubleCheck;
-    }
 
     // Call the server API to process the invoice
     const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
@@ -611,36 +542,8 @@ async function submitInvoice(invoice) {
     console.log('Server response:', responseData);
 
     if (responseData.message?.name) {
-      // Triple check if invoice was created in the meantime
-      const tripleCheck = await checkIfInvoiceExists(invoice);
-      if (tripleCheck && tripleCheck.name !== responseData.message.name) {
-        console.warn('Duplicate invoice detected:', {
-          original: tripleCheck.name,
-          new: responseData.message.name
-        });
-        // Cancel the new invoice
-        await fetch(`/api/method/frappe.client.cancel`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Frappe-CSRF-Token': frappe.csrf_token
-          },
-          body: JSON.stringify({
-            doctype: 'Sales Invoice',
-            name: responseData.message.name
-          })
-        });
-        return tripleCheck;
-      }
-
       // Mark the invoice as synced in IndexedDB
       await markOrderSynced(invoice.id);
-      
-      // Update offline queue count
-      const pendingCount = await getPendingOrdersCount();
-      window.dispatchEvent(new CustomEvent('offline-queue-updated', {
-        detail: { count: pendingCount }
-      }));
       
       // Show success message
       frappe.show_alert({
@@ -665,145 +568,31 @@ async function submitInvoice(invoice) {
   }
 }
 
-// Check if invoice already exists on server
-async function checkIfInvoiceExists(invoice) {
-  try {
-    // First check by offline_pos_name
-    if (invoice.offline_pos_name) {
-      try {
-        const response = await fetch(`/api/method/frappe.client.get_list`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Frappe-CSRF-Token': frappe.csrf_token
-          },
-          body: JSON.stringify({
-            doctype: 'Sales Invoice',
-            filters: {
-              offline_pos_name: invoice.offline_pos_name,
-              docstatus: ['!=', 2] // Not cancelled
-            },
-            fields: ['name', 'docstatus', 'offline_pos_name']
-          })
-        });
-
-        if (!response.ok) {
-          const error = await handleApiError(response, 'checkIfInvoiceExists - offline_pos_name check');
-          console.warn('Offline POS name check failed:', error);
-          // Continue to next check instead of failing
-        } else {
-          const result = await response.json();
-          if (result.message && result.message.length > 0) {
-            console.log('Invoice already exists with offline_pos_name:', invoice.offline_pos_name);
-            return result.message[0];
-          }
-        }
-      } catch (posNameError) {
-        console.warn('Error checking offline_pos_name:', posNameError);
-        // Continue to next check
-      }
-    }
-
-    // Then check by key fields
-    try {
-      const keyFieldsResponse = await fetch(`/api/method/frappe.client.get_list`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Frappe-CSRF-Token': frappe.csrf_token
-        },
-        body: JSON.stringify({
-          doctype: 'Sales Invoice',
-          filters: {
-            posting_date: invoice.posting_date,
-            customer: invoice.customer,
-            total: invoice.total,
-            grand_total: invoice.grand_total,
-            docstatus: ['!=', 2],
-            creation: ['>=', frappe.datetime.add_minutes(frappe.datetime.now_datetime(), -5)]
-          },
-          fields: ['name', 'docstatus', 'offline_pos_name', 'customer', 'grand_total']
-        })
-      });
-
-      if (!keyFieldsResponse.ok) {
-        const error = await handleApiError(keyFieldsResponse, 'checkIfInvoiceExists - key fields check');
-        console.warn('Key fields check failed:', error);
-        return null;
-      }
-
-      const keyFieldsResult = await keyFieldsResponse.json();
-      if (keyFieldsResult.message && keyFieldsResult.message.length > 0) {
-        console.log('Found matching recent invoice:', keyFieldsResult.message[0]);
-        return keyFieldsResult.message[0];
-      }
-    } catch (keyFieldsError) {
-      console.warn('Error checking key fields:', keyFieldsError);
-      return null;
-    }
-
-    return null;
-  } catch (error) {
-    console.error('Error in checkIfInvoiceExists:', error);
-    return null;
-  }
-}
-
 // Update processPendingInvoices to use the service
 export async function processPendingInvoices() {
-  const result = { processed: 0, failed: 0, success: true };
+  const result = { processed: 0, failed: 0 };
   
   try {
     const pendingInvoices = await getPendingOrders();
     
     for (const invoice of pendingInvoices) {
-      try {
-        // Check if invoice was already synced
-        const existingInvoice = await checkIfInvoiceExists(invoice);
-        if (existingInvoice) {
-          console.log('Invoice already exists:', existingInvoice);
-          await markOrderSynced(invoice.id);
+      const syncFn = async () => {
+        try {
+          await submitInvoice(invoice);
           result.processed++;
-          continue;
+        } catch (error) {
+          console.error('Failed to sync invoice:', error);
+          result.failed++;
+          throw error; // Rethrow to trigger retry
         }
-
-        await submitInvoice(invoice);
-        result.processed++;
-      } catch (error) {
-        console.error('Failed to sync invoice:', error);
-        result.failed++;
-        result.success = false;
-        result.error = error.message;
-      }
+      };
+      
+      ConnectivityService.addPendingSync(syncFn);
     }
-    
-    // Update offline queue count after processing
-    const pendingCount = await getPendingOrdersCount();
-    window.dispatchEvent(new CustomEvent('offline-queue-updated', {
-      detail: { count: pendingCount }
-    }));
-    
-    return result;
   } catch (error) {
     console.error('Error processing pending invoices:', error);
     throw error;
   }
-}
-
-// Get count of pending orders
-async function getPendingOrdersCount() {
-  try {
-    const db = await ensureStoreExists();
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction([ORDERS_STORE], 'readonly');
-      const store = transaction.objectStore(ORDERS_STORE);
-      const request = store.count();
-      
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  } catch (error) {
-    console.error('Error getting pending orders count:', error);
-    return 0;
-  }
+  
+  return result;
 } 
