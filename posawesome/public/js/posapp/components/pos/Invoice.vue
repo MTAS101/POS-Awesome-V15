@@ -1775,6 +1775,9 @@ export default {
 
         console.log('Showing payment dialog with currency:', invoice_doc.currency);
         
+        // Store the offline status so we can check it after payment is completed
+        this._currentIsOfflineMode = isOfflineMode;
+        
         // In offline mode, make sure to tell the payment component we're offline
         if (isOfflineMode) {
           console.log('Operating in offline mode for payment');
@@ -1783,6 +1786,26 @@ export default {
         
         this.eventBus.emit("show_payment", "true");
         this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
+        
+        // Set up a listener for payment completed event
+        this.eventBus.once("payment_completed", (payment_data) => {
+          console.log('Payment completed event received:', payment_data);
+          
+          // If we were in offline mode, clear the invoice form
+          if (this._currentIsOfflineMode) {
+            console.log('Clearing invoice after offline payment');
+            setTimeout(() => {
+              this.clear_invoice();
+              this.eventBus.emit("show_message", {
+                title: __('Invoice saved offline. Form cleared for new invoice.'),
+                color: 'success'
+              });
+            }, 1000);
+          }
+          
+          // Clear the offline mode flag
+          this._currentIsOfflineMode = null;
+        });
 
       } catch (error) {
         console.error('Error in show_payment:', error);
