@@ -1,430 +1,172 @@
 // Utility functions for IndexedDB operations
 
-const DB_NAME = 'posawesome-offline-db';
-// Use a default version but detect actual version during initialization
-let DB_VERSION = 1;
-const ORDERS_STORE = 'offline-orders';
+const DB_NAME = 'posawesome_offline';
+const DB_VERSION = 1;
+const INVOICE_STORE = 'offline_invoices';
+const SYNC_STATUS = {
+  PENDING: 'pending',
+  SYNCING: 'syncing',
+  SYNCED: 'synced',
+  FAILED: 'failed'
+};
 
-// Global reference to the database
-let dbPromise = null;
+let db;
 
-// Function to detect current database version
-async function getCurrentDbVersion() {
-  return new Promise((resolve) => {
-    // Open with a dummy version to just check existing version
-    const request = indexedDB.open(DB_NAME);
-    
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      const currentVersion = db.version;
-      console.log('Current IndexedDB version:', currentVersion);
-      db.close();
-      resolve(currentVersion);
-    };
-    
-    request.onupgradeneeded = (event) => {
-      // This shouldn't happen when just checking version
-      // If it does, it means the DB doesn't exist yet
-      const db = event.target.result;
-      db.close();
-      resolve(1); // Default to version 1 if DB doesn't exist
-    };
-    
-    request.onerror = () => {
-      console.warn('Error checking DB version, using default version:', DB_VERSION);
-      resolve(DB_VERSION); // Default to current version if error
-    };
-  });
-}
-
-// Initialize the database
-export async function initDB() {
-  // Return existing promise if already initializing
-  if (dbPromise) return dbPromise;
-  
-  // Detect current database version first
-  try {
-    DB_VERSION = await getCurrentDbVersion();
-  } catch (error) {
-    console.warn('Error detecting database version:', error);
-    // Continue with default version
-  }
-  
-  // Create new promise for initialization
-  dbPromise = new Promise((resolve, reject) => {
-    console.log('Opening IndexedDB with version:', DB_VERSION);
+// Initialize IndexedDB
+async function initDB() {
+  return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     
-    request.onerror = (event) => {
-      console.error('Error opening IndexedDB:', event.target.error);
-      dbPromise = null; // Reset promise on error
-      reject(event.target.error);
-    };
-    
-    request.onsuccess = (event) => {
-      const db = event.target.result;
-      console.log('IndexedDB initialized successfully with version:', db.version);
-      
-      // Add error handler for database
-      db.onerror = (event) => {
-        console.error('Database error:', event.target.errorCode);
-      };
-      
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      db = request.result;
       resolve(db);
     };
     
     request.onupgradeneeded = (event) => {
       const db = event.target.result;
-      console.log('Upgrading IndexedDB to version:', event.newVersion);
-      
-      // Create object stores for offline orders
-      if (!db.objectStoreNames.contains(ORDERS_STORE)) {
-        const store = db.createObjectStore(ORDERS_STORE, { keyPath: 'id', autoIncrement: true });
-        store.createIndex('timestamp', 'timestamp', { unique: false });
-        store.createIndex('customer', 'customer', { unique: false });
-        console.log('Object store created for offline orders');
+      if (!db.objectStoreNames.contains(INVOICE_STORE)) {
+        const store = db.createObjectStore(INVOICE_STORE, { keyPath: 'offline_pos_name' });
+        store.createIndex('sync_status', 'sync_status');
+        store.createIndex('created_at', 'created_at');
       }
     };
   });
-  
-  return dbPromise;
 }
 
-// Ensure database is initialized and stores exist
-async function ensureStoreExists() {
+// Save invoice offline
+async function saveInvoiceOffline(invoice) {
   try {
-    const db = await initDB();
-    // Verify store exists
-    if (!db.objectStoreNames.contains(ORDERS_STORE)) {
-      // If store doesn't exist, close and reopen with incremented version
-      db.close();
-      dbPromise = null; // Reset promise
-      
-      // Reopen with incremented version
-      const newVersion = db.version + 1;
-      console.log('Store missing, reopening with version:', newVersion);
-      
-      dbPromise = new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, newVersion);
-        
-        request.onerror = (event) => {
-          console.error('Error reopening IndexedDB:', event.target.error);
-          reject(event.target.error);
-        };
-        
-        request.onsuccess = (event) => {
-          console.log('Successfully reopened database with version:', newVersion);
-          resolve(event.target.result);
-        };
-        
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          // Create missing store
-          if (!db.objectStoreNames.contains(ORDERS_STORE)) {
-            const store = db.createObjectStore(ORDERS_STORE, { keyPath: 'id', autoIncrement: true });
-            store.createIndex('timestamp', 'timestamp', { unique: false });
-            store.createIndex('customer', 'customer', { unique: false });
-            console.log('Object store created for offline orders on retry');
-          }
-        };
-      });
-      
-      return dbPromise;
-    }
+    if (!db) await initDB();
     
-    return db;
+    const offlineInvoice = {
+      ...invoice,
+      offline_pos_name: `OFFPOS${Date.now()}`,
+      sync_status: SYNC_STATUS.PENDING,
+      created_at: new Date().toISOString(),
+      modified_at: new Date().toISOString()
+    };
+
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(INVOICE_STORE, 'readwrite');
+      const store = tx.objectStore(INVOICE_STORE);
+      
+      const request = store.add(offlineInvoice);
+      
+      request.onsuccess = () => resolve(offlineInvoice.offline_pos_name);
+      request.onerror = () => reject(request.error);
+    });
   } catch (error) {
-    console.error('Error ensuring store exists:', error);
+    console.error('Error saving invoice offline:', error);
     throw error;
   }
 }
 
-// Save invoice to IndexedDB for offline storage
-export async function saveInvoiceOffline(invoice) {
+// Get all pending offline invoices
+async function getPendingOfflineInvoices() {
   try {
-    const db = await ensureStoreExists();
+    if (!db) await initDB();
     
     return new Promise((resolve, reject) => {
-      // Verify the store exists before creating transaction
-      if (!db.objectStoreNames.contains(ORDERS_STORE)) {
-        reject(new Error(`Object store '${ORDERS_STORE}' does not exist`));
-        return;
+      const tx = db.transaction(INVOICE_STORE, 'readonly');
+      const store = tx.objectStore(INVOICE_STORE);
+      const index = store.index('sync_status');
+      
+      const request = index.getAll(SYNC_STATUS.PENDING);
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error('Error getting pending invoices:', error);
+    throw error;
+  }
+}
+
+// Sync offline invoices when online
+async function syncOfflineInvoices() {
+  try {
+    const pendingInvoices = await getPendingOfflineInvoices();
+    console.log('Found pending invoices:', pendingInvoices.length);
+    
+    for (const invoice of pendingInvoices) {
+      try {
+        await updateInvoiceSyncStatus(invoice.offline_pos_name, SYNC_STATUS.SYNCING);
+        
+        const result = await frappe.call({
+          method: 'posawesome.posawesome.api.posapp.submit_invoice',
+          args: {
+            invoice: JSON.stringify(invoice),
+            data: {
+              payments: invoice.payments,
+              customer_credit_dict: invoice.customer_credit_dict || [],
+              redeemed_customer_credit: invoice.redeemed_customer_credit || 0,
+              credit_change: invoice.credit_change || 0,
+              is_credit_sale: invoice.is_credit_sale || false
+            }
+          }
+        });
+        
+        if (result.message && result.message.status === 1) {
+          await updateInvoiceSyncStatus(invoice.offline_pos_name, SYNC_STATUS.SYNCED);
+          console.log('Successfully synced invoice:', invoice.offline_pos_name);
+        } else {
+          throw new Error('Failed to sync invoice');
+        }
+      } catch (error) {
+        console.error('Error syncing invoice:', invoice.offline_pos_name, error);
+        await updateInvoiceSyncStatus(invoice.offline_pos_name, SYNC_STATUS.FAILED);
       }
+    }
+  } catch (error) {
+    console.error('Error in sync process:', error);
+    throw error;
+  }
+}
+
+// Update invoice sync status
+async function updateInvoiceSyncStatus(offlinePosName, status) {
+  try {
+    if (!db) await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(INVOICE_STORE, 'readwrite');
+      const store = tx.objectStore(INVOICE_STORE);
       
-      const transaction = db.transaction([ORDERS_STORE], 'readwrite');
-      const store = transaction.objectStore(ORDERS_STORE);
-      
-      // Sanitize the invoice to remove non-serializable data and circular references
-      const sanitizedInvoice = sanitizeForStorage(invoice);
-      
-      // Add timestamp for sorting/tracking and set offline_submit flag to true
-      // so invoice will be submitted when synced online, not saved as draft
-      const order = {
-        ...sanitizedInvoice,
-        timestamp: Date.now(),
-        synced: false,
-        offline_submit: true // Always set to true to ensure invoice is submitted when synced
-      };
-      
-      const request = store.add(order);
+      const request = store.get(offlinePosName);
       
       request.onsuccess = () => {
-        console.log('Invoice saved offline:', request.result);
+        const invoice = request.result;
+        invoice.sync_status = status;
+        invoice.modified_at = new Date().toISOString();
         
-        // Try to sync with service worker if available
-        if ('serviceWorker' in navigator && 'SyncManager' in window) {
-          navigator.serviceWorker.ready.then(registration => {
-            registration.sync.register('sync-orders').catch(err => {
-              console.error('Background sync registration failed:', err);
-            });
-            
-            // Also send a message to the service worker
-            navigator.serviceWorker.controller?.postMessage({
-              type: 'STORE_OFFLINE_ORDER',
-              payload: { id: request.result, timestamp: Date.now() }
-            });
-          });
-        }
-        
-        resolve(request.result);
+        const updateRequest = store.put(invoice);
+        updateRequest.onsuccess = () => resolve();
+        updateRequest.onerror = () => reject(updateRequest.error);
       };
       
-      request.onerror = (event) => {
-        console.error('Error saving invoice offline:', event.target.error);
-        reject(event.target.error);
-      };
-      
-      // Handle transaction errors
-      transaction.onerror = (event) => {
-        console.error('Transaction error:', event.target.error);
-        reject(event.target.error);
-      };
+      request.onerror = () => reject(request.error);
     });
   } catch (error) {
-    console.error('Failed to save invoice offline:', error);
+    console.error('Error updating invoice status:', error);
     throw error;
   }
 }
 
-// Function to sanitize invoice data for storage
-function sanitizeForStorage(invoice) {
-  // Create a deep clone of the invoice to avoid modifying the original
-  const sanitized = JSON.parse(JSON.stringify({
-    // Only include necessary fields with proper serialization
-    doctype: invoice.doctype,
-    name: invoice.name || null,
-    customer: invoice.customer,
-    posting_date: invoice.posting_date,
-    due_date: invoice.due_date,
-    currency: invoice.currency,
-    conversion_rate: invoice.conversion_rate,
-    is_return: invoice.is_return ? 1 : 0,
-    total: invoice.total,
-    net_total: invoice.net_total,
-    base_total: invoice.base_total,
-    base_net_total: invoice.base_net_total,
-    discount_amount: invoice.discount_amount,
-    base_discount_amount: invoice.base_discount_amount,
-    additional_discount_percentage: invoice.additional_discount_percentage,
-    grand_total: invoice.grand_total,
-    base_grand_total: invoice.base_grand_total,
-    rounded_total: invoice.rounded_total,
-    base_rounded_total: invoice.base_rounded_total,
-    company: invoice.company,
-    pos_profile: invoice.pos_profile,
-    posa_pos_opening_shift: invoice.posa_pos_opening_shift,
-    posa_is_offer_applied: invoice.posa_is_offer_applied ? 1 : 0,
-    return_against: invoice.return_against || null,
-    
-    // Clean items array - ensure only serializable data
-    items: (invoice.items || []).map(item => ({
-      item_code: item.item_code,
-      item_name: item.item_name,
-      qty: item.qty,
-      rate: item.rate,
-      base_rate: item.base_rate,
-      amount: item.amount,
-      base_amount: item.base_amount,
-      discount_percentage: item.discount_percentage,
-      discount_amount: item.discount_amount,
-      base_discount_amount: item.base_discount_amount,
-      stock_qty: item.stock_qty,
-      uom: item.uom,
-      conversion_factor: item.conversion_factor,
-      stock_uom: item.stock_uom,
-      price_list_rate: item.price_list_rate,
-      base_price_list_rate: item.base_price_list_rate,
-      serial_no: item.serial_no,
-      batch_no: item.batch_no,
-      posa_notes: item.posa_notes,
-      posa_delivery_date: item.posa_delivery_date,
-      posa_offers: typeof item.posa_offers === 'string' ? item.posa_offers : JSON.stringify([]),
-      posa_offer_applied: item.posa_offer_applied ? 1 : 0,
-      posa_is_offer: item.posa_is_offer ? 1 : 0,
-      posa_is_replace: item.posa_is_replace || null,
-      is_free_item: item.is_free_item ? 1 : 0
-    })),
-    
-    // Clean payments array
-    payments: (invoice.payments || []).map(payment => ({
-      mode_of_payment: payment.mode_of_payment,
-      amount: payment.amount,
-      base_amount: payment.base_amount,
-      type: payment.type,
-      account: payment.account,
-      default: payment.default ? 1 : 0,
-      currency: payment.currency,
-      conversion_rate: payment.conversion_rate
-    })),
-    
-    // Clean offers data to avoid circular references
-    posa_offers: (invoice.posa_offers || []).map(offer => ({
-      offer_name: offer.offer_name,
-      row_id: offer.row_id,
-      apply_on: offer.apply_on,
-      offer: offer.offer,
-      items: typeof offer.items === 'string' ? offer.items : JSON.stringify(offer.items || []),
-      give_item: offer.give_item,
-      give_item_row_id: offer.give_item_row_id,
-      offer_applied: offer.offer_applied ? 1 : 0,
-      coupon_based: offer.coupon_based ? 1 : 0,
-      coupon: offer.coupon
-    })),
-    
-    // Other necessary data
-    posa_coupons: invoice.posa_coupons || [],
-    taxes: invoice.taxes || [],
-    posa_delivery_charges: invoice.posa_delivery_charges || null,
-    posa_delivery_charges_rate: invoice.posa_delivery_charges_rate || 0
-  }));
-  
-  return sanitized;
+// Check if we're online
+function isOnline() {
+  return navigator.onLine;
 }
 
-// Get all pending offline orders
-export async function getPendingOrders() {
-  try {
-    const db = await ensureStoreExists();
-    
-    return new Promise((resolve, reject) => {
-      // Verify the store exists before creating transaction
-      if (!db.objectStoreNames.contains(ORDERS_STORE)) {
-        console.warn(`Object store '${ORDERS_STORE}' does not exist yet, returning empty array`);
-        resolve([]);
-        return;
-      }
-      
-      // Use a try/catch block inside the promise for better error handling
-      try {
-        const transaction = db.transaction([ORDERS_STORE], 'readonly');
-        const store = transaction.objectStore(ORDERS_STORE);
-        
-        // Handle transaction errors
-        transaction.onerror = (event) => {
-          console.error('Transaction error when getting pending orders:', event.target.error);
-          reject(event.target.error);
-        };
-        
-        // Use the timestamp index if it exists
-        let request;
-        try {
-          const index = store.index('timestamp');
-          request = index.getAll();
-        } catch (indexError) {
-          console.warn('Index not found, falling back to getAll() on store:', indexError);
-          request = store.getAll();
-        }
-        
-        request.onsuccess = () => {
-          try {
-            // Filter out synced orders, handle empty result
-            const pendingOrders = request.result ? 
-              request.result.filter(order => !order.synced) : 
-              [];
-            
-            console.log(`Found ${pendingOrders.length} pending orders`);
-            resolve(pendingOrders);
-          } catch (filterError) {
-            console.error('Error filtering pending orders:', filterError);
-            // Return empty array instead of failing completely
-            resolve([]);
-          }
-        };
-        
-        request.onerror = (event) => {
-          console.error('Error getting pending orders:', event.target.error);
-          reject(event.target.error);
-        };
-      } catch (transactionError) {
-        console.error('Error creating transaction:', transactionError);
-        // Return empty array instead of rejecting
-        resolve([]);
-      }
-    });
-  } catch (error) {
-    console.error('Failed to get pending orders:', error);
-    return [];
-  }
-}
-
-// Mark an order as synced
-export async function markOrderSynced(id) {
-  try {
-    const db = await ensureStoreExists();
-    
-    return new Promise((resolve, reject) => {
-      // Verify the store exists before creating transaction
-      if (!db.objectStoreNames.contains(ORDERS_STORE)) {
-        reject(new Error(`Object store '${ORDERS_STORE}' does not exist`));
-        return;
-      }
-      
-      const transaction = db.transaction([ORDERS_STORE], 'readwrite');
-      const store = transaction.objectStore(ORDERS_STORE);
-      
-      // First get the order
-      const getRequest = store.get(id);
-      
-      getRequest.onsuccess = () => {
-        const order = getRequest.result;
-        if (!order) {
-          reject(new Error(`Order with ID ${id} not found`));
-          return;
-        }
-        
-        // Update the order to mark as synced
-        order.synced = true;
-        order.syncedAt = Date.now();
-        
-        const updateRequest = store.put(order);
-        
-        updateRequest.onsuccess = () => {
-          console.log(`Order ${id} marked as synced`);
-          resolve(true);
-        };
-        
-        updateRequest.onerror = (event) => {
-          console.error('Error marking order as synced:', event.target.error);
-          reject(event.target.error);
-        };
-      };
-      
-      getRequest.onerror = (event) => {
-        console.error('Error getting order to mark as synced:', event.target.error);
-        reject(event.target.error);
-      };
-      
-      // Handle transaction errors
-      transaction.onerror = (event) => {
-        console.error('Transaction error when marking order as synced:', event.target.error);
-        reject(event.target.error);
-      };
-    });
-  } catch (error) {
-    console.error('Failed to mark order as synced:', error);
-    throw error;
-  }
-}
+// Export functions
+export {
+  initDB,
+  saveInvoiceOffline,
+  getPendingOfflineInvoices,
+  syncOfflineInvoices,
+  isOnline,
+  SYNC_STATUS
+};
 
 // Centralized connectivity service
 const connectivityService = {
