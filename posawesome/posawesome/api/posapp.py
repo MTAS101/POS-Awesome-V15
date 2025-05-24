@@ -543,13 +543,32 @@ def update_invoice(data):
         if isinstance(data, str):
             data = json.loads(data)
         
+        # Extract transaction ID from data
+        transaction_id = None
+        if isinstance(data, dict) and 'data' in data:
+            transaction_data = data.get('data', {})
+            if isinstance(transaction_data, str):
+                transaction_data = json.loads(transaction_data)
+            transaction_id = transaction_data.get('transaction_id')
+        
+        # Check for existing transaction
+        if transaction_id:
+            existing_invoice = frappe.db.get_value(
+                "Sales Invoice",
+                {"posa_transaction_id": transaction_id},
+                "name"
+            )
+            if existing_invoice:
+                print(f"Found existing invoice {existing_invoice} for transaction {transaction_id}")
+                return frappe.get_doc("Sales Invoice", existing_invoice)
+        
         # Check for submit flag
         should_submit = frappe.form_dict.get("submit")
         # Check for include_payments flag
         include_payments = frappe.form_dict.get("include_payments")
         
         # Log important parameters for debugging
-        print(f"Processing invoice update with: submit={should_submit}, include_payments={include_payments}")
+        print(f"Processing invoice update with: submit={should_submit}, include_payments={include_payments}, transaction_id={transaction_id}")
         print(f"Data includes: customer={data.get('customer')}, items_count={len(data.get('items', []))}, payments_count={len(data.get('payments', []))}")
         
         if data.get("name"):
@@ -559,6 +578,10 @@ def update_invoice(data):
             # This is a new invoice
             print("Creating new Sales Invoice")
             invoice_doc = frappe.get_doc(data)
+            
+            # Set transaction ID for new invoices
+            if transaction_id:
+                invoice_doc.posa_transaction_id = transaction_id
 
         # Set currency from data before set_missing_values
         selected_currency = data.get("currency")
@@ -579,64 +602,6 @@ def update_invoice(data):
         
         # Set missing values first
         invoice_doc.set_missing_values()
-        
-        # Ensure selected currency is preserved after set_missing_values
-        if selected_currency:
-            invoice_doc.currency = selected_currency
-            # Get default conversion rate from ERPNext if currency is different from company currency
-            if invoice_doc.currency != frappe.get_cached_value("Company", invoice_doc.company, "default_currency"):
-                company_currency = frappe.get_cached_value("Company", invoice_doc.company, "default_currency")
-                # Get exchange rate from selected currency to base currency
-                exchange_rate = get_exchange_rate(
-                    invoice_doc.currency,
-                    company_currency,
-                    invoice_doc.posting_date
-                )
-                invoice_doc.conversion_rate = exchange_rate
-                invoice_doc.plc_conversion_rate = exchange_rate
-                invoice_doc.price_list_currency = selected_currency
-
-                # Update rates and amounts for all items using multiplication
-                for item in invoice_doc.items:
-                    if item.price_list_rate:
-                        # If exchange rate is 285 PKR = 1 USD
-                        # To convert USD to PKR: multiply by exchange rate
-                        # Example: 0.35 USD * 285 = 100 PKR
-                        item.base_price_list_rate = flt(item.price_list_rate * exchange_rate, item.precision("base_price_list_rate"))
-                    if item.rate:
-                        item.base_rate = flt(item.rate * exchange_rate, item.precision("base_rate"))
-                    if item.amount:
-                        item.base_amount = flt(item.amount * exchange_rate, item.precision("base_amount"))
-
-                # Update payment amounts
-                for payment in invoice_doc.payments:
-                    payment.base_amount = flt(payment.amount * exchange_rate, payment.precision("base_amount"))
-
-                # Update invoice level amounts
-                invoice_doc.base_total = flt(invoice_doc.total * exchange_rate, invoice_doc.precision("base_total"))
-                invoice_doc.base_net_total = flt(invoice_doc.net_total * exchange_rate, invoice_doc.precision("base_net_total"))
-                invoice_doc.base_grand_total = flt(invoice_doc.grand_total * exchange_rate, invoice_doc.precision("base_grand_total"))
-                invoice_doc.base_rounded_total = flt(invoice_doc.rounded_total * exchange_rate, invoice_doc.precision("base_rounded_total"))
-                invoice_doc.base_in_words = money_in_words(invoice_doc.base_rounded_total, invoice_doc.company_currency)
-
-                # Update data to be sent back to frontend
-                data["conversion_rate"] = exchange_rate
-                data["plc_conversion_rate"] = exchange_rate
-
-        # Process remarks if this is an offline order coming online
-        if data.get("offline_pos_name") or data.get("offline_submit"):
-            # Update remarks with items details for offline orders
-            items = []
-            for item in invoice_doc.items:
-                if item.item_name and item.rate and item.qty:
-                    total = item.rate * item.qty
-                    items.append(f"{item.item_name} - Rate: {item.rate}, Qty: {item.qty}, Amount: {total}")
-            
-            # Add the grand total at the end of remarks
-            grand_total = f"\nGrand Total: {invoice_doc.grand_total}"
-            items.append(grand_total)
-            
-            invoice_doc.remarks = "\n".join(items)
         
         # Make sure payments are properly included for POS invoices
         if include_payments or invoice_doc.is_pos == 1:
@@ -666,6 +631,20 @@ def update_invoice(data):
         # Submit the invoice if requested
         if should_submit:
             try:
+                # Double check for duplicate transaction before submitting
+                if transaction_id:
+                    existing_submitted = frappe.db.get_value(
+                        "Sales Invoice",
+                        {
+                            "posa_transaction_id": transaction_id,
+                            "docstatus": 1
+                        },
+                        "name"
+                    )
+                    if existing_submitted:
+                        print(f"Found existing submitted invoice {existing_submitted} for transaction {transaction_id}")
+                        return frappe.get_doc("Sales Invoice", existing_submitted)
+                
                 frappe.flags.ignore_account_permission = True
                 invoice_doc.docstatus = 1
                 invoice_doc.update_stock = 1  # Ensure stock is updated for offline orders
@@ -696,13 +675,35 @@ def update_invoice(data):
         return response
         
     except Exception as e:
-        frappe.db.rollback()
-        error_message = str(e)
-        print(f"Error in update_invoice: {error_message}")
-        frappe.log_error(f"Error in update_invoice: {error_message}")
-        frappe.msgprint(_("Error updating invoice: {0}").format(error_message), indicator="red")
-        return {"error": error_message}
+        print(f"Error in update_invoice: {str(e)}")
+        frappe.log_error(f"Error in update_invoice: {str(e)}")
+        raise
 
+# Add custom field for transaction ID
+def after_install():
+    try:
+        # Create custom field for transaction ID if it doesn't exist
+        if not frappe.db.exists("Custom Field", "Sales Invoice-posa_transaction_id"):
+            custom_field = frappe.get_doc({
+                "doctype": "Custom Field",
+                "dt": "Sales Invoice",
+                "label": "POS Transaction ID",
+                "fieldname": "posa_transaction_id",
+                "fieldtype": "Data",
+                "insert_after": "pos_profile",
+                "unique": 1,
+                "allow_on_submit": 0,
+                "in_list_view": 0,
+                "in_standard_filter": 0,
+                "in_global_search": 0,
+                "in_preview": 0,
+                "read_only": 1
+            })
+            custom_field.insert()
+            print("Created custom field for POS Transaction ID")
+    except Exception as e:
+        print(f"Error creating custom field: {str(e)}")
+        frappe.log_error(f"Error creating custom field: {str(e)}")
 
 @frappe.whitelist()
 def submit_invoice(invoice, data):
