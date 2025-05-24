@@ -439,6 +439,7 @@
 
 import format from "../../format";
 import Customer from "./Customer.vue";
+import { saveInvoiceOffline, isOnline } from "../../offline_db";
 
 export default {
   mixins: [format],
@@ -495,6 +496,8 @@ export default {
       selected_currency: "", // Currently selected currency
       exchange_rate: 1, // Current exchange rate
       available_currencies: [], // List of available currencies
+      is_processing_offline: false,
+      offline_queue_count: 0,
     };
   },
 
@@ -1522,8 +1525,39 @@ export default {
     },
 
     // Process and save invoice (handles update or create)
-    process_invoice() {
+    async process_invoice() {
       const doc = this.get_invoice_doc();
+      
+      // Check if we're offline
+      if (!isOnline()) {
+        try {
+          this.is_processing_offline = true;
+          
+          // Save invoice offline
+          await saveInvoiceOffline(doc);
+          
+          // Show success message
+          this.eventBus.emit('show_message', {
+            title: __('Invoice saved offline and will be synced when online'),
+            color: 'info'
+          });
+          
+          this.is_processing_offline = false;
+          return doc; // Return the doc to continue with payment UI
+        } catch (error) {
+          console.error('Error saving invoice offline:', error);
+          this.is_processing_offline = false;
+          
+          this.eventBus.emit('show_message', {
+            title: __(error.message || 'Error saving invoice offline'),
+            color: 'error'
+          });
+          
+          return false;
+        }
+      }
+      
+      // Online mode - proceed with normal flow
       if (doc.name) {
         try {
           const updated_doc = this.update_invoice(doc);
@@ -1579,7 +1613,8 @@ export default {
           invoiceType: this.invoiceType,
           is_return: this.invoice_doc ? this.invoice_doc.is_return : false,
           items_count: this.items.length,
-          customer: this.customer
+          customer: this.customer,
+          online: isOnline()
         });
 
         if (!this.customer) {
@@ -1615,7 +1650,7 @@ export default {
           invoice_doc = await this.process_invoice_from_order();
         } else {
           console.log('Processing regular invoice');
-          invoice_doc = this.process_invoice();
+          invoice_doc = await this.process_invoice();
         }
 
         if (!invoice_doc) {
@@ -4189,6 +4224,13 @@ export default {
     this.eventBus.on("reset_posting_date", () => {
       this.posting_date = frappe.datetime.nowdate();
     });
+    
+    // Listen for offline queue count updates
+    window.addEventListener('offline-queue-updated', (event) => {
+      if (event.detail && typeof event.detail.count === 'number') {
+        this.offline_queue_count = event.detail.count;
+      }
+    });
   },
   // Cleanup event listeners before component is destroyed
   beforeUnmount() {
@@ -4200,6 +4242,9 @@ export default {
     this.eventBus.off("clear_invoice");
     // Cleanup reset_posting_date listener
     this.eventBus.off("reset_posting_date");
+    
+    // Clean up offline queue listener
+    window.removeEventListener('offline-queue-updated');
   },
   // Register global keyboard shortcuts when component is created
   created() {

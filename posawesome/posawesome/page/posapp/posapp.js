@@ -10,6 +10,16 @@ frappe.pages['posapp'].on_page_load = function (wrapper) {
 
 	$('div.navbar-fixed-top').find('.container').css('padding', '0');
 
+	// Add PWA manifest link
+	$("head").append("<link rel='manifest' href='/manifest.json'>");
+	
+	// Add theme color meta tag for PWA
+	$("head").append("<meta name='theme-color' content='#0097A7'>");
+	
+	// Add Apple touch icon for iOS devices
+	$("head").append("<link rel='apple-touch-icon' href='/assets/posawesome/icons/icon-192x192.png'>");
+	
+	// Add existing styles
 	$("head").append("<link href='/assets/posawesome/node_modules/vuetify/dist/vuetify.min.css' rel='stylesheet'>");
 	$("head").append("<link rel='stylesheet' href='https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css'>");
 	$("head").append("<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900' />");

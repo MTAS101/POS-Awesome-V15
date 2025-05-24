@@ -1,0 +1,63 @@
+{
+  "name": "POS Awesome",
+  "short_name": "POSAwesome",
+  "description": "A powerful and beautiful Point of Sale application",
+  "start_url": "/app/point-of-sale",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0097A7",
+  "icons": [
+    {
+      "src": "/assets/posawesome/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/posawesome/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/posawesome/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/posawesome/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/posawesome/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/posawesome/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/posawesome/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/posawesome/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "scope": "/",
+  "orientation": "portrait",
+  "categories": ["business", "finance", "productivity"],
+  "lang": "en-US"
+} 

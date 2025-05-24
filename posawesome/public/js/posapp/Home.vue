@@ -1,9 +1,13 @@
 <template>
-  <v-app class="container1">
+  <v-app>
     <v-main>
       <Navbar @changePage="setPage($event)"></Navbar>
       <component v-bind:is="page" class="mx-4 md-4"></component>
     </v-main>
+    
+    <!-- PWA Components -->
+    <update-notification />
+    <connectivity-status />
   </v-app>
 </template>
 
