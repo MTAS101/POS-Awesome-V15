@@ -551,16 +551,26 @@ def update_invoice(data):
                 transaction_data = json.loads(transaction_data)
             transaction_id = transaction_data.get('transaction_id')
         
-        # Check for existing transaction
+        # Early check for existing transaction - both draft and submitted
         if transaction_id:
             existing_invoice = frappe.db.get_value(
                 "Sales Invoice",
-                {"posa_transaction_id": transaction_id},
-                "name"
+                {
+                    "posa_transaction_id": transaction_id,
+                    "docstatus": ["!=", 2]  # Not cancelled
+                },
+                ["name", "docstatus"],
+                as_dict=1
             )
+            
             if existing_invoice:
-                print(f"Found existing invoice {existing_invoice} for transaction {transaction_id}")
-                return frappe.get_doc("Sales Invoice", existing_invoice)
+                print(f"Found existing invoice {existing_invoice.name} with status {existing_invoice.docstatus} for transaction {transaction_id}")
+                if existing_invoice.docstatus == 1:
+                    # If already submitted, return that
+                    return frappe.get_doc("Sales Invoice", existing_invoice.name)
+                elif existing_invoice.docstatus == 0:
+                    # If draft exists, update that instead of creating new
+                    data["name"] = existing_invoice.name
         
         # Check for submit flag
         should_submit = frappe.form_dict.get("submit")
@@ -623,6 +633,20 @@ def update_invoice(data):
         frappe.flags.ignore_account_permission = True
         invoice_doc.docstatus = 0
         
+        # One final check for duplicates before saving
+        if transaction_id:
+            duplicate_check = frappe.db.exists(
+                "Sales Invoice",
+                {
+                    "posa_transaction_id": transaction_id,
+                    "name": ["!=", invoice_doc.name if invoice_doc.name else ""],
+                    "docstatus": ["!=", 2]
+                }
+            )
+            if duplicate_check:
+                print(f"Found duplicate invoice {duplicate_check} during final check")
+                return frappe.get_doc("Sales Invoice", duplicate_check)
+        
         # Save the invoice
         print(f"Saving invoice with is_pos={invoice_doc.is_pos}, update_stock={invoice_doc.update_stock}")
         invoice_doc.save()
@@ -637,7 +661,8 @@ def update_invoice(data):
                         "Sales Invoice",
                         {
                             "posa_transaction_id": transaction_id,
-                            "docstatus": 1
+                            "docstatus": 1,
+                            "name": ["!=", invoice_doc.name]
                         },
                         "name"
                     )
