@@ -2,7 +2,7 @@
   "name": "POS Awesome",
   "short_name": "POSAwesome",
   "description": "A powerful and beautiful Point of Sale application",
-  "start_url": "/app/point-of-sale",
+  "start_url": "/app/posapp",
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#0097A7",
@@ -56,7 +56,7 @@
       "purpose": "any maskable"
     }
   ],
-  "scope": "/",
+  "scope": "/app/",
   "orientation": "portrait",
   "categories": ["business", "finance", "productivity"],
   "lang": "en-US"

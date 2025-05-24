@@ -11,7 +11,7 @@ frappe.pages['posapp'].on_page_load = function (wrapper) {
 	$('div.navbar-fixed-top').find('.container').css('padding', '0');
 
 	// Add PWA manifest link
-	$("head").append("<link rel='manifest' href='/manifest.json'>");
+	$("head").append("<link rel='manifest' href='/assets/posawesome/manifest.json'>");
 	
 	// Add theme color meta tag for PWA
 	$("head").append("<meta name='theme-color' content='#0097A7'>");
@@ -26,47 +26,7 @@ frappe.pages['posapp'].on_page_load = function (wrapper) {
 	
 	// Listen for POS Profile registration
 	frappe.realtime.on('pos_profile_registered', () => {
-		const update_totals_based_on_tax_inclusive = () => {
-			console.log("Updating totals based on tax inclusive settings");
-			const posProfile = this.page.$PosApp.pos_profile;
-
-			if (!posProfile) {
-				console.error("POS Profile is not set.");
-				return;
-			}
-
-			frappe.call({
-				method: 'frappe.get_cached_value',
-				args: {
-					doctype: 'POS Profile',
-					name: posProfile,
-					fieldname: 'posa_tax_inclusive'
-				},
-				callback: function(response) {
-					if (response.message !== undefined) {
-						const posa_tax_inclusive = response.message;
-						const totalAmountField = document.getElementById('input-v-25');
-						const grandTotalField = document.getElementById('input-v-29');
-
-						if (totalAmountField && grandTotalField) {
-							if (posa_tax_inclusive) {
-								totalAmountField.value = grandTotalField.value;
-								console.log("Total amount copied from grand total:", grandTotalField.value);
-							} else {
-								totalAmountField.value = "";
-								console.log("Total amount cleared because checkbox is unchecked.");
-							}
-						} else {
-							console.error('Could not find total amount or grand total field by ID.');
-						}
-					} else {
-						console.error('Error fetching POS Profile or POS Profile not found.');
-					}
-				}
-			});
-		};
-
-		update_totals_based_on_tax_inclusive();
+		console.log('POS Profile registered event received');
 	});
 };
 

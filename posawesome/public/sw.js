@@ -26,10 +26,10 @@ if (workbox) {
   // Precache strategy for static assets
   // Add your files to precache here or use workbox-build to generate this list
   workbox.precaching.precacheAndRoute([
-    { url: '/app/point-of-sale', revision: '1.0.0' },
+    { url: '/app/posapp', revision: '1.0.0' },
     { url: '/assets/posawesome/icons/icon-192x192.png', revision: '1.0.0' },
     { url: '/assets/posawesome/icons/icon-512x512.png', revision: '1.0.0' },
-    { url: '/manifest.json', revision: '1.0.0' }
+    { url: '/assets/posawesome/manifest.json', revision: '1.0.0' }
   ]);
   
   // Cache CSS
@@ -149,7 +149,7 @@ if (workbox) {
       data: {
         dateOfArrival: Date.now(),
         primaryKey: '1',
-        url: data.url || '/app/point-of-sale'
+        url: data.url || '/app/posapp'
       },
       actions: [
         {
@@ -175,7 +175,7 @@ if (workbox) {
       );
     } else {
       event.waitUntil(
-        clients.openWindow('/app/point-of-sale')
+        clients.openWindow('/app/posapp')
       );
     }
   });
