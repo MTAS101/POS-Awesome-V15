@@ -106,10 +106,27 @@ export default {
         this.progress = 5;
         this.status_message = __('Initializing offline database...');
         
+        // Clear browser caches on retry
+        try {
+          if (window.caches && window.caches.keys) {
+            const cacheKeys = await window.caches.keys();
+            for (const key of cacheKeys) {
+              if (key.includes('posawesome')) {
+                await window.caches.delete(key);
+                console.log(`Cache '${key}' deleted`);
+              }
+            }
+          }
+        } catch (cacheError) {
+          console.warn('Error clearing caches:', cacheError);
+        }
+        
         // Initialize database
+        this.details = __('Creating database for offline data...');
         const db = await initOfflineStores();
         
         // Check if bootstrap is needed
+        this.details = __('Checking if offline data needs to be updated...');
         const bootstrapNeeded = await checkBootstrapNeeded(db, this.pos_profile);
         
         if (!bootstrapNeeded) {
@@ -161,7 +178,14 @@ export default {
         this.loading = false;
         this.error = error.message;
         this.status_message = __('Failed to initialize');
-        this.details = __('Please check console for details');
+        this.details = __('Try refreshing the page or clearing browser data');
+        
+        // Try to provide more helpful error message based on error type
+        if (error.message.includes('IndexedDB') || error.message.includes('object store')) {
+          this.details = __('Browser database error. Try clearing your browser data and restarting your browser.');
+        } else if (error.message.includes('network') || error.message.includes('connection')) {
+          this.details = __('Network error. Check your internet connection and try again.');
+        }
       }
     },
     
@@ -200,7 +224,25 @@ export default {
     },
     
     retryBootstrap() {
-      this.initializeBootstrap();
+      // Ask user to confirm clear database on retry
+      if (confirm(__('Would you like to completely reset the offline database? This will clear all cached data.'))) {
+        console.log('User confirmed database reset, starting fresh bootstrap');
+        
+        // Show loading state
+        this.loading = true;
+        this.error = null;
+        this.progress = 2;
+        this.status_message = __('Resetting offline database...');
+        this.details = __('Clearing existing data...');
+        
+        // Use setTimeout to allow UI to update before starting potentially slow operation
+        setTimeout(() => {
+          this.initializeBootstrap();
+        }, 500);
+      } else {
+        // Just retry without clearing database
+        this.initializeBootstrap();
+      }
     }
   },
   mounted() {

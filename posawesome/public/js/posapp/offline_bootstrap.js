@@ -30,61 +30,164 @@ export async function initOfflineStores() {
     let db = null;
     try {
       db = await initDB();
-      db.close();
+      if (db) {
+        console.log('Closing existing database connection');
+        db.close();
+      }
     } catch (error) {
       console.log('No existing database connection to close');
     }
 
+    // Force close any open connections to ensure clean upgrade
+    console.log('Requesting database cleanup');
+    try {
+      await new Promise(resolve => {
+        // A small delay to ensure connections are properly closed
+        setTimeout(resolve, 500);
+      });
+    } catch (e) {
+      console.log('Delay for connection cleanup skipped');
+    }
+    
+    // Delete the database if it exists and recreate
+    const dbExists = await checkIfDbExists('posawesome-offline-db');
+    if (dbExists) {
+      console.log('Deleting existing database to ensure clean start');
+      try {
+        await deleteDatabase('posawesome-offline-db');
+        console.log('Database deleted successfully');
+        // Small delay to ensure deletion completes
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (deleteError) {
+        console.error('Error deleting database:', deleteError);
+        // Continue despite error
+      }
+    }
+
     // Create new promise for upgrading database
     return new Promise((resolve, reject) => {
+      console.log('Opening IndexedDB with fresh version');
       const request = indexedDB.open('posawesome-offline-db', REQUIRED_DB_VERSION);
       
       request.onerror = (event) => {
         console.error('Error opening IndexedDB for bootstrap:', event.target.error);
-        reject(event.target.error);
+        reject(new Error(`Failed to open database: ${event.target.error}`));
+      };
+      
+      request.onblocked = (event) => {
+        console.warn('Database open blocked - close other tabs with this app open');
+        alert('Please close other tabs or instances of this app and try again');
+        reject(new Error('Database open blocked by another connection'));
       };
       
       request.onsuccess = (event) => {
         const db = event.target.result;
         console.log('IndexedDB opened for bootstrap with version:', db.version);
+        
+        // Verify all required stores exist
+        const storeNames = Array.from(db.objectStoreNames);
+        const requiredStores = [CUSTOMERS_STORE, ITEMS_STORE, TAXES_STORE, BOOTSTRAP_INFO_STORE];
+        const missingStores = requiredStores.filter(name => !storeNames.includes(name));
+        
+        if (missingStores.length > 0) {
+          db.close();
+          reject(new Error(`Missing required object stores: ${missingStores.join(', ')}`));
+          return;
+        }
+        
         resolve(db);
       };
       
       request.onupgradeneeded = (event) => {
-        const db = event.target.result;
-        console.log('Upgrading IndexedDB for bootstrap to version:', event.newVersion);
-        
-        // Create object stores for offline master data if they don't exist
-        if (!db.objectStoreNames.contains(CUSTOMERS_STORE)) {
-          const customerStore = db.createObjectStore(CUSTOMERS_STORE, { keyPath: 'name' });
-          customerStore.createIndex('customer_name', 'customer_name', { unique: false });
-          customerStore.createIndex('mobile_no', 'mobile_no', { unique: false });
-          console.log('Created customers store');
-        }
-        
-        if (!db.objectStoreNames.contains(ITEMS_STORE)) {
-          const itemStore = db.createObjectStore(ITEMS_STORE, { keyPath: 'name' });
-          itemStore.createIndex('item_name', 'item_name', { unique: false });
-          itemStore.createIndex('item_group', 'item_group', { unique: false });
-          itemStore.createIndex('barcode', 'barcode', { unique: false });
-          console.log('Created items store');
-        }
-        
-        if (!db.objectStoreNames.contains(TAXES_STORE)) {
-          const taxStore = db.createObjectStore(TAXES_STORE, { keyPath: 'name' });
-          console.log('Created taxes store');
-        }
-        
-        if (!db.objectStoreNames.contains(BOOTSTRAP_INFO_STORE)) {
-          const infoStore = db.createObjectStore(BOOTSTRAP_INFO_STORE, { keyPath: 'id' });
-          console.log('Created bootstrap info store');
+        try {
+          const db = event.target.result;
+          console.log('Upgrading IndexedDB for bootstrap to version:', event.newVersion);
+          
+          // Create object stores for offline master data if they don't exist
+          if (!db.objectStoreNames.contains(CUSTOMERS_STORE)) {
+            const customerStore = db.createObjectStore(CUSTOMERS_STORE, { keyPath: 'name' });
+            customerStore.createIndex('customer_name', 'customer_name', { unique: false });
+            customerStore.createIndex('mobile_no', 'mobile_no', { unique: false });
+            console.log('Created customers store');
+          }
+          
+          if (!db.objectStoreNames.contains(ITEMS_STORE)) {
+            const itemStore = db.createObjectStore(ITEMS_STORE, { keyPath: 'name' });
+            itemStore.createIndex('item_name', 'item_name', { unique: false });
+            itemStore.createIndex('item_group', 'item_group', { unique: false });
+            itemStore.createIndex('barcode', 'barcode', { unique: false });
+            console.log('Created items store');
+          }
+          
+          if (!db.objectStoreNames.contains(TAXES_STORE)) {
+            const taxStore = db.createObjectStore(TAXES_STORE, { keyPath: 'name' });
+            console.log('Created taxes store');
+          }
+          
+          if (!db.objectStoreNames.contains(BOOTSTRAP_INFO_STORE)) {
+            const infoStore = db.createObjectStore(BOOTSTRAP_INFO_STORE, { keyPath: 'id' });
+            console.log('Created bootstrap info store');
+          }
+          
+          console.log('All stores created successfully during upgrade');
+        } catch (e) {
+          console.error('Error during database upgrade:', e);
+          // We can't reject here as that would abort the upgrade
+          // Instead, we'll just log the error and the onsuccess handler will check for missing stores
         }
       };
     });
   } catch (error) {
     console.error('Failed to initialize offline stores:', error);
-    throw error;
+    throw new Error('Failed to initialize database: ' + error.message);
   }
+}
+
+/**
+ * Check if database exists
+ */
+async function checkIfDbExists(dbName) {
+  return new Promise(resolve => {
+    const request = indexedDB.open(dbName);
+    
+    request.onsuccess = function(event) {
+      const db = event.target.result;
+      db.close();
+      resolve(true);
+    };
+    
+    request.onupgradeneeded = function(event) {
+      const db = event.target.result;
+      db.close();
+      resolve(false);
+    };
+    
+    request.onerror = function() {
+      resolve(false);
+    };
+  });
+}
+
+/**
+ * Delete database
+ */
+async function deleteDatabase(dbName) {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.deleteDatabase(dbName);
+    
+    request.onsuccess = function() {
+      resolve();
+    };
+    
+    request.onerror = function(event) {
+      reject(new Error('Error deleting database: ' + event.target.error));
+    };
+    
+    request.onblocked = function() {
+      console.warn('Database deletion blocked - close other tabs with this app open');
+      reject(new Error('Database deletion blocked'));
+    };
+  });
 }
 
 /**
@@ -378,6 +481,12 @@ async function saveBootstrapInfo(db, posProfile) {
  */
 async function saveDataBatch(db, storeName, dataArray) {
   return new Promise((resolve, reject) => {
+    // First verify the store exists
+    if (!db.objectStoreNames.contains(storeName)) {
+      reject(new Error(`Object store '${storeName}' does not exist. Database may need to be recreated.`));
+      return;
+    }
+    
     const transaction = db.transaction([storeName], 'readwrite');
     const store = transaction.objectStore(storeName);
     
@@ -405,6 +514,12 @@ async function saveDataBatch(db, storeName, dataArray) {
  */
 async function saveToObjectStore(db, storeName, data) {
   return new Promise((resolve, reject) => {
+    // First verify the store exists
+    if (!db.objectStoreNames.contains(storeName)) {
+      reject(new Error(`Object store '${storeName}' does not exist. Database may need to be recreated.`));
+      return;
+    }
+    
     const transaction = db.transaction([storeName], 'readwrite');
     const store = transaction.objectStore(storeName);
     
@@ -425,6 +540,12 @@ async function saveToObjectStore(db, storeName, data) {
  */
 async function clearObjectStore(db, storeName) {
   return new Promise((resolve, reject) => {
+    // First verify the store exists
+    if (!db.objectStoreNames.contains(storeName)) {
+      reject(new Error(`Object store '${storeName}' does not exist. Database may need to be recreated.`));
+      return;
+    }
+    
     const transaction = db.transaction([storeName], 'readwrite');
     const store = transaction.objectStore(storeName);
     
@@ -445,6 +566,12 @@ async function clearObjectStore(db, storeName) {
  */
 async function getObjectStoreCount(db, storeName) {
   return new Promise((resolve, reject) => {
+    // First verify the store exists
+    if (!db.objectStoreNames.contains(storeName)) {
+      reject(new Error(`Object store '${storeName}' does not exist. Database may need to be recreated.`));
+      return;
+    }
+    
     const transaction = db.transaction([storeName], 'readonly');
     const store = transaction.objectStore(storeName);
     
