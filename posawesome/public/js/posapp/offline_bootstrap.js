@@ -19,10 +19,25 @@ const bootstrapStatus = {
   message: 'Not started',
   error: null,
   lastUpdated: null,
+  detailedLog: [] // Add detailed logging
 };
 
 // Track active database connections
 let activeConnection = null;
+
+// Debug log function
+function logDebug(message) {
+  console.log(`[OFFLINE DEBUG] ${message}`);
+  bootstrapStatus.detailedLog.push({
+    time: new Date(),
+    message: message
+  });
+  
+  // Keep log from growing too large
+  if (bootstrapStatus.detailedLog.length > 100) {
+    bootstrapStatus.detailedLog = bootstrapStatus.detailedLog.slice(-50);
+  }
+}
 
 /**
  * Initialize database with required object stores for master data
@@ -35,61 +50,90 @@ export async function initOfflineStores() {
     bootstrapStatus.message = 'Initializing database';
     bootstrapStatus.error = null;
     
+    logDebug('Starting database initialization');
+    
     // Safely close any existing database connections
     if (activeConnection) {
       try {
-        console.log('Closing existing database connection');
+        logDebug('Closing existing database connection');
         activeConnection.close();
         activeConnection = null;
         
         // Add a delay to ensure connection is fully closed
         await new Promise(resolve => setTimeout(resolve, 1000));
+        logDebug('Delay after closing connection complete');
       } catch (error) {
-        console.log('Error closing existing database connection:', error);
+        logDebug(`Error closing existing connection: ${error.message}`);
       }
     }
     
     // Delete the database if it exists and recreate
     const dbExists = await checkIfDbExists('posawesome-offline-db');
+    logDebug(`Database exists check: ${dbExists}`);
+    
     if (dbExists) {
-      console.log('Deleting existing database to ensure clean start');
+      logDebug('Deleting existing database to ensure clean start');
       try {
         await deleteDatabase('posawesome-offline-db');
-        console.log('Database deleted successfully');
+        logDebug('Database deleted successfully');
         // Ensure deletion completes with a longer delay
         await new Promise(resolve => setTimeout(resolve, 1500));
+        logDebug('Delay after deletion complete');
       } catch (deleteError) {
-        console.error('Error deleting database:', deleteError);
+        logDebug(`Error deleting database: ${deleteError.message}`);
         // Continue despite error
       }
     }
 
-    // Create new promise for upgrading database
+    // Add timeout for database opening to prevent hanging
+    const DB_OPEN_TIMEOUT = 15000; // 15 seconds
+    
+    // Create new promise for upgrading database with timeout
     return new Promise((resolve, reject) => {
-      console.log('Opening IndexedDB with fresh version');
+      logDebug('Opening IndexedDB with fresh version');
       const request = indexedDB.open('posawesome-offline-db', REQUIRED_DB_VERSION);
       
+      // Set timeout to prevent hanging
+      const timeoutId = setTimeout(() => {
+        logDebug('Database open timed out after 15 seconds');
+        reject(new Error('Database open timed out. Please try again.'));
+      }, DB_OPEN_TIMEOUT);
+      
       request.onerror = (event) => {
-        console.error('Error opening IndexedDB for bootstrap:', event.target.error);
-        reject(new Error(`Failed to open database: ${event.target.error}`));
+        clearTimeout(timeoutId);
+        const errorMsg = `Error opening IndexedDB: ${event.target.error}`;
+        logDebug(errorMsg);
+        reject(new Error(errorMsg));
       };
       
       request.onblocked = (event) => {
-        console.warn('Database open blocked - close other tabs with this app open');
-        alert('Please close other tabs or instances of this app and try again');
-        reject(new Error('Database open blocked by another connection'));
+        clearTimeout(timeoutId);
+        logDebug('Database open blocked - trying to close other connections');
+        
+        // Try to force close any connections that may be blocking
+        if (activeConnection) {
+          try {
+            activeConnection.close();
+            activeConnection = null;
+          } catch (e) {
+            logDebug(`Error closing active connection: ${e.message}`);
+          }
+        }
+        
+        reject(new Error('Database open blocked by another connection. Please refresh the page.'));
       };
       
       request.onsuccess = (event) => {
+        clearTimeout(timeoutId);
         const db = event.target.result;
-        console.log('IndexedDB opened for bootstrap with version:', db.version);
+        logDebug(`IndexedDB opened with version: ${db.version}`);
         
         // Store the active connection
         activeConnection = db;
         
         // Set up connection close handling
         db.onclose = () => {
-          console.log('Database connection closed');
+          logDebug('Database connection closed');
           if (activeConnection === db) {
             activeConnection = null;
           }
@@ -101,26 +145,28 @@ export async function initOfflineStores() {
         const missingStores = requiredStores.filter(name => !storeNames.includes(name));
         
         if (missingStores.length > 0) {
+          logDebug(`Missing stores: ${missingStores.join(', ')}`);
           db.close();
           activeConnection = null;
           reject(new Error(`Missing required object stores: ${missingStores.join(', ')}`));
           return;
         }
         
+        logDebug('Database initialization completed successfully');
         resolve(db);
       };
       
       request.onupgradeneeded = (event) => {
         try {
           const db = event.target.result;
-          console.log('Upgrading IndexedDB for bootstrap to version:', event.newVersion);
+          logDebug(`Upgrading IndexedDB to version: ${event.newVersion}`);
           
           // Create object stores for offline master data if they don't exist
           if (!db.objectStoreNames.contains(CUSTOMERS_STORE)) {
             const customerStore = db.createObjectStore(CUSTOMERS_STORE, { keyPath: 'name' });
             customerStore.createIndex('customer_name', 'customer_name', { unique: false });
             customerStore.createIndex('mobile_no', 'mobile_no', { unique: false });
-            console.log('Created customers store');
+            logDebug('Created customers store');
           }
           
           if (!db.objectStoreNames.contains(ITEMS_STORE)) {
@@ -128,29 +174,29 @@ export async function initOfflineStores() {
             itemStore.createIndex('item_name', 'item_name', { unique: false });
             itemStore.createIndex('item_group', 'item_group', { unique: false });
             itemStore.createIndex('barcode', 'barcode', { unique: false });
-            console.log('Created items store');
+            logDebug('Created items store');
           }
           
           if (!db.objectStoreNames.contains(TAXES_STORE)) {
             const taxStore = db.createObjectStore(TAXES_STORE, { keyPath: 'name' });
-            console.log('Created taxes store');
+            logDebug('Created taxes store');
           }
           
           if (!db.objectStoreNames.contains(BOOTSTRAP_INFO_STORE)) {
             const infoStore = db.createObjectStore(BOOTSTRAP_INFO_STORE, { keyPath: 'id' });
-            console.log('Created bootstrap info store');
+            logDebug('Created bootstrap info store');
           }
           
-          console.log('All stores created successfully during upgrade');
+          logDebug('All stores created successfully during upgrade');
         } catch (e) {
-          console.error('Error during database upgrade:', e);
+          logDebug(`Error during database upgrade: ${e.message}`);
           // We can't reject here as that would abort the upgrade
           // Instead, we'll just log the error and the onsuccess handler will check for missing stores
         }
       };
     });
   } catch (error) {
-    console.error('Failed to initialize offline stores:', error);
+    logDebug(`Failed to initialize offline stores: ${error.message}`);
     throw new Error('Failed to initialize database: ' + error.message);
   }
 }
@@ -159,23 +205,27 @@ export async function initOfflineStores() {
  * Check if database exists
  */
 async function checkIfDbExists(dbName) {
+  logDebug(`Checking if database exists: ${dbName}`);
   return new Promise(resolve => {
     const request = indexedDB.open(dbName);
     let db = null;
     
     request.onsuccess = function(event) {
       db = event.target.result;
+      logDebug(`Database ${dbName} exists`);
       db.close();
       resolve(true);
     };
     
     request.onupgradeneeded = function(event) {
       db = event.target.result;
+      logDebug(`Database ${dbName} does not exist or needs upgrade`);
       db.close();
       resolve(false);
     };
     
-    request.onerror = function() {
+    request.onerror = function(error) {
+      logDebug(`Error checking if database exists: ${error}`);
       if (db) db.close();
       resolve(false);
     };
@@ -186,20 +236,37 @@ async function checkIfDbExists(dbName) {
  * Delete database
  */
 async function deleteDatabase(dbName) {
+  logDebug(`Attempting to delete database: ${dbName}`);
   return new Promise((resolve, reject) => {
     const request = indexedDB.deleteDatabase(dbName);
     
     request.onsuccess = function() {
+      logDebug(`Database ${dbName} deleted successfully`);
       resolve();
     };
     
     request.onerror = function(event) {
-      reject(new Error('Error deleting database: ' + event.target.error));
+      const errorMsg = `Error deleting database: ${event.target.error}`;
+      logDebug(errorMsg);
+      reject(new Error(errorMsg));
     };
     
     request.onblocked = function() {
-      console.warn('Database deletion blocked - close other tabs with this app open');
-      reject(new Error('Database deletion blocked'));
+      logDebug(`Database ${dbName} deletion blocked - trying to force close`);
+      
+      // Try to force close any connections that may be blocking
+      if (activeConnection) {
+        try {
+          activeConnection.close();
+          activeConnection = null;
+          logDebug('Closed active connection to unblock deletion');
+        } catch (e) {
+          logDebug(`Error closing active connection: ${e.message}`);
+        }
+      }
+      
+      // Try to continue anyway
+      resolve();
     };
   });
 }
@@ -210,35 +277,65 @@ async function deleteDatabase(dbName) {
 export async function startBootstrap(posProfile) {
   try {
     if (!posProfile) {
+      logDebug('No POS Profile provided for bootstrap');
       throw new Error('POS Profile is required for bootstrapping');
     }
     
-    console.log('Starting offline data bootstrap process');
+    logDebug('Starting offline data bootstrap process');
     updateBootstrapStatus('Starting data download...', 5);
     
     // Initialize database with required stores
+    logDebug('Initializing database stores');
     const db = await initOfflineStores();
     activeConnection = db; // Update our tracked connection
+    logDebug('Database initialized successfully');
+    updateBootstrapStatus('Database initialized', 10);
     
     // Get batch size from POS profile or use default
     const batchSize = posProfile.posa_offline_batch_size || 100;
+    logDebug(`Using batch size: ${batchSize}`);
     
     // Start downloading data in stages
-    await downloadCustomers(db, posProfile, batchSize);
-    updateBootstrapStatus('Customers downloaded', 40);
+    try {
+      await downloadCustomers(db, posProfile, batchSize);
+      updateBootstrapStatus('Customers downloaded', 40);
+    } catch (customerError) {
+      logDebug(`Customer download failed: ${customerError.message}`);
+      throw new Error(`Failed to download customers: ${customerError.message}`);
+    }
     
-    await downloadItems(db, posProfile, batchSize);
-    updateBootstrapStatus('Items downloaded', 80);
+    try {
+      await downloadItems(db, posProfile, batchSize);
+      updateBootstrapStatus('Items downloaded', 80);
+    } catch (itemError) {
+      logDebug(`Item download failed: ${itemError.message}`);
+      throw new Error(`Failed to download items: ${itemError.message}`);
+    }
     
-    await downloadTaxes(db, posProfile);
-    updateBootstrapStatus('Taxes downloaded', 90);
+    try {
+      await downloadTaxes(db, posProfile);
+      updateBootstrapStatus('Taxes downloaded', 90);
+    } catch (taxError) {
+      logDebug(`Tax download failed: ${taxError.message}`);
+      throw new Error(`Failed to download taxes: ${taxError.message}`);
+    }
     
     // Validate the downloaded data
-    await validateData(db);
-    updateBootstrapStatus('Data validated', 95);
+    try {
+      await validateData(db);
+      updateBootstrapStatus('Data validated', 95);
+    } catch (validationError) {
+      logDebug(`Data validation failed: ${validationError.message}`);
+      throw new Error(`Data validation failed: ${validationError.message}`);
+    }
     
     // Save bootstrap completion info
-    await saveBootstrapInfo(db, posProfile);
+    try {
+      await saveBootstrapInfo(db, posProfile);
+    } catch (saveError) {
+      logDebug(`Error saving bootstrap info: ${saveError.message}`);
+      // Don't throw here, as this is not critical
+    }
     
     // Mark bootstrap as complete
     bootstrapStatus.isComplete = true;
@@ -246,10 +343,10 @@ export async function startBootstrap(posProfile) {
     bootstrapStatus.message = 'Bootstrap complete';
     bootstrapStatus.lastUpdated = new Date();
     
-    console.log('Offline data bootstrap complete');
+    logDebug('Offline data bootstrap complete');
     return true;
   } catch (error) {
-    console.error('Bootstrap process failed:', error);
+    logDebug(`Bootstrap process failed: ${error.message}`);
     bootstrapStatus.error = error.message;
     bootstrapStatus.message = 'Bootstrap failed: ' + error.message;
     return false;
@@ -262,16 +359,20 @@ export async function startBootstrap(posProfile) {
 async function downloadCustomers(db, posProfile, batchSize) {
   try {
     updateBootstrapStatus('Downloading customers...', 10);
+    logDebug('Starting customer download');
     
     // Check if the database connection is valid
     if (!db || !db.objectStoreNames) {
+      logDebug('Invalid database connection for customer download');
       throw new Error('Invalid database connection for customer download');
     }
     
     // Clear existing customers
+    logDebug('Clearing existing customers');
     await clearObjectStore(db, CUSTOMERS_STORE);
     
     // Get total count first
+    logDebug('Getting customer count');
     const countResponse = await frappe.call({
       method: 'frappe.client.get_count',
       args: {
@@ -285,7 +386,7 @@ async function downloadCustomers(db, posProfile, batchSize) {
     });
     
     const totalCustomers = countResponse.message || 0;
-    console.log(`Total customers to download: ${totalCustomers}`);
+    logDebug(`Total customers to download: ${totalCustomers}`);
     
     if (totalCustomers === 0) {
       updateBootstrapStatus('No customers found', 20);
@@ -298,6 +399,7 @@ async function downloadCustomers(db, posProfile, batchSize) {
     
     while (downloadedCount < totalCustomers) {
       updateBootstrapStatus(`Downloading customers batch ${page + 1}...`, 10 + (downloadedCount / totalCustomers) * 30);
+      logDebug(`Downloading customer batch ${page + 1}`);
       
       const customerResponse = await frappe.call({
         method: 'posawesome.posawesome.api.posapp.get_customer_names',
@@ -310,21 +412,25 @@ async function downloadCustomers(db, posProfile, batchSize) {
       });
       
       const customers = customerResponse.message || [];
+      logDebug(`Received ${customers.length} customers in batch ${page + 1}`);
       
       if (customers.length === 0) {
         break;
       }
       
       // Save batch to IndexedDB
+      logDebug(`Saving customer batch ${page + 1} to IndexedDB`);
       await saveDataBatch(db, CUSTOMERS_STORE, customers);
       
       downloadedCount += customers.length;
       page++;
+      logDebug(`Total customers downloaded so far: ${downloadedCount}`);
     }
     
     updateBootstrapStatus(`Downloaded ${downloadedCount} customers`, 40);
+    logDebug('Customer download completed');
   } catch (error) {
-    console.error('Error downloading customers:', error);
+    logDebug(`Error downloading customers: ${error.message}`);
     throw new Error('Failed to download customers: ' + error.message);
   }
 }
@@ -698,7 +804,7 @@ function updateBootstrapStatus(message, progress) {
   bootstrapStatus.message = message;
   bootstrapStatus.progress = progress;
   bootstrapStatus.lastUpdated = new Date();
-  console.log(`Bootstrap status: ${message} (${progress}%)`);
+  logDebug(`Bootstrap status: ${message} (${progress}%)`);
 }
 
 /**
@@ -706,6 +812,13 @@ function updateBootstrapStatus(message, progress) {
  */
 export function getBootstrapStatus() {
   return { ...bootstrapStatus };
+}
+
+/**
+ * Get detailed log for troubleshooting
+ */
+export function getDetailedLog() {
+  return [...bootstrapStatus.detailedLog];
 }
 
 /**

@@ -47,6 +47,13 @@
               <p class="font-weight-bold">{{ __("Error details:") }}</p>
               <p>{{ error }}</p>
             </div>
+            
+            <div v-if="debugMode && debugLog.length > 0" class="debug-panel">
+              <p class="font-weight-bold">{{ __("Debug Log:") }}</p>
+              <div v-for="(entry, index) in debugLog" :key="index">
+                {{ entry.time.toLocaleTimeString() }}: {{ entry.message }}
+              </div>
+            </div>
           </v-card-text>
           
           <v-card-actions v-if="error || complete">
@@ -76,7 +83,7 @@
 </template>
 
 <script>
-import { startBootstrap, getBootstrapStatus, isBootstrapComplete, initOfflineStores, checkBootstrapNeeded } from '../offline_bootstrap';
+import { startBootstrap, getBootstrapStatus, isBootstrapComplete, initOfflineStores, checkBootstrapNeeded, getDetailedLog } from '../offline_bootstrap';
 
 export default {
   name: 'OfflineDataLoader',
@@ -96,7 +103,13 @@ export default {
       complete: false,
       statusInterval: null,
       retryCount: 0,
-      maxRetries: 3
+      maxRetries: 3,
+      startTime: null,
+      progressTimeout: null,
+      stuckAtProgress: null,
+      stuckDuration: 0,
+      debugMode: false,
+      debugLog: []
     };
   },
   methods: {
@@ -108,10 +121,27 @@ export default {
         this.complete = false;
         this.progress = 5;
         this.status_message = __('Initializing offline database...');
+        this.startTime = Date.now();
+        this.stuckAtProgress = null;
+        this.stuckDuration = 0;
+        
+        // Clear any existing timeouts
+        if (this.progressTimeout) {
+          clearTimeout(this.progressTimeout);
+        }
+        
+        // Set a timeout to detect if progress gets stuck
+        this.progressTimeout = setTimeout(() => {
+          this.handleProgressStuck();
+        }, 30000); // 30 seconds
+        
+        // Log debug info
+        this.logDebug('Starting bootstrap initialization');
         
         // If we've already tried multiple times, force a complete reset
         if (this.retryCount >= 2) {
           this.details = __('Attempting recovery after previous failures...');
+          this.logDebug('Multiple retries detected, performing full reset');
           
           // Clear browser caches on retry
           try {
@@ -120,49 +150,65 @@ export default {
               for (const key of cacheKeys) {
                 if (key.includes('posawesome')) {
                   await window.caches.delete(key);
-                  console.log(`Cache '${key}' deleted`);
+                  this.logDebug(`Cache '${key}' deleted`);
                 }
               }
             }
           } catch (cacheError) {
-            console.warn('Error clearing caches:', cacheError);
+            this.logDebug(`Error clearing caches: ${cacheError.message}`);
           }
           
           // Clear IndexedDB databases
           try {
             await this.clearAllDatabases();
           } catch (dbError) {
-            console.warn('Error clearing databases:', dbError);
+            this.logDebug(`Error clearing databases: ${dbError.message}`);
           }
           
           // Wait longer to ensure cleanup completes
+          this.details = __('Performing deep cleanup...');
           await new Promise(resolve => setTimeout(resolve, 2000));
+          this.logDebug('Deep cleanup completed');
         }
         
         // Initialize database
         this.details = __('Creating database for offline data...');
         let db = null;
         try {
+          this.logDebug('Calling initOfflineStores');
           db = await initOfflineStores();
+          this.logDebug('Database initialization successful');
         } catch (dbError) {
-          console.error('Failed to initialize database:', dbError);
+          this.logDebug(`Database initialization failed: ${dbError.message}`);
+          
           // If database init fails, try one more time after a delay
           this.details = __('Database initialization failed, retrying...');
           await new Promise(resolve => setTimeout(resolve, 2000));
+          this.logDebug('Retrying database initialization');
           db = await initOfflineStores();
         }
         
         if (!db) {
+          this.logDebug('Database initialization returned null');
           throw new Error('Failed to initialize database');
         }
+        
+        // Update progress since we've successfully initialized the database
+        this.progress = 15;
+        clearTimeout(this.progressTimeout);
+        this.progressTimeout = setTimeout(() => {
+          this.handleProgressStuck();
+        }, 30000); // Reset 30 second timeout
         
         // Check if bootstrap is needed
         this.details = __('Checking if offline data needs to be updated...');
         let bootstrapNeeded = true;
         try {
+          this.logDebug('Checking if bootstrap is needed');
           bootstrapNeeded = await checkBootstrapNeeded(db, this.pos_profile);
+          this.logDebug(`Bootstrap needed: ${bootstrapNeeded}`);
         } catch (checkError) {
-          console.warn('Error checking bootstrap need, assuming needed:', checkError);
+          this.logDebug(`Error checking bootstrap need: ${checkError.message}`);
           bootstrapNeeded = true;
         }
         
@@ -173,6 +219,14 @@ export default {
           this.progress = 100;
           this.status_message = __('Ready to use');
           this.details = __('Using cached data from previous session');
+          this.logDebug('Using cached data, bootstrap complete');
+          
+          // Clear timeout
+          if (this.progressTimeout) {
+            clearTimeout(this.progressTimeout);
+            this.progressTimeout = null;
+          }
+          
           return;
         }
         
@@ -184,12 +238,19 @@ export default {
         this.startProgressMonitoring();
         
         // Start the bootstrap process
+        this.logDebug('Starting bootstrap process');
         const result = await startBootstrap(this.pos_profile);
+        this.logDebug(`Bootstrap process result: ${result}`);
         
-        // Clear interval
+        // Clear interval and timeout
         if (this.statusInterval) {
           clearInterval(this.statusInterval);
           this.statusInterval = null;
+        }
+        
+        if (this.progressTimeout) {
+          clearTimeout(this.progressTimeout);
+          this.progressTimeout = null;
         }
         
         if (result) {
@@ -200,6 +261,7 @@ export default {
           this.status_message = __('Offline data ready');
           this.details = __('All master data has been downloaded and verified');
           this.retryCount = 0; // Reset retry count on success
+          this.logDebug('Bootstrap completed successfully');
           
           // Emit completion event
           this.$emit('bootstrap-progress', 100);
@@ -211,6 +273,12 @@ export default {
           this.status_message = __('Data preparation failed');
           this.details = __('Please check your connection and try again');
           this.retryCount++; // Increment retry count
+          this.logDebug(`Bootstrap failed: ${status.error}`);
+          
+          // Show detailed log in debug mode
+          if (this.debugMode) {
+            this.debugLog = getDetailedLog();
+          }
         }
       } catch (error) {
         console.error('Bootstrap initialization error:', error);
@@ -219,44 +287,139 @@ export default {
         this.status_message = __('Failed to initialize');
         this.details = __('Try refreshing the page or clearing browser data');
         this.retryCount++; // Increment retry count
+        this.logDebug(`Initialization error: ${error.message}`);
+        
+        // Clear timeout
+        if (this.progressTimeout) {
+          clearTimeout(this.progressTimeout);
+          this.progressTimeout = null;
+        }
         
         // Try to provide more helpful error message based on error type
         if (error.message.includes('IndexedDB') || error.message.includes('object store')) {
           this.details = __('Browser database error. Try clearing your browser data and restarting your browser.');
         } else if (error.message.includes('network') || error.message.includes('connection')) {
           this.details = __('Network error. Check your internet connection and try again.');
+        } else if (error.message.includes('timeout')) {
+          this.details = __('Operation timed out. Your browser may be restricting background operations.');
         }
+        
+        // Show detailed log in debug mode
+        if (this.debugMode) {
+          this.debugLog = getDetailedLog();
+        }
+      }
+    },
+    
+    handleProgressStuck() {
+      // Called when progress hasn't changed for too long
+      if (this.progress < 20) {
+        this.logDebug(`Progress stuck at ${this.progress}% for over 30 seconds`);
+        
+        if (!this.stuckAtProgress) {
+          this.stuckAtProgress = this.progress;
+          this.stuckDuration = 30;
+          
+          // Give it another chance with a longer timeout
+          this.progressTimeout = setTimeout(() => {
+            this.handleProgressStuck();
+          }, 30000); // Another 30 seconds
+          
+          this.details = __('Operation taking longer than expected, please wait...');
+        } else if (this.stuckDuration >= 60) {
+          // Stuck for too long, trigger error
+          this.logDebug('Progress stuck for over 60 seconds, cancelling operation');
+          const error = new Error('Operation timed out - progress stuck at ' + this.progress + '%');
+          
+          // Force error state
+          this.loading = false;
+          this.error = error.message;
+          this.status_message = __('Operation timed out');
+          this.details = __('The database operation is taking too long. Please try again or restart your browser.');
+          this.retryCount++;
+          
+          // Clear interval
+          if (this.statusInterval) {
+            clearInterval(this.statusInterval);
+            this.statusInterval = null;
+          }
+          
+          // Clear timeout
+          if (this.progressTimeout) {
+            clearTimeout(this.progressTimeout);
+            this.progressTimeout = null;
+          }
+          
+          // Show detailed log in debug mode
+          if (this.debugMode) {
+            this.debugLog = getDetailedLog();
+          }
+        } else {
+          // Still stuck but giving more time
+          this.stuckDuration += 30;
+          this.progressTimeout = setTimeout(() => {
+            this.handleProgressStuck();
+          }, 30000); // Another 30 seconds
+          
+          this.details = __('Operation taking longer than expected, please continue waiting...');
+        }
+      } else {
+        // Progress is moving, reset stuck status
+        this.stuckAtProgress = null;
+        this.stuckDuration = 0;
+        
+        // Set new timeout for next progress checkpoint
+        this.progressTimeout = setTimeout(() => {
+          this.handleProgressStuck();
+        }, 30000);
+      }
+    },
+    
+    logDebug(message) {
+      console.log(`[OFFLINE LOADER] ${message}`);
+      this.debugLog.push({
+        time: new Date(),
+        message: message
+      });
+      
+      // Keep log from growing too large
+      if (this.debugLog.length > 100) {
+        this.debugLog = this.debugLog.slice(-50);
       }
     },
     
     async clearAllDatabases() {
       const dbNames = ['posawesome-offline-db'];
+      this.logDebug('Clearing all databases');
       
       for (const dbName of dbNames) {
         try {
           await this.deleteDatabase(dbName);
-          console.log(`Database ${dbName} deleted`);
+          this.logDebug(`Database ${dbName} deleted`);
         } catch (error) {
-          console.warn(`Failed to delete database ${dbName}:`, error);
+          this.logDebug(`Failed to delete database ${dbName}: ${error.message}`);
         }
       }
     },
     
     async deleteDatabase(dbName) {
       return new Promise((resolve, reject) => {
+        this.logDebug(`Attempting to delete database ${dbName}`);
         const request = indexedDB.deleteDatabase(dbName);
         
         request.onsuccess = () => {
-          console.log(`Database ${dbName} successfully deleted`);
+          this.logDebug(`Database ${dbName} successfully deleted`);
           resolve();
         };
         
         request.onerror = (event) => {
-          reject(new Error(`Error deleting database ${dbName}: ${event.target.error}`));
+          const error = new Error(`Error deleting database ${dbName}: ${event.target.error}`);
+          this.logDebug(error.message);
+          reject(error);
         };
         
         request.onblocked = () => {
-          console.warn(`Database ${dbName} deletion blocked`);
+          this.logDebug(`Database ${dbName} deletion blocked`);
           // Try to continue anyway
           resolve();
         };
@@ -269,11 +432,40 @@ export default {
         clearInterval(this.statusInterval);
       }
       
+      let lastProgress = this.progress;
+      let stuckCount = 0;
+      
       // Set up interval to check progress
       this.statusInterval = setInterval(() => {
         const status = getBootstrapStatus();
         this.progress = status.progress || 0;
         this.status_message = status.message || __('Preparing data...');
+        
+        // Check if progress is stuck
+        if (this.progress === lastProgress) {
+          stuckCount++;
+          
+          if (stuckCount >= 20) { // Stuck for 10 seconds (20 * 500ms)
+            this.logDebug(`Progress stuck at ${this.progress}% for ${stuckCount * 0.5} seconds`);
+            
+            // Update UI to show it's still working
+            if (stuckCount % 10 === 0) { // Every 5 seconds
+              this.details = __('Still working... Please be patient.');
+            }
+          }
+        } else {
+          // Progress changed, reset stuck counter
+          stuckCount = 0;
+          lastProgress = this.progress;
+          
+          // Reset progress timeout when progress changes
+          if (this.progressTimeout) {
+            clearTimeout(this.progressTimeout);
+            this.progressTimeout = setTimeout(() => {
+              this.handleProgressStuck();
+            }, 30000);
+          }
+        }
         
         // Emit progress event
         this.$emit('bootstrap-progress', this.progress);
@@ -284,6 +476,12 @@ export default {
           this.statusInterval = null;
           this.loading = false;
           this.complete = true;
+          
+          // Clear timeout
+          if (this.progressTimeout) {
+            clearTimeout(this.progressTimeout);
+            this.progressTimeout = null;
+          }
         }
         
         // Check for error
@@ -293,15 +491,30 @@ export default {
           this.loading = false;
           this.error = status.error;
           this.status_message = __('Bootstrap failed');
+          
+          // Clear timeout
+          if (this.progressTimeout) {
+            clearTimeout(this.progressTimeout);
+            this.progressTimeout = null;
+          }
         }
       }, 500);
     },
     
     retryBootstrap() {
+      // Clear any existing timeouts
+      if (this.progressTimeout) {
+        clearTimeout(this.progressTimeout);
+        this.progressTimeout = null;
+      }
+      
       // Ask user to confirm clear database on retry
       if (this.retryCount >= 2) {
         if (confirm(__('Multiple attempts have failed. Would you like to completely reset the offline database? This will clear all cached data.'))) {
-          console.log('User confirmed database reset, starting fresh bootstrap');
+          this.logDebug('User confirmed database reset, starting fresh bootstrap');
+          
+          // Turn on debug mode after multiple failures
+          this.debugMode = true;
           
           // Show loading state
           this.loading = true;
@@ -322,11 +535,26 @@ export default {
         // Regular retry
         this.initializeBootstrap();
       }
+    },
+    
+    toggleDebugMode() {
+      this.debugMode = !this.debugMode;
+      if (this.debugMode) {
+        this.debugLog = getDetailedLog();
+      }
     }
   },
   mounted() {
     // Start bootstrap when component is mounted
     this.initializeBootstrap();
+    
+    // Add keyboard shortcut for debug mode
+    window.addEventListener('keydown', (event) => {
+      // Ctrl+Shift+D to toggle debug mode
+      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
+        this.toggleDebugMode();
+      }
+    });
   },
   beforeUnmount() {
     // Clear interval when component is destroyed
@@ -334,6 +562,15 @@ export default {
       clearInterval(this.statusInterval);
       this.statusInterval = null;
     }
+    
+    // Clear timeout
+    if (this.progressTimeout) {
+      clearTimeout(this.progressTimeout);
+      this.progressTimeout = null;
+    }
+    
+    // Remove keyboard listener
+    window.removeEventListener('keydown', this.toggleDebugMode);
   }
 };
 </script>
@@ -343,5 +580,17 @@ export default {
   background-color: rgba(var(--v-theme-error), 0.05);
   border-left: 4px solid rgb(var(--v-theme-error));
   border-radius: 4px;
+}
+
+.debug-panel {
+  margin-top: 20px;
+  text-align: left;
+  max-height: 300px;
+  overflow-y: auto;
+  background-color: #f5f5f5;
+  padding: 10px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
 }
 </style> 
