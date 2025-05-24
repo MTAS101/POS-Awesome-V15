@@ -3,8 +3,6 @@
     <h2>POS AWESOME</h2>
 </div>
 
-POS Awesome is a modern, beautiful, and feature-rich Point of Sale system built for ERPNext.
-
 #### An open-source Point of Sale for [Erpnext](https://github.com/frappe/erpnext) using [Vue.js](https://github.com/vuejs/vue) and [Vuetify](https://github.com/vuetifyjs/vuetify) (VERSION 15 Support)
 
 ---
@@ -59,51 +57,6 @@ POS Awesome is a modern, beautiful, and feature-rich Point of Sale system built 
 4. `bench restart`
 5. `bench --site [your.site.name] install-app posawesome`
 6. `bench --site [your.site.name] migrate`
-
-### PWA Setup
-
-POS Awesome supports Progressive Web App (PWA) functionality for offline support. To set up PWA:
-
-1. Generate PWA icons from the placeholder:
-   - Use the SVG template at `public/icons/icon-placeholder.svg`
-   - Generate PNG icons in the following sizes:
-     - 72x72
-     - 96x96
-     - 128x128
-     - 144x144
-     - 152x152
-     - 192x192
-     - 384x384
-     - 512x512
-   - Place the generated icons in the `public/icons/` directory
-
-2. Update manifest.json:
-   - The manifest is pre-configured but you can customize:
-     - App name
-     - Theme colors
-     - Start URL
-     - Other PWA settings
-
-3. Service Worker:
-   - The service worker is pre-configured for:
-     - Offline support
-     - Asset caching
-     - Background sync for orders
-     - Push notifications
-
-4. Testing PWA:
-   - Build the app: `bench build --app posawesome`
-   - Open Chrome DevTools > Application > Service Workers
-   - Test offline functionality
-   - Verify installation prompt appears
-
-### Offline Support
-
-POS Awesome works offline with:
-- Local data storage using IndexedDB
-- Order queueing and background sync
-- Automatic retry when back online
-- Conflict resolution for synced orders
 
 ---
 

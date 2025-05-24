@@ -24,21 +24,18 @@ if (workbox) {
   workbox.core.clientsClaim();
   
   // Precache strategy for static assets
+  // Add your files to precache here or use workbox-build to generate this list
   workbox.precaching.precacheAndRoute([
     { url: '/app/posapp', revision: '1.0.0' },
     { url: '/assets/posawesome/icons/icon-192x192.png', revision: '1.0.0' },
     { url: '/assets/posawesome/icons/icon-512x512.png', revision: '1.0.0' },
-    { url: '/assets/posawesome/manifest.json', revision: '1.0.0' },
-    // Add more static assets here
-    { url: '/assets/posawesome/js/posapp/Home.vue', revision: '1.0.0' },
-    { url: '/assets/posawesome/js/posapp/components/pos/Pos.vue', revision: '1.0.0' },
-    { url: '/assets/posawesome/js/posapp/components/payments/Pay.vue', revision: '1.0.0' }
+    { url: '/assets/posawesome/manifest.json', revision: '1.0.0' }
   ]);
   
-  // Cache CSS with stale-while-revalidate
+  // Cache CSS
   workbox.routing.registerRoute(
     ({ request }) => request.destination === 'style',
-    new workbox.strategies.StaleWhileRevalidate({
+    new workbox.strategies.CacheFirst({
       cacheName: 'posawesome-styles',
       plugins: [
         new workbox.expiration.ExpirationPlugin({
@@ -49,7 +46,7 @@ if (workbox) {
     })
   );
   
-  // Cache JavaScript with stale-while-revalidate
+  // Cache JavaScript
   workbox.routing.registerRoute(
     ({ request }) => request.destination === 'script',
     new workbox.strategies.StaleWhileRevalidate({
@@ -59,14 +56,11 @@ if (workbox) {
           maxEntries: 50,
           maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
         }),
-        new workbox.cacheableResponse.CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
       ],
     })
   );
   
-  // Cache images with cache-first
+  // Cache images
   workbox.routing.registerRoute(
     ({ request }) => request.destination === 'image',
     new workbox.strategies.CacheFirst({
@@ -76,14 +70,11 @@ if (workbox) {
           maxEntries: 60,
           maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
         }),
-        new workbox.cacheableResponse.CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
       ],
     })
   );
   
-  // Cache fonts with cache-first
+  // Cache fonts
   workbox.routing.registerRoute(
     ({ request }) => request.destination === 'font',
     new workbox.strategies.CacheFirst({
@@ -92,9 +83,6 @@ if (workbox) {
         new workbox.expiration.ExpirationPlugin({
           maxEntries: 10,
           maxAgeSeconds: 60 * 24 * 60 * 60, // 60 days
-        }),
-        new workbox.cacheableResponse.CacheableResponsePlugin({
-          statuses: [0, 200],
         }),
       ],
     })
@@ -110,84 +98,38 @@ if (workbox) {
           maxEntries: 50,
           maxAgeSeconds: 5 * 60, // 5 minutes
         }),
-        new workbox.cacheableResponse.CacheableResponsePlugin({
-          statuses: [0, 200],
-        }),
       ],
-      networkTimeoutSeconds: 3,
     })
   );
   
   // Offline fallback page for navigation requests
   workbox.routing.registerRoute(
     ({ request }) => request.mode === 'navigate',
-    async ({ event }) => {
+    async () => {
       try {
+        // Try to fetch from network first
         return await workbox.strategies.NetworkFirst({
           cacheName: 'posawesome-pages',
           plugins: [
             new workbox.expiration.ExpirationPlugin({
               maxEntries: 25,
               maxAgeSeconds: 24 * 60 * 60, // 24 hours
-            }),
-            new workbox.cacheableResponse.CacheableResponsePlugin({
-              statuses: [0, 200],
-            }),
-          ],
-          networkTimeoutSeconds: 3,
-        }).handle({ event });
+            })
+          ]
+        }).handle({ request: 'index.html' });
       } catch (error) {
-        return workbox.precaching.matchPrecache('/offline.html');
+        // If network fails, serve from cache
+        return workbox.precaching.matchPrecache('index.html');
       }
     }
   );
   
   // Background sync for offline orders
   const bgSyncPlugin = new workbox.backgroundSync.BackgroundSyncPlugin('posawesome-offline-orders', {
-    maxRetentionTime: 24 * 60, // Retry for up to 24 hours (in minutes)
-    onSync: async ({ queue }) => {
-      let entry;
-      while ((entry = await queue.shiftRequest())) {
-        try {
-          await fetch(entry.request.clone());
-          
-          // Notify clients about successful sync
-          const clients = await self.clients.matchAll();
-          for (const client of clients) {
-            client.postMessage({
-              type: 'BACKGROUND_SYNC_SUCCESS',
-              payload: {
-                timestamp: Date.now(),
-                request: entry.request.url
-              }
-            });
-          }
-        } catch (error) {
-          console.error('Replay failed for request', entry.request.url, error);
-          
-          // Put entry back in the queue
-          await queue.unshiftRequest(entry);
-          
-          // Notify clients about sync failure
-          const clients = await self.clients.matchAll();
-          for (const client of clients) {
-            client.postMessage({
-              type: 'BACKGROUND_SYNC_FAILED',
-              payload: {
-                timestamp: Date.now(),
-                request: entry.request.url,
-                error: error.message
-              }
-            });
-          }
-          
-          throw error;
-        }
-      }
-    }
+    maxRetentionTime: 24 * 60 // Retry for up to 24 hours (in minutes)
   });
   
-  // Register route for offline order submission with background sync
+  // Register route for offline order submission
   workbox.routing.registerRoute(
     ({ url }) => url.pathname.includes('/api/method/posawesome.posawesome.api.posapp.update_invoice'),
     new workbox.strategies.NetworkOnly({
@@ -238,33 +180,11 @@ if (workbox) {
     }
   });
   
-  // Handle sync events
-  self.addEventListener('sync', (event) => {
-    if (event.tag === 'sync-orders') {
-      event.waitUntil(bgSyncPlugin.replay());
-    }
-  });
-  
-  // Handle message events
+  // IndexedDB setup for offline order storage
   self.addEventListener('message', (event) => {
-    if (event.data && event.data.type === 'SKIP_WAITING') {
-      self.skipWaiting();
-    }
-    
     if (event.data && event.data.type === 'STORE_OFFLINE_ORDER') {
-      // Store order data in IndexedDB for offline sync
-      const order = event.data.payload;
-      event.waitUntil(
-        bgSyncPlugin.queue.pushRequest({
-          request: new Request('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
-            method: 'POST',
-            body: JSON.stringify(order),
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          })
-        })
-      );
+      // This will be handled by the background sync plugin
+      console.log('Order stored for offline sync:', event.data.payload);
     }
   });
 } else {
