@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POS Awesome - Offline</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+      background-color: #f5f7fa;
+      color: #2c3e50;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      text-align: center;
+      background-color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      padding: 32px;
+      max-width: 500px;
+      width: 90%;
+    }
+    .logo {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 24px;
+      margin-bottom: 16px;
+      color: #0097A7;
+    }
+    p {
+      font-size: 16px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+      color: #4a5568;
+    }
+    .button {
+      display: inline-block;
+      background-color: #0097A7;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: bold;
+      transition: background-color 0.3s;
+    }
+    .button:hover {
+      background-color: #00796b;
+    }
+    .offline-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      color: #0097A7;
+    }
+    .status {
+      margin-top: 32px;
+      font-size: 14px;
+      color: #718096;
+    }
+    .pending-count {
+      font-weight: bold;
+      color: #0097A7;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="offline-icon">📶</div>
+    <h1>You're currently offline</h1>
+    <p>Don't worry - any changes you make in POS Awesome will be saved locally and synchronized when you're back online.</p>
+    <div>
+      <a href="/app/posapp" class="button">Go to POS</a>
+    </div>
+    <div class="status">
+      Pending invoices: <span id="pending-count" class="pending-count">0</span>
+    </div>
+  </div>
+
+  <script>
+    // Try to get the count of pending invoices from IndexedDB
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const dbName = 'posawesome-offline-db';
+        const storeName = 'pendingInvoices';
+        
+        // Function to count pending invoices
+        const countPendingInvoices = () => {
+          return new Promise((resolve, reject) => {
+            const request = indexedDB.open(dbName);
+            
+            request.onerror = () => resolve(0); // Default to 0 on error
+            
+            request.onsuccess = (event) => {
+              const db = event.target.result;
+              
+              // Check if store exists
+              if (!db.objectStoreNames.contains(storeName)) {
+                resolve(0);
+                return;
+              }
+              
+              const transaction = db.transaction([storeName], 'readonly');
+              const store = transaction.objectStore(storeName);
+              const countRequest = store.count();
+              
+              countRequest.onsuccess = () => {
+                resolve(countRequest.result);
+              };
+              
+              countRequest.onerror = () => {
+                resolve(0);
+              };
+            };
+          });
+        };
+        
+        // Update the UI
+        const pendingCount = await countPendingInvoices();
+        document.getElementById('pending-count').textContent = pendingCount;
+        
+      } catch (error) {
+        console.error('Error counting pending invoices:', error);
+      }
+    });
+    
+    // Check for online status changes
+    window.addEventListener('online', () => {
+      // Redirect to the app when we're back online
+      window.location.href = '/app/posapp';
+    });
+  </script>
+</body>
+</html> 

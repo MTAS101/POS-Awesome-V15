@@ -4,6 +4,8 @@ import eventBus from './bus';
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import Home from './Home.vue';
+// Import PWA registration script
+import '../pwa-register.js';
 
 frappe.provide('frappe.PosApp');
 

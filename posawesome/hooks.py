@@ -21,6 +21,33 @@ app_include_js = [
     "posawesome.bundle.js",
 ]
 
+# Include PWA manifest in the HTML head
+app_include_head_js = [
+    "/assets/posawesome/js/pwa-register.js"
+]
+
+web_include_js = [
+    "/assets/posawesome/js/pwa-register.js"
+]
+
+# Add PWA manifest link to HTML head
+app_include_css = []
+
+website_context = {
+    "favicon": "/assets/posawesome/icons/favicon.ico",
+    "splash_image": "/assets/posawesome/icons/icon-512x512.png"
+}
+
+# HTML header meta tags for PWA
+app_include_meta = [
+    '<meta name="theme-color" content="#0097A7">',
+    '<meta name="apple-mobile-web-app-capable" content="yes">',
+    '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
+    '<meta name="apple-mobile-web-app-title" content="POS Awesome">',
+    '<link rel="apple-touch-icon" href="/assets/posawesome/icons/icon-192x192.png">',
+    '<link rel="manifest" href="/assets/posawesome/manifest.json">'
+]
+
 # include js, css files in header of web template
 # web_include_css = "/assets/posawesome/css/posawesome.css"
 # web_include_js = "/assets/posawesome/js/posawesome.js"
