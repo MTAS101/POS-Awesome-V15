@@ -507,6 +507,67 @@ export function isOnline() {
   return ConnectivityService.isOnline;
 }
 
+// Function to submit an invoice to the server
+async function submitInvoice(invoice) {
+  try {
+    // Prepare the invoice data for submission
+    const requestData = {
+      data: JSON.stringify({
+        ...invoice,
+        is_pos: 1,  // Force this to be a POS invoice
+        update_stock: 1,  // Ensure stock is updated
+        offline_submit: true // Flag to indicate this is an offline submission
+      }),
+      submit: 1,  // Always submit invoices when syncing from offline mode
+      include_payments: 1  // Make sure payments are included
+    };
+
+    // Call the server API to process the invoice
+    const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Frappe-CSRF-Token': frappe.csrf_token
+      },
+      body: JSON.stringify(requestData)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Server error response:', errorText);
+      throw new Error(`Server error: ${errorText}`);
+    }
+
+    const responseData = await response.json();
+    console.log('Server response:', responseData);
+
+    if (responseData.message?.name) {
+      // Mark the invoice as synced in IndexedDB
+      await markOrderSynced(invoice.id);
+      
+      // Show success message
+      frappe.show_alert({
+        message: __(`Invoice ${responseData.message.name} created and submitted`),
+        indicator: 'green'
+      }, 5);
+
+      return responseData.message;
+    } else {
+      throw new Error('Invalid server response');
+    }
+  } catch (error) {
+    console.error('Error submitting invoice:', error);
+    
+    // Show error message
+    frappe.show_alert({
+      message: __(`Error syncing invoice: ${error.message}`),
+      indicator: 'red'
+    }, 5);
+    
+    throw error;
+  }
+}
+
 // Update processPendingInvoices to use the service
 export async function processPendingInvoices() {
   const result = { processed: 0, failed: 0 };
