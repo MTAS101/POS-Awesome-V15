@@ -5,14 +5,35 @@ const APP_CACHE = 'posawesome-cache-v1';
 const DATA_CACHE = 'posawesome-data-cache-v1';
 const OFFLINE_URL = '/app/offline.html';
 
+// Listen for the skip waiting message from the client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // Skip waiting and claim clients immediately
 self.addEventListener('install', (event) => {
-  event.waitUntil(self.skipWaiting());
+  console.log('[Service Worker] Installed');
+  event.waitUntil(
+    caches.open(APP_CACHE).then((cache) => {
+      console.log('[Service Worker] Caching app shell');
+      return cache.addAll([
+        '/assets/posawesome/js/posapp.bundle.js',
+        '/assets/posawesome/css/posawesome.css',
+        '/assets/posawesome/icons/icon-192x192.png',
+        '/assets/posawesome/manifest.json',
+        OFFLINE_URL,
+      ]);
+    })
+  );
 });
 
 self.addEventListener('activate', (event) => {
+  console.log('[Service Worker] Activated');
   event.waitUntil(
     Promise.all([
+      // Claim clients so the service worker is in control immediately
       self.clients.claim(),
       // Clean up old caches
       caches.keys().then((cacheNames) => {
@@ -23,7 +44,10 @@ self.addEventListener('activate', (event) => {
                 cacheName !== APP_CACHE && 
                 cacheName !== DATA_CACHE
             )
-            .map((cacheName) => caches.delete(cacheName))
+            .map((cacheName) => {
+              console.log('[Service Worker] Clearing old cache:', cacheName);
+              return caches.delete(cacheName);
+            })
         );
       })
     ])
@@ -231,6 +255,26 @@ async function syncPendingInvoices() {
     console.error('Error in syncPendingInvoices:', error);
   }
 }
+
+// Special handling for offline navigation to app URLs
+workbox.routing.registerRoute(
+  ({ url }) => url.pathname.startsWith('/app/'),
+  async ({ url, request, event, params }) => {
+    try {
+      // Try network first
+      const networkResponse = await fetch(request);
+      return networkResponse;
+    } catch (error) {
+      console.log('[Service Worker] Serving offline page for app route:', url.pathname);
+      // If offline, return the offline page
+      const cache = await caches.open(APP_CACHE);
+      const cachedResponse = await cache.match(OFFLINE_URL);
+      return cachedResponse || new Response('You are offline. Please check your connection.', {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+  }
+);
 
 // Intercept fetch requests for offline handling
 self.addEventListener('fetch', (event) => {

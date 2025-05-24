@@ -5,29 +5,20 @@
   // Check if service workers are supported
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/assets/posawesome/js/service-worker.js', {
-        scope: '/app/'
-      })
-      .then(function(registration) {
-        console.log('Service Worker registered with scope:', registration.scope);
-        
-        // Check for updates
-        registration.addEventListener('updatefound', function() {
-          // A new service worker is being installed
-          const newWorker = registration.installing;
+      // Try registering with root scope first, if that fails, fallback to default scope
+      registerServiceWorker('/', function(err) {
+        if (err) {
+          console.warn('Failed to register service worker with root scope, falling back to default scope.', err);
           
-          newWorker.addEventListener('statechange', function() {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New service worker is installed but waiting to activate
-              showUpdateNotification();
+          // Fallback to default scope (the directory where the service worker is)
+          registerServiceWorker('/assets/posawesome/js/', function(fallbackErr) {
+            if (fallbackErr) {
+              console.error('Service Worker registration failed with all scopes:', fallbackErr);
             }
           });
-        });
-      })
-      .catch(function(error) {
-        console.error('Service Worker registration failed:', error);
+        }
       });
-
+      
       // Handle controller change
       let refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
@@ -46,6 +37,35 @@
       } else if (data.type === 'INVOICE_SYNC_FAILED') {
         showNotification('Sync Failed', `Failed to sync invoice: ${data.error}`, 'error');
       }
+    });
+  }
+  
+  // Helper function to register service worker with a specific scope
+  function registerServiceWorker(scope, callback) {
+    navigator.serviceWorker.register('/assets/posawesome/js/service-worker.js', {
+      scope: scope
+    })
+    .then(function(registration) {
+      console.log('Service Worker registered with scope:', registration.scope);
+      
+      // Check for updates
+      registration.addEventListener('updatefound', function() {
+        // A new service worker is being installed
+        const newWorker = registration.installing;
+        
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New service worker is installed but waiting to activate
+            showUpdateNotification();
+          }
+        });
+      });
+      
+      if (callback) callback(null, registration);
+    })
+    .catch(function(error) {
+      console.error('Service Worker registration failed:', error);
+      if (callback) callback(error);
     });
   }
 
