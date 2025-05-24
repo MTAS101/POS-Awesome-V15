@@ -190,7 +190,7 @@ methods: {
 
   // Method to handle pay button click
   handlePayClick() {
-    // Show payment dialog first
+    // Show payment dialog first without submitting
     this.eventBus.emit("show_payment", true);
     this.eventBus.emit("set_customer_readonly", true);
   },

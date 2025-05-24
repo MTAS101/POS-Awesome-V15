@@ -564,6 +564,11 @@ async function submitInvoice(invoice) {
       return existingInvoice;
     }
 
+    // Generate a unique offline_pos_name if not exists
+    if (!invoice.offline_pos_name) {
+      invoice.offline_pos_name = `OFFPOS${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
     // Prepare the invoice data for submission
     const requestData = {
       data: JSON.stringify({
@@ -571,11 +576,20 @@ async function submitInvoice(invoice) {
         is_pos: 1,
         update_stock: 1,
         offline_submit: true,
-        offline_mode: true
+        offline_mode: true,
+        offline_pos_name: invoice.offline_pos_name // Ensure this is included
       }),
       submit: 1,
       include_payments: 1
     };
+
+    // Double check for existing invoice before submitting
+    const doubleCheck = await checkIfInvoiceExists(invoice);
+    if (doubleCheck) {
+      console.log('Invoice already exists (double check):', doubleCheck);
+      await markOrderSynced(invoice.id);
+      return doubleCheck;
+    }
 
     // Call the server API to process the invoice
     const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
@@ -597,11 +611,11 @@ async function submitInvoice(invoice) {
     console.log('Server response:', responseData);
 
     if (responseData.message?.name) {
-      // Double check if invoice was created in the meantime
-      const doubleCheck = await checkIfInvoiceExists(invoice);
-      if (doubleCheck && doubleCheck.name !== responseData.message.name) {
+      // Triple check if invoice was created in the meantime
+      const tripleCheck = await checkIfInvoiceExists(invoice);
+      if (tripleCheck && tripleCheck.name !== responseData.message.name) {
         console.warn('Duplicate invoice detected:', {
-          original: doubleCheck.name,
+          original: tripleCheck.name,
           new: responseData.message.name
         });
         // Cancel the new invoice
@@ -616,7 +630,7 @@ async function submitInvoice(invoice) {
             name: responseData.message.name
           })
         });
-        return doubleCheck;
+        return tripleCheck;
       }
 
       // Mark the invoice as synced in IndexedDB
@@ -654,43 +668,7 @@ async function submitInvoice(invoice) {
 // Check if invoice already exists on server
 async function checkIfInvoiceExists(invoice) {
   try {
-    // First check if this is a sales order conversion
-    if (invoice.order_id) {
-      try {
-        const orderResponse = await fetch(`/api/method/frappe.client.get_list`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Frappe-CSRF-Token': frappe.csrf_token
-          },
-          body: JSON.stringify({
-            doctype: 'Sales Invoice',
-            filters: {
-              order_id: invoice.order_id,
-              docstatus: ['!=', 2] // Not cancelled
-            },
-            fields: ['name', 'docstatus', 'order_id']
-          })
-        });
-
-        if (!orderResponse.ok) {
-          const error = await handleApiError(orderResponse, 'checkIfInvoiceExists - order check');
-          console.warn('Order check failed:', error);
-          // Continue to next check instead of failing
-        } else {
-          const orderResult = await orderResponse.json();
-          if (orderResult.message && orderResult.message.length > 0) {
-            console.log('Invoice already exists for order:', invoice.order_id);
-            return orderResult.message[0];
-          }
-        }
-      } catch (orderError) {
-        console.warn('Error checking order:', orderError);
-        // Continue to next check
-      }
-    }
-
-    // Then check by offline_pos_name with error handling
+    // First check by offline_pos_name
     if (invoice.offline_pos_name) {
       try {
         const response = await fetch(`/api/method/frappe.client.get_list`, {
@@ -726,7 +704,7 @@ async function checkIfInvoiceExists(invoice) {
       }
     }
 
-    // Finally check by exact match of key fields with error handling
+    // Then check by key fields
     try {
       const keyFieldsResponse = await fetch(`/api/method/frappe.client.get_list`, {
         method: 'POST',
@@ -751,7 +729,6 @@ async function checkIfInvoiceExists(invoice) {
       if (!keyFieldsResponse.ok) {
         const error = await handleApiError(keyFieldsResponse, 'checkIfInvoiceExists - key fields check');
         console.warn('Key fields check failed:', error);
-        // Return null instead of failing
         return null;
       }
 
@@ -762,14 +739,12 @@ async function checkIfInvoiceExists(invoice) {
       }
     } catch (keyFieldsError) {
       console.warn('Error checking key fields:', keyFieldsError);
-      // Return null instead of failing
       return null;
     }
 
     return null;
   } catch (error) {
     console.error('Error in checkIfInvoiceExists:', error);
-    // Return null instead of failing to allow offline operation
     return null;
   }
 }
