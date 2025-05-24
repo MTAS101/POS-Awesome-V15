@@ -142,118 +142,184 @@ async function ensureStoreExists() {
 // Save invoice to IndexedDB for offline storage
 export async function saveInvoiceOffline(invoice) {
   try {
+    console.log('Starting saveInvoiceOffline for customer:', invoice.customer);
     const db = await ensureStoreExists();
     
     // Generate a unique ID for tracking if not already set
     if (!invoice.offline_pos_name) {
-      invoice.offline_pos_name = 'Offline-' + Date.now();
+      invoice.offline_pos_name = 'Offline-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
     }
     
     return new Promise((resolve, reject) => {
       // Verify the store exists before creating transaction
       if (!db.objectStoreNames.contains(ORDERS_STORE)) {
+        console.error(`Object store '${ORDERS_STORE}' does not exist`);
         reject(new Error(`Object store '${ORDERS_STORE}' does not exist`));
         return;
       }
       
-      const transaction = db.transaction([ORDERS_STORE], 'readwrite');
-      const store = transaction.objectStore(ORDERS_STORE);
-      
-      // First check if this invoice already exists
-      // We'll use offline_pos_name as a unique identifier
-      const getAllRequest = store.getAll();
-      
-      getAllRequest.onsuccess = () => {
-        const existingOrders = getAllRequest.result || [];
-        const isDuplicate = existingOrders.some(order => 
-          order.offline_pos_name === invoice.offline_pos_name ||
-          // Also check for invoices with same customer and item details in the last few minutes
-          // to prevent duplicates from rapid clicking
-          (order.customer === invoice.customer && 
-           order.items.length === invoice.items.length &&
-           Date.now() - order.timestamp < 60000) // Within last minute
-        );
+      try {
+        const transaction = db.transaction([ORDERS_STORE], 'readwrite');
+        const store = transaction.objectStore(ORDERS_STORE);
         
-        if (isDuplicate) {
-          console.log('Invoice appears to be a duplicate, not saving again:', invoice.offline_pos_name);
-          resolve(null); // Resolve with null to indicate no new invoice was created
-          return;
-        }
-      
-        // Sanitize the invoice to remove non-serializable data and circular references
-        const sanitizedInvoice = sanitizeForStorage(invoice);
+        // First check if this invoice already exists using getAllKeys for better performance
+        const getAllRequest = store.getAll();
         
-        // Add timestamp for sorting/tracking and set offline_submit flag to true
-        // so invoice will be submitted when synced online, not saved as draft
-        const order = {
-          ...sanitizedInvoice,
-          timestamp: Date.now(),
-          synced: false,
-          offline_submit: true // Always set to true to ensure invoice is submitted when synced
-        };
-        
-        const request = store.add(order);
-        
-        request.onsuccess = () => {
-          console.log('Invoice saved offline:', request.result);
-          
-          // Try to sync with service worker if available
-          if ('serviceWorker' in navigator && 'SyncManager' in window) {
-            navigator.serviceWorker.ready.then(registration => {
-              registration.sync.register('sync-orders').catch(err => {
-                console.error('Background sync registration failed:', err);
-              });
+        getAllRequest.onsuccess = () => {
+          try {
+            const existingOrders = getAllRequest.result || [];
+            console.log(`Found ${existingOrders.length} existing orders, checking for duplicates`);
+            
+            // Check for duplicates with improved logic
+            const isDuplicate = existingOrders.some(order => {
+              // Check for exact offline_pos_name match (same invoice)
+              if (order.offline_pos_name === invoice.offline_pos_name) {
+                console.log('Found exact duplicate by offline_pos_name:', invoice.offline_pos_name);
+                return true;
+              }
               
-              // Also send a message to the service worker
-              navigator.serviceWorker.controller?.postMessage({
-                type: 'STORE_OFFLINE_ORDER',
-                payload: { id: request.result, timestamp: Date.now() }
-              });
+              // Check for very recent invoice for same customer with same items count
+              // This helps prevent duplicate submissions from double-clicking
+              if (order.customer === invoice.customer && 
+                  order.items?.length === invoice.items?.length &&
+                  Date.now() - order.timestamp < 10000) { // Within last 10 seconds
+                
+                console.log('Found potential duplicate by customer and items within 10 seconds');
+                
+                // For extra certainty, check if the total matches
+                if (Math.abs(order.grand_total - invoice.grand_total) < 0.01) {
+                  console.log('Totals match, confirming as duplicate');
+                  return true;
+                }
+              }
+              
+              return false;
             });
+            
+            if (isDuplicate) {
+              console.log('Invoice is a duplicate, not saving:', invoice.offline_pos_name);
+              resolve(null); // Resolve with null to indicate no new invoice was created
+              return;
+            }
+            
+            // If we get here, it's not a duplicate
+            console.log('Invoice is not a duplicate, proceeding with save');
+            
+            // Sanitize the invoice to remove non-serializable data and circular references
+            const sanitizedInvoice = sanitizeForStorage(invoice);
+            
+            // Add timestamp for sorting/tracking and set offline_submit flag to true
+            // so invoice will be submitted when synced online, not saved as draft
+            const order = {
+              ...sanitizedInvoice,
+              timestamp: Date.now(),
+              synced: false,
+              offline_submit: true, // Always set to true to ensure invoice is submitted when synced
+              stored_at: new Date().toISOString() // Add ISO string timestamp for debugging
+            };
+            
+            // Log key details for debugging
+            console.log('Saving invoice with details:', {
+              customer: order.customer,
+              offline_pos_name: order.offline_pos_name,
+              total: order.grand_total || order.total,
+              items_count: order.items?.length
+            });
+            
+            const request = store.add(order);
+            
+            request.onsuccess = () => {
+              console.log('Invoice saved offline successfully with ID:', request.result);
+              
+              // Try to sync with service worker if available
+              if ('serviceWorker' in navigator && 'SyncManager' in window) {
+                navigator.serviceWorker.ready.then(registration => {
+                  registration.sync.register('sync-orders').catch(err => {
+                    console.error('Background sync registration failed:', err);
+                  });
+                  
+                  // Also send a message to the service worker
+                  navigator.serviceWorker.controller?.postMessage({
+                    type: 'STORE_OFFLINE_ORDER',
+                    payload: { id: request.result, timestamp: Date.now() }
+                  });
+                });
+              }
+              
+              // Resolve with the ID
+              resolve(request.result);
+              
+              // Update offline queue count
+              const event = new CustomEvent('offline-queue-updated', {
+                detail: { count: existingOrders.length + 1 }
+              });
+              window.dispatchEvent(event);
+            };
+            
+            request.onerror = (event) => {
+              console.error('Error saving invoice offline:', event.target.error);
+              reject(event.target.error);
+            };
+          } catch (checkError) {
+            console.error('Error in duplicate check logic:', checkError);
+            // If the duplicate check fails, log the error but still try to save
+            // This is a fallback to ensure the invoice is saved even if duplicate check fails
+            const sanitizedInvoice = sanitizeForStorage(invoice);
+            const order = {
+              ...sanitizedInvoice,
+              timestamp: Date.now(),
+              synced: false,
+              offline_submit: true
+            };
+            
+            const request = store.add(order);
+            
+            request.onsuccess = () => {
+              console.log('Invoice saved offline (after duplicate check error):', request.result);
+              resolve(request.result);
+            };
+            
+            request.onerror = (event) => {
+              console.error('Error saving invoice offline after duplicate check error:', event.target.error);
+              reject(event.target.error);
+            };
           }
+        };
+        
+        getAllRequest.onerror = (event) => {
+          console.error('Error checking for duplicates:', event.target.error);
+          // Continue with saving anyway since we failed at duplicate check
           
-          resolve(request.result);
+          const sanitizedInvoice = sanitizeForStorage(invoice);
+          const order = {
+            ...sanitizedInvoice,
+            timestamp: Date.now(),
+            synced: false,
+            offline_submit: true // Always set to true to ensure invoice is submitted when synced
+          };
+          
+          const request = store.add(order);
+          
+          request.onsuccess = () => {
+            console.log('Invoice saved offline (after duplicate check failed):', request.result);
+            resolve(request.result);
+          };
+          
+          request.onerror = (event) => {
+            console.error('Error saving invoice offline:', event.target.error);
+            reject(event.target.error);
+          };
         };
         
-        request.onerror = (event) => {
-          console.error('Error saving invoice offline:', event.target.error);
+        // Handle transaction errors
+        transaction.onerror = (event) => {
+          console.error('Transaction error:', event.target.error);
           reject(event.target.error);
         };
-      };
-      
-      getAllRequest.onerror = (event) => {
-        console.error('Error checking for duplicates:', event.target.error);
-        // Continue with saving anyway since we failed at duplicate check
-        
-        // Sanitize the invoice to remove non-serializable data and circular references
-        const sanitizedInvoice = sanitizeForStorage(invoice);
-        
-        // Add timestamp for sorting/tracking and set offline_submit flag to true
-        const order = {
-          ...sanitizedInvoice,
-          timestamp: Date.now(),
-          synced: false,
-          offline_submit: true // Always set to true to ensure invoice is submitted when synced
-        };
-        
-        const request = store.add(order);
-        
-        request.onsuccess = () => {
-          console.log('Invoice saved offline (after duplicate check failed):', request.result);
-          resolve(request.result);
-        };
-        
-        request.onerror = (event) => {
-          console.error('Error saving invoice offline:', event.target.error);
-          reject(event.target.error);
-        };
-      };
-      
-      // Handle transaction errors
-      transaction.onerror = (event) => {
-        console.error('Transaction error:', event.target.error);
-        reject(event.target.error);
-      };
+      } catch (transactionError) {
+        console.error('Error creating transaction:', transactionError);
+        reject(transactionError);
+      }
     });
   } catch (error) {
     console.error('Failed to save invoice offline:', error);
@@ -484,6 +550,7 @@ export async function markOrderSynced(id) {
 // Process all pending invoices
 export async function processPendingInvoices() {
   try {
+    // Fetch all pending orders that haven't been synced yet
     const pendingOrders = await getPendingOrders();
     
     if (pendingOrders.length === 0) {
@@ -491,106 +558,182 @@ export async function processPendingInvoices() {
       return { success: true, processed: 0 };
     }
     
+    console.log(`Found ${pendingOrders.length} pending orders to process`);
+    
+    // Track order processing
     let successCount = 0;
     let errorCount = 0;
     
-    console.log(`Processing ${pendingOrders.length} pending orders`);
+    // Use a map to keep track of orders by unique identifiers
+    // This prevents duplicate processing of invoices with similar data
+    const orderTrackingMap = new Map();
     
-    // Create a Set to track orders we've already tried to process in this batch
-    // This helps prevent duplicate processing if there's an issue
-    const processedOrderIds = new Set();
-    
+    // Process orders sequentially to prevent race conditions
     for (const order of pendingOrders) {
       try {
-        // Skip if we've already tried to process this order in this batch
-        if (processedOrderIds.has(order.id)) {
-          console.log(`Skipping already processed order: ${order.id}`);
+        // Create a unique key for this order using customer + timestamp or offline_pos_name
+        const uniqueKey = order.offline_pos_name || 
+                          `${order.customer}-${order.timestamp}-${order.items?.length || 0}`;
+        
+        // Skip if we've already processed an order with this unique key
+        if (orderTrackingMap.has(uniqueKey)) {
+          console.log(`Skipping potential duplicate order: ${uniqueKey}`);
           continue;
         }
         
-        // Add to our tracking set
-        processedOrderIds.add(order.id);
+        // Add to tracking map
+        orderTrackingMap.set(uniqueKey, true);
         
-        console.log('Processing order:', order.id);
+        console.log(`Processing order: ${order.id}`);
         console.log('Order details:', {
           customer: order.customer,
+          timestamp: new Date(order.timestamp).toISOString(),
+          offline_pos_name: order.offline_pos_name,
           total: order.total,
-          has_items: order.items && order.items.length > 0,
-          has_payments: order.payments && order.payments.length > 0
+          items_count: order.items?.length || 0
         });
         
-        // Prepare the order data for submission
-        // We need to ensure that POS-specific fields are set correctly
-        order.is_pos = 1;  // Force this to be a POS invoice
-        order.update_stock = 1;  // Ensure stock is updated
+        // Ensure critical POS fields are properly set
+        const processedOrder = {
+          ...order,
+          is_pos: 1,
+          update_stock: 1,
+          offline_submit: true // Ensure invoice is submitted, not saved as draft
+        };
         
-        // Make sure payments are valid
-        if (order.payments && order.payments.length > 0) {
-          // Ensure each payment has amount set
-          for (const payment of order.payments) {
-            // If payment amount is not set, set it to the invoice total
-            if (!payment.amount || payment.amount === 0) {
-              payment.amount = order.grand_total || order.rounded_total || order.total;
-              console.log(`Setting payment amount to ${payment.amount} for ${payment.mode_of_payment}`);
+        // Ensure payments are properly set
+        if (processedOrder.payments && processedOrder.payments.length > 0) {
+          // Make sure at least one payment has an amount
+          let hasPaymentAmount = false;
+          
+          for (const payment of processedOrder.payments) {
+            if (payment.amount && payment.amount !== 0) {
+              hasPaymentAmount = true;
             }
+          }
+          
+          // If no payment has amount, set the default payment to the invoice total
+          if (!hasPaymentAmount && processedOrder.payments.length > 0) {
+            const defaultPayment = processedOrder.payments.find(p => p.default) || 
+                                  processedOrder.payments[0];
+                                  
+            const totalAmount = processedOrder.grand_total || processedOrder.rounded_total || processedOrder.total;
+            defaultPayment.amount = totalAmount;
+            
+            // Also set base_amount for multi-currency
+            if (processedOrder.conversion_rate) {
+              defaultPayment.base_amount = totalAmount * processedOrder.conversion_rate;
+            }
+            
+            console.log(`Set default payment amount to ${defaultPayment.amount}`);
           }
         }
         
-        // Add the 'submit' flag to ensure this is submitted, not saved as draft
-        // This ensures the offline invoice is properly submitted when synced
-        const shouldSubmit = true;
-        
-        // Make API call to update the invoice in the system
-        console.log('Sending order to server for processing');
+        // Make API call with proper parameters
+        console.log('Submitting order to server with submit=true and include_payments=true');
         const response = await frappe.call({
           method: 'posawesome.posawesome.api.posapp.update_invoice',
           args: {
-            data: order,
-            submit: shouldSubmit,
-            include_payments: true  // Important to include payments in submission
+            data: processedOrder,
+            submit: true, // Always submit when syncing
+            include_payments: true // Ensure payments are included
           }
         });
         
         if (response.message) {
-          console.log('Successfully processed order', order.id);
-          console.log('Response:', response.message.name);
+          if (response.message.error) {
+            // Server returned success:false with an error message
+            console.error('Server error processing order:', response.message.error);
+            errorCount++;
+            
+            // Don't mark as synced, will retry later
+            continue;
+          }
           
-          // Mark this order as synced in the offline database
-          await markOrderSynced(order.id);
-          successCount++;
+          // Successfully processed the order
+          console.log('Server successfully processed order:', response.message.name);
           
-          // Emit event to show success message
-          const event = new CustomEvent('offline-invoice-synced', {
-            detail: { success: true, invoice: response.message.name }
-          });
-          window.dispatchEvent(event);
+          try {
+            // Mark this order as synced in our offline database
+            await markOrderSynced(order.id);
+            successCount++;
+            
+            // Send an event for UI updates
+            const event = new CustomEvent('offline-invoice-synced', {
+              detail: { 
+                success: true, 
+                invoice: response.message.name,
+                customer: order.customer
+              }
+            });
+            window.dispatchEvent(event);
+            
+          } catch (markError) {
+            console.error('Error marking order as synced:', markError);
+            // Continue processing other orders even if marking this one failed
+          }
         } else {
-          console.error('Failed to process order', order.id, '- no response message');
+          console.error('No response message from server for order:', order.id);
           errorCount++;
         }
-      } catch (error) {
-        console.error('Error processing order', order.id, ':', error);
+      } catch (orderError) {
+        console.error('Error processing order:', order.id, orderError);
         errorCount++;
+        
+        // Continue with next order
+        continue;
       }
+      
+      // Add a small delay between orders to prevent overloading the server
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    // Update the offline queue count
+    // Fetch updated count of pending orders
     const remainingOrders = await getPendingOrders();
+    const remainingCount = remainingOrders.length;
+    
+    console.log(`Processing complete: ${successCount} succeeded, ${errorCount} failed, ${remainingCount} remaining`);
+    
+    // Notify the UI about updated queue count
     const event = new CustomEvent('offline-queue-updated', {
-      detail: { count: remainingOrders.length }
+      detail: { count: remainingCount }
     });
     window.dispatchEvent(event);
     
-    console.log(`Completed processing: ${successCount} succeeded, ${errorCount} failed`);
+    // Show appropriate message based on results
+    if (successCount > 0) {
+      frappe.show_alert({
+        message: __(`Successfully synced ${successCount} offline orders`),
+        indicator: 'green'
+      }, 5);
+    }
+    
+    if (errorCount > 0) {
+      frappe.show_alert({
+        message: __(`Failed to sync ${errorCount} offline orders - will retry automatically`),
+        indicator: 'red'
+      }, 5);
+    }
+    
     return { 
       success: true, 
       processed: successCount,
       errors: errorCount,
-      remaining: remainingOrders.length
+      remaining: remainingCount
     };
   } catch (error) {
-    console.error('Error processing pending invoices:', error);
-    return { success: false, error: error.message };
+    console.error('Fatal error in processPendingInvoices:', error);
+    
+    // Show error message
+    frappe.show_alert({
+      message: __(`Error synchronizing orders: ${error.message}`),
+      indicator: 'red'
+    }, 5);
+    
+    return { 
+      success: false, 
+      error: error.message 
+    };
   }
 }
 
