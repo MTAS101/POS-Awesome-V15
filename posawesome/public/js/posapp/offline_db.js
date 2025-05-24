@@ -1,7 +1,7 @@
 // Utility functions for IndexedDB operations
 
 const DB_NAME = 'POS_DB';
-const DB_VERSION = 2; // Increment version for schema update
+let DB_VERSION = 2; // Increment version for schema update
 const ORDERS_STORE = 'offline-orders';
 const INVOICE_STORE = 'invoices';
 const SEQUENCE_STORE = 'sequences';
@@ -53,8 +53,12 @@ export async function initDB() {
   if (dbPromise) return dbPromise;
   
   // Detect current database version first
+  let currentVersion;
   try {
-    DB_VERSION = await getCurrentDbVersion();
+    currentVersion = await getCurrentDbVersion();
+    if (currentVersion > DB_VERSION) {
+      DB_VERSION = currentVersion;
+    }
   } catch (error) {
     console.warn('Error detecting database version:', error);
     // Continue with default version
@@ -662,9 +666,12 @@ async function updateInvoiceSyncStatus(uuid, status, error = null) {
 
 // Export functions
 export {
-  initDB,
   saveInvoiceOffline,
   getPendingInvoices,
   updateInvoiceSyncStatus,
-  generateUUID
+  generateUUID,
+  ConnectivityService,
+  setupConnectivityListeners,
+  isOnline,
+  processPendingInvoices
 }; 
