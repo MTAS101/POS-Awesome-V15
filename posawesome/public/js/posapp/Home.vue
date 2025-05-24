@@ -15,11 +15,13 @@
 import Navbar from './components/Navbar.vue';
 import POS from './components/pos/Pos.vue';
 import Payments from './components/payments/Pay.vue';
+import { ConnectivityService } from './offline_db';
 
 export default {
   data: function () {
     return {
       page: 'POS',
+      cleanupFn: null
     };
   },
   components: {
@@ -37,8 +39,8 @@ export default {
         $('.navbar.navbar-default.navbar-fixed-top').remove();
       });
     },
-    handleConnectivityChange(isOnline) {
-      if (isOnline) {
+    handleConnectivityChange(status) {
+      if (status === 'online') {
         console.log('Connection restored - online mode');
         this.syncPendingInvoices();
       } else {
@@ -60,8 +62,7 @@ export default {
   },
   mounted() {
     this.remove_frappe_nav();
-    window.addEventListener('online', () => this.handleConnectivityChange(true));
-    window.addEventListener('offline', () => this.handleConnectivityChange(false));
+    this.cleanupFn = ConnectivityService.addListener(this.handleConnectivityChange);
   },
   updated() { },
   created: function () {
@@ -70,8 +71,9 @@ export default {
     }, 1000);
   },
   beforeUnmount() {
-    window.removeEventListener('online', () => this.handleConnectivityChange(true));
-    window.removeEventListener('offline', () => this.handleConnectivityChange(false));
+    if (this.cleanupFn) {
+      this.cleanupFn();
+    }
   },
 };
 </script>

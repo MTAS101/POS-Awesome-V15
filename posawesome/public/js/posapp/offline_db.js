@@ -426,186 +426,112 @@ export async function markOrderSynced(id) {
   }
 }
 
-// Process all pending invoices
-export async function processPendingInvoices() {
-  try {
-    const pendingOrders = await getPendingOrders();
-    
-    if (pendingOrders.length === 0) {
-      console.log('No pending orders to process');
-      return { success: true, processed: 0 };
-    }
-    
-    let successCount = 0;
-    let errorCount = 0;
-    
-    console.log(`Processing ${pendingOrders.length} pending orders`);
-    
-    for (const order of pendingOrders) {
-      try {
-        console.log('Processing order:', order.id);
-        console.log('Order details:', {
-          customer: order.customer,
-          total: order.total,
-          has_items: order.items && order.items.length > 0,
-          has_payments: order.payments && order.payments.length > 0
-        });
-        
-        // Prepare the order data for submission
-        // We need to ensure that POS-specific fields are set correctly
-        order.is_pos = 1;  // Force this to be a POS invoice
-        order.update_stock = 1;  // Ensure stock is updated
-        
-        // Make sure payments are valid
-        if (order.payments && order.payments.length > 0) {
-          // Ensure each payment has amount set
-          for (const payment of order.payments) {
-            // If payment amount is not set, set it to the invoice total
-            if (!payment.amount || payment.amount === 0) {
-              payment.amount = order.grand_total || order.rounded_total || order.total;
-              console.log(`Setting payment amount to ${payment.amount} for ${payment.mode_of_payment}`);
-            }
-          }
-        }
-        
-        // Server expects data in a specific format
-        const requestData = {
-          data: JSON.stringify(order),
-          submit: 1,  // Always submit invoices when syncing from offline mode
-          include_payments: 1  // Make sure payments are included in the submitted invoice
-        };
-        
-        console.log('Sending order to server with:');
-        console.log('- Submit flag: enabled');
-        console.log('- Include payments flag: enabled');
-        
-        // Call the server API to process the order
-        const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Frappe-CSRF-Token': frappe.csrf_token
-          },
-          body: JSON.stringify(requestData)
-        });
-        
-        const responseText = await response.text();
-        console.log('Server response:', responseText);
-        
-        if (response.ok) {
-          try {
-            const responseData = JSON.parse(responseText);
-            console.log('Successfully processed order:', order.id);
-            console.log('Invoice created with name:', responseData.message?.name);
-            
-            // Mark this order as synced
-            await markOrderSynced(order.id);
-            successCount++;
-            
-            // Show a specific message for this invoice
-            frappe.show_alert({
-              message: __(`Invoice ${responseData.message?.name || 'unknown'} created and submitted.`),
-              indicator: 'green'
-            }, 5);
-          } catch (parseError) {
-            console.error('Error parsing server response:', parseError);
-            errorCount++;
-          }
-        } else {
-          console.error('Error syncing order:', order.id, responseText);
-          
-          try {
-            // Try to parse error response
-            const errorJson = JSON.parse(responseText);
-            console.error('Server error details:', errorJson);
-            
-            // Show a specific error message
-            frappe.show_alert({
-              message: __(`Error syncing invoice: ${errorJson.exception || errorJson._server_messages || 'Unknown error'}`),
-              indicator: 'red'
-            }, 5);
-          } catch (parseError) {
-            // If parsing fails, just log the raw text
-            console.error('Raw error response:', responseText);
-            
-            // Show a generic error message
-            frappe.show_alert({
-              message: __(`Error syncing invoice: ${responseText.substring(0, 100)}...`),
-              indicator: 'red'
-            }, 5);
-          }
-          
-          errorCount++;
-        }
-      } catch (error) {
-        console.error('Error processing pending order:', order.id, error);
-        
-        // Show a specific error message for this order
-        frappe.show_alert({
-          message: __(`Error processing order: ${error.message}`),
-          indicator: 'red'
-        }, 5);
-        
-        errorCount++;
-      }
-      
-      // Add a small delay between processing orders to avoid overwhelming the server
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    }
-    
-    if (errorCount > 0) {
-      frappe.show_alert({
-        message: __(`Failed to sync ${errorCount} offline order(s). Check console for details.`),
-        indicator: 'red'
-      }, 7);
-    }
-    
-    if (successCount > 0) {
-      frappe.show_alert({
-        message: __(`Successfully synchronized ${successCount} offline order(s).`),
-        indicator: 'green'
-      }, 7);
-    }
-    
-    return {
-      success: errorCount === 0,
-      processed: successCount,
-      failed: errorCount,
-      total: pendingOrders.length
-    };
-  } catch (error) {
-    console.error('Failed to process pending invoices:', error);
-    frappe.show_alert({
-      message: __(`Error synchronizing orders: ${error.message}`),
-      indicator: 'red'
-    }, 7);
-    return { success: false, error: error.message };
-  }
-}
+// Centralized connectivity service
+const connectivityService = {
+  isOnline: navigator.onLine,
+  listeners: new Set(),
+  pendingSyncs: new Set(),
 
-// Check online status
-export function isOnline() {
-  return navigator.onLine;
-}
+  init() {
+    window.addEventListener('online', () => this.handleOnline());
+    window.addEventListener('offline', () => this.handleOffline());
+  },
 
-// Listen for online/offline events
-export function setupConnectivityListeners(callbacks = {}) {
-  const handleOnline = () => {
+  addListener(callback) {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
+  },
+
+  handleOnline() {
     console.log('App is online');
-    if (callbacks.onOnline) callbacks.onOnline();
-  };
-  
-  const handleOffline = () => {
+    this.isOnline = true;
+    this.notifyListeners('online');
+    this.processPendingSyncs();
+  },
+
+  handleOffline() {
     console.log('App is offline');
-    if (callbacks.onOffline) callbacks.onOffline();
+    this.isOnline = false;
+    this.notifyListeners('offline');
+  },
+
+  notifyListeners(status) {
+    this.listeners.forEach(callback => callback(status));
+  },
+
+  async processPendingSyncs() {
+    if (!this.isOnline) return;
+
+    const pendingSyncs = Array.from(this.pendingSyncs);
+    this.pendingSyncs.clear();
+
+    for (const syncFn of pendingSyncs) {
+      try {
+        await syncFn();
+      } catch (error) {
+        console.error('Sync failed:', error);
+        this.pendingSyncs.add(syncFn);
+      }
+    }
+  },
+
+  addPendingSync(syncFn) {
+    this.pendingSyncs.add(syncFn);
+    if (this.isOnline) {
+      this.processPendingSyncs();
+    }
+  }
+};
+
+// Initialize connectivity service
+connectivityService.init();
+
+// Export connectivity service
+export const ConnectivityService = connectivityService;
+
+// Update existing setupConnectivityListeners function
+export function setupConnectivityListeners(callbacks = {}) {
+  const handleStatus = (status) => {
+    if (status === 'online' && callbacks.onOnline) {
+      callbacks.onOnline();
+    } else if (status === 'offline' && callbacks.onOffline) {
+      callbacks.onOffline();
+    }
   };
+
+  return ConnectivityService.addListener(handleStatus);
+}
+
+// Export isOnline function that uses the service
+export function isOnline() {
+  return ConnectivityService.isOnline;
+}
+
+// Update processPendingInvoices to use the service
+export async function processPendingInvoices() {
+  const result = { processed: 0, failed: 0 };
   
-  window.addEventListener('online', handleOnline);
-  window.addEventListener('offline', handleOffline);
+  try {
+    const pendingInvoices = await getPendingOrders();
+    
+    for (const invoice of pendingInvoices) {
+      const syncFn = async () => {
+        try {
+          await submitInvoice(invoice);
+          result.processed++;
+        } catch (error) {
+          console.error('Failed to sync invoice:', error);
+          result.failed++;
+          throw error; // Rethrow to trigger retry
+        }
+      };
+      
+      ConnectivityService.addPendingSync(syncFn);
+    }
+  } catch (error) {
+    console.error('Error processing pending invoices:', error);
+    throw error;
+  }
   
-  // Return a cleanup function
-  return () => {
-    window.removeEventListener('online', handleOnline);
-    window.removeEventListener('offline', handleOffline);
-  };
+  return result;
 } 

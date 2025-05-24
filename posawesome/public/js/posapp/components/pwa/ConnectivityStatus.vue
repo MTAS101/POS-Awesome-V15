@@ -51,12 +51,12 @@
 </template>
 
 <script>
-import { isOnline, setupConnectivityListeners, processPendingInvoices } from '../../offline_db';
+import { ConnectivityService, processPendingInvoices } from '../../offline_db';
 
 export default {
   data() {
     return {
-      isOffline: false,
+      isOffline: !ConnectivityService.isOnline,
       showOfflineNotification: false,
       showBackOnlineNotification: false,
       showSyncSuccessNotification: false,
@@ -67,28 +67,14 @@ export default {
     };
   },
   methods: {
-    checkConnectivity() {
-      const online = isOnline();
-      this.isOffline = !online;
-      this.showOfflineNotification = !online;
+    handleConnectivityChange(status) {
+      this.isOffline = status === 'offline';
+      this.showOfflineNotification = status === 'offline';
       
-      if (online) {
+      if (status === 'online') {
+        this.showBackOnlineNotification = true;
         this.syncPendingOrders();
       }
-    },
-    
-    handleOffline() {
-      this.isOffline = true;
-      this.showOfflineNotification = true;
-    },
-    
-    async handleOnline() {
-      this.isOffline = false;
-      this.showOfflineNotification = false;
-      this.showBackOnlineNotification = true;
-      
-      // Sync pending orders
-      await this.syncPendingOrders();
     },
     
     async syncPendingOrders() {
@@ -112,17 +98,10 @@ export default {
     }
   },
   mounted() {
-    // Check initial connectivity
-    this.checkConnectivity();
-    
-    // Setup listeners for online/offline events
-    this.cleanupFn = setupConnectivityListeners({
-      onOnline: this.handleOnline,
-      onOffline: this.handleOffline
-    });
+    this.cleanupFn = ConnectivityService.addListener(this.handleConnectivityChange);
+    this.handleConnectivityChange(ConnectivityService.isOnline ? 'online' : 'offline');
   },
   beforeUnmount() {
-    // Clean up listeners
     if (this.cleanupFn) {
       this.cleanupFn();
     }
