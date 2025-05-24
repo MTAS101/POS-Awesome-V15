@@ -506,11 +506,10 @@ const connectivityService = {
 // Initialize connectivity service
 connectivityService.init();
 
-// Export connectivity service
-export const ConnectivityService = connectivityService;
+// Remove individual exports
+const ConnectivityService = connectivityService;
 
-// Update existing setupConnectivityListeners function
-export function setupConnectivityListeners(callbacks = {}) {
+function setupConnectivityListeners(callbacks = {}) {
   const handleStatus = (status) => {
     if (status === 'online' && callbacks.onOnline) {
       callbacks.onOnline();
@@ -522,156 +521,21 @@ export function setupConnectivityListeners(callbacks = {}) {
   return ConnectivityService.addListener(handleStatus);
 }
 
-// Export isOnline function that uses the service
-export function isOnline() {
+function isOnline() {
   return ConnectivityService.isOnline;
 }
 
-// Function to submit an invoice to the server
-async function submitInvoice(invoice) {
-  try {
-    // Prepare the invoice data for submission
-    const requestData = {
-      data: JSON.stringify({
-        ...invoice,
-        is_pos: 1,  // Force this to be a POS invoice
-        update_stock: 1,  // Ensure stock is updated
-        offline_submit: true // Flag to indicate this is an offline submission
-      }),
-      submit: 1,  // Always submit invoices when syncing from offline mode
-      include_payments: 1  // Make sure payments are included
-    };
-
-    // Call the server API to process the invoice
-    const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Frappe-CSRF-Token': frappe.csrf_token
-      },
-      body: JSON.stringify(requestData)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Server error response:', errorText);
-      throw new Error(`Server error: ${errorText}`);
-    }
-
-    const responseData = await response.json();
-    console.log('Server response:', responseData);
-
-    if (responseData.message?.name) {
-      // Mark the invoice as synced in IndexedDB
-      await markOrderSynced(invoice.id);
-      
-      // Show success message
-      frappe.show_alert({
-        message: __(`Invoice ${responseData.message.name} created and submitted`),
-        indicator: 'green'
-      }, 5);
-
-      return responseData.message;
-    } else {
-      throw new Error('Invalid server response');
-    }
-  } catch (error) {
-    console.error('Error submitting invoice:', error);
-    
-    // Show error message
-    frappe.show_alert({
-      message: __(`Error syncing invoice: ${error.message}`),
-      indicator: 'red'
-    }, 5);
-    
-    throw error;
-  }
-}
-
-// Update processPendingInvoices to use the service
-export async function processPendingInvoices() {
-  const result = { processed: 0, failed: 0 };
-  
-  try {
-    const pendingInvoices = await getPendingOrders();
-    
-    for (const invoice of pendingInvoices) {
-      const syncFn = async () => {
-        try {
-          await submitInvoice(invoice);
-          result.processed++;
-        } catch (error) {
-          console.error('Failed to sync invoice:', error);
-          result.failed++;
-          throw error; // Rethrow to trigger retry
-        }
-      };
-      
-      ConnectivityService.addPendingSync(syncFn);
-    }
-  } catch (error) {
-    console.error('Error processing pending invoices:', error);
-    throw error;
-  }
-  
-  return result;
-}
-
-// Get pending invoices for sync
-async function getPendingInvoices() {
-  const db = await initDB();
-  
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(INVOICE_STORE, 'readonly');
-    const store = transaction.objectStore(INVOICE_STORE);
-    const index = store.index('sync_status');
-    
-    const request = index.getAll('pending');
-    
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
-}
-
-// Update invoice sync status
-async function updateInvoiceSyncStatus(uuid, status, error = null) {
-  const db = await initDB();
-  
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(INVOICE_STORE, 'readwrite');
-    const store = transaction.objectStore(INVOICE_STORE);
-    
-    const request = store.get(uuid);
-    
-    request.onsuccess = () => {
-      const invoice = request.result;
-      if (invoice) {
-        invoice.sync_status = status;
-        invoice.sync_attempts += 1;
-        invoice.last_sync_attempt = Date.now();
-        if (error) {
-          invoice.last_sync_error = error;
-        }
-        
-        store.put(invoice);
-        resolve(true);
-      } else {
-        resolve(false);
-      }
-    };
-    
-    request.onerror = () => reject(request.error);
-  });
-}
-
-// Export functions
+// Export all functions at the end
 export {
+  initDB,
   saveInvoiceOffline,
-  getPendingInvoices,
+  getPendingInvoices, 
   updateInvoiceSyncStatus,
   generateUUID,
   ConnectivityService,
   setupConnectivityListeners,
   isOnline,
-  processPendingInvoices
+  processPendingInvoices,
+  getPendingOrders,
+  markOrderSynced
 }; 
