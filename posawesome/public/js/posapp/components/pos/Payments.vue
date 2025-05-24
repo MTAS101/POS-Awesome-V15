@@ -1758,51 +1758,7 @@ export default {
       }
 
       return invoice;
-    },
-    resetPaymentState() {
-      this.loyalty_amount = 0;
-      this.redeemed_customer_credit = 0;
-      this.is_credit_sale = false;
-      this.is_write_off_change = false;
-      this.dialog = false;
-    },
-    initializePaymentState() {
-      if (this.invoice_doc.customer) {
-        this.get_addresses();
-      }
-      this.get_sales_person_names();
-      
-      // Initialize any payment-specific state
-      this.calculatePaymentTotals();
-    },
-    updatePaymentUI() {
-      // Update UI elements
-      this.$forceUpdate();
-      
-      // Focus on first payment input if available
-      const paymentInput = this.$el.querySelector('.payment-input');
-      if (paymentInput) {
-        paymentInput.focus();
-      }
-    },
-    calculatePaymentTotals() {
-      if (!this.invoice_doc) return;
-      
-      const total = this.invoice_doc.rounded_total || this.invoice_doc.grand_total;
-      this.payment_total = total;
-      
-      // Update other payment-related calculations
-      this.updatePaymentMethods();
-    },
-    updatePaymentMethods() {
-      if (!this.invoice_doc?.payments) return;
-      
-      this.invoice_doc.payments.forEach(payment => {
-        if (payment.default && !payment.amount) {
-          payment.amount = this.payment_total;
-        }
-      });
-    },
+    }
   },
   created() {
     document.addEventListener("keydown", this.shortPay.bind(this));
@@ -1810,28 +1766,13 @@ export default {
   },
   mounted() {
     this.$nextTick(() => {
-      // Handle invoice preparation completion
-      this.eventBus.on("invoice_prepared", (invoice_doc) => {
-        console.log("Invoice prepared, setting up payment UI");
-        // Reset any previous payment state
-        this.resetPaymentState();
-      });
-
       this.eventBus.on("send_invoice_doc_payment", (invoice_doc) => {
-        console.log("Received invoice doc for payment");
         this.invoice_doc = invoice_doc;
         const default_payment = this.invoice_doc.payments.find(
           (payment) => payment.default === 1
         );
         this.is_credit_sale = false;
         this.is_write_off_change = false;
-
-        // Handle offline mode
-        if (invoice_doc.offline_mode) {
-          console.log("Setting up offline mode payment");
-          this.dialog = true;
-        }
-
         if (invoice_doc.is_return) {
           this.is_return = true;
           invoice_doc.payments.forEach((payment) => {
@@ -1851,37 +1792,48 @@ export default {
             this.currency_precision
           );
         }
-
-        // Initialize payment state
-        this.initializePaymentState();
-      });
-
-      this.eventBus.on("show_payment", (show) => {
-        console.log("Payment dialog visibility:", show);
-        // Ensure dialog is shown/hidden based on event
-        this.dialog = show === true;
-        
-        if (show) {
-          // Force UI update when showing payment
-          this.$nextTick(() => {
-            this.updatePaymentUI();
-          });
+        this.loyalty_amount = 0;
+        this.redeemed_customer_credit = 0;
+        if (invoice_doc.customer) {
+          this.get_addresses();
         }
+        this.get_sales_person_names();
       });
-
-      // Handle loading state
-      this.eventBus.on("set_loading", (loading) => {
-        this.loading = loading;
-      });
-
       this.eventBus.on("register_pos_profile", (data) => {
         this.pos_profile = data.pos_profile;
         this.get_mpesa_modes();
       });
-      
       this.eventBus.on("add_the_new_address", (data) => {
         this.addresses.push(data);
         this.$forceUpdate();
+      });
+      this.eventBus.on("update_invoice_type", (data) => {
+        this.invoiceType = data;
+        if (this.invoice_doc && data !== "Order") {
+          this.invoice_doc.posa_delivery_date = null;
+          this.invoice_doc.posa_notes = null;
+          this.invoice_doc.shipping_address_name = null;
+        }
+        if (this.invoice_doc && data === "Return") {
+          this.invoice_doc.is_return = 1;
+          this.ensureReturnPaymentsAreNegative();
+        }
+      });
+      this.eventBus.on("update_customer", (customer) => {
+        if (this.customer !== customer) {
+          this.customer_credit_dict = [];
+          this.redeem_customer_credit = false;
+          this.is_cashback = true;
+        }
+      });
+      this.eventBus.on("set_pos_settings", (data) => {
+        this.pos_settings = data;
+      });
+      this.eventBus.on("set_customer_info_to_edit", (data) => {
+        this.customer_info = data;
+      });
+      this.eventBus.on("set_mpesa_payment", (data) => {
+        this.set_mpesa_payment(data);
       });
     });
   },

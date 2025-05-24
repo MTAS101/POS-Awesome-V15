@@ -1655,89 +1655,73 @@ export default {
           return;
         }
 
-        // First emit loading state
-        this.eventBus.emit("set_loading", true);
-
-        try {
-          // Process invoice based on type
-          let invoice_doc;
-          if (this.invoice_doc && this.invoice_doc.doctype === "Sales Order") {
-            invoice_doc = await this.process_invoice_from_order();
-          } else {
-            invoice_doc = await this.process_invoice();
-          }
-
-          if (!invoice_doc) {
-            throw new Error("Failed to prepare invoice");
-          }
-
-          // Check if offline
-          const isOfflineMode = !navigator.onLine;
-          
-          // Set currency info
-          invoice_doc.currency = this.selected_currency || this.pos_profile.currency;
-          invoice_doc.conversion_rate = this.exchange_rate || 1;
-          
-          // Update totals
-          invoice_doc.total = this.Total;
-          invoice_doc.grand_total = this.subtotal;
-          invoice_doc.rounded_total = this.roundAmount(this.subtotal);
-          invoice_doc.base_total = this.Total * (1 / this.exchange_rate || 1);
-          invoice_doc.base_grand_total = this.subtotal * (1 / this.exchange_rate || 1);
-          invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
-
-          // Handle offline mode
-          if (isOfflineMode) {
-            invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
-            invoice_doc.is_pos = 1;
-            invoice_doc.update_stock = 1;
-            invoice_doc.offline_mode = true;
-            invoice_doc.offline_submit = true;
-          }
-
-          // Handle return invoices
-          if (this.invoiceType === 'Return' || invoice_doc.is_return) {
-            invoice_doc.is_return = 1;
-            this.ensure_negative_values(invoice_doc);
-          }
-
-          // Get payments with correct sign
-          invoice_doc.payments = this.get_payments();
-          
-          // For offline mode, ensure at least one payment method
-          if (isOfflineMode && invoice_doc.payments && invoice_doc.payments.length > 0) {
-            const hasPaymentValue = invoice_doc.payments.some(p => p.amount !== 0);
-            if (!hasPaymentValue) {
-              invoice_doc.payments[0].amount = invoice_doc.rounded_total || invoice_doc.grand_total;
-            }
-          }
-
-          // Emit events in correct sequence for payment UI
-          this.eventBus.emit("invoice_prepared", invoice_doc);
-          this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
-          
-          // Small delay to ensure UI is ready
-          setTimeout(() => {
-            this.eventBus.emit("show_payment", true);
-          }, 100);
-
-          // Setup payment completion listener
-          this.eventBus.on("payment_completed", (result) => {
-            if (result.success) {
-              this.clear_invoice();
-              if (result.offline) {
-                this.eventBus.emit("show_message", {
-                  title: __('Invoice saved offline. Will be submitted when online.'),
-                  color: 'success'
-                });
-              }
-            }
-          });
-
-        } finally {
-          // Always clear loading state
-          this.eventBus.emit("set_loading", false);
+        // Process invoice based on type
+        let invoice_doc;
+        if (this.invoice_doc && this.invoice_doc.doctype === "Sales Order") {
+          invoice_doc = await this.process_invoice_from_order();
+        } else {
+          invoice_doc = await this.process_invoice();
         }
+
+        if (!invoice_doc) {
+          return;
+        }
+
+        // Set currency info
+        invoice_doc.currency = this.selected_currency || this.pos_profile.currency;
+        invoice_doc.conversion_rate = this.exchange_rate || 1;
+        
+        // Update totals
+        invoice_doc.total = this.Total;
+        invoice_doc.grand_total = this.subtotal;
+        invoice_doc.rounded_total = this.roundAmount(this.subtotal);
+        invoice_doc.base_total = this.Total * (1 / this.exchange_rate || 1);
+        invoice_doc.base_grand_total = this.subtotal * (1 / this.exchange_rate || 1);
+        invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
+
+        // Check if offline
+        const isOfflineMode = !navigator.onLine;
+        if (isOfflineMode) {
+          invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
+          invoice_doc.is_pos = 1;
+          invoice_doc.update_stock = 1;
+          invoice_doc.offline_mode = true;
+          invoice_doc.offline_submit = true;
+        }
+
+        // Handle return invoices
+        if (this.invoiceType === 'Return' || invoice_doc.is_return) {
+          invoice_doc.is_return = 1;
+          this.ensure_negative_values(invoice_doc);
+        }
+
+        // Get payments with correct sign
+        invoice_doc.payments = this.get_payments();
+        
+        // For offline mode, ensure at least one payment method
+        if (isOfflineMode && invoice_doc.payments && invoice_doc.payments.length > 0) {
+          const hasPaymentValue = invoice_doc.payments.some(p => p.amount !== 0);
+          if (!hasPaymentValue) {
+            invoice_doc.payments[0].amount = invoice_doc.rounded_total || invoice_doc.grand_total;
+          }
+        }
+
+        // Show payment dialog
+        this.eventBus.emit("show_payment", true);
+        this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
+
+        // Listen for payment completion
+        this.eventBus.on("payment_completed", (result) => {
+          if (result.success) {
+            this.clear_invoice();
+            if (result.offline) {
+              this.eventBus.emit("show_message", {
+                title: __('Invoice saved offline. Will be submitted when online.'),
+                color: 'success'
+              });
+            }
+          }
+        });
 
       } catch (error) {
         console.error('Error in show_payment:', error);
@@ -1746,7 +1730,6 @@ export default {
           color: "error",
           message: error.message
         });
-        this.eventBus.emit("set_loading", false);
       }
     },
 
