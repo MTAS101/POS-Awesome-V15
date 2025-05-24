@@ -8,18 +8,6 @@ const ORDERS_STORE = 'offline-orders';
 // Global reference to the database
 let dbPromise = null;
 
-// Import compression library
-import { compress, decompress } from 'lz-string';
-
-// Sync status constants
-const syncStatus = {
-  PENDING: 'pending',
-  SYNCING: 'syncing',
-  SYNCED: 'synced',
-  FAILED: 'failed',
-  CONFLICT: 'conflict'
-};
-
 // Function to detect current database version
 async function getCurrentDbVersion() {
   return new Promise((resolve) => {
@@ -218,95 +206,9 @@ export async function saveInvoiceOffline(invoice) {
   }
 }
 
-// Validation function for offline invoices
-function validateOfflineInvoice(invoice) {
-  const requiredFields = ['customer', 'items', 'payments'];
-  const errors = [];
-
-  requiredFields.forEach(field => {
-    if (!invoice[field]) {
-      errors.push(`Missing required field: ${field}`);
-    }
-  });
-
-  if (invoice.items && !Array.isArray(invoice.items)) {
-    errors.push('Items must be an array');
-  }
-
-  if (invoice.payments && !Array.isArray(invoice.payments)) {
-    errors.push('Payments must be an array');
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-}
-
-// Handle conflicts between local and server data
-async function handleConflict(localInvoice, serverInvoice) {
-  if (localInvoice.modified > serverInvoice.modified) {
-    return localInvoice;
-  }
-  
-  return {
-    ...serverInvoice,
-    offline_changes: localInvoice.offline_changes || [],
-    needs_review: true
-  };
-}
-
-// Update sync status for an invoice
-async function updateSyncStatus(id, status, error = null) {
-  const db = await ensureStoreExists();
-  const tx = db.transaction([ORDERS_STORE], 'readwrite');
-  const store = tx.objectStore(ORDERS_STORE);
-  
-  const invoice = await store.get(id);
-  invoice.syncStatus = status;
-  invoice.lastSyncAttempt = Date.now();
-  
-  if (error) {
-    invoice.syncError = error.message;
-  }
-  
-  await store.put(invoice);
-}
-
-// Check storage quota
-async function checkStorageQuota() {
-  if ('storage' in navigator && 'estimate' in navigator.storage) {
-    const estimate = await navigator.storage.estimate();
-    const percentageUsed = (estimate.usage / estimate.quota) * 100;
-    
-    if (percentageUsed > 80) {
-      frappe.show_alert({
-        message: __('Offline storage is almost full. Please sync your data.'),
-        indicator: 'orange'
-      });
-    }
-  }
-}
-
-// Clean up old synced orders
-async function cleanupOldOrders() {
-  const TWO_WEEKS = 14 * 24 * 60 * 60 * 1000;
-  const db = await ensureStoreExists();
-  const tx = db.transaction([ORDERS_STORE], 'readwrite');
-  const store = tx.objectStore(ORDERS_STORE);
-  
-  const orders = await store.getAll();
-  const now = Date.now();
-  
-  for (const order of orders) {
-    if (order.synced && (now - order.syncedAt > TWO_WEEKS)) {
-      await store.delete(order.id);
-    }
-  }
-}
-
-// Update sanitizeForStorage to use compression
+// Function to sanitize invoice data for storage
 function sanitizeForStorage(invoice) {
+  // Create a deep clone of the invoice to avoid modifying the original
   const sanitized = JSON.parse(JSON.stringify({
     // Only include necessary fields with proper serialization
     doctype: invoice.doctype,
@@ -396,7 +298,7 @@ function sanitizeForStorage(invoice) {
     posa_delivery_charges_rate: invoice.posa_delivery_charges_rate || 0
   }));
   
-  return compress(JSON.stringify(sanitized));
+  return sanitized;
 }
 
 // Get all pending offline orders
@@ -693,35 +595,4 @@ export async function processPendingInvoices() {
   }
   
   return result;
-}
-
-// Update saveInvoiceOffline with retry mechanism
-const MAX_RETRIES = 3;
-const RETRY_DELAY = 1000;
-
-async function saveWithRetry(invoice, retries = 0) {
-  try {
-    // Validate invoice before saving
-    const validation = validateOfflineInvoice(invoice);
-    if (!validation.isValid) {
-      throw new Error(`Invalid invoice: ${validation.errors.join(', ')}`);
-    }
-    
-    // Check storage quota
-    await checkStorageQuota();
-    
-    // Try to save
-    const result = await saveInvoiceOffline(invoice);
-    
-    // Clean up old orders if successful
-    await cleanupOldOrders();
-    
-    return result;
-  } catch (error) {
-    if (retries < MAX_RETRIES) {
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
-      return saveWithRetry(invoice, retries + 1);
-    }
-    throw error;
-  }
 } 
