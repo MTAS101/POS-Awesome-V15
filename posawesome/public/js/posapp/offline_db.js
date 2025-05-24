@@ -437,8 +437,19 @@ export async function processPendingInvoices() {
     let successCount = 0;
     let errorCount = 0;
     
+    console.log(`Processing ${pendingOrders.length} pending orders`);
+    
     for (const order of pendingOrders) {
       try {
+        console.log('Processing order:', order.id);
+        
+        // Server expects data in a specific format
+        // The API is expecting a string that it will JSON.parse,
+        // but we need to send a proper object wrapped in a data field
+        const requestData = {
+          data: JSON.stringify(order)
+        };
+        
         // Call the server API to process the order
         const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
           method: 'POST',
@@ -446,20 +457,46 @@ export async function processPendingInvoices() {
             'Content-Type': 'application/json',
             'X-Frappe-CSRF-Token': frappe.csrf_token
           },
-          body: JSON.stringify({ data: order })
+          body: JSON.stringify(requestData)
         });
         
         if (response.ok) {
+          console.log('Successfully synced order:', order.id);
           await markOrderSynced(order.id);
           successCount++;
         } else {
-          console.error('Error syncing order:', order.id, await response.text());
+          const errorText = await response.text();
+          console.error('Error syncing order:', order.id, errorText);
+          
+          try {
+            // Try to parse error response
+            const errorJson = JSON.parse(errorText);
+            console.error('Server error details:', errorJson);
+          } catch (parseError) {
+            // If parsing fails, just log the raw text
+            console.error('Raw error response:', errorText);
+          }
+          
           errorCount++;
         }
       } catch (error) {
         console.error('Error processing pending order:', order.id, error);
         errorCount++;
       }
+    }
+    
+    if (errorCount > 0) {
+      frappe.show_alert({
+        message: __(`Failed to sync ${errorCount} offline order(s). Will retry automatically.`),
+        indicator: 'red'
+      });
+    }
+    
+    if (successCount > 0) {
+      frappe.show_alert({
+        message: __(`Successfully synchronized ${successCount} offline order(s).`),
+        indicator: 'green'
+      });
     }
     
     return {
@@ -470,6 +507,10 @@ export async function processPendingInvoices() {
     };
   } catch (error) {
     console.error('Failed to process pending invoices:', error);
+    frappe.show_alert({
+      message: __(`Error synchronizing orders: ${error.message}`),
+      indicator: 'red'
+    });
     return { success: false, error: error.message };
   }
 }
