@@ -8,7 +8,19 @@
     >
       <div class="d-flex align-center">
         <v-icon class="mr-2">mdi-wifi-off</v-icon>
-        {{ __("You are offline. Orders will be saved locally and synced when you're back online.") }}
+        <div>
+          <div>{{ __("You are offline. Orders will be saved locally.") }}</div>
+          <div class="text-caption">{{ pendingOrdersCount }} {{ __("orders pending sync") }}</div>
+        </div>
+        <v-btn
+          v-if="pendingOrdersCount > 0"
+          text
+          small
+          class="ml-4"
+          @click="showPendingOrders"
+        >
+          {{ __("View Orders") }}
+        </v-btn>
       </div>
     </v-snackbar>
     
@@ -20,7 +32,16 @@
     >
       <div class="d-flex align-center">
         <v-icon class="mr-2">mdi-wifi</v-icon>
-        {{ __("You're back online! Syncing pending orders...") }}
+        <div>
+          <div>{{ __("You're back online!") }}</div>
+          <div class="text-caption">{{ __("Syncing pending orders...") }}</div>
+        </div>
+        <v-progress-circular
+          indeterminate
+          size="20"
+          width="2"
+          class="ml-4"
+        ></v-progress-circular>
       </div>
     </v-snackbar>
     
@@ -47,87 +68,228 @@
         {{ syncErrorMessage }}
       </div>
     </v-snackbar>
+    
+    <v-dialog
+      v-model="showPendingOrdersDialog"
+      max-width="600"
+    >
+      <v-card>
+        <v-card-title>{{ __("Pending Orders") }}</v-card-title>
+        <v-card-text>
+          <v-list dense>
+            <v-list-item
+              v-for="order in pendingOrders"
+              :key="order.id"
+            >
+              <v-list-item-content>
+                <v-list-item-title>
+                  {{ order.customer }} - {{ frappe.format_currency(order.grand_total, order.currency) }}
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  {{ formatDate(order.timestamp) }}
+                  <span v-if="order.sync_attempts" class="error--text">
+                    ({{ order.sync_attempts }} {{ __("sync attempts") }})
+                  </span>
+                </v-list-item-subtitle>
+              </v-list-item-content>
+              <v-list-item-action>
+                <v-btn
+                  small
+                  text
+                  color="primary"
+                  @click="retrySync(order)"
+                  :loading="syncingOrders[order.id]"
+                  :disabled="!isOnline"
+                >
+                  {{ __("Retry") }}
+                </v-btn>
+              </v-list-item-action>
+            </v-list-item>
+          </v-list>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn
+            text
+            @click="showPendingOrdersDialog = false"
+          >
+            {{ __("Close") }}
+          </v-btn>
+          <v-btn
+            color="primary"
+            :disabled="!isOnline || !pendingOrders.length"
+            :loading="syncingAll"
+            @click="syncAllPendingOrders"
+          >
+            {{ __("Sync All") }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script>
-import { isOnline, setupConnectivityListeners, processPendingInvoices } from '../../offline_db';
+import { isOnline, setupConnectivityListeners, processPendingInvoices, getPendingOrders } from '../../offline_db';
 
 export default {
   data() {
     return {
-      isOffline: false,
+      isOffline: !isOnline(),
       showOfflineNotification: false,
       showBackOnlineNotification: false,
       showSyncSuccessNotification: false,
       showSyncErrorNotification: false,
+      showPendingOrdersDialog: false,
       syncSuccessMessage: '',
       syncErrorMessage: '',
-      cleanupFn: null
+      pendingOrders: [],
+      pendingOrdersCount: 0,
+      syncingOrders: {},
+      syncingAll: false,
+      cleanupFn: null,
+      autoSyncInterval: null
     };
   },
   methods: {
-    checkConnectivity() {
-      const online = isOnline();
-      this.isOffline = !online;
-      this.showOfflineNotification = !online;
-      
-      if (online) {
-        this.syncPendingOrders();
+    formatDate(timestamp) {
+      return frappe.datetime.prettyDate(new Date(timestamp));
+    },
+    
+    async updatePendingOrders() {
+      try {
+        this.pendingOrders = await getPendingOrders();
+        this.pendingOrdersCount = this.pendingOrders.length;
+      } catch (error) {
+        console.error('Error fetching pending orders:', error);
       }
     },
     
-    handleOffline() {
-      this.isOffline = true;
-      this.showOfflineNotification = true;
+    showPendingOrders() {
+      this.showPendingOrdersDialog = true;
     },
     
-    async handleOnline() {
-      this.isOffline = false;
-      this.showOfflineNotification = false;
-      this.showBackOnlineNotification = true;
+    async retrySync(order) {
+      if (!isOnline()) {
+        frappe.show_alert({
+          message: __('Cannot sync while offline'),
+          indicator: 'red'
+        });
+        return;
+      }
       
-      // Sync pending orders
-      await this.syncPendingOrders();
+      this.$set(this.syncingOrders, order.id, true);
+      
+      try {
+        const result = await processPendingInvoices([order]);
+        if (result.processed > 0) {
+          await this.updatePendingOrders();
+          frappe.show_alert({
+            message: __('Order synced successfully'),
+            indicator: 'green'
+          });
+        }
+      } catch (error) {
+        frappe.show_alert({
+          message: __('Failed to sync order: ') + error.message,
+          indicator: 'red'
+        });
+      } finally {
+        this.$set(this.syncingOrders, order.id, false);
+      }
     },
     
-    async syncPendingOrders() {
+    async syncAllPendingOrders() {
+      if (!isOnline()) {
+        frappe.show_alert({
+          message: __('Cannot sync while offline'),
+          indicator: 'red'
+        });
+        return;
+      }
+      
+      this.syncingAll = true;
+      
       try {
         const result = await processPendingInvoices();
+        await this.updatePendingOrders();
         
         if (result.processed > 0) {
-          this.syncSuccessMessage = __(`Successfully synced ${result.processed} offline order(s).`);
-          this.showSyncSuccessNotification = true;
+          frappe.show_alert({
+            message: __(`Successfully synced ${result.processed} orders`),
+            indicator: 'green'
+          });
         }
         
         if (result.failed > 0) {
-          this.syncErrorMessage = __(`Failed to sync ${result.failed} offline order(s). Will retry automatically.`);
-          this.showSyncErrorNotification = true;
+          frappe.show_alert({
+            message: __(`Failed to sync ${result.failed} orders`),
+            indicator: 'red'
+          });
         }
       } catch (error) {
-        console.error('Error syncing pending orders:', error);
-        this.syncErrorMessage = __('Error syncing offline orders. Will retry automatically.');
-        this.showSyncErrorNotification = true;
+        frappe.show_alert({
+          message: __('Error syncing orders: ') + error.message,
+          indicator: 'red'
+        });
+      } finally {
+        this.syncingAll = false;
+      }
+    },
+    
+    startAutoSync() {
+      // Auto-sync every 5 minutes when online
+      this.autoSyncInterval = setInterval(() => {
+        if (isOnline() && this.pendingOrdersCount > 0) {
+          this.syncAllPendingOrders();
+        }
+      }, 5 * 60 * 1000);
+    },
+    
+    stopAutoSync() {
+      if (this.autoSyncInterval) {
+        clearInterval(this.autoSyncInterval);
+        this.autoSyncInterval = null;
       }
     }
   },
-  mounted() {
-    // Check initial connectivity
-    this.checkConnectivity();
+  async mounted() {
+    // Initial pending orders check
+    await this.updatePendingOrders();
     
-    // Setup listeners for online/offline events
+    // Setup connectivity listeners
     this.cleanupFn = setupConnectivityListeners({
-      onOnline: this.handleOnline,
-      onOffline: this.handleOffline
+      onOnline: async () => {
+        this.isOffline = false;
+        this.showOfflineNotification = false;
+        this.showBackOnlineNotification = true;
+        await this.syncAllPendingOrders();
+        this.startAutoSync();
+      },
+      onOffline: () => {
+        this.isOffline = true;
+        this.showOfflineNotification = true;
+        this.stopAutoSync();
+      }
     });
+    
+    // Start auto-sync if online
+    if (isOnline()) {
+      this.startAutoSync();
+    }
+    
+    // Setup periodic pending orders check
+    setInterval(() => {
+      this.updatePendingOrders();
+    }, 30 * 1000); // Check every 30 seconds
   },
-  beforeUnmount() {
-    // Clean up listeners
+  beforeDestroy() {
     if (this.cleanupFn) {
       this.cleanupFn();
     }
+    this.stopAutoSync();
   }
-}
+};
 </script>
 
 <style scoped>

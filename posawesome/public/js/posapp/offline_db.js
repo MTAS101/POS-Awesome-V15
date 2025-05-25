@@ -426,145 +426,134 @@ export async function markOrderSynced(id) {
   }
 }
 
-// Process all pending invoices
-export async function processPendingInvoices() {
+// Enhanced retry mechanism for failed syncs
+const MAX_RETRY_ATTEMPTS = 5;
+const RETRY_DELAY_MS = 5000; // 5 seconds
+
+async function retryWithBackoff(operation, retryCount = 0) {
   try {
-    const pendingOrders = await getPendingOrders();
-    
-    if (pendingOrders.length === 0) {
-      console.log('No pending orders to process');
-      return { success: true, processed: 0 };
+    return await operation();
+  } catch (error) {
+    if (retryCount >= MAX_RETRY_ATTEMPTS) {
+      throw new Error(`Failed after ${MAX_RETRY_ATTEMPTS} attempts: ${error.message}`);
     }
     
-    let successCount = 0;
-    let errorCount = 0;
-    let errors = [];
+    const delay = RETRY_DELAY_MS * Math.pow(2, retryCount);
+    console.log(`Retry attempt ${retryCount + 1} after ${delay}ms`);
+    await new Promise(resolve => setTimeout(resolve, delay));
     
-    console.log(`Processing ${pendingOrders.length} pending orders`);
-    
-    for (const order of pendingOrders) {
-      try {
-        console.log('Processing order:', order.id);
-        
-        // All orders should be submitted, not saved as draft
-        const requestData = {
-          data: JSON.stringify(order),
-          submit: 1 // Always submit invoices when syncing from offline mode
+    return retryWithBackoff(operation, retryCount + 1);
+  }
+}
+
+// Enhanced sync process with better error handling
+export async function processPendingInvoices() {
+  if (!navigator.onLine) {
+    console.log('Device is offline, skipping sync');
+    return { processed: 0, failed: 0 };
+  }
+  
+  const pendingOrders = await getPendingOrders();
+  let processed = 0;
+  let failed = 0;
+  
+  for (const order of pendingOrders) {
+    try {
+      await retryWithBackoff(async () => {
+        // Prepare order data
+        const orderData = {
+          ...order,
+          offline_sync: true,
+          sync_attempt: (order.sync_attempts || 0) + 1
         };
         
-        console.log('Sending order with submit flag enabled');
-        
-        // Call the server API to process the order
-        const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Frappe-CSRF-Token': frappe.csrf_token
-          },
-          body: JSON.stringify(requestData)
+        // Submit to server
+        const response = await frappe.call({
+          method: 'posawesome.posawesome.api.submit_invoice',
+          args: { invoice: orderData },
+          freeze: false
         });
         
-        if (response.ok) {
-          const result = await response.json();
-          console.log('Successfully synced order:', order.id, result);
-          await markOrderSynced(order.id);
-          successCount++;
-          
-          // Update UI to show sync success
-          window.dispatchEvent(new CustomEvent('invoice-synced', {
-            detail: { 
-              success: true,
-              invoice: result.message || result
-            }
-          }));
-        } else {
-          const errorText = await response.text();
-          console.error('Error syncing order:', order.id, errorText);
-          
-          try {
-            // Try to parse error response
-            const errorJson = JSON.parse(errorText);
-            errors.push({
-              orderId: order.id,
-              error: errorJson.message || errorJson._server_messages || errorText
-            });
-          } catch (parseError) {
-            // If parsing fails, just log the raw text
-            errors.push({
-              orderId: order.id,
-              error: errorText
-            });
-          }
-          
-          errorCount++;
-          
-          // Update UI to show sync error
-          window.dispatchEvent(new CustomEvent('invoice-sync-failed', {
-            detail: {
-              orderId: order.id,
-              error: errorText
-            }
-          }));
+        if (!response || !response.message || response.message.error) {
+          throw new Error(response?.message?.error || 'Invalid server response');
         }
-      } catch (error) {
-        console.error('Error processing pending order:', order.id, error);
-        errors.push({
-          orderId: order.id,
-          error: error.message
-        });
-        errorCount++;
         
-        // Update UI to show sync error
-        window.dispatchEvent(new CustomEvent('invoice-sync-failed', {
-          detail: {
-            orderId: order.id,
-            error: error.message
-          }
-        }));
+        // Mark as synced in IndexedDB
+        await markOrderAsSynced(order.id);
+        processed++;
+        
+        // Notify success
+        frappe.show_alert({
+          message: __('Order synced successfully'),
+          indicator: 'green'
+        });
+      });
+    } catch (error) {
+      console.error(`Failed to sync order ${order.id}:`, error);
+      failed++;
+      
+      // Update sync attempt count
+      try {
+        await updateSyncAttempt(order.id);
+      } catch (updateError) {
+        console.error('Error updating sync attempt:', updateError);
       }
     }
-    
-    // Update offline queue count
-    window.dispatchEvent(new CustomEvent('offline-queue-updated', {
-      detail: { count: await getPendingOrdersCount() }
-    }));
-    
-    if (errorCount > 0) {
-      frappe.show_alert({
-        message: __(`Failed to sync ${errorCount} offline order(s). Will retry automatically.`),
-        indicator: 'red'
-      });
-    }
-    
-    if (successCount > 0) {
-      frappe.show_alert({
-        message: __(`Successfully synchronized ${successCount} offline order(s).`),
-        indicator: 'green'
-      });
-    }
-    
-    return {
-      success: errorCount === 0,
-      processed: successCount,
-      failed: errorCount,
-      total: pendingOrders.length,
-      errors: errors
-    };
-  } catch (error) {
-    console.error('Failed to process pending invoices:', error);
-    frappe.show_alert({
-      message: __(`Error synchronizing orders: ${error.message}`),
-      indicator: 'red'
-    });
-    return { 
-      success: false, 
-      error: error.message,
-      errors: [{
-        orderId: 'general',
-        error: error.message
-      }]
-    };
   }
+  
+  return { processed, failed };
+}
+
+// Update sync attempt count
+async function updateSyncAttempt(orderId) {
+  const db = await ensureStoreExists();
+  
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([ORDERS_STORE], 'readwrite');
+    const store = transaction.objectStore(ORDERS_STORE);
+    
+    const request = store.get(orderId);
+    
+    request.onsuccess = () => {
+      const order = request.result;
+      if (order) {
+        order.sync_attempts = (order.sync_attempts || 0) + 1;
+        order.last_sync_attempt = Date.now();
+        
+        store.put(order).onsuccess = () => resolve();
+      } else {
+        reject(new Error('Order not found'));
+      }
+    };
+    
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Mark order as synced
+async function markOrderAsSynced(orderId) {
+  const db = await ensureStoreExists();
+  
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction([ORDERS_STORE], 'readwrite');
+    const store = transaction.objectStore(ORDERS_STORE);
+    
+    const request = store.get(orderId);
+    
+    request.onsuccess = () => {
+      const order = request.result;
+      if (order) {
+        order.synced = true;
+        order.sync_date = Date.now();
+        
+        store.put(order).onsuccess = () => resolve();
+      } else {
+        reject(new Error('Order not found'));
+      }
+    };
+    
+    request.onerror = () => reject(request.error);
+  });
 }
 
 // Get count of pending orders

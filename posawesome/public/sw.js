@@ -83,20 +83,38 @@ if (workbox) {
     })
   );
   
-  // Handle API requests with Network First strategy
+  // Cache API responses with a stale-while-revalidate strategy for better offline performance
   workbox.routing.registerRoute(
-    new RegExp('/api/.*'),
-    new workbox.strategies.NetworkFirst({
-      cacheName: 'api-cache',
+    new RegExp('/api/method/(?!posawesome).*'),  // All API routes except posawesome
+    new workbox.strategies.StaleWhileRevalidate({
+      cacheName: 'api-general-cache',
       plugins: [
         new workbox.expiration.ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 24 * 60 * 60, // 1 Day
+          maxEntries: 100,
+          maxAgeSeconds: 12 * 60 * 60, // 12 Hours
         }),
         new workbox.cacheableResponse.CacheableResponsePlugin({
           statuses: [0, 200],
         }),
       ],
+    })
+  );
+  
+  // Specific cache for frequently accessed POS data
+  workbox.routing.registerRoute(
+    new RegExp('/api/method/posawesome.*'),
+    new workbox.strategies.NetworkFirst({
+      cacheName: 'pos-api-cache',
+      plugins: [
+        new workbox.expiration.ExpirationPlugin({
+          maxEntries: 200,
+          maxAgeSeconds: 4 * 60 * 60, // 4 Hours
+        }),
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [0, 200],
+        }),
+      ],
+      networkTimeoutSeconds: 3,  // Fallback to cache if network is slow
     })
   );
   
