@@ -1597,34 +1597,56 @@ export default {
     isOfflineMode() {
       return !navigator.onLine || (this.invoice_doc && this.invoice_doc.offline_mode);
     },
-    // Handle offline payment submission with locking
+    // Handle offline payment submission with strict locking
     async handleOfflineSubmission() {
-      const lockKey = 'invoice_submission_lock';
+      const lockKey = `invoice_submission_lock_${Date.now()}`;
+      const syncKey = 'sync_in_progress';
       
       try {
-        // Check if submission is already in progress
-        if (localStorage.getItem(lockKey)) {
+        // Check if sync is in progress
+        if (localStorage.getItem(syncKey)) {
           this.eventBus.emit("show_message", {
-            title: __("Another submission is in progress. Please wait."),
+            title: __("Sync is in progress. Please wait."),
             color: "warning",
           });
           return;
         }
 
-        // Set submission lock
-        localStorage.setItem(lockKey, 'true');
+        // Check if any submission is in progress
+        const existingLock = localStorage.getItem('invoice_submission_lock');
+        if (existingLock) {
+          const lockTime = parseInt(existingLock.split('_').pop());
+          // If lock is older than 5 minutes, clear it
+          if (Date.now() - lockTime > 300000) {
+            localStorage.removeItem('invoice_submission_lock');
+          } else {
+            this.eventBus.emit("show_message", {
+              title: __("Another submission is in progress. Please wait."),
+              color: "warning",
+            });
+            return;
+          }
+        }
+
+        // Set submission lock with timestamp
+        localStorage.setItem('invoice_submission_lock', lockKey);
         
-        // Generate a unique offline ID
-        const offlineId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        // Generate a unique offline ID with timestamp and random string
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 15);
+        const offlineId = `${timestamp}_${randomStr}_${this.invoice_doc.name || 'new'}`;
         
         // Check if this invoice was already submitted
         const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
-        if (submittedInvoices.includes(offlineId)) {
+        if (submittedInvoices.some(inv => inv.includes(this.invoice_doc.name))) {
           throw new Error('This invoice was already submitted');
         }
 
+        // Generate hash for duplicate detection
+        const invoiceHash = await this.generateInvoiceHash(this.invoice_doc);
+
         // Check IndexedDB for duplicate invoice
-        const existingInvoice = await this.checkDuplicateInvoice(this.invoice_doc);
+        const existingInvoice = await this.checkDuplicateInvoice(invoiceHash);
         if (existingInvoice) {
           throw new Error('A similar invoice was already submitted');
         }
@@ -1642,14 +1664,21 @@ export default {
           sync_status: 'pending',
           created_at: new Date().toISOString(),
           submitted: false,
-          invoice_hash: await this.generateInvoiceHash(this.invoice_doc)
+          invoice_hash: invoiceHash,
+          attempt_count: 0,
+          last_attempt: null
         };
 
-        // Save to IndexedDB with transaction
+        // Save to IndexedDB with strict transaction
         await this.saveInvoiceOffline(offlineInvoice);
 
-        // Add to submitted invoices only after successful save
-        submittedInvoices.push(offlineId);
+        // Add to submitted invoices with full details
+        submittedInvoices.push({
+          id: offlineId,
+          hash: invoiceHash,
+          timestamp: timestamp,
+          name: this.invoice_doc.name
+        });
         localStorage.setItem('submitted_offline_invoices', JSON.stringify(submittedInvoices));
 
         // Update UI
@@ -1664,11 +1693,11 @@ export default {
         // Update offline queue count
         window.dispatchEvent(new CustomEvent('offline-queue-updated'));
 
-        // Request background sync
+        // Request background sync with retry limit
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           try {
             const registration = await navigator.serviceWorker.ready;
-            await registration.sync.register('sync-invoices');
+            await registration.sync.register(`sync-invoice-${offlineId}`);
           } catch (err) {
             console.warn('Background sync registration failed:', err);
           }
@@ -1681,41 +1710,12 @@ export default {
           color: "error",
         });
       } finally {
-        // Always remove the lock
-        localStorage.removeItem(lockKey);
+        // Remove the lock
+        localStorage.removeItem('invoice_submission_lock');
       }
     },
-    // Reset form after submission
-    resetForm() {
-      this.customer_credit_dict = [];
-      this.redeem_customer_credit = false;
-      this.is_cashback = true;
-      this.sales_person = "";
-      this.eventBus.emit("clear_invoice");
-      this.eventBus.emit("reset_posting_date");
-      this.back_to_invoice();
-    },
-    // Generate hash for invoice comparison
-    async generateInvoiceHash(invoice) {
-      const relevantData = {
-        customer: invoice.customer,
-        total: invoice.total,
-        items: invoice.items.map(item => ({
-          item_code: item.item_code,
-          qty: item.qty,
-          rate: item.rate
-        }))
-      };
-      const text = JSON.stringify(relevantData);
-      const msgBuffer = new TextEncoder().encode(text);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    },
-    // Check for duplicate invoice in IndexedDB
-    async checkDuplicateInvoice(invoice) {
-      const hash = await this.generateInvoiceHash(invoice);
-      
+    // Check for duplicate invoice in IndexedDB with strict hash comparison
+    async checkDuplicateInvoice(hash) {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open('POS_DB', 1);
 
@@ -1725,24 +1725,20 @@ export default {
           const db = event.target.result;
           const transaction = db.transaction(['invoices'], 'readonly');
           const store = transaction.objectStore('invoices');
-          const request = store.openCursor();
+          
+          // Use index for faster search
+          const index = store.index('invoice_hash');
+          const request = index.get(hash);
           
           request.onsuccess = (e) => {
-            const cursor = e.target.result;
-            if (cursor) {
-              if (cursor.value.invoice_hash === hash) {
-                resolve(true);
-              } else {
-                cursor.continue();
-              }
-            } else {
-              resolve(false);
-            }
+            resolve(!!e.target.result); // Return true if duplicate found
           };
+          
+          request.onerror = () => reject(new Error('Failed to check for duplicates'));
         };
       });
     },
-    // Save invoice to IndexedDB with transaction
+    // Save invoice to IndexedDB with strict transaction control
     async saveInvoiceOffline(invoice) {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open('POS_DB', 1);
@@ -1753,28 +1749,35 @@ export default {
           const db = event.target.result;
           const transaction = db.transaction(['invoices'], 'readwrite');
           
-          // Add transaction error handling
+          transaction.oncomplete = () => resolve();
           transaction.onerror = () => reject(new Error('Transaction failed'));
           transaction.onabort = () => reject(new Error('Transaction aborted'));
           
           const store = transaction.objectStore('invoices');
-
-          // Check for existing invoice
-          const getRequest = store.get(invoice.offline_id);
           
-          getRequest.onsuccess = (e) => {
-            if (e.target.result) {
+          try {
+            // Double check for duplicates
+            const existingHash = await this.checkDuplicateInvoice(invoice.invoice_hash);
+            if (existingHash) {
               transaction.abort();
-              reject(new Error('Invoice already exists'));
-            } else {
-              const saveRequest = store.add(invoice);
-              saveRequest.onsuccess = () => resolve();
-              saveRequest.onerror = () => {
-                transaction.abort();
-                reject(new Error('Failed to save invoice'));
-              };
+              reject(new Error('Duplicate invoice detected'));
+              return;
             }
-          };
+
+            // Check for existing invoice by ID
+            const getRequest = store.get(invoice.offline_id);
+            getRequest.onsuccess = (e) => {
+              if (e.target.result) {
+                transaction.abort();
+                reject(new Error('Invoice already exists'));
+              } else {
+                store.add(invoice);
+              }
+            };
+          } catch (error) {
+            transaction.abort();
+            reject(error);
+          }
         };
 
         request.onupgradeneeded = (event) => {
@@ -1784,7 +1787,9 @@ export default {
             store.createIndex('sync_status', 'sync_status');
             store.createIndex('created_at', 'created_at');
             store.createIndex('submitted', 'submitted');
-            store.createIndex('invoice_hash', 'invoice_hash');
+            store.createIndex('invoice_hash', 'invoice_hash', { unique: true });
+            store.createIndex('attempt_count', 'attempt_count');
+            store.createIndex('last_attempt', 'last_attempt');
           }
         };
       });
