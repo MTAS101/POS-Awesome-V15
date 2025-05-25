@@ -1425,6 +1425,105 @@ export default {
     get_change_amount() {
       return Math.max(0, this.total_payments - this.invoice_doc.grand_total);
     },
+    async submit_dialog() {
+      if (this.isProcessing) return;
+      this.isProcessing = true;
+
+      try {
+        // Validation checks
+        if (!this.invoice_doc.customer) {
+          throw new Error(__("Please select a customer"));
+        }
+
+        if (!this.validate_payments()) {
+          throw new Error(__("Payment validation failed"));
+        }
+
+        // Show payment dialog first
+        this.eventBus.emit("show_payment", true);
+        
+        // Check if we're in offline mode
+        if (this.isOffline) {
+          // Wait for payment dialog to be filled
+          this.eventBus.once("payment_submitted", async () => {
+            await this.handleOfflineSubmission();
+          });
+          return;
+        }
+
+        // For online mode, proceed with regular submission
+        const payments = this.process_payments();
+        if (payments.length === 0) {
+          throw new Error(__("No payment methods selected"));
+        }
+
+        // Process the payment
+        const res = await this.submit_invoice(payments);
+        if (res) {
+          this.eventBus.emit("show_payment", false);
+          this.eventBus.emit("show_message", {
+            title: __("Payment processed successfully"),
+            color: "success"
+          });
+          this.eventBus.emit("payment_completed", { success: true });
+        }
+
+      } catch (error) {
+        this.eventBus.emit("show_message", {
+          title: error.message,
+          color: "error"
+        });
+        // Close payment dialog on error
+        this.eventBus.emit("show_payment", false);
+      } finally {
+        this.isProcessing = false;
+      }
+    },
+    async handleOfflineSubmission() {
+      console.log('Processing offline payment submission');
+      
+      try {
+        // Validate offline payment
+        if (!this.validate_payments()) {
+          throw new Error(__("Payment validation failed"));
+        }
+
+        // Prepare and save invoice data
+        const invoice = this.prepare_invoice_data();
+        const result = await saveInvoiceOffline(invoice);
+
+        if (result) {
+          // Close payment dialog
+          this.eventBus.emit("show_payment", false);
+          
+          // Show success message
+          this.eventBus.emit("show_message", {
+            title: __("Invoice saved offline and will be processed when online"),
+            color: "success"
+          });
+          
+          // Clear the invoice view
+          this.eventBus.emit("clear_invoice");
+
+          // Emit payment completed event
+          this.eventBus.emit("payment_completed", {
+            success: true,
+            offline: true,
+            invoice_id: result
+          });
+        } else {
+          throw new Error(__("Failed to save invoice offline"));
+        }
+      } catch (error) {
+        console.error('Error in offline submission:', error);
+        this.eventBus.emit("show_message", {
+          title: error.message,
+          color: "error"
+        });
+        // Close payment dialog on error
+        this.eventBus.emit("show_payment", false);
+      }
+    },
     async process_offline() {
       console.log('Processing offline payment');
       
@@ -1575,70 +1674,9 @@ export default {
         timeout = setTimeout(later, wait);
       };
     },
-    async submit_dialog() {
-      if (this.isProcessing) return;
-      this.isProcessing = true;
-
-      try {
-        // Validation checks
-        if (!this.invoice_doc.customer) {
-          throw new Error(__("Please select a customer"));
-        }
-
-        if (!this.validate_payments()) {
-          throw new Error(__("Payment validation failed"));
-        }
-
-        // Check if we're in offline mode
-        if (this.isOffline) {
-          this.handleOfflineSubmission();
-          return;
-        }
-
-        // For online mode, proceed with regular submission
-        const payments = this.process_payments();
-        if (payments.length === 0) {
-          throw new Error(__("No payment methods selected"));
-        }
-
-        // Process the payment
-        const res = await this.submit_invoice(payments);
-        if (res) {
-          this.eventBus.emit("show_payment", false);
-          this.eventBus.emit("show_message", {
-            title: __("Payment processed successfully"),
-            color: "success"
-          });
-          this.eventBus.emit("payment_completed", { success: true });
-        }
-
-      } catch (error) {
-        this.eventBus.emit("show_message", {
-          title: error.message,
-          color: "error"
-        });
-      } finally {
-        this.isProcessing = false;
-      }
-    },
     checkOfflineStatus() {
       this.isOffline = !navigator.onLine;
       console.log('Offline status:', this.isOffline);
-    },
-    handleOfflineSubmission() {
-      console.log('Processing offline payment submission');
-      
-      // For offline mode, show a success message and clear without redirect
-      this.eventBus.emit("show_message", {
-        title: __("Invoice saved offline and will be processed when online"),
-        color: "success"
-      });
-      
-      // Close the payment dialog
-      this.eventBus.emit("show_payment", false);
-      
-      // Clear the invoice view without trying to navigate
-      this.eventBus.emit("clear_invoice");
     },
     async process_payment() {
       if (this.isProcessing) {
