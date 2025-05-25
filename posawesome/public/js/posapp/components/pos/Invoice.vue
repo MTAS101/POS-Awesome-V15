@@ -1684,9 +1684,7 @@ export default {
         if (isOfflineMode) {
           invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
           invoice_doc.is_pos = 1;
-          invoice_doc.update_stock = 1;
-          invoice_doc.offline_mode = true;
-          invoice_doc.offline_submit = true;
+          invoice_doc.offline_submit = true; // Flag to indicate this should be submitted when synced
         }
 
         // Handle return invoices

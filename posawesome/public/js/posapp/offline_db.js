@@ -157,13 +157,11 @@ export async function saveInvoiceOffline(invoice) {
       // Sanitize the invoice to remove non-serializable data and circular references
       const sanitizedInvoice = sanitizeForStorage(invoice);
       
-      // Add timestamp for sorting/tracking and set offline_submit flag to true
-      // so invoice will be submitted when synced online, not saved as draft
+      // Add timestamp for sorting/tracking
       const order = {
         ...sanitizedInvoice,
         timestamp: Date.now(),
-        synced: false,
-        offline_submit: true // Always set to true to ensure invoice is submitted when synced
+        synced: false
       };
       
       const request = store.add(order);
@@ -467,85 +465,64 @@ const connectivityService = {
 
     for (const syncFn of pendingSyncs) {
       try {
-        await syncFn();
+        console.log('Processing order:', order.id);
+        
+        // Check if this invoice should be submitted (not just saved as draft)
+        const shouldSubmit = order.offline_submit === true;
+        
+        // Server expects data in a specific format
+        // The API is expecting a string that it will JSON.parse,
+        // but we need to send a proper object wrapped in a data field
+        const requestData = {
+          data: JSON.stringify(order),
+          submit: shouldSubmit ? 1 : 0  // Add submit flag if this should be submitted
+        };
+        
+        console.log('Sending order with submit flag:', shouldSubmit);
+        
+        // Call the server API to process the order
+        const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Frappe-CSRF-Token': frappe.csrf_token
+          },
+          body: JSON.stringify(requestData)
+        });
+        
+        if (response.ok) {
+          console.log('Successfully synced order:', order.id);
+          await markOrderSynced(order.id);
+          successCount++;
+        } else {
+          const errorText = await response.text();
+          console.error('Error syncing order:', order.id, errorText);
+          
+          try {
+            // Try to parse error response
+            const errorJson = JSON.parse(errorText);
+            console.error('Server error details:', errorJson);
+          } catch (parseError) {
+            // If parsing fails, just log the raw text
+            console.error('Raw error response:', errorText);
+          }
+          
+          errorCount++;
+        }
       } catch (error) {
-        console.error('Sync failed:', error);
-        this.pendingSyncs.add(syncFn);
+        console.error('Error processing pending order:', order.id, error);
+        errorCount++;
       }
     }
-  },
-
-  addPendingSync(syncFn) {
-    this.pendingSyncs.add(syncFn);
-    if (this.isOnline) {
-      this.processPendingSyncs();
+    
+    if (errorCount > 0) {
+      frappe.show_alert({
+        message: __(`Failed to sync ${errorCount} offline order(s). Will retry automatically.`),
+        indicator: 'red'
+      });
     }
-  }
-};
-
-// Initialize connectivity service
-connectivityService.init();
-
-// Export connectivity service
-export const ConnectivityService = connectivityService;
-
-// Update existing setupConnectivityListeners function
-export function setupConnectivityListeners(callbacks = {}) {
-  const handleStatus = (status) => {
-    if (status === 'online' && callbacks.onOnline) {
-      callbacks.onOnline();
-    } else if (status === 'offline' && callbacks.onOffline) {
-      callbacks.onOffline();
-    }
-  };
-
-  return ConnectivityService.addListener(handleStatus);
-}
-
-// Export isOnline function that uses the service
-export function isOnline() {
-  return ConnectivityService.isOnline;
-}
-
-// Function to submit an invoice to the server
-async function submitInvoice(invoice) {
-  try {
-    // Prepare the invoice data for submission
-    const requestData = {
-      data: JSON.stringify({
-        ...invoice,
-        is_pos: 1,  // Force this to be a POS invoice
-        update_stock: 1,  // Ensure stock is updated
-        offline_submit: true // Flag to indicate this is an offline submission
-      }),
-      submit: 1,  // Always submit invoices when syncing from offline mode
-      include_payments: 1  // Make sure payments are included
-    };
-
-    // Call the server API to process the invoice
-    const response = await fetch('/api/method/posawesome.posawesome.api.posapp.update_invoice', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Frappe-CSRF-Token': frappe.csrf_token
-      },
-      body: JSON.stringify(requestData)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Server error response:', errorText);
-      throw new Error(`Server error: ${errorText}`);
-    }
-
-    const responseData = await response.json();
-    console.log('Server response:', responseData);
-
-    if (responseData.message?.name) {
-      // Mark the invoice as synced in IndexedDB
-      await markOrderSynced(invoice.id);
-      
-      // Show success message
+    
+    if (successCount > 0) {
       frappe.show_alert({
         message: __(`Invoice ${responseData.message.name} created and submitted`),
         indicator: 'green'
