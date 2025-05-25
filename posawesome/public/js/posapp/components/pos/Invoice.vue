@@ -1551,8 +1551,10 @@ export default {
           
           // Now show offline message
           this.eventBus.emit('show_message', {
-            title: __('Processing in offline mode...'),
-            color: 'info'
+            title: __('Invoice will be saved offline and synced when online'),
+            message: __('Please complete the payment process'),
+            color: 'info',
+            timeout: 4000
           });
           
           // Add offline flags
