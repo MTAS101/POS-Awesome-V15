@@ -1412,37 +1412,188 @@ export default {
           break;
       }
     },
+    // Handle offline payment submission with queue system
+    async handleOfflineSubmission() {
+      const queueKey = 'pos_invoice_queue';
+      const processingKey = 'pos_invoice_processing';
+      
+      try {
+        // Check if already processing
+        if (localStorage.getItem(processingKey)) {
+          this.eventBus.emit("show_message", {
+            title: __("Another invoice is being processed. Please wait."),
+            color: "warning",
+          });
+          return;
+        }
+
+        // Set processing flag
+        localStorage.setItem(processingKey, 'true');
+
+        // Generate unique ID
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 15);
+        const offlineId = `${timestamp}_${randomStr}_${this.invoice_doc.name || 'new'}`;
+
+        // Check queue for duplicates
+        const queue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+        const isDuplicate = queue.some(item => 
+          item.invoice_doc && 
+          item.invoice_doc.name === this.invoice_doc.name
+        );
+
+        if (isDuplicate) {
+          throw new Error('This invoice is already in the queue');
+        }
+
+        // Create queue item
+        const queueItem = {
+          id: offlineId,
+          timestamp: timestamp,
+          status: 'pending',
+          attempts: 0,
+          lastAttempt: null,
+          invoice_doc: this.invoice_doc,
+          payment_data: {
+            total_change: !this.invoice_doc.is_return ? -this.diff_payment : 0,
+            paid_change: !this.invoice_doc.is_return ? this.paid_change : 0,
+            credit_change: -this.credit_change,
+            redeemed_customer_credit: this.redeemed_customer_credit,
+            customer_credit_dict: this.customer_credit_dict,
+            is_cashback: this.is_cashback
+          }
+        };
+
+        // Add to queue
+        queue.push(queueItem);
+        localStorage.setItem(queueKey, JSON.stringify(queue));
+
+        // Update UI
+        this.eventBus.emit("show_message", {
+          title: __("Invoice queued for processing"),
+          color: "success",
+        });
+
+        // Clear form
+        this.resetForm();
+
+        // Start processing if online
+        if (navigator.onLine) {
+          this.processQueue();
+        }
+
+      } catch (error) {
+        console.error('Error in offline submission:', error);
+        this.eventBus.emit("show_message", {
+          title: __("Error: ") + error.message,
+          color: "error",
+        });
+      } finally {
+        localStorage.removeItem(processingKey);
+      }
+    },
+
+    // Process the queue
+    async processQueue() {
+      const queueKey = 'pos_invoice_queue';
+      const processingKey = 'pos_invoice_processing';
+      
+      if (!navigator.onLine || localStorage.getItem(processingKey)) {
+        return;
+      }
+
+      try {
+        localStorage.setItem(processingKey, 'true');
+        
+        const queue = JSON.parse(localStorage.getItem(queueKey) || '[]');
+        if (queue.length === 0) {
+          return;
+        }
+
+        // Process each item sequentially
+        for (let i = 0; i < queue.length; i++) {
+          const item = queue[i];
+          
+          // Skip if too many attempts
+          if (item.attempts >= 3) {
+            const timeSinceLastAttempt = Date.now() - (new Date(item.lastAttempt || 0)).getTime();
+            if (timeSinceLastAttempt < 300000) { // 5 minutes
+              continue;
+            }
+          }
+
+          try {
+            // Update attempt info
+            item.attempts++;
+            item.lastAttempt = new Date().toISOString();
+            item.status = 'processing';
+            queue[i] = item;
+            localStorage.setItem(queueKey, JSON.stringify(queue));
+
+            // Submit to server
+            const response = await this.submitQueuedInvoice(item);
+
+            if (response.message) {
+              // Success - remove from queue
+              queue.splice(i, 1);
+              i--; // Adjust index
+              localStorage.setItem(queueKey, JSON.stringify(queue));
+
+              this.eventBus.emit("show_message", {
+                title: __("Invoice {0} processed successfully", [response.message.name]),
+                color: "success",
+              });
+            }
+          } catch (error) {
+            console.error('Error processing queue item:', error);
+            
+            // Update status
+            item.status = 'error';
+            item.error = error.message;
+            queue[i] = item;
+            localStorage.setItem(queueKey, JSON.stringify(queue));
+
+            this.eventBus.emit("show_message", {
+              title: __("Error processing invoice: ") + error.message,
+              color: "error",
+            });
+          }
+        }
+      } finally {
+        localStorage.removeItem(processingKey);
+      }
+    },
+
+    // Submit a queued invoice
+    async submitQueuedInvoice(queueItem) {
+      return new Promise((resolve, reject) => {
+        frappe.call({
+          method: "posawesome.posawesome.api.posapp.submit_invoice",
+          args: {
+            invoice: queueItem.invoice_doc,
+            data: queueItem.payment_data
+          },
+          callback: function(r) {
+            if (r.exc) {
+              reject(new Error(r.exc));
+            } else {
+              resolve(r);
+            }
+          }
+        });
+      });
+    },
+
     // Enhanced online handler
     async handleOnline() {
-      // Clear any existing sync locks that might be stale
-      if ('caches' in window) {
-        try {
-          const cache = await caches.open('sync-locks');
-          const keys = await cache.keys();
-          await Promise.all(keys.map(key => cache.delete(key)));
-        } catch (error) {
-          console.warn('Error clearing sync locks:', error);
-        }
-      }
-
-      // Trigger sync for any pending invoices
-      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        try {
-          const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
-          for (const invoice of submittedInvoices) {
-            const offlineId = typeof invoice === 'string' ? invoice : invoice.id;
-            const registration = await navigator.serviceWorker.ready;
-            await registration.sync.register(`sync-invoice-${offlineId}`);
-          }
-        } catch (error) {
-          console.warn('Error registering syncs:', error);
-        }
-      }
-
+      // Process any queued invoices
+      this.processQueue();
+      
       // Refresh data
       this.get_addresses();
       this.get_sales_person_names();
     },
+
     // Handle offline mode
     handleOffline() {
       this.eventBus.emit("show_message", {
@@ -1659,203 +1810,6 @@ export default {
     // Add offline mode detection
     isOfflineMode() {
       return !navigator.onLine || (this.invoice_doc && this.invoice_doc.offline_mode);
-    },
-    // Handle offline payment submission with strict locking
-    async handleOfflineSubmission() {
-      const lockKey = `invoice_submission_lock_${Date.now()}`;
-      const syncKey = 'sync_in_progress';
-      
-      try {
-        // Check if sync is in progress
-        if (localStorage.getItem(syncKey)) {
-          this.eventBus.emit("show_message", {
-            title: __("Sync is in progress. Please wait."),
-            color: "warning",
-          });
-          return;
-        }
-
-        // Check if any submission is in progress
-        const existingLock = localStorage.getItem('invoice_submission_lock');
-        if (existingLock) {
-          const lockTime = parseInt(existingLock.split('_').pop());
-          // If lock is older than 5 minutes, clear it
-          if (Date.now() - lockTime > 300000) {
-            localStorage.removeItem('invoice_submission_lock');
-          } else {
-            this.eventBus.emit("show_message", {
-              title: __("Another submission is in progress. Please wait."),
-              color: "warning",
-            });
-            return;
-          }
-        }
-
-        // Set submission lock with timestamp
-        localStorage.setItem('invoice_submission_lock', lockKey);
-        
-        // Generate a unique offline ID with timestamp and random string
-        const timestamp = Date.now();
-        const randomStr = Math.random().toString(36).substring(2, 15);
-        const offlineId = `${timestamp}_${randomStr}_${this.invoice_doc.name || 'new'}`;
-        
-        // Check if this invoice was already submitted
-        const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
-        if (submittedInvoices.some(inv => inv.includes(this.invoice_doc.name))) {
-          throw new Error('This invoice was already submitted');
-        }
-
-        // Generate hash for duplicate detection
-        const invoiceHash = await this.generateInvoiceHash(this.invoice_doc);
-
-        // Check IndexedDB for duplicate invoice
-        const existingInvoice = await this.checkDuplicateInvoice(invoiceHash);
-        if (existingInvoice) {
-          throw new Error('A similar invoice was already submitted');
-        }
-        
-        const offlineInvoice = {
-          ...this.invoice_doc,
-          offline_mode: true,
-          offline_id: offlineId,
-          total_change: !this.invoice_doc.is_return ? -this.diff_payment : 0,
-          paid_change: !this.invoice_doc.is_return ? this.paid_change : 0,
-          credit_change: -this.credit_change,
-          redeemed_customer_credit: this.redeemed_customer_credit,
-          customer_credit_dict: this.customer_credit_dict,
-          is_cashback: this.is_cashback,
-          sync_status: 'pending',
-          created_at: new Date().toISOString(),
-          submitted: false,
-          invoice_hash: invoiceHash,
-          attempt_count: 0,
-          last_attempt: null
-        };
-
-        // Save to IndexedDB with strict transaction
-        await this.saveInvoiceOffline(offlineInvoice);
-
-        // Add to submitted invoices with full details
-        submittedInvoices.push({
-          id: offlineId,
-          hash: invoiceHash,
-          timestamp: timestamp,
-          name: this.invoice_doc.name
-        });
-        localStorage.setItem('submitted_offline_invoices', JSON.stringify(submittedInvoices));
-
-        // Update UI
-        this.eventBus.emit("show_message", {
-          title: __("Invoice saved offline. Will sync when online."),
-          color: "success",
-        });
-
-        // Clear form and reset
-        this.resetForm();
-
-        // Update offline queue count
-        window.dispatchEvent(new CustomEvent('offline-queue-updated'));
-
-        // Request background sync with retry limit
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-          try {
-            const registration = await navigator.serviceWorker.ready;
-            await registration.sync.register(`sync-invoice-${offlineId}`);
-          } catch (err) {
-            console.warn('Background sync registration failed:', err);
-          }
-        }
-
-      } catch (error) {
-        console.error('Error in offline submission:', error);
-        this.eventBus.emit("show_message", {
-          title: __("Error saving invoice offline: ") + error.message,
-          color: "error",
-        });
-      } finally {
-        // Remove the lock
-        localStorage.removeItem('invoice_submission_lock');
-      }
-    },
-    // Check for duplicate invoice in IndexedDB with strict hash comparison
-    async checkDuplicateInvoice(hash) {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open('POS_DB', 1);
-
-        request.onerror = () => reject(new Error('Failed to open database'));
-
-        request.onsuccess = (event) => {
-          const db = event.target.result;
-          const transaction = db.transaction(['invoices'], 'readonly');
-          const store = transaction.objectStore('invoices');
-          
-          // Use index for faster search
-          const index = store.index('invoice_hash');
-          const request = index.get(hash);
-          
-          request.onsuccess = (e) => {
-            resolve(!!e.target.result); // Return true if duplicate found
-          };
-          
-          request.onerror = () => reject(new Error('Failed to check for duplicates'));
-        };
-      });
-    },
-    // Save invoice to IndexedDB with strict transaction control
-    async saveInvoiceOffline(invoice) {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open('POS_DB', 1);
-
-        request.onerror = () => reject(new Error('Failed to open database'));
-
-        request.onsuccess = async (event) => {
-          const db = event.target.result;
-          const transaction = db.transaction(['invoices'], 'readwrite');
-          
-          transaction.oncomplete = () => resolve();
-          transaction.onerror = () => reject(new Error('Transaction failed'));
-          transaction.onabort = () => reject(new Error('Transaction aborted'));
-          
-          const store = transaction.objectStore('invoices');
-          
-          try {
-            // Double check for duplicates
-            const existingHash = await this.checkDuplicateInvoice(invoice.invoice_hash);
-            if (existingHash) {
-              transaction.abort();
-              reject(new Error('Duplicate invoice detected'));
-              return;
-            }
-
-            // Check for existing invoice by ID
-            const getRequest = store.get(invoice.offline_id);
-            getRequest.onsuccess = (e) => {
-              if (e.target.result) {
-                transaction.abort();
-                reject(new Error('Invoice already exists'));
-              } else {
-                store.add(invoice);
-              }
-            };
-          } catch (error) {
-            transaction.abort();
-            reject(error);
-          }
-        };
-
-        request.onupgradeneeded = (event) => {
-          const db = event.target.result;
-          if (!db.objectStoreNames.contains('invoices')) {
-            const store = db.createObjectStore('invoices', { keyPath: 'offline_id' });
-            store.createIndex('sync_status', 'sync_status');
-            store.createIndex('created_at', 'created_at');
-            store.createIndex('submitted', 'submitted');
-            store.createIndex('invoice_hash', 'invoice_hash', { unique: true });
-            store.createIndex('attempt_count', 'attempt_count');
-            store.createIndex('last_attempt', 'last_attempt');
-          }
-        };
-      });
     },
   },
   // Lifecycle hook: created
