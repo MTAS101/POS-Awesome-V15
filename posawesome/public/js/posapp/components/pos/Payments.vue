@@ -1252,13 +1252,32 @@ export default {
         this.customer_credit_dict = [];
       }
     },
-    // Get customer addresses for shipping
-    get_addresses() {
+    // Get customer addresses with offline support
+    async get_addresses() {
       const vm = this;
       if (!vm.invoice_doc || !vm.invoice_doc.customer) {
         vm.addresses = [];
         return;
       }
+
+      // Check if offline
+      if (!navigator.onLine) {
+        try {
+          // Try to get cached addresses from localStorage
+          const cachedAddresses = localStorage.getItem(`customer_addresses_${vm.invoice_doc.customer}`);
+          if (cachedAddresses) {
+            vm.addresses = JSON.parse(cachedAddresses);
+            return;
+          }
+        } catch (error) {
+          console.warn('Error getting cached addresses:', error);
+        }
+        // If no cached data, set empty array
+        vm.addresses = [];
+        return;
+      }
+
+      // Online mode - fetch from server
       frappe.call({
         method: "posawesome.posawesome.api.posapp.get_customer_addresses",
         args: { customer: vm.invoice_doc.customer },
@@ -1266,10 +1285,106 @@ export default {
         callback: function (r) {
           if (!r.exc) {
             vm.addresses = r.message;
+            // Cache the addresses
+            try {
+              localStorage.setItem(
+                `customer_addresses_${vm.invoice_doc.customer}`,
+                JSON.stringify(r.message)
+              );
+            } catch (error) {
+              console.warn('Error caching addresses:', error);
+            }
           } else {
             vm.addresses = [];
           }
         },
+      }).catch(error => {
+        console.error('Error fetching addresses:', error);
+        vm.addresses = [];
+      });
+    },
+    // Get sales person names with offline support
+    async get_sales_person_names() {
+      const vm = this;
+      
+      // Check if offline
+      if (!navigator.onLine) {
+        try {
+          // Try to get cached sales persons from localStorage
+          const cachedSalesPersons = localStorage.getItem('sales_persons_cache');
+          if (cachedSalesPersons) {
+            vm.sales_persons = JSON.parse(cachedSalesPersons);
+            return;
+          }
+        } catch (error) {
+          console.warn('Error getting cached sales persons:', error);
+        }
+        // If no cached data, set empty array
+        vm.sales_persons = [];
+        return;
+      }
+
+      // First try localStorage if enabled
+      if (vm.pos_profile.posa_local_storage) {
+        try {
+          const storedData = localStorage.getItem("sales_persons_storage");
+          if (storedData) {
+            vm.sales_persons = JSON.parse(storedData);
+          }
+        } catch (error) {
+          console.warn('Error reading from localStorage:', error);
+        }
+      }
+
+      // Then fetch from server
+      try {
+        const response = await frappe.call({
+          method: "posawesome.posawesome.api.posapp.get_sales_person_names"
+        });
+
+        if (response.message && response.message.length > 0) {
+          const formattedData = response.message.map(sp => ({
+            value: sp.name,
+            title: sp.sales_person_name,
+            sales_person_name: sp.sales_person_name,
+            name: sp.name
+          }));
+
+          vm.sales_persons = formattedData;
+
+          // Cache in localStorage
+          try {
+            if (vm.pos_profile.posa_local_storage) {
+              localStorage.setItem("sales_persons_storage", JSON.stringify(formattedData));
+            }
+            // Also cache for offline use
+            localStorage.setItem("sales_persons_cache", JSON.stringify(formattedData));
+          } catch (error) {
+            console.warn('Error caching sales persons:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching sales persons:', error);
+        // Keep using cached data if available
+        if (vm.sales_persons.length === 0) {
+          vm.eventBus.emit("show_message", {
+            title: __("Could not fetch sales persons. Using cached data if available."),
+            color: "warning",
+          });
+        }
+      }
+    },
+    // Clear cached data when going online
+    handleOnline() {
+      // Refresh data when coming back online
+      this.get_addresses();
+      this.get_sales_person_names();
+    },
+    // Handle offline mode
+    handleOffline() {
+      this.eventBus.emit("show_message", {
+        title: __("You are offline. Using cached data."),
+        color: "warning",
       });
     },
     // Filter addresses for autocomplete
@@ -1293,33 +1408,6 @@ export default {
         return;
       }
       this.eventBus.emit("open_new_address", this.invoice_doc.customer);
-    },
-    // Get sales person names from API/localStorage
-    get_sales_person_names() {
-      const vm = this;
-      if (vm.pos_profile.posa_local_storage && localStorage.sales_persons_storage) {
-        try {
-          vm.sales_persons = JSON.parse(localStorage.getItem("sales_persons_storage"));
-        } catch(e) {}
-      }
-      frappe.call({
-        method: "posawesome.posawesome.api.posapp.get_sales_person_names",
-        callback: function (r) {
-          if (r.message && r.message.length > 0) {
-            vm.sales_persons = r.message.map(sp => ({
-              value: sp.name,
-              title: sp.sales_person_name,
-              sales_person_name: sp.sales_person_name,
-              name: sp.name
-            }));
-            if (vm.pos_profile.posa_local_storage) {
-              localStorage.setItem("sales_persons_storage", JSON.stringify(vm.sales_persons));
-            }
-          } else {
-            vm.sales_persons = [];
-          }
-        },
-      });
     },
     // Request payment for phone type
     request_payment(payment) {
@@ -1710,6 +1798,10 @@ export default {
   // Lifecycle hook: mounted
   mounted() {
     this.$nextTick(() => {
+      // Add online/offline handlers
+      window.addEventListener('online', this.handleOnline);
+      window.addEventListener('offline', this.handleOffline);
+
       // Listen to various event bus events for POS actions
       this.eventBus.on("send_invoice_doc_payment", (invoice_doc) => {
         this.invoice_doc = invoice_doc;
@@ -1799,6 +1891,10 @@ export default {
     this.eventBus.off("set_pos_settings");
     this.eventBus.off("set_customer_info_to_edit");
     this.eventBus.off("set_mpesa_payment");
+
+    // Remove online/offline handlers
+    window.removeEventListener('online', this.handleOnline);
+    window.removeEventListener('offline', this.handleOffline);
   },
   // Lifecycle hook: unmounted
   unmounted() {
