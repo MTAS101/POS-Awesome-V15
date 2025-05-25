@@ -86,8 +86,8 @@
                 
                 request.onsuccess = function(event) {
                     const db = event.target.result;
-                    const transaction = db.transaction(['orders'], 'readonly');
-                    const store = transaction.objectStore('orders');
+                    const transaction = db.transaction(['offline-orders'], 'readonly');
+                    const store = transaction.objectStore('offline-orders');
                     const countRequest = store.count();
                     
                     countRequest.onsuccess = function() {
