@@ -1531,46 +1531,53 @@ export default {
       try {
         // Check if we're offline
         if (!isOnline()) {
-          // Show payment dialog first
-          this.eventBus.emit("show_payment", true);
-          this.eventBus.emit("send_invoice_doc_payment", doc);
-          
-          // Wait for payment to be completed
-          await new Promise((resolve, reject) => {
-            const handlePayment = (result) => {
-              this.eventBus.off("payment_completed", handlePayment);
-              if (result.success) {
-                resolve();
-              } else {
-                reject(new Error("Payment failed"));
-              }
-            };
+          try {
+            this.is_processing_offline = true;
             
-            this.eventBus.on("payment_completed", handlePayment);
-          });
-          
-          // Now show offline message
-          this.eventBus.emit('show_message', {
-            title: __('Invoice will be saved offline and synced when online'),
-            message: __('Please complete the payment process'),
-            color: 'info',
-            timeout: 4000
-          });
-          
-          // Add offline flags
-          doc.offline_pos_name = doc.name || ('Offline-' + Date.now());
-          doc.is_pos = 1;
-          doc.update_stock = 1;
-          doc.offline_mode = true;
-          doc.offline_submit = true;
-          
-          return doc;
+            // Show info message about offline processing
+            this.eventBus.emit('show_message', {
+              title: __('You are offline. Processing invoice for local storage...'),
+              color: 'info'
+            });
+            
+            // Validate offline data - make sure we have the minimal required fields
+            if (!doc.customer) {
+              throw new Error('Customer is required for offline invoices');
+            }
+            
+            if (!doc.items || !doc.items.length) {
+              throw new Error('No items in invoice');
+            }
+            
+            // Save invoice offline
+            const result = await saveInvoiceOffline(doc);
+            
+            // Show success message
+            this.eventBus.emit('show_message', {
+              title: __('Invoice saved offline and will be synced when online'),
+              color: 'success'
+            });
+            
+            this.is_processing_offline = false;
+            return doc; // Return the doc to continue with payment UI
+          } catch (error) {
+            console.error('Error saving invoice offline:', error);
+            this.is_processing_offline = false;
+            
+            this.eventBus.emit('show_message', {
+              title: __(error.message || 'Error saving invoice offline'),
+              color: 'error'
+            });
+            
+            return false;
+          }
         }
         
         // Online mode - proceed with normal flow
         if (doc.name) {
           try {
             const updated_doc = this.update_invoice(doc);
+            // Update posting date after invoice update
             if (updated_doc && updated_doc.posting_date) {
               this.posting_date = updated_doc.posting_date;
             }
@@ -1586,6 +1593,7 @@ export default {
         } else {
           try {
             const updated_doc = this.update_invoice(doc);
+            // Update posting date after invoice creation
             if (updated_doc && updated_doc.posting_date) {
               this.posting_date = updated_doc.posting_date;
             }

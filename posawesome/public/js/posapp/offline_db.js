@@ -233,33 +233,8 @@ function sanitizeForStorage(invoice) {
     company: invoice.company,
     pos_profile: invoice.pos_profile,
     posa_pos_opening_shift: invoice.posa_pos_opening_shift,
-    offline_pos_name: invoice.offline_pos_name,
-    offline_mode: true,
-    offline_submit: true,
-    is_pos: 1,
-    update_stock: 1,
-    
-    // Payment related fields
-    payments: (invoice.payments || []).map(payment => ({
-      mode_of_payment: payment.mode_of_payment,
-      amount: payment.amount,
-      base_amount: payment.base_amount,
-      account: payment.account,
-      type: payment.type,
-      default: payment.default || 0
-    })),
-    
-    // Loyalty and credit fields
-    loyalty_amount: invoice.loyalty_amount,
-    redeem_loyalty_points: invoice.redeem_loyalty_points,
-    loyalty_points: invoice.loyalty_points,
-    redeemed_customer_credit: invoice.redeemed_customer_credit,
-    customer_credit_dict: invoice.customer_credit_dict,
-    is_credit_sale: invoice.is_credit_sale ? 1 : 0,
-    is_write_off_change: invoice.is_write_off_change ? 1 : 0,
-    is_cashback: invoice.is_cashback ? 1 : 0,
-    paid_change: invoice.paid_change,
-    credit_change: invoice.credit_change,
+    posa_is_offer_applied: invoice.posa_is_offer_applied ? 1 : 0,
+    return_against: invoice.return_against || null,
     
     // Clean items array - ensure only serializable data
     items: (invoice.items || []).map(item => ({
@@ -273,15 +248,54 @@ function sanitizeForStorage(invoice) {
       discount_percentage: item.discount_percentage,
       discount_amount: item.discount_amount,
       base_discount_amount: item.base_discount_amount,
-      warehouse: item.warehouse,
-      batch_no: item.batch_no,
-      serial_no: item.serial_no,
+      stock_qty: item.stock_qty,
       uom: item.uom,
       conversion_factor: item.conversion_factor,
       stock_uom: item.stock_uom,
       price_list_rate: item.price_list_rate,
-      stock_qty: item.stock_qty
-    }))
+      base_price_list_rate: item.base_price_list_rate,
+      serial_no: item.serial_no,
+      batch_no: item.batch_no,
+      posa_notes: item.posa_notes,
+      posa_delivery_date: item.posa_delivery_date,
+      posa_offers: typeof item.posa_offers === 'string' ? item.posa_offers : JSON.stringify([]),
+      posa_offer_applied: item.posa_offer_applied ? 1 : 0,
+      posa_is_offer: item.posa_is_offer ? 1 : 0,
+      posa_is_replace: item.posa_is_replace || null,
+      is_free_item: item.is_free_item ? 1 : 0
+    })),
+    
+    // Clean payments array
+    payments: (invoice.payments || []).map(payment => ({
+      mode_of_payment: payment.mode_of_payment,
+      amount: payment.amount,
+      base_amount: payment.base_amount,
+      type: payment.type,
+      account: payment.account,
+      default: payment.default ? 1 : 0,
+      currency: payment.currency,
+      conversion_rate: payment.conversion_rate
+    })),
+    
+    // Clean offers data to avoid circular references
+    posa_offers: (invoice.posa_offers || []).map(offer => ({
+      offer_name: offer.offer_name,
+      row_id: offer.row_id,
+      apply_on: offer.apply_on,
+      offer: offer.offer,
+      items: typeof offer.items === 'string' ? offer.items : JSON.stringify(offer.items || []),
+      give_item: offer.give_item,
+      give_item_row_id: offer.give_item_row_id,
+      offer_applied: offer.offer_applied ? 1 : 0,
+      coupon_based: offer.coupon_based ? 1 : 0,
+      coupon: offer.coupon
+    })),
+    
+    // Other necessary data
+    posa_coupons: invoice.posa_coupons || [],
+    taxes: invoice.taxes || [],
+    posa_delivery_charges: invoice.posa_delivery_charges || null,
+    posa_delivery_charges_rate: invoice.posa_delivery_charges_rate || 0
   }));
   
   return sanitized;
