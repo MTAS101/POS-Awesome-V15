@@ -1509,11 +1509,37 @@ export default {
     isOfflineMode() {
       return !navigator.onLine || (this.invoice_doc && this.invoice_doc.offline_mode);
     },
-    // Handle offline payment submission
+    // Handle offline payment submission with locking
     async handleOfflineSubmission() {
+      const lockKey = 'invoice_submission_lock';
+      
       try {
+        // Check if submission is already in progress
+        if (localStorage.getItem(lockKey)) {
+          this.eventBus.emit("show_message", {
+            title: __("Another submission is in progress. Please wait."),
+            color: "warning",
+          });
+          return;
+        }
+
+        // Set submission lock
+        localStorage.setItem(lockKey, 'true');
+        
         // Generate a unique offline ID
         const offlineId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        // Check if this invoice was already submitted
+        const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
+        if (submittedInvoices.includes(offlineId)) {
+          throw new Error('This invoice was already submitted');
+        }
+
+        // Check IndexedDB for duplicate invoice
+        const existingInvoice = await this.checkDuplicateInvoice(this.invoice_doc);
+        if (existingInvoice) {
+          throw new Error('A similar invoice was already submitted');
+        }
         
         const offlineInvoice = {
           ...this.invoice_doc,
@@ -1527,14 +1553,14 @@ export default {
           is_cashback: this.is_cashback,
           sync_status: 'pending',
           created_at: new Date().toISOString(),
-          submitted: false
+          submitted: false,
+          invoice_hash: await this.generateInvoiceHash(this.invoice_doc)
         };
 
-        // Save to IndexedDB
+        // Save to IndexedDB with transaction
         await this.saveInvoiceOffline(offlineInvoice);
 
-        // Store offline ID in localStorage to prevent duplicates
-        const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
+        // Add to submitted invoices only after successful save
         submittedInvoices.push(offlineId);
         localStorage.setItem('submitted_offline_invoices', JSON.stringify(submittedInvoices));
 
@@ -1545,28 +1571,16 @@ export default {
         });
 
         // Clear form and reset
-        this.customer_credit_dict = [];
-        this.redeem_customer_credit = false;
-        this.is_cashback = true;
-        this.sales_person = "";
-        
-        // Reset invoice form
-        this.eventBus.emit("clear_invoice");
-        this.eventBus.emit("reset_posting_date");
-        this.back_to_invoice();
+        this.resetForm();
 
         // Update offline queue count
         window.dispatchEvent(new CustomEvent('offline-queue-updated'));
 
-        // Request background sync only if not already syncing
+        // Request background sync
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           try {
             const registration = await navigator.serviceWorker.ready;
-            // Check if sync is already registered
-            const tags = await registration.sync.getTags();
-            if (!tags.includes('sync-invoices')) {
-              await registration.sync.register('sync-invoices');
-            }
+            await registration.sync.register('sync-invoices');
           } catch (err) {
             console.warn('Background sync registration failed:', err);
           }
@@ -1578,9 +1592,69 @@ export default {
           title: __("Error saving invoice offline: ") + error.message,
           color: "error",
         });
+      } finally {
+        // Always remove the lock
+        localStorage.removeItem(lockKey);
       }
     },
-    // Save invoice to IndexedDB with duplicate check
+    // Reset form after submission
+    resetForm() {
+      this.customer_credit_dict = [];
+      this.redeem_customer_credit = false;
+      this.is_cashback = true;
+      this.sales_person = "";
+      this.eventBus.emit("clear_invoice");
+      this.eventBus.emit("reset_posting_date");
+      this.back_to_invoice();
+    },
+    // Generate hash for invoice comparison
+    async generateInvoiceHash(invoice) {
+      const relevantData = {
+        customer: invoice.customer,
+        total: invoice.total,
+        items: invoice.items.map(item => ({
+          item_code: item.item_code,
+          qty: item.qty,
+          rate: item.rate
+        }))
+      };
+      const text = JSON.stringify(relevantData);
+      const msgBuffer = new TextEncoder().encode(text);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    },
+    // Check for duplicate invoice in IndexedDB
+    async checkDuplicateInvoice(invoice) {
+      const hash = await this.generateInvoiceHash(invoice);
+      
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('POS_DB', 1);
+
+        request.onerror = () => reject(new Error('Failed to open database'));
+
+        request.onsuccess = (event) => {
+          const db = event.target.result;
+          const transaction = db.transaction(['invoices'], 'readonly');
+          const store = transaction.objectStore('invoices');
+          const request = store.openCursor();
+          
+          request.onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+              if (cursor.value.invoice_hash === hash) {
+                resolve(true);
+              } else {
+                cursor.continue();
+              }
+            } else {
+              resolve(false);
+            }
+          };
+        };
+      });
+    },
+    // Save invoice to IndexedDB with transaction
     async saveInvoiceOffline(invoice) {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open('POS_DB', 1);
@@ -1590,20 +1664,27 @@ export default {
         request.onsuccess = async (event) => {
           const db = event.target.result;
           const transaction = db.transaction(['invoices'], 'readwrite');
+          
+          // Add transaction error handling
+          transaction.onerror = () => reject(new Error('Transaction failed'));
+          transaction.onabort = () => reject(new Error('Transaction aborted'));
+          
           const store = transaction.objectStore('invoices');
 
-          // Check if invoice with same offline_id exists
+          // Check for existing invoice
           const getRequest = store.get(invoice.offline_id);
           
           getRequest.onsuccess = (e) => {
             if (e.target.result) {
-              // Invoice already exists
-              reject(new Error('Invoice already saved offline'));
+              transaction.abort();
+              reject(new Error('Invoice already exists'));
             } else {
-              // Save new invoice
               const saveRequest = store.add(invoice);
               saveRequest.onsuccess = () => resolve();
-              saveRequest.onerror = () => reject(new Error('Failed to save invoice'));
+              saveRequest.onerror = () => {
+                transaction.abort();
+                reject(new Error('Failed to save invoice'));
+              };
             }
           };
         };
@@ -1615,115 +1696,10 @@ export default {
             store.createIndex('sync_status', 'sync_status');
             store.createIndex('created_at', 'created_at');
             store.createIndex('submitted', 'submitted');
+            store.createIndex('invoice_hash', 'invoice_hash');
           }
         };
       });
-    },
-    // Enhanced submit_dialog to handle offline mode
-    async submit_dialog() {
-      // Validation checks
-      if (!this.customer) {
-        this.eventBus.emit("show_message", {
-          title: __("Select A Customer"),
-          color: "error",
-        });
-        return;
-      }
-
-      if (this.balance != 0) {
-        this.eventBus.emit("show_message", {
-          title: __("There is a pending amount to be paid"),
-          color: "error",
-        });
-        return;
-      }
-
-      try {
-        // Check if we're in offline mode
-        if (this.isOfflineMode()) {
-          await this.handleOfflineSubmission();
-          return;
-        }
-
-        // Online mode - proceed with regular submission
-        let totalPayedAmount = 0;
-        this.invoice_doc.payments.forEach((payment) => {
-          payment.amount = this.flt(payment.amount);
-          totalPayedAmount += payment.amount;
-        });
-
-        if (this.invoice_doc.is_return && totalPayedAmount === 0) {
-          this.invoice_doc.is_pos = 0;
-        }
-
-        let data = {
-          total_change: !this.invoice_doc.is_return ? -this.diff_payment : 0,
-          paid_change: !this.invoice_doc.is_return ? this.paid_change : 0,
-          credit_change: -this.credit_change,
-          redeemed_customer_credit: this.redeemed_customer_credit,
-          customer_credit_dict: this.customer_credit_dict,
-          is_cashback: this.is_cashback,
-        };
-
-        frappe.call({
-          method: "posawesome.posawesome.api.posapp.submit_invoice",
-          args: {
-            data: data,
-            invoice: this.invoice_doc,
-          },
-          callback: (r) => this.handleSubmitResponse(r)
-        });
-      } catch (error) {
-        console.error('Error in submit_dialog:', error);
-        this.eventBus.emit("show_message", {
-          title: __("Error processing invoice: ") + error.message,
-          color: "error",
-        });
-      }
-    },
-    // Handle submit response
-    handleSubmitResponse(r) {
-      if (r.exc) {
-        console.error("Error submitting invoice:", r.exc);
-        this.eventBus.emit("show_message", {
-          title: __("Error submitting invoice: ") + r.exc,
-          color: "error",
-        });
-        return;
-      }
-
-      if (!r.message) {
-        this.eventBus.emit("show_message", {
-          title: __("Error submitting invoice: No response from server"),
-          color: "error",
-        });
-        return;
-      }
-
-      // Success handling
-      if (this.should_print) {
-        this.load_print_page();
-      }
-
-      // Reset form
-      this.customer_credit_dict = [];
-      this.redeem_customer_credit = false;
-      this.is_cashback = true;
-      this.sales_person = "";
-
-      // Update UI
-      this.eventBus.emit("set_last_invoice", this.invoice_doc.name);
-      this.eventBus.emit("show_message", {
-        title: __("Invoice {0} is Submitted", [r.message.name]),
-        color: "success",
-      });
-      frappe.utils.play_sound("submit");
-
-      // Clear form
-      this.addresses = [];
-      this.eventBus.emit("clear_invoice");
-      this.eventBus.emit("reset_posting_date");
-      this.back_to_invoice();
     },
   },
   // Lifecycle hook: created
