@@ -1632,119 +1632,146 @@ export default {
     // Show payment dialog after validation and processing
     async show_payment() {
       try {
-        // Basic validations
+        console.log('Starting show_payment process');
+        console.log('Invoice state before payment:', {
+          invoiceType: this.invoiceType,
+          is_return: this.invoice_doc ? this.invoice_doc.is_return : false,
+          items_count: this.items.length,
+          customer: this.customer,
+          online: isOnline()
+        });
+
         if (!this.customer) {
+          console.log('Customer validation failed');
           this.eventBus.emit("show_message", {
-            title: __("Select a customer"),
+            title: __(`Select a customer`),
             color: "error",
           });
           return;
         }
 
         if (!this.items.length) {
+          console.log('Items validation failed - no items');
           this.eventBus.emit("show_message", {
-            title: __("Select items to sell"),
+            title: __(`Select items to sell`),
             color: "error",
           });
           return;
         }
 
-        // Main validation
-        const isValid = await this.validate();
+        console.log('Basic validations passed, proceeding to main validation');
+        const isValid = this.validate();
+        console.log('Main validation result:', isValid);
+
         if (!isValid) {
+          console.log('Main validation failed');
           return;
         }
 
-        // Process invoice based on type
         let invoice_doc;
-        if (this.invoice_doc && this.invoice_doc.doctype === "Sales Order") {
+        if (this.invoice_doc.doctype == "Sales Order") {
+          console.log('Processing Sales Order payment');
           invoice_doc = await this.process_invoice_from_order();
         } else {
+          console.log('Processing regular invoice');
           invoice_doc = await this.process_invoice();
         }
 
         if (!invoice_doc) {
+          console.log('Failed to process invoice');
           return;
         }
 
-        // Set currency info
+        // Update invoice_doc with current currency info
         invoice_doc.currency = this.selected_currency || this.pos_profile.currency;
         invoice_doc.conversion_rate = this.exchange_rate || 1;
         
-        // Update totals
+        // Update totals in invoice_doc to match current calculations
         invoice_doc.total = this.Total;
         invoice_doc.grand_total = this.subtotal;
+        
+        // Apply rounding to get rounded total
         invoice_doc.rounded_total = this.roundAmount(this.subtotal);
         invoice_doc.base_total = this.Total * (1 / this.exchange_rate || 1);
         invoice_doc.base_grand_total = this.subtotal * (1 / this.exchange_rate || 1);
         invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
-
-        // Check if offline
-        const isOfflineMode = !navigator.onLine;
+        
+        // Check if we're offline
+        const isOfflineMode = !isOnline();
+        
+        // If offline, add a flag to indicate this should be submitted, not saved as draft
         if (isOfflineMode) {
           invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
           invoice_doc.is_pos = 1;
           invoice_doc.offline_submit = true; // Flag to indicate this should be submitted when synced
+          console.log('Invoice flagged for automatic submission when online');
+          
+          // Show info message about offline mode
+          this.eventBus.emit('show_message', {
+            title: __('You are offline. Invoice will be submitted automatically when online.'),
+            color: 'info'
+          });
         }
-
-        // Handle return invoices
-        if (this.invoiceType === 'Return' || invoice_doc.is_return) {
-          invoice_doc.is_return = 1;
-          this.ensure_negative_values(invoice_doc);
-        }
-
-        // Get payments with correct sign
-        invoice_doc.payments = this.get_payments();
         
-        // For offline mode, ensure at least one payment method
-        if (isOfflineMode && invoice_doc.payments && invoice_doc.payments.length > 0) {
-          const hasPaymentValue = invoice_doc.payments.some(p => p.amount !== 0);
-          if (!hasPaymentValue) {
-            invoice_doc.payments[0].amount = invoice_doc.rounded_total || invoice_doc.grand_total;
+        // Check if this is a return invoice
+        if (this.invoiceType === 'Return' || invoice_doc.is_return) {
+          console.log('Preparing RETURN invoice for payment with:', {
+            is_return: invoice_doc.is_return,
+            invoiceType: this.invoiceType,
+            return_against: invoice_doc.return_against,
+            items: invoice_doc.items.length,
+            grand_total: invoice_doc.grand_total
+          });
+          
+          // For return invoices, explicitly ensure all amounts are negative
+          invoice_doc.is_return = 1;
+          if (invoice_doc.grand_total > 0) invoice_doc.grand_total = -Math.abs(invoice_doc.grand_total);
+          if (invoice_doc.rounded_total > 0) invoice_doc.rounded_total = -Math.abs(invoice_doc.rounded_total);
+          if (invoice_doc.total > 0) invoice_doc.total = -Math.abs(invoice_doc.total);
+          if (invoice_doc.base_grand_total > 0) invoice_doc.base_grand_total = -Math.abs(invoice_doc.base_grand_total);
+          if (invoice_doc.base_rounded_total > 0) invoice_doc.base_rounded_total = -Math.abs(invoice_doc.base_rounded_total);
+          if (invoice_doc.base_total > 0) invoice_doc.base_total = -Math.abs(invoice_doc.base_total);
+          
+          // Ensure all items have negative quantity and amount
+          if (invoice_doc.items && invoice_doc.items.length) {
+            invoice_doc.items.forEach(item => {
+              if (item.qty > 0) item.qty = -Math.abs(item.qty);
+              if (item.stock_qty > 0) item.stock_qty = -Math.abs(item.stock_qty);
+              if (item.amount > 0) item.amount = -Math.abs(item.amount);
+            });
           }
         }
+        
+        // Get payments with correct sign (positive/negative)
+        invoice_doc.payments = this.get_payments();
+        console.log('Final payment data:', invoice_doc.payments);
 
-        // Show payment dialog
-        this.eventBus.emit("show_payment", true);
+        // Double-check return invoice payments are negative
+        if ((this.invoiceType === 'Return' || invoice_doc.is_return) && invoice_doc.payments.length) {
+          invoice_doc.payments.forEach(payment => {
+            if (payment.amount > 0) payment.amount = -Math.abs(payment.amount);
+            if (payment.base_amount > 0) payment.base_amount = -Math.abs(payment.base_amount);
+          });
+          console.log('Ensured negative payment amounts for return:', invoice_doc.payments);
+        }
+
+        console.log('Showing payment dialog with currency:', invoice_doc.currency);
+        
+        // In offline mode, make sure to tell the payment component we're offline
+        if (isOfflineMode) {
+          console.log('Operating in offline mode for payment');
+          invoice_doc.offline_mode = true;
+        }
+        
+        this.eventBus.emit("show_payment", "true");
         this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
-
-        // Listen for payment completion
-        this.eventBus.on("payment_completed", (result) => {
-          if (result.success) {
-            this.clear_invoice();
-            if (result.offline) {
-              this.eventBus.emit("show_message", {
-                title: __('Invoice saved offline. Will be submitted when online.'),
-                color: 'success'
-              });
-            }
-          }
-        });
 
       } catch (error) {
         console.error('Error in show_payment:', error);
         this.eventBus.emit("show_message", {
-          title: __("Error showing payment screen"),
+          title: __("Error processing payment"),
           color: "error",
           message: error.message
-        });
-      }
-    },
-
-    ensure_negative_values(invoice_doc) {
-      // Make all amounts negative for return invoices
-      ['grand_total', 'rounded_total', 'total', 'base_grand_total', 'base_rounded_total', 'base_total'].forEach(field => {
-        if (invoice_doc[field] > 0) {
-          invoice_doc[field] = -Math.abs(invoice_doc[field]);
-        }
-      });
-
-      // Make item quantities and amounts negative
-      if (invoice_doc.items && invoice_doc.items.length) {
-        invoice_doc.items.forEach(item => {
-          if (item.qty > 0) item.qty = -Math.abs(item.qty);
-          if (item.stock_qty > 0) item.stock_qty = -Math.abs(item.stock_qty);
-          if (item.amount > 0) item.amount = -Math.abs(item.amount);
         });
       }
     },

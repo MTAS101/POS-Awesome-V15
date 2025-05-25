@@ -248,85 +248,51 @@ export default {
      * for various connection states (connect, disconnect, error).
      */
     initSocketConnection() {
-      this.serverConnecting = true;
-      this.serverOnline = false;
+      this.serverConnecting = true; // Set state to indicate connection attempt is in progress
+      this.serverOnline = false; // Assume server is offline until a successful connection is made
 
       try {
-        // Get socket configuration from Frappe system settings
-        frappe.call({
-          method: 'frappe.client.get_value',
-          args: {
-            doctype: 'System Settings',
-            fieldname: 'socket_io_port'
-          },
-          callback: (r) => {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const host = window.location.hostname;
-            const port = r.message?.socket_io_port || '9000';
-            const socketUrl = `${protocol}//${host}:${port}`;
+        // Determine the base URL for the socket connection.
+        // The port '9000' is a common default for Socket.IO servers, but it MUST be adjusted
+        // to the actual port your backend's WebSocket server is listening on.
+        const protocol = window.location.protocol; // e.g., 'http:', 'https:'
+        const host = window.location.hostname; // e.g., 'localhost', 'yourdomain.com'
+        const port = '9000'; // IMPORTANT: Configure this to your actual Socket.IO server port!
 
-            // Close existing socket if any
-            if (this.socket) {
-              this.socket.close();
-              this.socket = null;
-            }
+        this.socket = io(`${protocol}//${host}:${port}`, {
+          path: '/socket.io', // Standard path for Socket.IO connections
+          transports: ['websocket', 'polling'], // Preferred transport methods (websocket is faster)
+          reconnection: true, // Enable automatic reconnection attempts if connection is lost
+          reconnectionAttempts: Infinity, // Attempt to reconnect indefinitely
+          reconnectionDelay: 1000, // Initial delay before first reconnection attempt (1 second)
+          reconnectionDelayMax: 5000, // Maximum delay between reconnection attempts (5 seconds)
+          timeout: 20000 // How long to wait before considering the connection failed (20 seconds)
+        });
 
-            this.socket = io(socketUrl, {
-              path: '/socket.io',
-              transports: ['websocket'],
-              reconnection: true,
-              reconnectionAttempts: 5,
-              reconnectionDelay: 1000,
-              reconnectionDelayMax: 5000,
-              timeout: 20000,
-              forceNew: true
-            });
+        // Event listener for a successful connection to the Socket.IO server.
+        this.socket.on('connect', () => {
+          this.serverOnline = true; // Update server status to online
+          this.serverConnecting = false; // Connection attempt is complete
+          console.log('Socket.IO: Connected to server');
+        });
 
-            this.socket.on('connect', () => {
-              this.serverOnline = true;
-              this.serverConnecting = false;
-              console.log('Socket.IO: Connected to server');
-            });
+        // Event listener for disconnection from the Socket.IO server.
+        this.socket.on('disconnect', (reason) => {
+          this.serverOnline = false; // Update server status to offline
+          this.serverConnecting = false; // No longer connecting if disconnected
+          console.warn('Socket.IO: Disconnected from server. Reason:', reason);
+          // Socket.IO's `reconnection: true` handles automatic reconnection attempts.
+        });
 
-            this.socket.on('disconnect', (reason) => {
-              this.serverOnline = false;
-              this.serverConnecting = false;
-              console.warn('Socket.IO: Disconnected from server. Reason:', reason);
-              
-              // Handle specific disconnect reasons
-              if (reason === 'io server disconnect') {
-                // Server initiated disconnect, don't attempt reconnection
-                console.log('Server initiated disconnect, not attempting reconnection');
-              } else if (reason === 'transport close') {
-                // Connection lost, attempt reconnection if within limits
-                if (this.socket.reconnectionAttempts < 5) {
-                  setTimeout(() => this.socket.connect(), 1000);
-                }
-              }
-            });
-
-            this.socket.on('connect_error', (error) => {
-              this.serverOnline = false;
-              this.serverConnecting = false;
-              console.error('Socket.IO: Connection error:', error.message);
-              
-              // If SSL/TLS error, try fallback to ws://
-              if (error.message.includes('SSL') || error.message.includes('certificate')) {
-                console.log('SSL error detected, attempting fallback to ws://');
-                const fallbackUrl = `ws://${host}:${port}`;
-                this.socket.io.uri = fallbackUrl;
-                this.socket.connect();
-              }
-            });
-
-          },
-          error: (err) => {
-            console.error('Failed to get socket configuration:', err);
-            this.serverConnecting = false;
-          }
+        // Event listener for connection errors (e.g., server not found, refused connection).
+        this.socket.on('connect_error', (error) => {
+          this.serverOnline = false; // Update server status to offline
+          this.serverConnecting = false; // No longer connecting if an error occurred
+          console.error('Socket.IO: Connection error:', error.message);
         });
 
       } catch (err) {
+        // Catch any errors during the initial Socket.IO client instantiation.
         this.serverOnline = false;
         this.serverConnecting = false;
         console.error('Failed to initialize Socket.IO connection:', err);
