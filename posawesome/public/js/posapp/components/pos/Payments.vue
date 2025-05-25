@@ -550,12 +550,12 @@
     <v-card flat class="cards mb-0 mt-3 py-0">
       <v-row align="start" no-gutters>
         <v-col cols="6">
-          <v-btn block size="large" color="primary" theme="dark" @click="submit" :disabled="vaildatPayment">
+          <v-btn block size="large" color="primary" theme="dark" @click="submitPayment(); submit()" :disabled="vaildatPayment">
             {{ __("Submit") }}
           </v-btn>
         </v-col>
         <v-col cols="6" class="pl-1">
-          <v-btn block size="large" color="success" theme="dark" @click="submit(undefined, false, true)" :disabled="vaildatPayment">
+          <v-btn block size="large" color="success" theme="dark" @click="submitPayment(); submit(undefined, false, true)" :disabled="vaildatPayment">
             {{ __("Submit & Print") }}
           </v-btn>
         </v-col>
@@ -1430,28 +1430,38 @@ export default {
       this.isProcessing = true;
 
       try {
-        // Validation checks
+        // Basic validation
         if (!this.invoice_doc.customer) {
           throw new Error(__("Please select a customer"));
         }
 
+        // Check if we're in offline mode
+        if (this.isOffline) {
+          // Show payment dialog first
+          this.eventBus.emit("show_payment", true);
+          
+          // Wait for payment to be filled and submitted
+          await new Promise((resolve) => {
+            this.eventBus.once("payment_submitted", () => {
+              resolve();
+            });
+          });
+
+          // Validate payments after they are entered
+          if (!this.validate_payments()) {
+            throw new Error(__("Payment validation failed"));
+          }
+
+          // Now handle offline submission
+          await this.handleOfflineSubmission();
+          return;
+        }
+
+        // For online mode
         if (!this.validate_payments()) {
           throw new Error(__("Payment validation failed"));
         }
 
-        // Show payment dialog first
-        this.eventBus.emit("show_payment", true);
-        
-        // Check if we're in offline mode
-        if (this.isOffline) {
-          // Wait for payment dialog to be filled
-          this.eventBus.once("payment_submitted", async () => {
-            await this.handleOfflineSubmission();
-          });
-          return;
-        }
-
-        // For online mode, proceed with regular submission
         const payments = this.process_payments();
         if (payments.length === 0) {
           throw new Error(__("No payment methods selected"));
@@ -1479,15 +1489,11 @@ export default {
         this.isProcessing = false;
       }
     },
+
     async handleOfflineSubmission() {
       console.log('Processing offline payment submission');
       
       try {
-        // Validate offline payment
-        if (!this.validate_payments()) {
-          throw new Error(__("Payment validation failed"));
-        }
-
         // Prepare and save invoice data
         const invoice = this.prepare_invoice_data();
         const result = await saveInvoiceOffline(invoice);
@@ -1524,125 +1530,13 @@ export default {
         this.eventBus.emit("show_payment", false);
       }
     },
-    async process_offline() {
-      console.log('Processing offline payment');
-      
-      try {
-        this.saving = true;
-        const invoice_doc = {...this.invoice_doc};
-        
-        if (!invoice_doc) {
-          console.log('No invoice document to process offline');
-          this.eventBus.emit('show_message', {
-            title: __('No invoice document to process offline'),
-            color: 'error'
-          });
-          this.saving = false;
-          return;
-        }
-        
-        if (!invoice_doc.payments || !invoice_doc.payments.length) {
-          console.log('No payment methods available');
-          this.eventBus.emit('show_message', {
-            title: __('No payment methods available for offline processing'),
-            color: 'error'
-          });
-          this.saving = false;
-          return;
-        }
-        
-        const hasValidPayment = invoice_doc.payments.some(p => p.amount !== 0);
-        if (!hasValidPayment) {
-          console.log('No payment amount entered');
-          this.eventBus.emit('show_message', {
-            title: __('Please enter a payment amount'),
-            color: 'error'
-          });
-          this.saving = false;
-          return;
-        }
-        
-        console.log('Saving invoice offline with payment data:', invoice_doc.payments);
-        
-        const result = await saveInvoiceOffline(invoice_doc);
-        
-        if (result) {
-          console.log('Invoice saved offline successfully');
-          this.eventBus.emit('show_message', {
-            title: __('Invoice saved offline successfully'),
-            color: 'success'
-          });
-          
-          this.reset_payments();
-          this.dialog = false;
-          
-          console.log('Emitting payment_completed event for offline invoice');
-          this.eventBus.emit('payment_completed', {
-            success: true,
-            offline: true,
-            invoice_id: result
-          });
-          
-          this.eventBus.emit('show_message', {
-            title: __('Invoice will be submitted when you go back online'),
-            color: 'info'
-          });
-        } else {
-          throw new Error('Failed to save invoice offline');
-        }
-      } catch (error) {
-        console.error('Error processing offline payment:', error);
-        this.eventBus.emit('show_message', {
-          title: __('Error processing offline payment'),
-          color: 'error',
-          message: error.message
-        });
-      } finally {
-        this.saving = false;
-      }
+
+    // Add new method to handle payment submission
+    submitPayment() {
+      // Emit event that payment is submitted
+      this.eventBus.emit("payment_submitted");
     },
-    validate_payments() {
-      if (this.invoice_doc.is_return) {
-        this.ensureReturnPaymentsAreNegative();
-      }
-      
-      let totalPayedAmount = 0;
-      this.invoice_doc.payments.forEach((payment) => {
-        payment.amount = this.flt(payment.amount);
-        totalPayedAmount += payment.amount;
-      });
-      
-      if (this.invoice_doc.is_return && totalPayedAmount === 0) {
-        this.invoice_doc.is_pos = 0;
-      }
-      
-      if (this.customer_credit_dict.length) {
-        this.customer_credit_dict.forEach((row) => {
-          row.credit_to_redeem = this.flt(row.credit_to_redeem);
-        });
-      }
-      
-      if (!this.invoice_doc.is_return && this.total_payments <= 0) {
-        this.eventBus.emit('show_message', {
-          title: __('Please enter payment amount'),
-          color: 'error'
-        });
-        return false;
-      }
-      
-      if (!this.invoice_doc.is_return && 
-          this.total_payments < this.invoice_doc.grand_total && 
-          !this.redeemed_customer_credit) {
-        this.eventBus.emit('show_message', {
-          title: __('Payment amount is less than invoice total'),
-          color: 'error'
-        });
-        return false;
-      }
-      
-      return true;
-    },
-    
+
     process_payments() {
       const payments = [];
       
