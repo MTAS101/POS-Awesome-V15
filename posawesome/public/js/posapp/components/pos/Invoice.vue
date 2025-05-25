@@ -1537,13 +1537,16 @@ export default {
           
           // Wait for payment to be completed
           await new Promise((resolve, reject) => {
-            this.eventBus.once("payment_completed", (result) => {
+            const handlePayment = (result) => {
+              this.eventBus.off("payment_completed", handlePayment);
               if (result.success) {
                 resolve();
               } else {
                 reject(new Error("Payment failed"));
               }
-            });
+            };
+            
+            this.eventBus.on("payment_completed", handlePayment);
           });
           
           // Now show offline message
