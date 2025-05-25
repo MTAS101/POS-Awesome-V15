@@ -55,7 +55,7 @@ if (workbox) {
   // Cache page navigations (HTML) with a 'Cache First' strategy for POS app
   workbox.routing.registerRoute(
     ({url}) => url.pathname.includes('/app/posapp'),
-    new workbox.strategies.CacheFirst({
+    new workbox.strategies.NetworkFirst({
       cacheName: 'pos-pages-cache',
       plugins: [
         new workbox.expiration.ExpirationPlugin({
@@ -66,8 +66,71 @@ if (workbox) {
           statuses: [0, 200],
         }),
       ],
+      networkTimeoutSeconds: 3, // Fallback to cache after 3 seconds
     })
   );
+  
+  // Cache all POS app assets with a 'Cache First' strategy
+  workbox.routing.registerRoute(
+    ({url}) => url.pathname.includes('/assets/posawesome/'),
+    new workbox.strategies.CacheFirst({
+      cacheName: 'pos-assets-cache',
+      plugins: [
+        new workbox.expiration.ExpirationPlugin({
+          maxEntries: 100,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+        }),
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [0, 200],
+        }),
+      ],
+    })
+  );
+  
+  // Cache all Frappe assets with a 'Cache First' strategy
+  workbox.routing.registerRoute(
+    ({url}) => url.pathname.includes('/assets/frappe/'),
+    new workbox.strategies.CacheFirst({
+      cacheName: 'frappe-assets-cache',
+      plugins: [
+        new workbox.expiration.ExpirationPlugin({
+          maxEntries: 100,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+        }),
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [0, 200],
+        }),
+      ],
+    })
+  );
+  
+  // Cache all API responses with a 'Network First' strategy
+  workbox.routing.registerRoute(
+    ({url}) => url.pathname.includes('/api/method/'),
+    new workbox.strategies.NetworkFirst({
+      cacheName: 'api-cache',
+      plugins: [
+        new workbox.expiration.ExpirationPlugin({
+          maxEntries: 100,
+          maxAgeSeconds: 12 * 60 * 60, // 12 Hours
+        }),
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [0, 200],
+        }),
+      ],
+      networkTimeoutSeconds: 3, // Fallback to cache after 3 seconds
+    })
+  );
+  
+  // Precache essential POS app files
+  workbox.precaching.precacheAndRoute([
+    { url: '/assets/posawesome/js/posapp/posapp.js', revision: '1.0.0' },
+    { url: '/assets/posawesome/css/posawesome.css', revision: '1.0.0' },
+    { url: '/assets/frappe/js/frappe.js', revision: '1.0.0' },
+    { url: '/assets/js/control.js', revision: '1.0.0' },
+    { url: '/assets/js/dialog.js', revision: '1.0.0' },
+    { url: '/assets/js/form.js', revision: '1.0.0' }
+  ]);
   
   // Other page navigations with Network First
   workbox.routing.registerRoute(

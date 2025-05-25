@@ -17,15 +17,33 @@ async handleOfflineSubmission() {
       "success"
     );
     
-    // Close the payment dialog
+    // Close the payment dialog and reset form
     this.close_dialog();
     
-    // Clear the invoice view without trying to navigate
+    // Clear the invoice view and reset all forms
     this.eventBus.emit("clear_invoice");
+    this.eventBus.emit("show_payment", "false");
+    this.eventBus.emit("reset_posting_date");
+    this.eventBus.emit("set_customer_readonly", false);
+    
+    // Reset local state
+    this.customer = "";
+    this.balance = 0;
+    this.invoice_doc = null;
+    
+    // Force UI update
+    this.$nextTick(() => {
+      // Focus on customer field in the new form
+      const customerField = document.querySelector('.customer-field');
+      if (customerField) {
+        customerField.focus();
+      }
+    });
     
     // Update offline queue count
+    const pendingCount = await getPendingOrdersCount();
     window.dispatchEvent(new CustomEvent('offline-queue-updated', {
-      detail: { count: await getPendingOrdersCount() }
+      detail: { count: pendingCount }
     }));
     
     // Cache the current page state
@@ -37,7 +55,21 @@ async handleOfflineSubmission() {
           timestamp: Date.now()
         }
       });
+      
+      // Request background sync
+      try {
+        await navigator.serviceWorker.ready;
+        await navigator.serviceWorker.sync.register('sync-invoices');
+      } catch (err) {
+        console.warn('Background sync registration failed:', err);
+      }
     }
+    
+    // Show success message for new form
+    this.show_message(
+      "New invoice form ready",
+      "success"
+    );
     
   } catch (error) {
     console.error('Error in offline submission:', error);
@@ -50,6 +82,8 @@ async handleOfflineSubmission() {
 
 // Update the submit_dialog method to handle offline mode
 async submit_dialog() {
+  console.log('Starting submit_dialog');
+  
   // Validation checks
   if (!this.customer) {
     this.show_message(
@@ -69,35 +103,48 @@ async submit_dialog() {
 
   try {
     // Check if we're in offline mode
-    if (this.invoice_doc && (this.invoice_doc.offline_mode || !navigator.onLine)) {
+    const isOffline = !navigator.onLine || (this.invoice_doc && this.invoice_doc.offline_mode);
+    console.log('Offline mode:', isOffline);
+    
+    if (isOffline) {
       await this.handleOfflineSubmission();
-      
-      // Clear current invoice and show new form
-      this.eventBus.emit("clear_invoice");
-      this.eventBus.emit("show_payment", "false");
-      this.eventBus.emit("reset_posting_date");
-      
-      // Show success message
-      this.show_message(
-        "Invoice saved offline. New invoice ready.",
-        "success"
-      );
       return;
     }
 
     // For online mode, proceed with regular submission
+    console.log('Processing online submission');
     const res = await this.submit_invoice();
+    
     if (res) {
+      console.log('Online submission successful');
+      
       // Close payment dialog
       this.close_dialog();
       
       // Show print if needed
-      this.show_print(res);
+      if (this.should_print) {
+        this.show_print(res);
+      }
       
       // Clear current invoice and show new form
       this.eventBus.emit("clear_invoice");
       this.eventBus.emit("show_payment", "false");
       this.eventBus.emit("reset_posting_date");
+      this.eventBus.emit("set_customer_readonly", false);
+      
+      // Reset local state
+      this.customer = "";
+      this.balance = 0;
+      this.invoice_doc = null;
+      
+      // Force UI update
+      this.$nextTick(() => {
+        // Focus on customer field in the new form
+        const customerField = document.querySelector('.customer-field');
+        if (customerField) {
+          customerField.focus();
+        }
+      });
       
       // Show success message
       this.show_message(
