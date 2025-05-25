@@ -246,45 +246,164 @@ if (workbox) {
 
   // Handle background sync for invoices
   self.addEventListener('sync', async (event) => {
-    if (event.tag === 'sync-invoices') {
-      event.waitUntil(syncInvoices());
+    if (event.tag.startsWith('sync-invoice-')) {
+      event.waitUntil(syncSingleInvoice(event.tag));
     }
   });
 
-  // Function to sync invoices
-  async function syncInvoices() {
+  // Function to sync a single invoice
+  async function syncSingleInvoice(syncTag) {
+    const offlineId = syncTag.replace('sync-invoice-', '');
+    const syncLockKey = `sync_lock_${offlineId}`;
+    
     try {
-      const db = await openDB();
-      const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
-      const pendingInvoices = await getPendingInvoices(db);
-      
-      for (const invoice of pendingInvoices) {
-        try {
-          // Skip if already submitted
-          if (invoice.submitted || submittedInvoices.includes(invoice.offline_id)) {
-            console.log('Skipping already submitted invoice:', invoice.offline_id);
-            continue;
-          }
+      // Check if this invoice is already being synced
+      if (await getSyncLock(syncLockKey)) {
+        console.log('Sync already in progress for invoice:', offlineId);
+        return;
+      }
 
-          // Mark as submitted before sending
-          await markInvoiceAsSubmitted(db, invoice.offline_id);
-          
-          const response = await submitInvoice(invoice);
-          if (response.message) {
-            await removeInvoice(db, invoice.offline_id);
-            
-            // Remove from localStorage
-            const updatedSubmitted = submittedInvoices.filter(id => id !== invoice.offline_id);
-            localStorage.setItem('submitted_offline_invoices', JSON.stringify(updatedSubmitted));
-          }
-        } catch (error) {
-          console.error('Error syncing invoice:', error);
-          await markInvoiceAsNotSubmitted(db, invoice.offline_id);
+      // Set sync lock
+      await setSyncLock(syncLockKey);
+
+      const db = await openDB();
+      const invoice = await getInvoiceById(db, offlineId);
+
+      if (!invoice) {
+        console.log('Invoice not found:', offlineId);
+        return;
+      }
+
+      // Check if already submitted
+      if (invoice.submitted) {
+        console.log('Invoice already submitted:', offlineId);
+        return;
+      }
+
+      // Check attempt count and last attempt time
+      if (invoice.attempt_count >= 3) {
+        const lastAttempt = new Date(invoice.last_attempt || 0);
+        const timeSinceLastAttempt = Date.now() - lastAttempt.getTime();
+        
+        // If less than 5 minutes since last attempt, skip
+        if (timeSinceLastAttempt < 300000) {
+          console.log('Too many recent attempts for invoice:', offlineId);
+          return;
         }
       }
+
+      // Update attempt count and time
+      await updateInvoiceAttempt(db, offlineId);
+
+      // Try to submit
+      const response = await submitInvoice(invoice);
+      
+      if (response.message) {
+        // Success - remove from IndexedDB and localStorage
+        await removeInvoice(db, offlineId);
+        await removeFromSubmittedInvoices(offlineId);
+        
+        // Broadcast success
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({
+              type: 'INVOICE_SYNCED',
+              offlineId: offlineId,
+              success: true
+            });
+          });
+        });
+      }
     } catch (error) {
-      console.error('Error in sync process:', error);
+      console.error('Error syncing invoice:', error);
+      
+      // Broadcast error
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'INVOICE_SYNC_ERROR',
+            offlineId: offlineId,
+            error: error.message
+          });
+        });
+      });
+    } finally {
+      // Always remove sync lock
+      await removeSyncLock(syncLockKey);
     }
+  }
+
+  // Helper functions for sync locks
+  async function getSyncLock(key) {
+    return new Promise((resolve) => {
+      caches.open('sync-locks').then(cache => {
+        cache.match(key).then(response => {
+          resolve(!!response);
+        });
+      });
+    });
+  }
+
+  async function setSyncLock(key) {
+    return caches.open('sync-locks').then(cache => {
+      return cache.put(key, new Response('locked'));
+    });
+  }
+
+  async function removeSyncLock(key) {
+    return caches.open('sync-locks').then(cache => {
+      return cache.delete(key);
+    });
+  }
+
+  // Get invoice by ID
+  async function getInvoiceById(db, offlineId) {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['invoices'], 'readonly');
+      const store = transaction.objectStore('invoices');
+      const request = store.get(offlineId);
+      
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(new Error('Failed to get invoice'));
+    });
+  }
+
+  // Update invoice attempt count and time
+  async function updateInvoiceAttempt(db, offlineId) {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(['invoices'], 'readwrite');
+      const store = transaction.objectStore('invoices');
+      const request = store.get(offlineId);
+      
+      request.onsuccess = () => {
+        const invoice = request.result;
+        if (invoice) {
+          invoice.attempt_count = (invoice.attempt_count || 0) + 1;
+          invoice.last_attempt = new Date().toISOString();
+          store.put(invoice);
+          resolve();
+        } else {
+          reject(new Error('Invoice not found'));
+        }
+      };
+      
+      request.onerror = () => reject(new Error('Failed to update attempt'));
+    });
+  }
+
+  // Remove from submitted invoices in localStorage
+  async function removeFromSubmittedInvoices(offlineId) {
+    return new Promise((resolve) => {
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'REMOVE_SUBMITTED_INVOICE',
+            offlineId: offlineId
+          });
+        });
+      });
+      resolve();
+    });
   }
 
   // Open IndexedDB
@@ -304,74 +423,6 @@ if (workbox) {
           store.createIndex('submitted', 'submitted');
         }
       };
-    });
-  }
-
-  // Get pending invoices
-  function getPendingInvoices(db) {
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['invoices'], 'readonly');
-      const store = transaction.objectStore('invoices');
-      const request = store.getAll();
-      
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(new Error('Failed to get pending invoices'));
-    });
-  }
-
-  // Mark invoice as submitted
-  function markInvoiceAsSubmitted(db, offlineId) {
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['invoices'], 'readwrite');
-      const store = transaction.objectStore('invoices');
-      const request = store.get(offlineId);
-      
-      request.onsuccess = (e) => {
-        const invoice = e.target.result;
-        if (invoice) {
-          invoice.submitted = true;
-          store.put(invoice);
-          resolve();
-        } else {
-          reject(new Error('Invoice not found'));
-        }
-      };
-      
-      request.onerror = () => reject(new Error('Failed to mark invoice as submitted'));
-    });
-  }
-
-  // Mark invoice as not submitted
-  function markInvoiceAsNotSubmitted(db, offlineId) {
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['invoices'], 'readwrite');
-      const store = transaction.objectStore('invoices');
-      const request = store.get(offlineId);
-      
-      request.onsuccess = (e) => {
-        const invoice = e.target.result;
-        if (invoice) {
-          invoice.submitted = false;
-          store.put(invoice);
-          resolve();
-        } else {
-          reject(new Error('Invoice not found'));
-        }
-      };
-      
-      request.onerror = () => reject(new Error('Failed to mark invoice as not submitted'));
-    });
-  }
-
-  // Remove invoice from IndexedDB
-  function removeInvoice(db, offlineId) {
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(['invoices'], 'readwrite');
-      const store = transaction.objectStore('invoices');
-      const request = store.delete(offlineId);
-      
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(new Error('Failed to remove invoice'));
     });
   }
 

@@ -1374,9 +1374,72 @@ export default {
         }
       }
     },
-    // Clear cached data when going online
-    handleOnline() {
-      // Refresh data when coming back online
+    // Handle service worker messages
+    handleServiceWorkerMessage(event) {
+      const { type, offlineId, success, error } = event.data;
+      
+      switch (type) {
+        case 'INVOICE_SYNCED':
+          if (success) {
+            // Remove from submitted invoices
+            const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
+            const updatedInvoices = submittedInvoices.filter(inv => 
+              typeof inv === 'string' ? inv !== offlineId : inv.id !== offlineId
+            );
+            localStorage.setItem('submitted_offline_invoices', JSON.stringify(updatedInvoices));
+            
+            this.eventBus.emit("show_message", {
+              title: __("Invoice synced successfully"),
+              color: "success",
+            });
+          }
+          break;
+          
+        case 'INVOICE_SYNC_ERROR':
+          console.error('Sync error for invoice:', offlineId, error);
+          this.eventBus.emit("show_message", {
+            title: __("Error syncing invoice: ") + error,
+            color: "error",
+          });
+          break;
+          
+        case 'REMOVE_SUBMITTED_INVOICE':
+          const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
+          const updatedInvoices = submittedInvoices.filter(inv => 
+            typeof inv === 'string' ? inv !== offlineId : inv.id !== offlineId
+          );
+          localStorage.setItem('submitted_offline_invoices', JSON.stringify(updatedInvoices));
+          break;
+      }
+    },
+    // Enhanced online handler
+    async handleOnline() {
+      // Clear any existing sync locks that might be stale
+      if ('caches' in window) {
+        try {
+          const cache = await caches.open('sync-locks');
+          const keys = await cache.keys();
+          await Promise.all(keys.map(key => cache.delete(key)));
+        } catch (error) {
+          console.warn('Error clearing sync locks:', error);
+        }
+      }
+
+      // Trigger sync for any pending invoices
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        try {
+          const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
+          for (const invoice of submittedInvoices) {
+            const offlineId = typeof invoice === 'string' ? invoice : invoice.id;
+            const registration = await navigator.serviceWorker.ready;
+            await registration.sync.register(`sync-invoice-${offlineId}`);
+          }
+        } catch (error) {
+          console.warn('Error registering syncs:', error);
+        }
+      }
+
+      // Refresh data
       this.get_addresses();
       this.get_sales_person_names();
     },
@@ -1803,6 +1866,9 @@ export default {
   // Lifecycle hook: mounted
   mounted() {
     this.$nextTick(() => {
+      // Add service worker message listener
+      navigator.serviceWorker.addEventListener('message', this.handleServiceWorkerMessage);
+
       // Add online/offline handlers
       window.addEventListener('online', this.handleOnline);
       window.addEventListener('offline', this.handleOffline);
