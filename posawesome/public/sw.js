@@ -17,7 +17,7 @@ if (workbox) {
     runtime: 'runtime'
   });
   
-  // Skip waiting and claim clients so new service worker activates immediately
+  // Skip waiting and claim clients
   workbox.core.skipWaiting();
   workbox.core.clientsClaim();
   
@@ -52,7 +52,24 @@ if (workbox) {
     })
   );
   
-  // Cache page navigations (HTML) with a 'Network First' strategy
+  // Cache page navigations (HTML) with a 'Cache First' strategy for POS app
+  workbox.routing.registerRoute(
+    ({url}) => url.pathname.includes('/app/posapp'),
+    new workbox.strategies.CacheFirst({
+      cacheName: 'pos-pages-cache',
+      plugins: [
+        new workbox.expiration.ExpirationPlugin({
+          maxEntries: 10,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 Days
+        }),
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [0, 200],
+        }),
+      ],
+    })
+  );
+  
+  // Other page navigations with Network First
   workbox.routing.registerRoute(
     ({request}) => request.mode === 'navigate',
     new workbox.strategies.NetworkFirst({
@@ -65,24 +82,6 @@ if (workbox) {
       ],
     })
   );
-  
-  // Fallback to offline page if network request fails
-  const offlineFallbackPage = '/assets/posawesome/offline.html';
-  
-  workbox.routing.setCatchHandler(({event}) => {
-    switch (event.request.destination) {
-      case 'document':
-        return caches.match(offlineFallbackPage);
-      default:
-        return Response.error();
-    }
-  });
-  
-  // Precache offline page and other essential assets
-  workbox.precaching.precacheAndRoute([
-    { url: offlineFallbackPage, revision: '1.0.0' },
-    { url: '/assets/posawesome/offline-image.png', revision: '1.0.0' }
-  ]);
   
   // Handle API requests with Network First strategy
   workbox.routing.registerRoute(
