@@ -71,14 +71,39 @@ async submit_dialog() {
     // Check if we're in offline mode
     if (this.invoice_doc && (this.invoice_doc.offline_mode || !navigator.onLine)) {
       await this.handleOfflineSubmission();
+      
+      // Clear current invoice and show new form
+      this.eventBus.emit("clear_invoice");
+      this.eventBus.emit("show_payment", "false");
+      this.eventBus.emit("reset_posting_date");
+      
+      // Show success message
+      this.show_message(
+        "Invoice saved offline. New invoice ready.",
+        "success"
+      );
       return;
     }
 
     // For online mode, proceed with regular submission
     const res = await this.submit_invoice();
     if (res) {
+      // Close payment dialog
       this.close_dialog();
+      
+      // Show print if needed
       this.show_print(res);
+      
+      // Clear current invoice and show new form
+      this.eventBus.emit("clear_invoice");
+      this.eventBus.emit("show_payment", "false");
+      this.eventBus.emit("reset_posting_date");
+      
+      // Show success message
+      this.show_message(
+        "Invoice submitted successfully. New invoice ready.",
+        "success"
+      );
     }
   } catch (error) {
     console.error('Error in submit_dialog:', error);

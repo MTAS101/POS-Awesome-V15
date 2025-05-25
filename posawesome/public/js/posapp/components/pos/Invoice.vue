@@ -855,27 +855,110 @@ export default {
 
     // Reset all invoice fields to default/empty values
     clear_invoice() {
+      // Reset all invoice related data
       this.items = [];
       this.posa_offers = [];
-      this.expanded = [];
-      this.eventBus.emit("set_pos_coupons", []);
       this.posa_coupons = [];
-      this.invoice_doc = "";
-      this.return_doc = "";
-      this.discount_amount = 0;
-      this.additional_discount = 0;  // Added for additional discount
-      this.additional_discount_percentage = 0;
+      this.selected_delivery_charge = {};
       this.delivery_charges_rate = 0;
-      this.selected_delivery_charge = "";
-      // Reset posting date to today
-      this.posting_date = frappe.datetime.nowdate();
-
-      // Always reset to default customer after invoice
-      this.customer = this.pos_profile.customer;
-
-      this.eventBus.emit("set_customer_readonly", false);
+      this.customer = "";
+      this.customer_info = "";
+      this.invoice_doc = {
+        doctype: "Sales Invoice",
+        is_pos: 1,
+        company: this.pos_profile.company,
+        currency: this.pos_profile.currency,
+        pos_profile: this.pos_profile.name,
+        payments: this.get_payment_methods(),
+        is_return: 0,
+        items: [],
+        taxes: [],
+        posa_pos_opening_shift: this.pos_opening_shift.name,
+        posting_date: frappe.datetime.nowdate(),
+        total: 0,
+        grand_total: 0,
+        base_total: 0,
+        base_grand_total: 0,
+        rounded_total: 0,
+        base_rounded_total: 0,
+        net_total: 0,
+        base_net_total: 0,
+        conversion_rate: 1,
+        plc_conversion_rate: 1,
+        write_off_amount: 0,
+        base_write_off_amount: 0,
+        write_off_outstanding_amount_automatically: 0,
+        write_off_account: "",
+        write_off_cost_center: "",
+        payments: this.get_payment_methods(),
+        posa_delivery_charges: "",
+        posa_delivery_charges_rate: 0,
+        posa_notes: "",
+        posa_is_offer_applied: 0,
+        posa_offers: [],
+        posa_coupons: []
+      };
+      
+      // Reset UI states
+      this.customer_readonly = false;
+      this.is_return = false;
+      this.return_doc = null;
       this.invoiceType = this.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
       this.invoiceTypes = ["Invoice", "Order"];
+      this.selected_currency = this.pos_profile.currency;
+      this.exchange_rate = 1;
+      this.offline_queue_count = 0;
+      
+      // Reset posting date to today
+      this.posting_date = frappe.datetime.nowdate();
+      
+      // Reset customer info
+      this.customer_info = "";
+      this.addresses = [];
+      this.loyalty_points = 0;
+      this.loyalty_amount = 0;
+      this.available_customer_credit = 0;
+      this.customer_credit_dict = [];
+      
+      // Reset item related data
+      this.new_line = {};
+      this.search_items_data = [];
+      this.search_items_group_data = [];
+      this.search_item_group = "";
+      this.item_group_search = "";
+      this.item_search = "";
+      
+      // Reset delivery related data
+      this.delivery_charges = [];
+      this.selected_delivery_charge = {};
+      this.delivery_charges_rate = 0;
+      
+      // Reset offers and coupons
+      this.posa_offers = [];
+      this.posa_coupons = [];
+      
+      // Reset UI flags
+      this.is_loading = false;
+      this.is_submitting = false;
+      this.is_processing_offline = false;
+      
+      // Emit events to update other components
+      this.eventBus.emit("update_customer", "");
+      this.eventBus.emit("set_customer_readonly", false);
+      
+      // Show success message
+      this.eventBus.emit("show_message", {
+        title: __("New invoice form ready"),
+        color: "success"
+      });
+      
+      // Focus on item search
+      this.$nextTick(() => {
+        const itemSearchInput = document.querySelector('.item-search-input');
+        if (itemSearchInput) {
+          itemSearchInput.focus();
+        }
+      });
     },
 
     // Fetch customer balance from backend
