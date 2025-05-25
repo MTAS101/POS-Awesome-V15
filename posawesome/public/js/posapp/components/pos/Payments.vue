@@ -1558,11 +1558,15 @@ export default {
         // Update offline queue count
         window.dispatchEvent(new CustomEvent('offline-queue-updated'));
 
-        // Request background sync
+        // Request background sync only if not already syncing
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
           try {
-            await navigator.serviceWorker.ready;
-            await navigator.serviceWorker.sync.register('sync-invoices');
+            const registration = await navigator.serviceWorker.ready;
+            // Check if sync is already registered
+            const tags = await registration.sync.getTags();
+            if (!tags.includes('sync-invoices')) {
+              await registration.sync.register('sync-invoices');
+            }
           } catch (err) {
             console.warn('Background sync registration failed:', err);
           }
@@ -1610,6 +1614,7 @@ export default {
             const store = db.createObjectStore('invoices', { keyPath: 'offline_id' });
             store.createIndex('sync_status', 'sync_status');
             store.createIndex('created_at', 'created_at');
+            store.createIndex('submitted', 'submitted');
           }
         };
       });
