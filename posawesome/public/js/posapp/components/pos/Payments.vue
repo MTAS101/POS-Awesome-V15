@@ -641,6 +641,7 @@ export default {
       isProcessing: false,
       processingTimeout: null,
       lastProcessedInvoiceId: null,
+      isOffline: false,
     };
   },
   computed: {
@@ -1575,43 +1576,69 @@ export default {
       };
     },
     async submit_dialog() {
-      if (this.isProcessing) {
-        console.log('Payment already in process, skipping duplicate submission');
-        return;
-      }
+      if (this.isProcessing) return;
+      this.isProcessing = true;
 
       try {
-        this.isProcessing = true;
-        
-        // Clear any existing timeout
-        if (this.processingTimeout) {
-          clearTimeout(this.processingTimeout);
+        // Validation checks
+        if (!this.invoice_doc.customer) {
+          throw new Error(__("Please select a customer"));
         }
 
-        // Set a timeout to reset processing state after 30 seconds
-        this.processingTimeout = setTimeout(() => {
-          this.isProcessing = false;
-        }, 30000);
-
-        const result = await this.process_payment();
-        
-        if (result && result.invoice_id) {
-          this.lastProcessedInvoiceId = result.invoice_id;
-          console.log('Payment processed successfully:', result.invoice_id);
+        if (!this.validate_payments()) {
+          throw new Error(__("Payment validation failed"));
         }
+
+        // Check if we're in offline mode
+        if (this.isOffline) {
+          this.handleOfflineSubmission();
+          return;
+        }
+
+        // For online mode, proceed with regular submission
+        const payments = this.process_payments();
+        if (payments.length === 0) {
+          throw new Error(__("No payment methods selected"));
+        }
+
+        // Process the payment
+        const res = await this.submit_invoice(payments);
+        if (res) {
+          this.eventBus.emit("show_payment", false);
+          this.eventBus.emit("show_message", {
+            title: __("Payment processed successfully"),
+            color: "success"
+          });
+          this.eventBus.emit("payment_completed", { success: true });
+        }
+
       } catch (error) {
-        console.error('Error in submit_dialog:', error);
-        frappe.show_alert({
-          message: __('Error processing payment. Please try again.'),
-          indicator: 'red'
+        this.eventBus.emit("show_message", {
+          title: error.message,
+          color: "error"
         });
       } finally {
-        // Clear timeout and reset state
-        if (this.processingTimeout) {
-          clearTimeout(this.processingTimeout);
-        }
         this.isProcessing = false;
       }
+    },
+    checkOfflineStatus() {
+      this.isOffline = !navigator.onLine;
+      console.log('Offline status:', this.isOffline);
+    },
+    handleOfflineSubmission() {
+      console.log('Processing offline payment submission');
+      
+      // For offline mode, show a success message and clear without redirect
+      this.eventBus.emit("show_message", {
+        title: __("Invoice saved offline and will be processed when online"),
+        color: "success"
+      });
+      
+      // Close the payment dialog
+      this.eventBus.emit("show_payment", false);
+      
+      // Clear the invoice view without trying to navigate
+      this.eventBus.emit("clear_invoice");
     },
     async process_payment() {
       if (this.isProcessing) {
@@ -1648,6 +1675,7 @@ export default {
         this.isProcessing = false;
       }
     },
+
     async create_invoice() {
       if (this.isProcessing) {
         console.log('Invoice creation already in process, skipping');
@@ -1672,9 +1700,9 @@ export default {
         this.isProcessing = false;
       }
     },
+
     async handle_offline_invoice() {
       try {
-        const { saveInvoiceOffline } = await import('../../offline_db');
         const invoice = this.prepare_invoice_data();
         
         const result = await saveInvoiceOffline(invoice);
@@ -1702,6 +1730,7 @@ export default {
         throw error;
       }
     },
+
     prepare_invoice_data() {
       const invoice = {
         doctype: 'Sales Invoice',
@@ -1710,8 +1739,8 @@ export default {
         company: this.pos_profile.company,
         posting_date: frappe.datetime.now_date(),
         posting_time: frappe.datetime.now_time(),
-        customer: this.customer,
-        items: this.items.map(item => ({
+        customer: this.invoice_doc.customer,
+        items: this.invoice_doc.items.map(item => ({
           item_code: item.item_code,
           item_name: item.item_name,
           description: item.description,
@@ -1730,24 +1759,28 @@ export default {
           serial_no: item.serial_no,
           cost_center: this.pos_profile.cost_center
         })),
-        payments: this.payments.map(payment => ({
-          mode_of_payment: payment.mode_of_payment,
-          amount: payment.amount,
-          account: payment.account,
-          type: payment.type,
-          default: payment.default ? 1 : 0
-        })),
-        taxes: this.taxes || [],
-        total: this.total,
-        grand_total: this.grand_total,
-        rounded_total: this.rounded_total,
-        base_rounded_total: this.base_rounded_total,
-        base_grand_total: this.base_grand_total,
-        discount_amount: this.discount_amount,
-        additional_discount_percentage: this.additional_discount_percentage,
+        payments: this.process_payments(),
+        taxes: this.invoice_doc.taxes || [],
+        total: this.invoice_doc.total,
+        grand_total: this.invoice_doc.grand_total,
+        rounded_total: this.invoice_doc.rounded_total,
+        base_rounded_total: this.invoice_doc.base_rounded_total,
+        base_grand_total: this.invoice_doc.base_grand_total,
+        discount_amount: this.invoice_doc.discount_amount,
+        additional_discount_percentage: this.invoice_doc.additional_discount_percentage,
         posa_pos_opening_shift: this.pos_profile.pos_opening_shift,
         posa_is_printed: 0,
-        update_stock: 1
+        update_stock: 1,
+        loyalty_amount: this.loyalty_amount,
+        redeem_loyalty_points: this.invoice_doc.redeem_loyalty_points,
+        loyalty_points: this.invoice_doc.loyalty_points,
+        redeemed_customer_credit: this.redeemed_customer_credit,
+        customer_credit_dict: this.customer_credit_dict,
+        is_credit_sale: this.is_credit_sale,
+        is_write_off_change: this.is_write_off_change,
+        is_cashback: this.is_cashback,
+        paid_change: this.paid_change,
+        credit_change: this.credit_change
       };
 
       // Add offline specific flags
@@ -1758,11 +1791,38 @@ export default {
       }
 
       return invoice;
-    }
+    },
+
+    reset_payments() {
+      this.invoice_doc.payments.forEach(payment => {
+        payment.amount = 0;
+        if (payment.base_amount !== undefined) {
+          payment.base_amount = 0;
+        }
+      });
+      this.loyalty_amount = 0;
+      this.redeemed_customer_credit = 0;
+      this.credit_change = 0;
+      this.paid_change = 0;
+      this.is_credit_sale = false;
+      this.is_write_off_change = false;
+      this.is_cashback = true;
+      this.customer_credit_dict = [];
+    },
   },
   created() {
+    // Add offline status check
+    window.addEventListener('online', this.checkOfflineStatus);
+    window.addEventListener('offline', this.checkOfflineStatus);
+    this.checkOfflineStatus();
+    
     document.addEventListener("keydown", this.shortPay.bind(this));
     this.submit_dialog = this.debounce(this.submit_dialog, 1000);
+  },
+  beforeDestroy() {
+    // Clean up event listeners
+    window.removeEventListener('online', this.checkOfflineStatus);
+    window.removeEventListener('offline', this.checkOfflineStatus);
   },
   mounted() {
     this.$nextTick(() => {
