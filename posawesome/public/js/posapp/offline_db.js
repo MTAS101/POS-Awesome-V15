@@ -438,6 +438,7 @@ export async function processPendingInvoices() {
     
     let successCount = 0;
     let errorCount = 0;
+    let errors = [];
     
     console.log(`Processing ${pendingOrders.length} pending orders`);
     
@@ -446,12 +447,6 @@ export async function processPendingInvoices() {
         console.log('Processing order:', order.id);
         
         // All orders should be submitted, not saved as draft
-        // This ensures consistent behavior across the application
-        const shouldSubmit = true;
-        
-        // Server expects data in a specific format
-        // The API is expecting a string that it will JSON.parse,
-        // but we need to send a proper object wrapped in a data field
         const requestData = {
           data: JSON.stringify(order),
           submit: 1 // Always submit invoices when syncing from offline mode
@@ -470,9 +465,18 @@ export async function processPendingInvoices() {
         });
         
         if (response.ok) {
-          console.log('Successfully synced order:', order.id);
+          const result = await response.json();
+          console.log('Successfully synced order:', order.id, result);
           await markOrderSynced(order.id);
           successCount++;
+          
+          // Update UI to show sync success
+          window.dispatchEvent(new CustomEvent('invoice-synced', {
+            detail: { 
+              success: true,
+              invoice: result.message || result
+            }
+          }));
         } else {
           const errorText = await response.text();
           console.error('Error syncing order:', order.id, errorText);
@@ -480,19 +484,50 @@ export async function processPendingInvoices() {
           try {
             // Try to parse error response
             const errorJson = JSON.parse(errorText);
-            console.error('Server error details:', errorJson);
+            errors.push({
+              orderId: order.id,
+              error: errorJson.message || errorJson._server_messages || errorText
+            });
           } catch (parseError) {
             // If parsing fails, just log the raw text
-            console.error('Raw error response:', errorText);
+            errors.push({
+              orderId: order.id,
+              error: errorText
+            });
           }
           
           errorCount++;
+          
+          // Update UI to show sync error
+          window.dispatchEvent(new CustomEvent('invoice-sync-failed', {
+            detail: {
+              orderId: order.id,
+              error: errorText
+            }
+          }));
         }
       } catch (error) {
         console.error('Error processing pending order:', order.id, error);
+        errors.push({
+          orderId: order.id,
+          error: error.message
+        });
         errorCount++;
+        
+        // Update UI to show sync error
+        window.dispatchEvent(new CustomEvent('invoice-sync-failed', {
+          detail: {
+            orderId: order.id,
+            error: error.message
+          }
+        }));
       }
     }
+    
+    // Update offline queue count
+    window.dispatchEvent(new CustomEvent('offline-queue-updated', {
+      detail: { count: await getPendingOrdersCount() }
+    }));
     
     if (errorCount > 0) {
       frappe.show_alert({
@@ -512,7 +547,8 @@ export async function processPendingInvoices() {
       success: errorCount === 0,
       processed: successCount,
       failed: errorCount,
-      total: pendingOrders.length
+      total: pendingOrders.length,
+      errors: errors
     };
   } catch (error) {
     console.error('Failed to process pending invoices:', error);
@@ -520,7 +556,38 @@ export async function processPendingInvoices() {
       message: __(`Error synchronizing orders: ${error.message}`),
       indicator: 'red'
     });
-    return { success: false, error: error.message };
+    return { 
+      success: false, 
+      error: error.message,
+      errors: [{
+        orderId: 'general',
+        error: error.message
+      }]
+    };
+  }
+}
+
+// Get count of pending orders
+export async function getPendingOrdersCount() {
+  try {
+    const db = await ensureStoreExists();
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([ORDERS_STORE], 'readonly');
+      const store = transaction.objectStore(ORDERS_STORE);
+      const countRequest = store.count();
+      
+      countRequest.onsuccess = () => {
+        resolve(countRequest.result);
+      };
+      
+      countRequest.onerror = (event) => {
+        console.error('Error counting pending orders:', event.target.error);
+        reject(event.target.error);
+      };
+    });
+  } catch (error) {
+    console.error('Failed to get pending orders count:', error);
+    return 0;
   }
 }
 

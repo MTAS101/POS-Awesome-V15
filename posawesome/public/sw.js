@@ -1,15 +1,13 @@
 // Import Workbox from CDN - in production you might want to use a bundled version
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js');
 
 if (workbox) {
   console.log(`Workbox is loaded`);
   
   workbox.setConfig({ debug: false });
   
-  // Force production builds
-  workbox.setConfig({
-    debug: false
-  });
+  // Force development builds
+  workbox.setConfig({ debug: true });
   
   // Cache names
   workbox.core.setCacheNameDetails({
@@ -32,46 +30,63 @@ if (workbox) {
     { url: '/assets/posawesome/manifest.json', revision: '1.0.0' }
   ]);
   
-  // Cache CSS
+  // Cache page navigations (html) with a Network First strategy
   workbox.routing.registerRoute(
-    ({ request }) => request.destination === 'style',
-    new workbox.strategies.CacheFirst({
-      cacheName: 'posawesome-styles',
+    // Check to see if the request is a navigation to a new page
+    ({ request }) => request.mode === 'navigate',
+    // Use a Network First caching strategy
+    new workbox.strategies.NetworkFirst({
+      // Put all cached files in a cache named 'pages'
+      cacheName: 'pages',
       plugins: [
-        new workbox.expiration.ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+        // Ensure that only requests that result in a 200 status are cached
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [200],
         }),
       ],
-    })
+    }),
   );
   
-  // Cache JavaScript
+  // Cache CSS, JS, and Web Worker files with a Stale While Revalidate strategy
   workbox.routing.registerRoute(
-    ({ request }) => request.destination === 'script',
+    // Check to see if the request's destination is style for stylesheets, script for JavaScript, or worker for web worker
+    ({ request }) =>
+      request.destination === 'style' ||
+      request.destination === 'script' ||
+      request.destination === 'worker',
+    // Use a Stale While Revalidate caching strategy
     new workbox.strategies.StaleWhileRevalidate({
-      cacheName: 'posawesome-scripts',
+      // Put all cached files in a cache named 'assets'
+      cacheName: 'assets',
       plugins: [
-        new workbox.expiration.ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 days
+        // Ensure that only requests that result in a 200 status are cached
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [200],
         }),
       ],
-    })
+    }),
   );
   
-  // Cache images
+  // Cache images with a Cache First strategy
   workbox.routing.registerRoute(
+    // Check to see if the request's destination is image
     ({ request }) => request.destination === 'image',
+    // Use a Cache First caching strategy
     new workbox.strategies.CacheFirst({
-      cacheName: 'posawesome-images',
+      // Put all cached images in a cache named 'images'
+      cacheName: 'images',
       plugins: [
+        // Ensure that only requests that result in a 200 status are cached
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [200],
+        }),
+        // Don't cache more than 50 items, and expire them after 30 days
         new workbox.expiration.ExpirationPlugin({
-          maxEntries: 60,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
+          maxEntries: 50,
+          maxAgeSeconds: 30 * 24 * 60 * 60,
         }),
       ],
-    })
+    }),
   );
   
   // Cache fonts
@@ -88,18 +103,21 @@ if (workbox) {
     })
   );
   
-  // API requests - Network first with fallback to cache
+  // Cache the API responses with a Network First strategy
   workbox.routing.registerRoute(
     ({ url }) => url.pathname.includes('/api/'),
     new workbox.strategies.NetworkFirst({
-      cacheName: 'posawesome-api',
+      cacheName: 'api-cache',
       plugins: [
+        new workbox.cacheableResponse.CacheableResponsePlugin({
+          statuses: [200],
+        }),
         new workbox.expiration.ExpirationPlugin({
           maxEntries: 50,
-          maxAgeSeconds: 5 * 60, // 5 minutes
+          maxAgeSeconds: 24 * 60 * 60, // 24 hours
         }),
       ],
-    })
+    }),
   );
   
   // Offline fallback page for navigation requests
@@ -185,6 +203,18 @@ if (workbox) {
     if (event.data && event.data.type === 'STORE_OFFLINE_ORDER') {
       // This will be handled by the background sync plugin
       console.log('Order stored for offline sync:', event.data.payload);
+    }
+  });
+
+  // Handle offline fallback
+  workbox.routing.setCatchHandler(({ event }) => {
+    switch (event.request.destination) {
+      case 'document':
+        return caches.match('/offline.html');
+      case 'image':
+        return caches.match('/offline-image.png');
+      default:
+        return Response.error();
     }
   });
 } else {
