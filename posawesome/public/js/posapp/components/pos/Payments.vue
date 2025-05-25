@@ -1494,8 +1494,16 @@ export default {
       console.log('Processing offline payment submission');
       
       try {
-        // Prepare and save invoice data
+        // Validate payments
+        if (!this.validate_payments()) {
+          throw new Error(__("Payment validation failed"));
+        }
+
+        // Prepare invoice data with payments
         const invoice = this.prepare_invoice_data();
+        
+        // Save invoice offline
+        console.log('Saving invoice offline with payment data:', invoice);
         const result = await saveInvoiceOffline(invoice);
 
         if (result) {
@@ -1504,7 +1512,7 @@ export default {
           
           // Show success message
           this.eventBus.emit("show_message", {
-            title: __("Invoice saved offline and will be processed when online"),
+            title: __("Invoice saved offline successfully"),
             color: "success"
           });
           
@@ -1526,15 +1534,65 @@ export default {
           title: error.message,
           color: "error"
         });
-        // Close payment dialog on error
-        this.eventBus.emit("show_payment", false);
       }
     },
 
-    // Add new method to handle payment submission
-    submitPayment() {
-      // Emit event that payment is submitted
-      this.eventBus.emit("payment_submitted");
+    prepare_invoice_data() {
+      const invoice = {
+        doctype: 'Sales Invoice',
+        is_pos: 1,
+        pos_profile: this.pos_profile.name,
+        company: this.pos_profile.company,
+        posting_date: frappe.datetime.now_date(),
+        posting_time: frappe.datetime.now_time(),
+        customer: this.invoice_doc.customer,
+        items: this.invoice_doc.items.map(item => ({
+          item_code: item.item_code,
+          item_name: item.item_name,
+          description: item.description,
+          qty: item.qty,
+          rate: item.rate,
+          amount: item.amount,
+          uom: item.uom,
+          conversion_factor: item.conversion_factor,
+          stock_uom: item.stock_uom,
+          price_list_rate: item.price_list_rate,
+          discount_percentage: item.discount_percentage,
+          discount_amount: item.discount_amount,
+          stock_qty: item.stock_qty,
+          warehouse: item.warehouse,
+          batch_no: item.batch_no,
+          serial_no: item.serial_no,
+          cost_center: this.pos_profile.cost_center
+        })),
+        payments: this.process_payments(),
+        taxes: this.invoice_doc.taxes || [],
+        total: this.invoice_doc.total,
+        grand_total: this.invoice_doc.grand_total,
+        rounded_total: this.invoice_doc.rounded_total,
+        base_rounded_total: this.invoice_doc.base_rounded_total,
+        base_grand_total: this.invoice_doc.base_grand_total,
+        discount_amount: this.invoice_doc.discount_amount,
+        additional_discount_percentage: this.invoice_doc.additional_discount_percentage,
+        posa_pos_opening_shift: this.pos_profile.pos_opening_shift,
+        posa_is_printed: 0,
+        update_stock: 1,
+        loyalty_amount: this.loyalty_amount,
+        redeem_loyalty_points: this.invoice_doc.redeem_loyalty_points,
+        loyalty_points: this.invoice_doc.loyalty_points,
+        redeemed_customer_credit: this.redeemed_customer_credit,
+        customer_credit_dict: this.customer_credit_dict,
+        is_credit_sale: this.is_credit_sale,
+        is_write_off_change: this.is_write_off_change,
+        is_cashback: this.is_cashback,
+        paid_change: this.paid_change,
+        credit_change: this.credit_change,
+        offline_pos_name: this.invoice_doc.offline_pos_name,
+        offline_mode: true,
+        offline_submit: true
+      };
+
+      return invoice;
     },
 
     process_payments() {
@@ -1661,85 +1719,6 @@ export default {
         console.error('Error handling offline invoice:', error);
         throw error;
       }
-    },
-
-    prepare_invoice_data() {
-      const invoice = {
-        doctype: 'Sales Invoice',
-        is_pos: 1,
-        pos_profile: this.pos_profile.name,
-        company: this.pos_profile.company,
-        posting_date: frappe.datetime.now_date(),
-        posting_time: frappe.datetime.now_time(),
-        customer: this.invoice_doc.customer,
-        items: this.invoice_doc.items.map(item => ({
-          item_code: item.item_code,
-          item_name: item.item_name,
-          description: item.description,
-          qty: item.qty,
-          rate: item.rate,
-          amount: item.amount,
-          uom: item.uom,
-          conversion_factor: item.conversion_factor,
-          stock_uom: item.stock_uom,
-          price_list_rate: item.price_list_rate,
-          discount_percentage: item.discount_percentage,
-          discount_amount: item.discount_amount,
-          stock_qty: item.stock_qty,
-          warehouse: item.warehouse,
-          batch_no: item.batch_no,
-          serial_no: item.serial_no,
-          cost_center: this.pos_profile.cost_center
-        })),
-        payments: this.process_payments(),
-        taxes: this.invoice_doc.taxes || [],
-        total: this.invoice_doc.total,
-        grand_total: this.invoice_doc.grand_total,
-        rounded_total: this.invoice_doc.rounded_total,
-        base_rounded_total: this.invoice_doc.base_rounded_total,
-        base_grand_total: this.invoice_doc.base_grand_total,
-        discount_amount: this.invoice_doc.discount_amount,
-        additional_discount_percentage: this.invoice_doc.additional_discount_percentage,
-        posa_pos_opening_shift: this.pos_profile.pos_opening_shift,
-        posa_is_printed: 0,
-        update_stock: 1,
-        loyalty_amount: this.loyalty_amount,
-        redeem_loyalty_points: this.invoice_doc.redeem_loyalty_points,
-        loyalty_points: this.invoice_doc.loyalty_points,
-        redeemed_customer_credit: this.redeemed_customer_credit,
-        customer_credit_dict: this.customer_credit_dict,
-        is_credit_sale: this.is_credit_sale,
-        is_write_off_change: this.is_write_off_change,
-        is_cashback: this.is_cashback,
-        paid_change: this.paid_change,
-        credit_change: this.credit_change
-      };
-
-      // Add offline specific flags
-      if (!navigator.onLine) {
-        invoice.offline_pos_name = `OFFPOS${Date.now()}`;
-        invoice.offline_invoice = 1;
-        invoice.offline_sync_status = 'not_synced';
-      }
-
-      return invoice;
-    },
-
-    reset_payments() {
-      this.invoice_doc.payments.forEach(payment => {
-        payment.amount = 0;
-        if (payment.base_amount !== undefined) {
-          payment.base_amount = 0;
-        }
-      });
-      this.loyalty_amount = 0;
-      this.redeemed_customer_credit = 0;
-      this.credit_change = 0;
-      this.paid_change = 0;
-      this.is_credit_sale = false;
-      this.is_write_off_change = false;
-      this.is_cashback = true;
-      this.customer_credit_dict = [];
     },
   },
   created() {

@@ -1536,11 +1536,11 @@ export default {
             
             // Show info message about offline processing
             this.eventBus.emit('show_message', {
-              title: __('You are offline. Processing invoice for local storage...'),
+              title: __('Processing in offline mode...'),
               color: 'info'
             });
             
-            // Validate offline data - make sure we have the minimal required fields
+            // Validate offline data
             if (!doc.customer) {
               throw new Error('Customer is required for offline invoices');
             }
@@ -1548,24 +1548,23 @@ export default {
             if (!doc.items || !doc.items.length) {
               throw new Error('No items in invoice');
             }
+
+            // Add offline flags to doc
+            doc.offline_pos_name = doc.name || ('Offline-' + Date.now());
+            doc.is_pos = 1;
+            doc.update_stock = 1;
+            doc.offline_mode = true;
             
-            // Save invoice offline
-            const result = await saveInvoiceOffline(doc);
+            // Return doc to show payment dialog
+            // Actual saving will happen after payment is entered
+            return doc;
             
-            // Show success message
-            this.eventBus.emit('show_message', {
-              title: __('Invoice saved offline and will be synced when online'),
-              color: 'success'
-            });
-            
-            this.is_processing_offline = false;
-            return doc; // Return the doc to continue with payment UI
           } catch (error) {
-            console.error('Error saving invoice offline:', error);
+            console.error('Error preparing offline invoice:', error);
             this.is_processing_offline = false;
             
             this.eventBus.emit('show_message', {
-              title: __(error.message || 'Error saving invoice offline'),
+              title: __(error.message || 'Error preparing offline invoice'),
               color: 'error'
             });
             
@@ -1577,7 +1576,6 @@ export default {
         if (doc.name) {
           try {
             const updated_doc = this.update_invoice(doc);
-            // Update posting date after invoice update
             if (updated_doc && updated_doc.posting_date) {
               this.posting_date = updated_doc.posting_date;
             }
@@ -1593,7 +1591,6 @@ export default {
         } else {
           try {
             const updated_doc = this.update_invoice(doc);
-            // Update posting date after invoice creation
             if (updated_doc && updated_doc.posting_date) {
               this.posting_date = updated_doc.posting_date;
             }
