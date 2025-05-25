@@ -1531,45 +1531,35 @@ export default {
       try {
         // Check if we're offline
         if (!isOnline()) {
-          try {
-            this.is_processing_offline = true;
-            
-            // Show info message about offline processing
-            this.eventBus.emit('show_message', {
-              title: __('Processing in offline mode...'),
-              color: 'info'
+          // Show payment dialog first
+          this.eventBus.emit("show_payment", true);
+          this.eventBus.emit("send_invoice_doc_payment", doc);
+          
+          // Wait for payment to be completed
+          await new Promise((resolve, reject) => {
+            this.eventBus.once("payment_completed", (result) => {
+              if (result.success) {
+                resolve();
+              } else {
+                reject(new Error("Payment failed"));
+              }
             });
-            
-            // Validate offline data
-            if (!doc.customer) {
-              throw new Error('Customer is required for offline invoices');
-            }
-            
-            if (!doc.items || !doc.items.length) {
-              throw new Error('No items in invoice');
-            }
-
-            // Add offline flags to doc
-            doc.offline_pos_name = doc.name || ('Offline-' + Date.now());
-            doc.is_pos = 1;
-            doc.update_stock = 1;
-            doc.offline_mode = true;
-            
-            // Return doc to show payment dialog
-            // Actual saving will happen after payment is entered
-            return doc;
-            
-          } catch (error) {
-            console.error('Error preparing offline invoice:', error);
-            this.is_processing_offline = false;
-            
-            this.eventBus.emit('show_message', {
-              title: __(error.message || 'Error preparing offline invoice'),
-              color: 'error'
-            });
-            
-            return false;
-          }
+          });
+          
+          // Now show offline message
+          this.eventBus.emit('show_message', {
+            title: __('Processing in offline mode...'),
+            color: 'info'
+          });
+          
+          // Add offline flags
+          doc.offline_pos_name = doc.name || ('Offline-' + Date.now());
+          doc.is_pos = 1;
+          doc.update_stock = 1;
+          doc.offline_mode = true;
+          doc.offline_submit = true;
+          
+          return doc;
         }
         
         // Online mode - proceed with normal flow

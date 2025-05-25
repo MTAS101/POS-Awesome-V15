@@ -1722,6 +1722,32 @@ export default {
     },
   },
   created() {
+    this.eventBus.on("show_payment", (value) => {
+      this.dialog = value;
+      if (value) {
+        this.$nextTick(() => {
+          // Focus on first payment input when dialog opens
+          const firstInput = this.$el.querySelector('input');
+          if (firstInput) firstInput.focus();
+        });
+      }
+    });
+
+    this.eventBus.on("send_invoice_doc_payment", (invoice_doc) => {
+      this.invoice_doc = invoice_doc;
+      this.isOffline = !navigator.onLine;
+      
+      // Initialize payments if not already set
+      if (!this.invoice_doc.payments || !this.invoice_doc.payments.length) {
+        this.invoice_doc.payments = this.get_payment_modes();
+      }
+      
+      // Set default payment amount in offline mode
+      if (this.isOffline && this.invoice_doc.payments.length > 0) {
+        this.invoice_doc.payments[0].amount = this.invoice_doc.rounded_total || this.invoice_doc.grand_total;
+      }
+    });
+
     // Add offline status check
     window.addEventListener('online', this.checkOfflineStatus);
     window.addEventListener('offline', this.checkOfflineStatus);
