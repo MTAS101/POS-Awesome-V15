@@ -116,12 +116,12 @@ export default {
       }
     },
 
-    async removeSyncedInvoice(invoice) {
+    async removeSyncedInvoice(offlineId) {
       try {
         const db = await this.openDB();
         const transaction = db.transaction(['invoices'], 'readwrite');
         const store = transaction.objectStore('invoices');
-        await store.delete(invoice.name);
+        await store.delete(offlineId);
       } catch (error) {
         console.error('Error removing synced invoice:', error);
       }
@@ -136,16 +136,33 @@ export default {
       
       try {
         const pendingInvoices = await this.getPendingInvoices();
+        const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
         
         for (const invoice of pendingInvoices) {
           try {
+            // Skip if invoice was already submitted
+            if (invoice.submitted || submittedInvoices.includes(invoice.offline_id)) {
+              console.log('Skipping already submitted invoice:', invoice.offline_id);
+              continue;
+            }
+
+            // Mark invoice as submitted before sending to prevent duplicates
+            await this.markInvoiceAsSubmitted(invoice.offline_id);
+            
             const response = await this.submitInvoice(invoice);
             if (response.message) {
-              await this.removeSyncedInvoice(invoice);
+              await this.removeSyncedInvoice(invoice.offline_id);
+              
+              // Remove from localStorage after successful sync
+              const updatedSubmitted = submittedInvoices.filter(id => id !== invoice.offline_id);
+              localStorage.setItem('submitted_offline_invoices', JSON.stringify(updatedSubmitted));
+              
               successCount++;
             }
           } catch (error) {
             console.error('Error syncing invoice:', error);
+            // Mark as not submitted if sync failed
+            await this.markInvoiceAsNotSubmitted(invoice.offline_id);
             failedCount++;
           }
         }
@@ -176,6 +193,52 @@ export default {
       } finally {
         this.isSyncing = false;
       }
+    },
+
+    async markInvoiceAsSubmitted(offlineId) {
+      const db = await this.openDB();
+      const transaction = db.transaction(['invoices'], 'readwrite');
+      const store = transaction.objectStore('invoices');
+      
+      return new Promise((resolve, reject) => {
+        const getRequest = store.get(offlineId);
+        
+        getRequest.onsuccess = (e) => {
+          const invoice = e.target.result;
+          if (invoice) {
+            invoice.submitted = true;
+            store.put(invoice);
+            resolve();
+          } else {
+            reject(new Error('Invoice not found'));
+          }
+        };
+        
+        getRequest.onerror = () => reject(new Error('Failed to mark invoice as submitted'));
+      });
+    },
+
+    async markInvoiceAsNotSubmitted(offlineId) {
+      const db = await this.openDB();
+      const transaction = db.transaction(['invoices'], 'readwrite');
+      const store = transaction.objectStore('invoices');
+      
+      return new Promise((resolve, reject) => {
+        const getRequest = store.get(offlineId);
+        
+        getRequest.onsuccess = (e) => {
+          const invoice = e.target.result;
+          if (invoice) {
+            invoice.submitted = false;
+            store.put(invoice);
+            resolve();
+          } else {
+            reject(new Error('Invoice not found'));
+          }
+        };
+        
+        getRequest.onerror = () => reject(new Error('Failed to mark invoice as not submitted'));
+      });
     },
 
     submitInvoice(invoice) {

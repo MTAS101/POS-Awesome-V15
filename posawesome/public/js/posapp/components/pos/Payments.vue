@@ -1512,9 +1512,13 @@ export default {
     // Handle offline payment submission
     async handleOfflineSubmission() {
       try {
+        // Generate a unique offline ID
+        const offlineId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
         const offlineInvoice = {
           ...this.invoice_doc,
           offline_mode: true,
+          offline_id: offlineId,
           total_change: !this.invoice_doc.is_return ? -this.diff_payment : 0,
           paid_change: !this.invoice_doc.is_return ? this.paid_change : 0,
           credit_change: -this.credit_change,
@@ -1523,10 +1527,16 @@ export default {
           is_cashback: this.is_cashback,
           sync_status: 'pending',
           created_at: new Date().toISOString(),
+          submitted: false
         };
 
         // Save to IndexedDB
         await this.saveInvoiceOffline(offlineInvoice);
+
+        // Store offline ID in localStorage to prevent duplicates
+        const submittedInvoices = JSON.parse(localStorage.getItem('submitted_offline_invoices') || '[]');
+        submittedInvoices.push(offlineId);
+        localStorage.setItem('submitted_offline_invoices', JSON.stringify(submittedInvoices));
 
         // Update UI
         this.eventBus.emit("show_message", {
@@ -1566,28 +1576,40 @@ export default {
         });
       }
     },
-    // Save invoice to IndexedDB
+    // Save invoice to IndexedDB with duplicate check
     async saveInvoiceOffline(invoice) {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open('POS_DB', 1);
 
         request.onerror = () => reject(new Error('Failed to open database'));
 
-        request.onsuccess = (event) => {
+        request.onsuccess = async (event) => {
           const db = event.target.result;
           const transaction = db.transaction(['invoices'], 'readwrite');
           const store = transaction.objectStore('invoices');
 
-          const saveRequest = store.add(invoice);
-
-          saveRequest.onsuccess = () => resolve();
-          saveRequest.onerror = () => reject(new Error('Failed to save invoice'));
+          // Check if invoice with same offline_id exists
+          const getRequest = store.get(invoice.offline_id);
+          
+          getRequest.onsuccess = (e) => {
+            if (e.target.result) {
+              // Invoice already exists
+              reject(new Error('Invoice already saved offline'));
+            } else {
+              // Save new invoice
+              const saveRequest = store.add(invoice);
+              saveRequest.onsuccess = () => resolve();
+              saveRequest.onerror = () => reject(new Error('Failed to save invoice'));
+            }
+          };
         };
 
         request.onupgradeneeded = (event) => {
           const db = event.target.result;
           if (!db.objectStoreNames.contains('invoices')) {
-            db.createObjectStore('invoices', { keyPath: 'name' });
+            const store = db.createObjectStore('invoices', { keyPath: 'offline_id' });
+            store.createIndex('sync_status', 'sync_status');
+            store.createIndex('created_at', 'created_at');
           }
         };
       });
