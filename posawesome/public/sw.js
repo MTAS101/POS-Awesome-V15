@@ -124,7 +124,7 @@ if (workbox) {
   });
   
   workbox.routing.registerRoute(
-    new RegExp('/api/method/posawesome.*'),
+    new RegExp('/api/method/posawesome.posawesome.api.posapp.update_invoice'),
     new workbox.strategies.NetworkOnly({
       plugins: [bgSyncPlugin],
     }),

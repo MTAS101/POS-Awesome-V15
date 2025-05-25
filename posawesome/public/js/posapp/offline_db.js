@@ -467,15 +467,18 @@ export async function processPendingInvoices() {
           sync_attempt: (order.sync_attempts || 0) + 1
         };
         
-        // Submit to server
+        // Submit to server using update_invoice endpoint
         const response = await frappe.call({
-          method: 'posawesome.posawesome.api.submit_invoice',
-          args: { invoice: orderData },
+          method: 'posawesome.posawesome.api.posapp.update_invoice',
+          args: { 
+            data: orderData,
+            submit: 1  // Set submit flag to true for offline orders
+          },
           freeze: false
         });
         
-        if (!response || !response.message || response.message.error) {
-          throw new Error(response?.message?.error || 'Invalid server response');
+        if (!response || !response.message) {
+          throw new Error('Invalid server response');
         }
         
         // Mark as synced in IndexedDB
