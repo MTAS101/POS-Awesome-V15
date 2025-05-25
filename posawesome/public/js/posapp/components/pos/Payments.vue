@@ -1504,7 +1504,200 @@ export default {
     // Get change amount for display
     get_change_amount() {
       return Math.max(0, this.total_payments - this.invoice_doc.grand_total);
-    }
+    },
+    // Add offline mode detection
+    isOfflineMode() {
+      return !navigator.onLine || (this.invoice_doc && this.invoice_doc.offline_mode);
+    },
+    // Handle offline payment submission
+    async handleOfflineSubmission() {
+      try {
+        const offlineInvoice = {
+          ...this.invoice_doc,
+          offline_mode: true,
+          total_change: !this.invoice_doc.is_return ? -this.diff_payment : 0,
+          paid_change: !this.invoice_doc.is_return ? this.paid_change : 0,
+          credit_change: -this.credit_change,
+          redeemed_customer_credit: this.redeemed_customer_credit,
+          customer_credit_dict: this.customer_credit_dict,
+          is_cashback: this.is_cashback,
+          sync_status: 'pending',
+          created_at: new Date().toISOString(),
+        };
+
+        // Save to IndexedDB
+        await this.saveInvoiceOffline(offlineInvoice);
+
+        // Update UI
+        this.eventBus.emit("show_message", {
+          title: __("Invoice saved offline. Will sync when online."),
+          color: "success",
+        });
+
+        // Clear form and reset
+        this.customer_credit_dict = [];
+        this.redeem_customer_credit = false;
+        this.is_cashback = true;
+        this.sales_person = "";
+        
+        // Reset invoice form
+        this.eventBus.emit("clear_invoice");
+        this.eventBus.emit("reset_posting_date");
+        this.back_to_invoice();
+
+        // Update offline queue count
+        window.dispatchEvent(new CustomEvent('offline-queue-updated'));
+
+        // Request background sync
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+          try {
+            await navigator.serviceWorker.ready;
+            await navigator.serviceWorker.sync.register('sync-invoices');
+          } catch (err) {
+            console.warn('Background sync registration failed:', err);
+          }
+        }
+
+      } catch (error) {
+        console.error('Error in offline submission:', error);
+        this.eventBus.emit("show_message", {
+          title: __("Error saving invoice offline: ") + error.message,
+          color: "error",
+        });
+      }
+    },
+    // Save invoice to IndexedDB
+    async saveInvoiceOffline(invoice) {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open('POS_DB', 1);
+
+        request.onerror = () => reject(new Error('Failed to open database'));
+
+        request.onsuccess = (event) => {
+          const db = event.target.result;
+          const transaction = db.transaction(['invoices'], 'readwrite');
+          const store = transaction.objectStore('invoices');
+
+          const saveRequest = store.add(invoice);
+
+          saveRequest.onsuccess = () => resolve();
+          saveRequest.onerror = () => reject(new Error('Failed to save invoice'));
+        };
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains('invoices')) {
+            db.createObjectStore('invoices', { keyPath: 'name' });
+          }
+        };
+      });
+    },
+    // Enhanced submit_dialog to handle offline mode
+    async submit_dialog() {
+      // Validation checks
+      if (!this.customer) {
+        this.eventBus.emit("show_message", {
+          title: __("Select A Customer"),
+          color: "error",
+        });
+        return;
+      }
+
+      if (this.balance != 0) {
+        this.eventBus.emit("show_message", {
+          title: __("There is a pending amount to be paid"),
+          color: "error",
+        });
+        return;
+      }
+
+      try {
+        // Check if we're in offline mode
+        if (this.isOfflineMode()) {
+          await this.handleOfflineSubmission();
+          return;
+        }
+
+        // Online mode - proceed with regular submission
+        let totalPayedAmount = 0;
+        this.invoice_doc.payments.forEach((payment) => {
+          payment.amount = this.flt(payment.amount);
+          totalPayedAmount += payment.amount;
+        });
+
+        if (this.invoice_doc.is_return && totalPayedAmount === 0) {
+          this.invoice_doc.is_pos = 0;
+        }
+
+        let data = {
+          total_change: !this.invoice_doc.is_return ? -this.diff_payment : 0,
+          paid_change: !this.invoice_doc.is_return ? this.paid_change : 0,
+          credit_change: -this.credit_change,
+          redeemed_customer_credit: this.redeemed_customer_credit,
+          customer_credit_dict: this.customer_credit_dict,
+          is_cashback: this.is_cashback,
+        };
+
+        frappe.call({
+          method: "posawesome.posawesome.api.posapp.submit_invoice",
+          args: {
+            data: data,
+            invoice: this.invoice_doc,
+          },
+          callback: (r) => this.handleSubmitResponse(r)
+        });
+      } catch (error) {
+        console.error('Error in submit_dialog:', error);
+        this.eventBus.emit("show_message", {
+          title: __("Error processing invoice: ") + error.message,
+          color: "error",
+        });
+      }
+    },
+    // Handle submit response
+    handleSubmitResponse(r) {
+      if (r.exc) {
+        console.error("Error submitting invoice:", r.exc);
+        this.eventBus.emit("show_message", {
+          title: __("Error submitting invoice: ") + r.exc,
+          color: "error",
+        });
+        return;
+      }
+
+      if (!r.message) {
+        this.eventBus.emit("show_message", {
+          title: __("Error submitting invoice: No response from server"),
+          color: "error",
+        });
+        return;
+      }
+
+      // Success handling
+      if (this.should_print) {
+        this.load_print_page();
+      }
+
+      // Reset form
+      this.customer_credit_dict = [];
+      this.redeem_customer_credit = false;
+      this.is_cashback = true;
+      this.sales_person = "";
+
+      // Update UI
+      this.eventBus.emit("set_last_invoice", this.invoice_doc.name);
+      this.eventBus.emit("show_message", {
+        title: __("Invoice {0} is Submitted", [r.message.name]),
+        color: "success",
+      });
+      frappe.utils.play_sound("submit");
+
+      // Clear form
+      this.addresses = [];
+      this.eventBus.emit("clear_invoice");
+      this.eventBus.emit("reset_posting_date");
+      this.back_to_invoice();
+    },
   },
   // Lifecycle hook: created
   created() {
