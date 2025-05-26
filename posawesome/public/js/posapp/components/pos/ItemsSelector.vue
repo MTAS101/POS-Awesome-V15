@@ -471,15 +471,27 @@ export default {
     },
     update_items_details(items) {
       const vm = this;
-      if (!items || !items.length) return;
-
-      // Cancel previous request
-      if (vm.currentRequest) {
-        vm.abortController.abort();
-        vm.currentRequest = null;
+      
+      // Check if we're offline first to avoid unnecessary API calls
+      if (!navigator.onLine) {
+        console.log('Device is offline, skipping item details update');
+        return;
       }
-
+      
+      // Cancel any existing request
+      if (vm.abortController) {
+        vm.abortController.abort();
+      }
+      
       vm.abortController = new AbortController();
+      
+      // Add timeout to prevent hanging
+      const timeoutId = setTimeout(() => {
+        if (vm.abortController) {
+          vm.abortController.abort();
+          console.log('Item details request timed out');
+        }
+      }, 5000); // 5 second timeout
       
       vm.currentRequest = frappe.call({
         method: "posawesome.posawesome.api.posapp.get_items_details",
@@ -490,6 +502,8 @@ export default {
         freeze: true,
         signal: vm.abortController.signal,
         callback: function(r) {
+          clearTimeout(timeoutId); // Clear timeout on success
+          
           if (r.message) {
             let qtyChanged = false;
             
@@ -531,17 +545,44 @@ export default {
           }
         },
         error: function(err) {
+          clearTimeout(timeoutId); // Clear timeout on error
+          
           if (err.name !== 'AbortError') {
             console.error("Error fetching item details:", err);
+            
+            // Check if network is down
+            if (!navigator.onLine || err.statusText === 'Unknown Status' || 
+                err.message && err.message.includes('disconnected')) {
+              console.log('Network appears to be down, will retry when online');
+              
+              // Don't retry immediately if offline
+              return;
+            }
+            
+            // Implement exponential backoff for retries
+            const retryDelay = Math.min(1000 * Math.pow(2, vm.retryCount || 0), 30000);
+            vm.retryCount = (vm.retryCount || 0) + 1;
+            
+            console.log(`Retrying in ${retryDelay/1000} seconds (attempt ${vm.retryCount})`);
+            
             setTimeout(() => {
-              vm.update_items_details(items);
-            }, 1000);
+              // Only retry if we're online
+              if (navigator.onLine) {
+                vm.update_items_details(items);
+              } else {
+                console.log('Still offline, skipping retry');
+              }
+            }, retryDelay);
+          } else {
+            // Reset retry count on abort
+            vm.retryCount = 0;
           }
         }
       });
       
       // Cleanup on component destroy
       this.cleanupBeforeDestroy = () => {
+        clearTimeout(timeoutId);
         if (vm.abortController) {
           vm.abortController.abort();
         }

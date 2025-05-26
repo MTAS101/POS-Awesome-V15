@@ -708,58 +708,99 @@ export default {
         payment.amount = flt(payment.amount);
       });
 
-      const payload = {};
-      payload.customer = customer;
-      payload.company = this.company;
-      payload.currency = this.pos_profile.currency;
-      payload.pos_opening_shift_name = this.pos_opening_shift.name;
-      payload.pos_profile_name = this.pos_profile.name;
-      payload.pos_profile = this.pos_profile;
-      payload.payment_methods = this.payment_methods;
-      payload.selected_invoices = this.selected_invoices;
-      payload.selected_payments = this.selected_payments;
-      payload.total_selected_invoices = flt(this.total_selected_invoices);
-      payload.selected_mpesa_payments = this.selected_mpesa_payments;
-      payload.total_selected_payments = flt(this.total_selected_payments);
-      payload.total_payment_methods = flt(this.total_payment_methods);
-      payload.total_selected_mpesa_payments = flt(
-        this.total_selected_mpesa_payments
-      );
-
-      frappe.call({
-        method: "posawesome.posawesome.api.payment_entry.process_pos_payment",
-        args: { payload },
-        freeze: true,
-        freeze_message: __("Processing Payment"),
-        callback: function (r) {
-          vm.isSubmitting = false;
-          if (r.message) {
-            console.log("Server response:", JSON.stringify(r.message));
-            frappe.utils.play_sound("submit");
-            
-            // Extract payment name from server response
-            const payment_name = r.message.new_payments_entry && r.message.new_payments_entry.length > 0 
-                ? r.message.new_payments_entry[0].name : null;
-            
-            if (payment_name) {
-              console.log("Opening print view with payment name:", payment_name);
-              vm.load_print_page(payment_name);
-            } else {
-              console.log("No payment_name found in response");
-              frappe.msgprint(__("Payment submitted but print function could not be executed. Payment name not found."));
+      // Refresh selected invoices to get latest versions before processing
+      const refreshPromises = this.selected_invoices.map(invoice => {
+        return new Promise((resolve, reject) => {
+          frappe.call({
+            method: "frappe.client.get",
+            args: {
+              doctype: "Sales Invoice",
+              name: invoice.voucher_no || invoice.name
+            },
+            callback: function(r) {
+              if (r.message) {
+                // Update the invoice data with latest version
+                resolve({
+                  ...invoice,
+                  modified: r.message.modified,
+                  outstanding_amount: r.message.outstanding_amount
+                });
+              } else {
+                resolve(invoice);
+              }
+            },
+            error: function(err) {
+              console.error("Error refreshing invoice:", err);
+              resolve(invoice); // Continue with original invoice if refresh fails
             }
-            vm.clear_all(false);
-            vm.customer_name = customer;
-            vm.get_outstanding_invoices();
-            vm.get_unallocated_payments();
-            vm.set_mpesa_search_params();
-            vm.get_draft_mpesa_payments_register();
-          }
-        },
-        error: function() {
-          vm.isSubmitting = false;
-        }
+          });
+        });
       });
+
+      // Process after refreshing all invoices
+      Promise.all(refreshPromises)
+        .then(refreshedInvoices => {
+          // Update the selected_invoices with refreshed data
+          this.selected_invoices = refreshedInvoices;
+          
+          const payload = {};
+          payload.customer = customer;
+          payload.company = this.company;
+          payload.currency = this.pos_profile.currency;
+          payload.pos_opening_shift_name = this.pos_opening_shift.name;
+          payload.pos_profile_name = this.pos_profile.name;
+          payload.pos_profile = this.pos_profile;
+          payload.payment_methods = this.payment_methods;
+          payload.selected_invoices = this.selected_invoices;
+          payload.selected_payments = this.selected_payments;
+          payload.total_selected_invoices = flt(this.total_selected_invoices);
+          payload.selected_mpesa_payments = this.selected_mpesa_payments;
+          payload.total_selected_payments = flt(this.total_selected_payments);
+          payload.total_payment_methods = flt(this.total_payment_methods);
+          payload.total_selected_mpesa_payments = flt(
+            this.total_selected_mpesa_payments
+          );
+
+          frappe.call({
+            method: "posawesome.posawesome.api.payment_entry.process_pos_payment",
+            args: { payload },
+            freeze: true,
+            freeze_message: __('Processing Payment'),
+            callback: function (r) {
+              vm.isSubmitting = false;
+              if (r.message) {
+                console.log("Server response:", JSON.stringify(r.message));
+                frappe.utils.play_sound("submit");
+                
+                // Extract payment name from server response
+                const payment_name = r.message.new_payments_entry && r.message.new_payments_entry.length > 0 
+                    ? r.message.new_payments_entry[0].name : null;
+                
+                if (payment_name) {
+                  console.log("Opening print view with payment name:", payment_name);
+                  vm.load_print_page(payment_name);
+                } else {
+                  console.log("No payment_name found in response");
+                  frappe.msgprint(__('Payment submitted but print function could not be executed. Payment name not found.'));
+                }
+                vm.clear_all(false);
+                vm.customer_name = customer;
+                vm.get_outstanding_invoices();
+                vm.get_unallocated_payments();
+                vm.set_mpesa_search_params();
+                vm.get_draft_mpesa_payments_register();
+              }
+            },
+            error: function() {
+              vm.isSubmitting = false;
+            }
+          });
+        })
+        .catch(err => {
+          console.error("Error in submit_and_print:", err);
+          vm.isSubmitting = false;
+          frappe.msgprint(__("An error occurred while processing your request. Please try again."));
+        });
     },
     selectSingleInvoice(item) {
       console.log("Row clicked:", item);

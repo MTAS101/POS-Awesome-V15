@@ -62,6 +62,16 @@ export default {
     this.remove_frappe_nav();
     window.addEventListener('online', () => this.handleConnectivityChange(true));
     window.addEventListener('offline', () => this.handleConnectivityChange(false));
+    
+    // Listen for orders_synced event from ConnectivityStatus component
+    this.$root.$on('orders_synced', (syncResult) => {
+      console.log('Orders synced, refreshing data:', syncResult);
+      // Refresh your main page data here
+      // For example, if you have a method to load invoices or orders:
+      if (this.$refs.posComponent) {
+        this.$refs.posComponent.refresh_invoices();
+      }
+    });
   },
   updated() { },
   created: function () {
@@ -72,6 +82,9 @@ export default {
   beforeUnmount() {
     window.removeEventListener('online', () => this.handleConnectivityChange(true));
     window.removeEventListener('offline', () => this.handleConnectivityChange(false));
+    
+    // Clean up event listener
+    this.$root.$off('orders_synced');
   },
 };
 </script>

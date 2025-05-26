@@ -7,7 +7,7 @@
         <v-card-title class="text-h5">
           <span class="text-h5 text-primary">{{
             __("Cancel Sale ?")
-            }}</span>
+          }}</span>
         </v-card-title>
         <v-card-text>
           This would cancel and delete the current sale. To save it as Draft, click the "Save and Clear" instead.
@@ -73,9 +73,8 @@
           <v-menu v-model="posting_date_menu" :close-on-content-click="false" transition="scale-transition"
             density="default">
             <template v-slot:activator="{ props }">
-              <v-text-field v-model="formatted_posting_date" :label="frappe._('Posting Date')" readonly
-                variant="solo" density="compact" clearable color="primary" hide-details
-                prepend-inner-icon="mdi-calendar"
+              <v-text-field v-model="formatted_posting_date" :label="frappe._('Posting Date')" readonly variant="solo"
+                density="compact" clearable color="primary" hide-details prepend-inner-icon="mdi-calendar"
                 v-bind="props"></v-text-field>
             </template>
             <v-date-picker v-model="posting_date" no-title scrollable color="primary"
@@ -84,7 +83,7 @@
               <template #actions>
                 <v-spacer></v-spacer>
                 <v-btn text color="primary" @click="posting_date = null; posting_date_menu = false">{{ __('Clear')
-                  }}</v-btn>
+                }}</v-btn>
                 <v-btn text color="primary" @click="posting_date_menu = false">{{ __('OK') }}</v-btn>
               </template>
             </v-date-picker>
@@ -118,23 +117,13 @@
       <!-- Items Table Section (Main items list for invoice) -->
       <div class="my-0 py-0 overflow-y-auto mt-3" style="max-height: calc(70vh - 180px)">
         <!-- Main Items Data Table -->
-        <v-data-table 
-          :headers="items_headers" 
-          :items="items" 
-          v-model:expanded="expanded" 
-          show-expand
-          item-value="posa_row_id" 
-          class="elevation-1" 
-          :items-per-page="itemsPerPage" 
-          expand-on-click
-          density="compact" 
-          hide-default-footer
-          :single-expand="true"
-          @update:expanded="handleExpandedUpdate">
+        <v-data-table :headers="items_headers" :items="items" v-model:expanded="expanded" show-expand
+          item-value="posa_row_id" class="elevation-1" :items-per-page="itemsPerPage" expand-on-click density="compact"
+          hide-default-footer :single-expand="true" @update:expanded="handleExpandedUpdate">
           <!-- Quantity Column Template -->
           <template v-slot:item.qty="{ item }">{{
             formatFloat(item.qty)
-          }}</template>
+            }}</template>
           <!-- Rate Column Template with Currency Symbol -->
           <template v-slot:item.rate="{ item }">
             <div class="d-flex align-center">
@@ -174,17 +163,20 @@
               <!-- Expanded Item Action Buttons Row -->
               <v-row class="mb-2" dense>
                 <v-col cols="auto">
-                  <v-btn :disabled="!!item.posa_is_replace" icon="mdi-delete" size="large" color="error" variant="tonal" class="mr-2" width="52" height="52" @click.stop="remove_item(item)">
+                  <v-btn :disabled="!!item.posa_is_replace" icon="mdi-delete" size="large" color="error" variant="tonal"
+                    class="mr-2" width="52" height="52" @click.stop="remove_item(item)">
                     <v-icon size="large">mdi-delete</v-icon>
                   </v-btn>
                 </v-col>
                 <v-spacer></v-spacer>
                 <v-col cols="auto">
                   <v-btn-group density="default" class="mx-2">
-                    <v-btn :disabled="!!item.posa_is_replace" size="large" color="error" variant="tonal" width="52" height="52" class="mr-1" @click.stop="subtract_one(item)">
+                    <v-btn :disabled="!!item.posa_is_replace" size="large" color="error" variant="tonal" width="52"
+                      height="52" class="mr-1" @click.stop="subtract_one(item)">
                       <v-icon size="large">mdi-minus</v-icon>
                     </v-btn>
-                    <v-btn :disabled="!!item.posa_is_replace" size="large" color="success" variant="tonal" width="52" height="52" class="ml-1" @click.stop="add_one(item)">
+                    <v-btn :disabled="!!item.posa_is_replace" size="large" color="success" variant="tonal" width="52"
+                      height="52" class="ml-1" @click.stop="add_one(item)">
                       <v-icon size="large">mdi-plus</v-icon>
                     </v-btn>
                   </v-btn-group>
@@ -238,18 +230,20 @@
                         (invoiceType === 'Return' && invoice_doc.return_against)" suffix="%"></v-text-field>
                 </v-col>
                 <v-col cols="12" sm="4">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Discount Amount')"
-                    bg-color="white" hide-details :model-value="formatCurrency(item.discount_amount || 0)" ref="discount"
-                    @change="(event) => { if (expanded && expanded.length === 1 && expanded[0] === item.posa_row_id) { calc_prices(item, event.target.value, { target: { id: 'discount_amount' } }); } }" 
-                    :rules="['isNumber']" id="discount_amount" 
-                    :disabled="!!item.posa_is_replace || item.posa_offer_applied || !pos_profile.posa_allow_user_to_edit_item_discount || (invoiceType === 'Return' && invoice_doc.return_against)" 
+                  <v-text-field density="compact" variant="outlined" color="primary"
+                    :label="frappe._('Discount Amount')" bg-color="white" hide-details
+                    :model-value="formatCurrency(item.discount_amount || 0)" ref="discount"
+                    @change="(event) => { if (expanded && expanded.length === 1 && expanded[0] === item.posa_row_id) { calc_prices(item, event.target.value, { target: { id: 'discount_amount' } }); } }"
+                    :rules="['isNumber']" id="discount_amount"
+                    :disabled="!!item.posa_is_replace || item.posa_offer_applied || !pos_profile.posa_allow_user_to_edit_item_discount || (invoiceType === 'Return' && invoice_doc.return_against)"
                     :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
                 </v-col>
 
                 <!-- Third Row -->
                 <v-col cols="12" sm="4">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Price list Rate')"
-                    bg-color="white" hide-details :model-value="formatCurrency(item.price_list_rate)" disabled
+                  <v-text-field density="compact" variant="outlined" color="primary"
+                    :label="frappe._('Price list Rate')" bg-color="white" hide-details
+                    :model-value="formatCurrency(item.price_list_rate)" disabled
                     :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
                 </v-col>
                 <v-col cols="12" sm="4">
@@ -278,14 +272,15 @@
                 <!-- Serial Number Fields (if enabled) -->
                 <template v-if="item.has_serial_no == 1 || item.serial_no">
                   <v-col cols="12" sm="4">
-                    <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Serial No QTY')"
-                      bg-color="white" hide-details v-model="item.serial_no_selected_count" type="number"
-                      disabled></v-text-field>
+                    <v-text-field density="compact" variant="outlined" color="primary"
+                      :label="frappe._('Serial No QTY')" bg-color="white" hide-details
+                      v-model="item.serial_no_selected_count" type="number" disabled></v-text-field>
                   </v-col>
                   <v-col cols="12">
-                    <v-autocomplete v-model="item.serial_no_selected" :items="item.serial_no_data" item-title="serial_no"
-                      variant="outlined" density="compact" chips color="primary" small-chips
-                      :label="frappe._('Serial No')" multiple @update:model-value="set_serial_no(item)"></v-autocomplete>
+                    <v-autocomplete v-model="item.serial_no_selected" :items="item.serial_no_data"
+                      item-title="serial_no" variant="outlined" density="compact" chips color="primary" small-chips
+                      :label="frappe._('Serial No')" multiple
+                      @update:model-value="set_serial_no(item)"></v-autocomplete>
                   </v-col>
                 </template>
 
@@ -376,7 +371,7 @@
             <!-- Items Discount -->
             <v-col cols="6">
               <v-text-field :model-value="formatCurrency(total_items_discount_amount)"
-                :prefix="currencySymbol(displayCurrency)" :label="frappe._('Items Discounts')" 
+                :prefix="currencySymbol(displayCurrency)" :label="frappe._('Items Discounts')"
                 prepend-inner-icon="mdi-tag-minus" variant="solo" density="compact" color="warning" readonly />
             </v-col>
 
@@ -625,7 +620,7 @@ export default {
         try {
           e.preventDefault();
           e.stopPropagation();
-          
+
           if (!this.items || this.items.length === 0) {
             console.log('No items to expand/collapse');
             return;
@@ -633,10 +628,10 @@ export default {
 
           const firstItem = this.items[0];
           console.log('Processing first item:', firstItem.item_code);
-          
+
           // Check if first item is currently expanded using its ID
           const isExpanded = this.expanded.includes(firstItem.posa_row_id);
-          
+
           // Toggle expanded state using item ID
           if (isExpanded) {
             console.log('Collapsing item:', firstItem.item_code);
@@ -662,7 +657,7 @@ export default {
     handleExpandedUpdate(newExpanded) {
       console.log('Expanded state updated:', newExpanded);
       this.expanded = newExpanded;
-      
+
       // Update item details for newly expanded items
       if (newExpanded && newExpanded.length > 0) {
         const expandedItemId = newExpanded[0];
@@ -762,7 +757,7 @@ export default {
           cur_item.serial_no_selected.push(item.to_set_serial_no);
           item.to_set_serial_no = null;
         }
-        
+
         // For returns, subtract from quantity to make it more negative
         if (this.invoiceType === "Return") {
           cur_item.qty -= (item.qty || 1);
@@ -770,16 +765,16 @@ export default {
           cur_item.qty += (item.qty || 1);
         }
         this.calc_stock_qty(cur_item, cur_item.qty);
-        
+
         // Update batch quantity if needed
         if (cur_item.has_batch_no && cur_item.batch_no) {
           this.set_batch_qty(cur_item, cur_item.batch_no, false);
         }
-        
+
         this.set_serial_no(cur_item);
       }
       this.$forceUpdate();
-      
+
       // Only try to expand if new_item exists and should be expanded
       if (new_item && ((!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no)) {
         this.expanded = [new_item.posa_row_id];
@@ -798,7 +793,7 @@ export default {
       if (!item.posa_is_replace) {
         item.posa_is_replace = "";
       }
-      
+
       // Initialize flag for tracking manual rate changes
       new_item._manual_rate_set = false;
 
@@ -812,7 +807,7 @@ export default {
       new_item.discount_percentage = 0;
       new_item.discount_amount_per_item = 0;
       new_item.price_list_rate = item.rate;
-      
+
       // Setup base rates properly for multi-currency
       if (this.selected_currency !== this.pos_profile.currency) {
         // Store original base currency values
@@ -825,7 +820,7 @@ export default {
         new_item.base_rate = item.rate;
         new_item.base_discount_amount = 0;
       }
-      
+
       new_item.qty = item.qty;
       new_item.uom = item.uom ? item.uom : item.stock_uom;
       // Ensure item_uoms is initialized
@@ -869,7 +864,6 @@ export default {
         company: this.pos_profile.company,
         currency: this.pos_profile.currency,
         pos_profile: this.pos_profile.name,
-        payments: this.get_payment_methods(),
         is_return: 0,
         items: [],
         taxes: [],
@@ -898,7 +892,7 @@ export default {
         posa_offers: [],
         posa_coupons: []
       };
-      
+
       // Reset UI states
       this.customer_readonly = false;
       this.is_return = false;
@@ -908,10 +902,10 @@ export default {
       this.selected_currency = this.pos_profile.currency;
       this.exchange_rate = 1;
       this.offline_queue_count = 0;
-      
+
       // Reset posting date to today
       this.posting_date = frappe.datetime.nowdate();
-      
+
       // Reset customer info
       this.customer_info = "";
       this.addresses = [];
@@ -919,7 +913,7 @@ export default {
       this.loyalty_amount = 0;
       this.available_customer_credit = 0;
       this.customer_credit_dict = [];
-      
+
       // Reset item related data
       this.new_line = {};
       this.search_items_data = [];
@@ -927,31 +921,31 @@ export default {
       this.search_item_group = "";
       this.item_group_search = "";
       this.item_search = "";
-      
+
       // Reset delivery related data
       this.delivery_charges = [];
       this.selected_delivery_charge = {};
       this.delivery_charges_rate = 0;
-      
+
       // Reset offers and coupons
       this.posa_offers = [];
       this.posa_coupons = [];
-      
+
       // Reset UI flags
       this.is_loading = false;
       this.is_submitting = false;
       this.is_processing_offline = false;
-      
+
       // Emit events to update other components
       this.eventBus.emit("update_customer", "");
       this.eventBus.emit("set_customer_readonly", false);
-      
+
       // Show success message
       this.eventBus.emit("show_message", {
         title: __("New invoice form ready"),
         color: "success"
       });
-      
+
       // Focus on item search
       this.$nextTick(() => {
         const itemSearchInput = document.querySelector('.item-search-input');
@@ -1020,7 +1014,7 @@ export default {
         customer: data.customer,
         items_count: data.items ? data.items.length : 0
       });
-      
+
       this.clear_invoice()
       if (data.is_return) {
         console.log("Processing return invoice");
@@ -1037,11 +1031,11 @@ export default {
         this.invoiceType = "Return";
         this.invoiceTypes = ["Return"];
       }
-      
+
       this.invoice_doc = data;
       this.items = data.items || [];
       console.log("Items set:", this.items.length, "items");
-      
+
       if (this.items.length > 0) {
         this.update_items_details(this.items);
         this.posa_offers = data.posa_offers || [];
@@ -1056,13 +1050,13 @@ export default {
       } else {
         console.log("Warning: No items in return invoice");
       }
-      
+
       this.customer = data.customer;
       this.posting_date = data.posting_date || frappe.datetime.nowdate();
       this.discount_amount = data.discount_amount;
       this.additional_discount_percentage =
         data.additional_discount_percentage;
-        
+
       if (this.items.length > 0) {
         this.items.forEach((item) => {
           if (item.serial_no) {
@@ -1077,7 +1071,7 @@ export default {
           }
         });
       }
-      
+
       if (data.is_return) {
         console.log("Setting return values for discounts");
         this.discount_amount = -data.discount_amount;
@@ -1087,7 +1081,7 @@ export default {
       } else {
         this.eventBus.emit("set_pos_coupons", data.posa_coupons);
       }
-      
+
       console.log("load_invoice completed, invoice state:", {
         invoiceType: this.invoiceType,
         is_return: this.invoice_doc.is_return,
@@ -1194,78 +1188,78 @@ export default {
       if (this.invoice_doc.name) {
         doc = { ...this.invoice_doc };
       }
-      
+
       // Always set these fields first
       doc.doctype = "Sales Invoice";
       doc.is_pos = 1;
       doc.ignore_pricing_rule = 1;
       doc.company = doc.company || this.pos_profile.company;
       doc.pos_profile = doc.pos_profile || this.pos_profile.name;
-      
+
       // Currency related fields
       doc.currency = this.selected_currency || this.pos_profile.currency;
       doc.conversion_rate = this.exchange_rate || 1;
       doc.plc_conversion_rate = this.exchange_rate || 1;
       doc.price_list_currency = doc.currency;
-      
+
       // Other fields
       doc.campaign = doc.campaign || this.pos_profile.campaign;
       doc.selling_price_list = this.pos_profile.selling_price_list;
       doc.naming_series = doc.naming_series || this.pos_profile.naming_series;
       doc.customer = this.customer;
-      
+
       // Determine if this is a return invoice
       const isReturn = this.invoiceType === 'Return' || this.invoice_doc.is_return;
       doc.is_return = isReturn ? 1 : 0;
-      
+
       // Calculate amounts in selected currency
       const items = this.get_invoice_items();
       doc.items = items;
-      
+
       // Calculate totals in selected currency ensuring negative values for returns
       let total = this.Total;
       if (isReturn && total > 0) total = -Math.abs(total);
-      
+
       doc.total = total;
       doc.net_total = total;  // Net total is same as total before taxes
       doc.base_total = total * (1 / this.exchange_rate || 1);
       doc.base_net_total = total * (1 / this.exchange_rate || 1);
-      
+
       // Apply discounts with correct sign for returns
       let discountAmount = flt(this.additional_discount);
       if (isReturn && discountAmount > 0) discountAmount = -Math.abs(discountAmount);
-      
+
       doc.discount_amount = discountAmount;
       doc.base_discount_amount = discountAmount * (1 / this.exchange_rate || 1);
-      
+
       let discountPercentage = flt(this.additional_discount_percentage);
       if (isReturn && discountPercentage > 0) discountPercentage = -Math.abs(discountPercentage);
-      
+
       doc.additional_discount_percentage = discountPercentage;
-      
+
       // Calculate grand total with correct sign for returns
       let grandTotal = this.subtotal;
       if (isReturn && grandTotal > 0) grandTotal = -Math.abs(grandTotal);
-      
+
       doc.grand_total = grandTotal;
       doc.base_grand_total = grandTotal * (1 / this.exchange_rate || 1);
-      
+
       // Apply rounding to get rounded total
       doc.rounded_total = this.roundAmount(grandTotal);
       doc.base_rounded_total = this.roundAmount(doc.base_grand_total);
-      
+
       // Add POS specific fields
       doc.posa_pos_opening_shift = this.pos_opening_shift.name;
       doc.payments = this.get_payments();
       doc.taxes = [];
-      
+
       // Handle return specific fields
       if (isReturn) {
         if (this.invoice_doc.return_against) {
           doc.return_against = this.invoice_doc.return_against;
         }
         doc.update_stock = 1;
-        
+
         // Double-check all values are negative
         if (doc.grand_total > 0) doc.grand_total = -Math.abs(doc.grand_total);
         if (doc.base_grand_total > 0) doc.base_grand_total = -Math.abs(doc.base_grand_total);
@@ -1275,7 +1269,7 @@ export default {
         if (doc.base_total > 0) doc.base_total = -Math.abs(doc.base_total);
         if (doc.net_total > 0) doc.net_total = -Math.abs(doc.net_total);
         if (doc.base_net_total > 0) doc.base_net_total = -Math.abs(doc.base_net_total);
-        
+
         // Ensure payments have negative amounts
         if (doc.payments && doc.payments.length) {
           doc.payments.forEach(payment => {
@@ -1284,28 +1278,28 @@ export default {
           });
         }
       }
-      
+
       // Add offer details
       doc.posa_offers = this.posa_offers;
       doc.posa_coupons = this.posa_coupons;
       doc.posa_delivery_charges = this.selected_delivery_charge.name;
       doc.posa_delivery_charges_rate = this.delivery_charges_rate || 0;
       doc.posting_date = this.posting_date;
-      
+
       // Add flags to ensure proper rate handling
       doc.ignore_pricing_rule = 1;
       doc.price_list_currency = doc.currency;
       doc.plc_conversion_rate = doc.conversion_rate;
       doc.ignore_default_fields = 1;  // Add this to prevent default field updates
-      
+
       // Add custom fields to track offer rates
       doc.posa_is_offer_applied = this.posa_offers.length > 0 ? 1 : 0;
-      
+
       // Calculate base amounts using the exchange rate
       if (this.selected_currency !== this.pos_profile.currency) {
         // For returns, we need to ensure negative values
         const multiplier = isReturn ? -1 : 1;
-        
+
         // If exchange rate is 300 PKR = 1 USD
         // To convert USD to PKR: multiply by exchange rate
         doc.base_total = total * this.exchange_rate * multiplier;
@@ -1323,7 +1317,7 @@ export default {
         doc.base_grand_total = grandTotal * multiplier;
         doc.base_rounded_total = grandTotal * multiplier;
       }
-      
+
       // Ensure payments have correct base amounts
       if (doc.payments && doc.payments.length) {
         doc.payments.forEach(payment => {
@@ -1333,7 +1327,7 @@ export default {
           } else {
             payment.base_amount = payment.amount;
           }
-          
+
           // For returns, ensure negative values
           if (isReturn) {
             payment.amount = -Math.abs(payment.amount);
@@ -1341,7 +1335,7 @@ export default {
           }
         });
       }
-      
+
       return doc;
     },
 
@@ -1414,7 +1408,7 @@ export default {
     get_invoice_items() {
       const items_list = [];
       const isReturn = this.invoiceType === 'Return' || this.invoice_doc.is_return;
-      
+
       this.items.forEach((item) => {
         const new_item = {
           item_code: item.item_code,
@@ -1440,17 +1434,17 @@ export default {
           // item.rate is in USD (e.g. 10 USD)
           // base_rate should be in PKR (e.g. 3000 PKR)
           new_item.rate = flt(item.rate);  // Keep rate in USD
-          
+
           // Use pre-stored base_rate if available, otherwise calculate
           new_item.base_rate = item.base_rate || flt(item.rate * this.exchange_rate);
-          
+
           new_item.price_list_rate = flt(item.price_list_rate);  // Keep price list rate in USD
           new_item.base_price_list_rate = item.base_price_list_rate || flt(item.price_list_rate * this.exchange_rate);
-          
+
           // Calculate amounts
           new_item.amount = flt(item.qty) * new_item.rate;  // Amount in USD
           new_item.base_amount = new_item.amount * this.exchange_rate;  // Convert to PKR
-          
+
           // Handle discount amount
           new_item.discount_amount = flt(item.discount_amount);  // Keep discount in USD
           new_item.base_discount_amount = item.base_discount_amount || flt(item.discount_amount * this.exchange_rate);
@@ -1477,7 +1471,7 @@ export default {
 
         items_list.push(new_item);
       });
-      
+
       return items_list;
     },
 
@@ -1518,24 +1512,24 @@ export default {
       // Use this.subtotal which is already in selected currency and includes all calculations
       const total_amount = this.subtotal;
       let remaining_amount = total_amount;
-      
+
       this.pos_profile.payments.forEach((payment, index) => {
         // For the first payment method, assign the full remaining amount
         const payment_amount = index === 0 ? remaining_amount : (payment.amount || 0);
-        
+
         // For return invoices, ensure payment amounts are negative
-        const adjusted_amount = this.invoiceType === 'Return' || this.invoice_doc.is_return ? 
+        const adjusted_amount = this.invoiceType === 'Return' || this.invoice_doc.is_return ?
           -Math.abs(payment_amount) : payment_amount;
-        
+
         // Handle currency conversion
         // If selected_currency is USD and base is PKR:
         // amount is in USD (e.g. 10 USD)
         // base_amount should be in PKR (e.g. 3000 PKR)
         // So multiply by exchange rate to get base_amount
-        const base_amount = this.selected_currency !== this.pos_profile.currency ? 
-          this.flt(adjusted_amount * (this.exchange_rate || 1), this.currency_precision) : 
+        const base_amount = this.selected_currency !== this.pos_profile.currency ?
+          this.flt(adjusted_amount * (this.exchange_rate || 1), this.currency_precision) :
           adjusted_amount;
-        
+
         payments.push({
           amount: adjusted_amount,  // Keep in selected currency (e.g. USD)
           base_amount: base_amount,  // Convert to base currency (e.g. PKR)
@@ -1559,7 +1553,7 @@ export default {
           base_amount: p.base_amount
         }))
       });
-      
+
       return payments;
     },
 
@@ -1610,52 +1604,52 @@ export default {
     // Process and save invoice (handles update or create)
     async process_invoice() {
       const doc = this.get_invoice_doc();
-      
+
       try {
         // Check if we're offline
         if (!isOnline()) {
           try {
             this.is_processing_offline = true;
-            
+
             // Show info message about offline processing
             this.eventBus.emit('show_message', {
               title: __('You are offline. Processing invoice for local storage...'),
               color: 'info'
             });
-            
+
             // Validate offline data - make sure we have the minimal required fields
             if (!doc.customer) {
               throw new Error('Customer is required for offline invoices');
             }
-            
+
             if (!doc.items || !doc.items.length) {
               throw new Error('No items in invoice');
             }
-            
+
             // Save invoice offline
             const result = await saveInvoiceOffline(doc);
-            
+
             // Show success message
             this.eventBus.emit('show_message', {
               title: __('Invoice saved offline and will be synced when online'),
               color: 'success'
             });
-            
+
             this.is_processing_offline = false;
             return doc; // Return the doc to continue with payment UI
           } catch (error) {
             console.error('Error saving invoice offline:', error);
             this.is_processing_offline = false;
-            
+
             this.eventBus.emit('show_message', {
               title: __(error.message || 'Error saving invoice offline'),
               color: 'error'
             });
-            
+
             return false;
           }
         }
-        
+
         // Online mode - proceed with normal flow
         if (doc.name) {
           try {
@@ -1768,34 +1762,34 @@ export default {
         // Update invoice_doc with current currency info
         invoice_doc.currency = this.selected_currency || this.pos_profile.currency;
         invoice_doc.conversion_rate = this.exchange_rate || 1;
-        
+
         // Update totals in invoice_doc to match current calculations
         invoice_doc.total = this.Total;
         invoice_doc.grand_total = this.subtotal;
-        
+
         // Apply rounding to get rounded total
         invoice_doc.rounded_total = this.roundAmount(this.subtotal);
         invoice_doc.base_total = this.Total * (1 / this.exchange_rate || 1);
         invoice_doc.base_grand_total = this.subtotal * (1 / this.exchange_rate || 1);
         invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
-        
+
         // Check if we're offline
         const isOfflineMode = !isOnline();
-        
+
         // If offline, add a flag to indicate this should be submitted, not saved as draft
         if (isOfflineMode) {
           invoice_doc.offline_pos_name = invoice_doc.name || ('Offline-' + Date.now());
           invoice_doc.is_pos = 1;
           invoice_doc.offline_submit = true; // Flag to indicate this should be submitted when synced
           console.log('Invoice flagged for automatic submission when online');
-          
+
           // Show info message about offline mode
           this.eventBus.emit('show_message', {
             title: __('You are offline. Invoice will be submitted automatically when online.'),
             color: 'info'
           });
         }
-        
+
         // Check if this is a return invoice
         if (this.invoiceType === 'Return' || invoice_doc.is_return) {
           console.log('Preparing RETURN invoice for payment with:', {
@@ -1805,7 +1799,7 @@ export default {
             items: invoice_doc.items.length,
             grand_total: invoice_doc.grand_total
           });
-          
+
           // For return invoices, explicitly ensure all amounts are negative
           invoice_doc.is_return = 1;
           if (invoice_doc.grand_total > 0) invoice_doc.grand_total = -Math.abs(invoice_doc.grand_total);
@@ -1814,7 +1808,7 @@ export default {
           if (invoice_doc.base_grand_total > 0) invoice_doc.base_grand_total = -Math.abs(invoice_doc.base_grand_total);
           if (invoice_doc.base_rounded_total > 0) invoice_doc.base_rounded_total = -Math.abs(invoice_doc.base_rounded_total);
           if (invoice_doc.base_total > 0) invoice_doc.base_total = -Math.abs(invoice_doc.base_total);
-          
+
           // Ensure all items have negative quantity and amount
           if (invoice_doc.items && invoice_doc.items.length) {
             invoice_doc.items.forEach(item => {
@@ -1824,7 +1818,7 @@ export default {
             });
           }
         }
-        
+
         // Get payments with correct sign (positive/negative)
         invoice_doc.payments = this.get_payments();
         console.log('Final payment data:', invoice_doc.payments);
@@ -1839,13 +1833,13 @@ export default {
         }
 
         console.log('Showing payment dialog with currency:', invoice_doc.currency);
-        
+
         // In offline mode, make sure to tell the payment component we're offline
         if (isOfflineMode) {
           console.log('Operating in offline mode for payment');
           invoice_doc.offline_mode = true;
         }
-        
+
         this.eventBus.emit("show_payment", "true");
         this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
 
@@ -1862,11 +1856,11 @@ export default {
     // Validate invoice before payment/submit (return logic, quantity, rates, etc)
     async validate() {
       console.log('Starting return validation');
-      
+
       // For all returns, check if amounts are negative
       if (this.invoiceType === 'Return' || this.invoice_doc.is_return) {
         console.log('Validating return invoice values');
-        
+
         // Check if quantities are negative
         const positiveItems = this.items.filter(item => item.qty >= 0 || item.stock_qty >= 0);
         if (positiveItems.length > 0) {
@@ -1875,17 +1869,17 @@ export default {
             title: __(`Return items must have negative quantities`),
             color: 'error'
           });
-          
+
           // Fix the quantities to be negative
           positiveItems.forEach(item => {
             item.qty = -Math.abs(item.qty);
             item.stock_qty = -Math.abs(item.stock_qty);
           });
-          
+
           // Force update to reflect changes
           this.$forceUpdate();
         }
-        
+
         // Ensure total amount is negative
         if (this.subtotal > 0) {
           console.log('Return has positive subtotal:', this.subtotal);
@@ -1895,7 +1889,7 @@ export default {
           });
         }
       }
-      
+
       // For return with reference to existing invoice
       if (this.invoice_doc.is_return && this.invoice_doc.return_against) {
         console.log('Return doc:', this.invoice_doc);
@@ -2090,7 +2084,7 @@ export default {
         return;
       }
       var vm = this;
-      
+
       // Remove this block which was causing the issue - rates should persist regardless of currency
       // if (item.price_list_rate && !item.posa_offer_applied) {
       //   item.rate = item.price_list_rate;
@@ -2144,30 +2138,30 @@ export default {
               // Pass null instead of undefined to avoid console warning
               vm.set_batch_qty(item, null, false);
             }
-            
+
             // First save base rates if not exists or if in default currency
             if (!item.base_rate || vm.selected_currency === vm.pos_profile.currency) {
               // Always store base rates from server in base currency
               item.base_price_list_rate = data.price_list_rate;
-              
+
               if (!item.posa_offer_applied) {
                 item.base_rate = data.price_list_rate;
               }
             }
-            
+
             // Only update rates if no offer is applied
             if (!item.posa_offer_applied) {
               // Convert to selected currency if needed
               if (vm.selected_currency !== vm.pos_profile.currency) {
                 const exchange_rate = vm.exchange_rate || 1;
                 item.price_list_rate = vm.flt(item.base_price_list_rate / exchange_rate, vm.currency_precision);
-                
+
                 // In multi-currency mode, update the rate from base_rate
                 item.rate = vm.flt(item.base_rate / exchange_rate, vm.currency_precision);
               } else {
                 // When in default currency, use base rates directly for price_list_rate
                 item.price_list_rate = item.base_price_list_rate;
-                
+
                 // IMPORTANT: For default currency, only set rate if it's not already set
                 // This preserves manually entered rates
                 if (!item._manual_rate_set) {
@@ -2193,24 +2187,24 @@ export default {
               item.posa_is_offer == 0 &&
               !item.posa_is_replace
             ) {
-              const discount_percent = item.max_discount > 0 
+              const discount_percent = item.max_discount > 0
                 ? Math.min(item.max_discount, vm.customer_info.posa_discount)
                 : vm.customer_info.posa_discount;
-              
+
               item.discount_percentage = discount_percent;
-              
+
               // Calculate discount in selected currency
               const discount_amount = vm.flt((item.price_list_rate * discount_percent) / 100, vm.currency_precision);
               item.discount_amount = discount_amount;
-              
+
               // Also store base discount amount
               item.base_discount_amount = vm.flt((item.base_price_list_rate * discount_percent) / 100, vm.currency_precision);
-              
+
               // Update rates with discount
               item.rate = vm.flt(item.price_list_rate - discount_amount, vm.currency_precision);
               item.base_rate = vm.flt(item.base_price_list_rate - item.base_discount_amount, vm.currency_precision);
             }
-            
+
             // Update other item details
             item.last_purchase_rate = data.last_purchase_rate;
             item.projected_qty = data.projected_qty;
@@ -2221,22 +2215,22 @@ export default {
             item.stock_uom = data.stock_uom;
             item.has_serial_no = data.has_serial_no;
             item.has_batch_no = data.has_batch_no;
-            
+
             // Calculate final amount
             item.amount = vm.flt(item.qty * item.rate, vm.currency_precision);
             item.base_amount = vm.flt(item.qty * item.base_rate, vm.currency_precision);
-            
+
             // Log updated rates for debugging
             console.log(`Updated rates for ${item.item_code} on expand:`, {
               base_rate: item.base_rate,
               rate: item.rate,
-              base_price_list_rate: item.base_price_list_rate, 
+              base_price_list_rate: item.base_price_list_rate,
               price_list_rate: item.price_list_rate,
               exchange_rate: vm.exchange_rate,
               selected_currency: vm.selected_currency,
               default_currency: vm.pos_profile.currency
             });
-            
+
             // Force update UI immediately
             vm.$forceUpdate();
           }
@@ -2325,7 +2319,7 @@ export default {
         if (fieldId === 'rate') {
           item._manual_rate_set = true;
         }
-        
+
         // Handle negative values
         if (newValue < 0) {
           newValue = 0;
@@ -2433,7 +2427,7 @@ export default {
         item._skip_calc = false;
         return;
       }
-      
+
       if (!item.posa_offer_applied) {
         if (item.price_list_rate) {
           // Always work with base rates first
@@ -2461,10 +2455,10 @@ export default {
         // Calculate discount in selected currency
         const price_list_rate = item.price_list_rate;
         const discount_amount = this.flt((price_list_rate * item.discount_percentage) / 100, this.currency_precision);
-        
+
         item.discount_amount = discount_amount;
         item.rate = this.flt(price_list_rate - discount_amount, this.currency_precision);
-        
+
         // Store base discount amount
         if (this.selected_currency !== this.pos_profile.currency) {
           // Convert discount amount back to base currency by multiplying with exchange rate
@@ -2482,7 +2476,7 @@ export default {
       } else {
         item.base_amount = item.amount;
       }
-      
+
       this.$forceUpdate();
     },
 
@@ -2499,7 +2493,7 @@ export default {
 
       // Store old conversion factor for ratio calculation
       const old_conversion_factor = item.conversion_factor || 1;
-      
+
       // Update conversion factor
       item.conversion_factor = new_uom.conversion_factor;
 
@@ -2511,7 +2505,7 @@ export default {
         item.discount_amount = 0;
         item.discount_percentage = 0;
       }
-      
+
       // Store original base rates if not already stored
       if (!item.original_base_rate && !item.posa_offer_applied) {
         item.original_base_rate = item.base_rate / old_conversion_factor;
@@ -2526,15 +2520,15 @@ export default {
           const items = typeof o.items === 'string' ? JSON.parse(o.items) : o.items;
           return Array.isArray(items) && items.includes(item.posa_row_id);
         }) : null;
-        
+
         if (offer && offer.discount_type === "Rate") {
           // Apply offer rate with new conversion factor
           const converted_rate = flt(offer.rate * item.conversion_factor);
-          
+
           // Set base rates
           item.base_rate = converted_rate;
           item.base_price_list_rate = converted_rate;
-          
+
           // Convert to selected currency
           if (this.selected_currency !== this.pos_profile.currency) {
             // If exchange rate is 300 PKR = 1 USD
@@ -2548,7 +2542,7 @@ export default {
           }
         } else if (offer && offer.discount_type === "Discount Percentage") {
           // For percentage discount, recalculate from original price but with new conversion factor
-          
+
           // Update the base prices with new conversion factor
           let updated_base_price;
           if (item.original_base_price_list_rate) {
@@ -2558,15 +2552,15 @@ export default {
             // Fallback if original price not stored
             updated_base_price = this.flt(item.base_price_list_rate * conversion_ratio, this.currency_precision);
           }
-          
+
           // Store updated base price
           item.base_price_list_rate = updated_base_price;
-          
+
           // Recalculate discount based on percentage
           const base_discount = this.flt((updated_base_price * offer.discount_percentage) / 100, this.currency_precision);
           item.base_discount_amount = base_discount;
           item.base_rate = this.flt(updated_base_price - base_discount, this.currency_precision);
-          
+
           // Convert to selected currency if needed
           if (this.selected_currency !== this.pos_profile.currency) {
             item.price_list_rate = this.flt(updated_base_price / this.exchange_rate, this.currency_precision);
@@ -2587,7 +2581,7 @@ export default {
           item.base_rate = item.original_base_rate * item.conversion_factor;
           item.base_price_list_rate = item.original_base_price_list_rate * item.conversion_factor;
         }
-        
+
         // Convert to selected currency
         if (this.selected_currency !== this.pos_profile.currency) {
           // If exchange rate is 300 PKR = 1 USD
@@ -2670,7 +2664,7 @@ export default {
             return b.remaining_qty - a.remaining_qty;
           }
         });
-      
+
       if (batch_no_data.length > 0) {
         let batch_to_use = null;
         if (value) {
@@ -2679,15 +2673,15 @@ export default {
         if (!batch_to_use) {
           batch_to_use = batch_no_data[0];
         }
-        
+
         item.batch_no = batch_to_use.batch_no;
         item.actual_batch_qty = batch_to_use.batch_qty;
         item.batch_no_expiry_date = batch_to_use.expiry_date;
-        
+
         if (batch_to_use.batch_price) {
           // Store batch price in base currency
           item.base_batch_price = batch_to_use.batch_price;
-          
+
           // Convert batch price to selected currency if needed
           if (this.selected_currency !== this.pos_profile.currency) {
             // If exchange rate is 285 PKR = 1 USD
@@ -2696,11 +2690,11 @@ export default {
           } else {
             item.batch_price = batch_to_use.batch_price;
           }
-          
+
           // Set rates based on batch price
           item.base_price_list_rate = item.base_batch_price;
           item.base_rate = item.base_batch_price;
-          
+
           if (this.selected_currency !== this.pos_profile.currency) {
             item.price_list_rate = item.batch_price;
             item.rate = item.batch_price;
@@ -2708,16 +2702,16 @@ export default {
             item.price_list_rate = item.base_batch_price;
             item.rate = item.base_batch_price;
           }
-          
+
           // Reset discounts since we're using batch price
           item.discount_percentage = 0;
           item.discount_amount = 0;
           item.base_discount_amount = 0;
-          
+
           // Calculate final amounts
           item.amount = this.flt(item.qty * item.rate, this.currency_precision);
           item.base_amount = this.flt(item.qty * item.base_rate, this.currency_precision);
-          
+
           console.log('Updated batch prices:', {
             base_batch_price: item.base_batch_price,
             batch_price: item.batch_price,
@@ -2726,7 +2720,7 @@ export default {
             price_list_rate: item.price_list_rate,
             exchange_rate: this.exchange_rate
           });
-          
+
         } else if (update) {
           item.batch_price = null;
           item.base_batch_price = null;
@@ -2739,10 +2733,10 @@ export default {
         item.batch_price = null;
         item.base_batch_price = null;
       }
-      
+
       // Update batch_no_data
       item.batch_no_data = batch_no_data;
-      
+
       // Force UI update
       this.$forceUpdate();
     },
@@ -3385,7 +3379,7 @@ export default {
       // Handle free items
       const is_free = (offer.discount_type === "Rate" && !offer.rate) ||
         (offer.discount_type === "Discount Percentage" && offer.discount_percentage == 100);
-      
+
       new_item.is_free_item = is_free ? 1 : 0;
 
       // Set price list rate based on currency
@@ -3416,16 +3410,16 @@ export default {
     ApplyOnPrice(offer) {
       console.log('Applying price offer:', offer);
       if (!offer || !Array.isArray(this.items)) return;
-      
+
       this.items.forEach((item) => {
         // Check if offer.items exists and is valid
         if (!item || !offer.items || !Array.isArray(offer.items)) return;
-        
+
         if (offer.items.includes(item.posa_row_id)) {
           // Ensure posa_offers is initialized and valid
           const item_offers = item.posa_offers ? JSON.parse(item.posa_offers) : [];
           if (!Array.isArray(item_offers)) return;
-          
+
           if (!item_offers.includes(offer.row_id)) {
             // Store original rates only if this is the first offer being applied
             if (!item.posa_offer_applied) {
@@ -3449,7 +3443,7 @@ export default {
             if (offer.discount_type === "Rate") {
               // offer.rate is always in base currency (e.g. PKR)
               const base_offer_rate = flt(offer.rate * conversion_factor);
-              
+
               // Set base rates first
               item.base_rate = base_offer_rate;
               item.base_price_list_rate = base_offer_rate;
@@ -3472,7 +3466,7 @@ export default {
 
             } else if (offer.discount_type === "Discount Percentage") {
               item.discount_percentage = offer.discount_percentage;
-              
+
               // Calculate discount in base currency first
               // Use normalized price * current conversion factor
               const base_price = this.flt(
@@ -3499,7 +3493,7 @@ export default {
             // Calculate final amounts
             item.amount = this.flt(item.qty * item.rate, this.currency_precision);
             item.base_amount = this.flt(item.qty * item.base_rate, this.currency_precision);
-            
+
             console.log('Updated rates after applying offer:', {
               rate: item.rate,
               base_rate: item.base_rate,
@@ -3521,17 +3515,17 @@ export default {
     RemoveOnPrice(offer) {
       console.log('Removing price offer:', offer);
       if (!offer || !Array.isArray(this.items)) return;
-      
+
       this.items.forEach((item) => {
         if (!item || !item.posa_offers) return;
-        
+
         try {
           const item_offers = JSON.parse(item.posa_offers);
           if (!Array.isArray(item_offers)) return;
-          
+
           if (item_offers.includes(offer.row_id)) {
             console.log('Found item with offer:', item);
-            
+
             // Check if we have original rates stored
             if (!item.original_base_rate) {
               console.warn('Original rates not found, fetching from server');
@@ -3541,7 +3535,7 @@ export default {
 
             // Get current conversion factor
             const cf = flt(item.conversion_factor || 1);
-            
+
             console.log('Restoring original rates with conversion factor:', {
               original_base_rate: item.original_base_rate,
               original_base_price_list_rate: item.original_base_price_list_rate,
@@ -3551,7 +3545,7 @@ export default {
             // Restore original rates adjusted for current conversion factor
             item.base_rate = this.flt(item.original_base_rate * cf, this.currency_precision);
             item.base_price_list_rate = this.flt(item.original_base_price_list_rate * cf, this.currency_precision);
-            
+
             // Convert to selected currency
             if (this.selected_currency !== this.pos_profile.currency) {
               item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
@@ -3637,19 +3631,19 @@ export default {
 
     addOfferToItems(offer) {
       if (!offer || !offer.items || !Array.isArray(this.items)) return;
-      
+
       try {
         const offer_items = typeof offer.items === 'string' ? JSON.parse(offer.items) : offer.items;
         if (!Array.isArray(offer_items)) return;
-        
+
         offer_items.forEach((el) => {
           this.items.forEach((exist_item) => {
             if (!exist_item || !exist_item.posa_row_id) return;
-            
+
             if (exist_item.posa_row_id == el) {
               const item_offers = exist_item.posa_offers ? JSON.parse(exist_item.posa_offers) : [];
               if (!Array.isArray(item_offers)) return;
-              
+
               if (!item_offers.includes(offer.row_id)) {
                 item_offers.push(offer.row_id);
                 if (offer.offer === "Item Price") {
@@ -3672,19 +3666,19 @@ export default {
 
     deleteOfferFromItems(offer) {
       if (!offer || !offer.items || !Array.isArray(this.items)) return;
-      
+
       try {
         const offer_items = typeof offer.items === 'string' ? JSON.parse(offer.items) : offer.items;
         if (!Array.isArray(offer_items)) return;
-        
+
         offer_items.forEach((el) => {
           this.items.forEach((exist_item) => {
             if (!exist_item || !exist_item.posa_row_id) return;
-            
+
             if (exist_item.posa_row_id == el) {
               const item_offers = exist_item.posa_offers ? JSON.parse(exist_item.posa_offers) : [];
               if (!Array.isArray(item_offers)) return;
-              
+
               const updated_item_offers = item_offers.filter(
                 (row_id) => row_id != offer.row_id
               );
@@ -3851,10 +3845,10 @@ export default {
 
         if (r.message) {
           console.log("Received currencies:", r.message);
-          
+
           // Get base currency for reference
           const baseCurrency = this.pos_profile.currency;
-          
+
           // Create simple currency list with just names
           this.available_currencies = r.message.map(currency => {
             return {
@@ -3901,7 +3895,7 @@ export default {
           currency: currency,
           exchange_rate: 1
         });
-        
+
         // First ensure base rates exist for all items
         this.items.forEach(item => {
           if (!item.base_rate) {
@@ -3910,16 +3904,16 @@ export default {
             item.base_discount_amount = item.discount_amount || 0;
           }
         });
-        
+
         // Then update all item rates
         this.update_item_rates();
         return;
       }
-      
+
       try {
         console.log('Updating currency exchange rate...');
         console.log('Selected:', currency, 'Base:', this.pos_profile.currency, 'Date:', this.posting_date);
-        
+
         // First ensure base rates exist for all items
         this.items.forEach(item => {
           if (!item.base_rate) {
@@ -3933,7 +3927,7 @@ export default {
             });
           }
         });
-        
+
         // Get rate from selected to base currency
         const response = await frappe.call({
           method: "erpnext.setup.utils.get_exchange_rate",
@@ -3949,26 +3943,26 @@ export default {
           // Store the rate directly without inverting
           this.exchange_rate = this.flt(rate, 6);
           console.log("Exchange rate updated:", this.exchange_rate);
-          
+
           // Emit currency update
           this.eventBus.emit("update_currency", {
             currency: currency,
             exchange_rate: this.exchange_rate
           });
-          
+
           // Update the currency title in the dropdown to show the rate
           const currencyIndex = this.available_currencies.findIndex(c => c.value === currency);
           if (currencyIndex !== -1) {
             this.available_currencies[currencyIndex].title = `${currency} (1 = ${this.flt(rate, 6)} ${this.pos_profile.currency})`;
             this.available_currencies[currencyIndex].rate = rate;
           }
-          
+
           // Force update of all items immediately
           this.update_item_rates();
-          
+
           // Log updated items for debugging
           console.log(`Updated all ${this.items.length} items to currency ${currency} with rate ${rate}`);
-          
+
           // Show success message
           this.eventBus.emit("show_message", {
             title: __(`Exchange rate updated: 1 ${currency} = ${this.flt(rate, 6)} ${this.pos_profile.currency}`),
@@ -3982,23 +3976,23 @@ export default {
         // Reset currency selection to base currency
         this.selected_currency = this.pos_profile.currency;
         this.exchange_rate = 1;
-        
+
         // Emit currency update for reset
         this.eventBus.emit("update_currency", {
           currency: this.pos_profile.currency,
           exchange_rate: 1
         });
-        
+
         // Reset the currency title in the dropdown
         const currencyIndex = this.available_currencies.findIndex(c => c.value === currency);
         if (currencyIndex !== -1) {
           this.available_currencies[currencyIndex].title = currency;
           this.available_currencies[currencyIndex].rate = null;
         }
-        
+
         // Restore all items to base currency rates
         this.update_item_rates();
-        
+
         this.eventBus.emit("show_message", {
           title: __(`Error: Could not fetch exchange rate from ${currency} to ${this.pos_profile.currency}. Please set up the exchange rate first.`),
           color: "error"
@@ -4010,13 +4004,13 @@ export default {
       if (!this.exchange_rate || this.exchange_rate <= 0) {
         this.exchange_rate = 1;
       }
-      
+
       // Emit currency update
       this.eventBus.emit("update_currency", {
         currency: this.selected_currency || this.pos_profile.currency,
         exchange_rate: this.exchange_rate
       });
-      
+
       this.update_item_rates();
     },
 
@@ -4026,7 +4020,7 @@ export default {
       this.items.forEach(item => {
         // Set skip flag to avoid double calculations
         item._skip_calc = true;
-        
+
         // First ensure base rates exist for all items
         if (!item.base_rate) {
           console.log(`Setting base rates for ${item.item_code} for the first time`);
@@ -4053,7 +4047,7 @@ export default {
         } else {
           // When switching to another currency, convert from base rates
           console.log(`Converting rates for ${item.item_code} to ${this.selected_currency}`);
-          
+
           // If exchange rate is 285 PKR = 1 USD
           // To convert PKR to USD: divide by exchange rate
           // Example: 100 PKR / 285 = 0.35 USD
@@ -4066,7 +4060,7 @@ export default {
           item.rate = converted_rate < 0.000001 ? 0 : converted_rate;
           item.discount_amount = converted_discount < 0.000001 ? 0 : converted_discount;
         }
-        
+
         // Always recalculate final amounts
         item.amount = this.flt(item.qty * item.rate, this.currency_precision);
         item.base_amount = this.flt(item.qty * item.base_rate, this.currency_precision);
@@ -4085,7 +4079,7 @@ export default {
         // Apply any other pricing rules if needed
         this.calc_item_price(item);
       });
-      
+
       // Force UI update after all calculations
       this.$forceUpdate();
     },
@@ -4149,7 +4143,7 @@ export default {
       if (this.selected_currency) {
         const doc = this.get_invoice_doc();
         doc.currency = this.selected_currency;
-        
+
         try {
           const response = await this.update_invoice(doc);
           if (response && response.conversion_rate) {
@@ -4187,21 +4181,21 @@ export default {
       if (!this.exchange_rate || this.exchange_rate <= 0) {
         this.exchange_rate = 1;
       }
-      
+
       // Emit currency update
       this.eventBus.emit("update_currency", {
         currency: this.selected_currency || this.pos_profile.currency,
         exchange_rate: this.exchange_rate
       });
-      
+
       this.update_item_rates();
     },
 
     // Add new rounding function
     roundAmount(amount) {
       // If multi-currency is enabled and selected currency is different from base currency
-      if (this.pos_profile.posa_allow_multi_currency && 
-          this.selected_currency !== this.pos_profile.currency) {
+      if (this.pos_profile.posa_allow_multi_currency &&
+        this.selected_currency !== this.pos_profile.currency) {
         // For multi-currency, just keep 2 decimal places without rounding to nearest integer
         return this.flt(amount, 2);
       }
@@ -4245,7 +4239,7 @@ export default {
         this.is_syncing = true;
         const result = await processPendingInvoices();
         this.is_syncing = false;
-        
+
         if (result.success) {
           if (result.processed > 0) {
             frappe.show_alert({
@@ -4356,8 +4350,8 @@ export default {
       if (data.return_doc) {
         console.log("Return against existing invoice:", data.return_doc.name);
         // Ensure negative discount amounts
-        this.discount_amount = data.return_doc.discount_amount > 0 ? 
-          -Math.abs(data.return_doc.discount_amount) : 
+        this.discount_amount = data.return_doc.discount_amount > 0 ?
+          -Math.abs(data.return_doc.discount_amount) :
           data.return_doc.discount_amount;
         this.additional_discount_percentage = data.return_doc.additional_discount_percentage > 0 ?
           -Math.abs(data.return_doc.additional_discount_percentage) :
@@ -4388,7 +4382,7 @@ export default {
     this.eventBus.on("reset_posting_date", () => {
       this.posting_date = frappe.datetime.nowdate();
     });
-    
+
     // Listen for offline queue count updates
     window.addEventListener('offline-queue-updated', (event) => {
       if (event.detail && typeof event.detail.count === 'number') {
@@ -4406,7 +4400,7 @@ export default {
     this.eventBus.off("clear_invoice");
     // Cleanup reset_posting_date listener
     this.eventBus.off("reset_posting_date");
-    
+
     // Clean up offline queue listener
     window.removeEventListener('offline-queue-updated');
   },

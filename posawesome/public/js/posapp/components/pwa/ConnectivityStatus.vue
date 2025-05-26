@@ -148,7 +148,8 @@ export default {
       syncingOrders: {},
       syncingAll: false,
       cleanupFn: null,
-      autoSyncInterval: null
+      autoSyncInterval: null,
+      isUpdatingPendingOrders: false,
     };
   },
   methods: {
@@ -157,11 +158,87 @@ export default {
     },
     
     async updatePendingOrders() {
+      // Set a flag to prevent multiple simultaneous calls
+      if (this.isUpdatingPendingOrders) return;
+      
+      this.isUpdatingPendingOrders = true;
+      
       try {
-        this.pendingOrders = await getPendingOrders();
+        // Use Promise with timeout to prevent hanging
+        const pendingOrdersPromise = getPendingOrders();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout fetching pending orders')), 5000);
+        });
+        
+        this.pendingOrders = await Promise.race([pendingOrdersPromise, timeoutPromise]);
         this.pendingOrdersCount = this.pendingOrders.length;
       } catch (error) {
         console.error('Error fetching pending orders:', error);
+        // Don't update pendingOrders on error to maintain last known state
+      } finally {
+        this.isUpdatingPendingOrders = false;
+      }
+    },
+    
+    async syncAllPendingOrders() {
+      if (!isOnline()) {
+        frappe.show_alert({
+          message: __('Cannot sync while offline'),
+          indicator: 'red'
+        });
+        return;
+      }
+      
+      this.syncingAll = true;
+      
+      try {
+        // Use Promise with timeout to prevent hanging
+        const syncPromise = processPendingInvoices();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Sync operation timed out')), 30000);
+        });
+        
+        const result = await Promise.race([syncPromise, timeoutPromise]);
+        
+        // Update UI first before showing alerts
+        await this.updatePendingOrders();
+        
+        // Prepare summary message
+        let summaryMessage = '';
+        if (result.processed > 0) {
+          summaryMessage += __(`Successfully synced ${result.processed} orders. `);
+        }
+        
+        if (result.failed > 0) {
+          summaryMessage += __(`Failed to sync ${result.failed} orders. `);
+        }
+        
+        if (summaryMessage) {
+          // Show summary alert
+          frappe.show_alert({
+            message: summaryMessage,
+            indicator: result.failed > 0 ? 'orange' : 'green'
+          });
+          
+          // Force refresh main page if any orders were processed
+          if (result.processed > 0) {
+            this.$nextTick(() => {
+              // Emit an event that the main app can listen for to refresh data
+              this.$root.$emit('orders_synced', {
+                processed: result.processed,
+                failed: result.failed
+              });
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error syncing orders:', error);
+        frappe.show_alert({
+          message: __('Error syncing orders: ') + (error.message || 'Unknown error'),
+          indicator: 'red'
+        });
+      } finally {
+        this.syncingAll = false;
       }
     },
     
@@ -196,44 +273,6 @@ export default {
         });
       } finally {
         this.$set(this.syncingOrders, order.id, false);
-      }
-    },
-    
-    async syncAllPendingOrders() {
-      if (!isOnline()) {
-        frappe.show_alert({
-          message: __('Cannot sync while offline'),
-          indicator: 'red'
-        });
-        return;
-      }
-      
-      this.syncingAll = true;
-      
-      try {
-        const result = await processPendingInvoices();
-        await this.updatePendingOrders();
-        
-        if (result.processed > 0) {
-          frappe.show_alert({
-            message: __(`Successfully synced ${result.processed} orders`),
-            indicator: 'green'
-          });
-        }
-        
-        if (result.failed > 0) {
-          frappe.show_alert({
-            message: __(`Failed to sync ${result.failed} orders`),
-            indicator: 'red'
-          });
-        }
-      } catch (error) {
-        frappe.show_alert({
-          message: __('Error syncing orders: ') + error.message,
-          indicator: 'red'
-        });
-      } finally {
-        this.syncingAll = false;
       }
     },
     
@@ -301,4 +340,4 @@ export default {
   z-index: 999;
   pointer-events: none;
 }
-</style> 
+</style>
