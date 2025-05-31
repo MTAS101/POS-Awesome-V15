@@ -1,11 +1,13 @@
 {
+  "name": "posawesome",
   "scripts": {
     "dev": "vite"
   },
   "dependencies": {
-    "html5-qrcode": "^2.3.8",
     "lodash": "^4.17.21",
     "mitt": "^3.0.1",
+    "qr-scanner": "^1.4.2",
+    "quagga": "^0.12.1",
     "vue": "^3.3.4",
     "vuetify": "^3.7.5"
   },
