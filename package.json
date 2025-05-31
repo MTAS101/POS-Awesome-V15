@@ -3,6 +3,7 @@
     "dev": "vite"
   },
   "dependencies": {
+    "html5-qrcode": "^2.3.8",
     "lodash": "^4.17.21",
     "mitt": "^3.0.1",
     "vue": "^3.3.4",

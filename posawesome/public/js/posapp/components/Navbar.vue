@@ -1,7 +1,7 @@
 <template>
   <!-- Main navigation container -->
   <nav>
-     <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
+    <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
     <v-app-bar app flat height="56" color="white" class="border-bottom">
       <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary" />
 
@@ -255,7 +255,7 @@ export default {
         // Get the current window location to determine the server URL
         const protocol = window.location.protocol;
         const host = window.location.hostname;
-        const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+        const port = "9000" || (protocol === 'https:' ? '443' : '80');
 
         // Use the same host and port as the current page
         this.socket = io(`${protocol}//${host}:${port}`, {
@@ -281,7 +281,7 @@ export default {
           this.serverOnline = false; // Update server status to offline
           this.serverConnecting = false; // No longer connecting if disconnected
           console.warn('Socket.IO: Disconnected from server. Reason:', reason);
-          
+
           // Show error message to user
           this.showMessage({
             color: 'error',
@@ -294,7 +294,7 @@ export default {
           this.serverOnline = false; // Update server status to offline
           this.serverConnecting = false; // No longer connecting if an error occurred
           console.error('Socket.IO: Connection error:', error.message);
-          
+
           // Show error message to user
           this.showMessage({
             color: 'error',
@@ -307,7 +307,7 @@ export default {
         this.serverOnline = false;
         this.serverConnecting = false;
         console.error('Failed to initialize Socket.IO connection:', err);
-        
+
         // Show error message to user
         this.showMessage({
           color: 'error',

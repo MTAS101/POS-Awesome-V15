@@ -8,9 +8,15 @@
           <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
             :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
             bg-color="white" hide-details v-model="debounce_search" @keydown.esc="esc_event"
-            @keydown.enter="search_onchange" @click:clear="clearSearch"
-            prepend-inner-icon="mdi-magnify"
-            @focus="handleItemSearchFocus" ref="debounce_search"></v-text-field>
+            @keydown.enter="search_onchange" @click:clear="clearSearch" prepend-inner-icon="mdi-magnify"
+            @focus="handleItemSearchFocus" ref="debounce_search">
+            <!-- Add camera scan button if enabled -->
+            <template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
+              <v-btn icon="mdi-camera" size="small" color="primary" variant="text" @click="startCameraScanning"
+                :title="__('Scan with Camera')">
+              </v-btn>
+            </template>
+          </v-text-field>
         </v-col>
         <v-col cols="3" class="pb-0 mb-2" v-if="pos_profile.posa_input_qty">
           <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')" bg-color="white"
@@ -37,7 +43,8 @@
                       {{ currencySymbol(pos_profile.currency) || "" }}
                       {{ format_currency(item.rate, pos_profile.currency, 4) }}
                     </div>
-                    <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency" class="text-caption text-success">
+                    <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                      class="text-caption text-success">
                       {{ currencySymbol(selected_currency) || "" }}
                       {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
                     </div>
@@ -53,12 +60,14 @@
           <div fluid class="items" v-if="items_view == 'list'">
             <div class="my-0 py-0 overflow-y-auto" style="max-height: 65vh">
               <v-data-table :headers="getItemsHeaders()" :items="filtered_items" item-key="item_code" item-value="item-"
-                class="elevation-0 sleek-data-table" :items-per-page="itemsPerPage" hide-default-footer @click:row="click_item_row">
+                class="elevation-0 sleek-data-table" :items-per-page="itemsPerPage" hide-default-footer
+                @click:row="click_item_row">
                 <template v-slot:item.rate="{ item }">
                   <div>
                     <div class="text-primary">{{ currencySymbol(pos_profile.currency) }}
                       {{ format_currency(item.rate, pos_profile.currency, 4) }}</div>
-                    <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency" class="text-success">
+                    <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                      class="text-success">
                       {{ currencySymbol(selected_currency) }}
                       {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
                     </div>
@@ -76,8 +85,8 @@
     <v-card class="cards mb-0 mt-3 pa-2 bg-grey-lighten-5">
       <v-row no-gutters align="center" justify="center">
         <v-col cols="12">
-          <v-select :items="items_group" :label="frappe._('Items Group')" density="compact" variant="solo"
-            hide-details v-model="item_group"></v-select>
+          <v-select :items="items_group" :label="frappe._('Items Group')" density="compact" variant="solo" hide-details
+            v-model="item_group"></v-select>
         </v-col>
         <v-col cols="3" class="mt-1">
           <v-btn-toggle v-model="items_view" color="primary" group density="compact" rounded>
@@ -98,6 +107,10 @@
         </v-col>
       </v-row>
     </v-card>
+
+    <!-- Camera Scanner Component -->
+    <CameraScanner v-if="pos_profile.posa_enable_camera_scanning" ref="cameraScanner"
+      :scan-type="pos_profile.posa_camera_scan_type || 'Both'" @barcode-scanned="onBarcodeScanned" />
   </div>
 </template>
 
@@ -105,8 +118,13 @@
 
 import format from "../../format";
 import _ from "lodash";
+import CameraScanner from './CameraScanner.vue';
+
 export default {
   mixins: [format],
+  components: {
+    CameraScanner
+  },
   data: () => ({
     pos_profile: "",
     flags: {},
@@ -167,7 +185,7 @@ export default {
         console.error("No POS Profile");
         return;
       }
-      
+
       // If items are already loaded and it's not a specific search or customer change, don't reload
       if (this.items_loaded && !this.first_search && !this.pos_profile.pose_use_limit_search) {
         console.info("Items already loaded, skipping reload");
@@ -177,7 +195,7 @@ export default {
         }
         return;
       }
-      
+
       const vm = this;
       this.loading = true;
       let search = this.get_search(this.first_search);
@@ -198,7 +216,7 @@ export default {
         this.eventBus.emit("set_all_items", vm.items);
         vm.loading = false;
         vm.items_loaded = true;
-        
+
         // Even when loading from localStorage, refresh the quantities
         setTimeout(() => {
           if (vm.filtered_items && vm.filtered_items.length > 0) {
@@ -223,16 +241,16 @@ export default {
             vm.items_loaded = true;
             console.info("Items Loaded");
             vm.$nextTick(() => {
-              if(vm.search) vm.search_onchange();
+              if (vm.search) vm.search_onchange();
             });
-            
+
             // Always refresh quantities after items are loaded
             setTimeout(() => {
               if (vm.filtered_items && vm.filtered_items.length > 0) {
                 vm.update_items_details(vm.filtered_items);
               }
             }, 300);
-            
+
             if (
               vm.pos_profile.posa_local_storage &&
               !vm.pos_profile.pose_use_limit_search
@@ -320,29 +338,29 @@ export default {
           this.update_items_details([item]);
           return;
         }
-        
+
         // Ensure UOMs are initialized before adding the item
         if (!item.item_uoms || item.item_uoms.length === 0) {
           // If UOMs are not available, fetch them first
           this.update_items_details([item]);
-          
+
           // Add stock UOM as fallback
           if (!item.item_uoms || item.item_uoms.length === 0) {
             item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
           }
         }
-        
+
         // Convert rate if multi-currency is enabled
-        if (this.pos_profile.posa_allow_multi_currency && 
-            this.selected_currency !== this.pos_profile.currency) {
+        if (this.pos_profile.posa_allow_multi_currency &&
+          this.selected_currency !== this.pos_profile.currency) {
           // Store original rate as base_rate
           item.base_rate = item.rate;
           item.base_price_list_rate = item.price_list_rate;
-          
+
           // Set converted rates
           item.rate = this.getConvertedRate(item);
           item.price_list_rate = this.getConvertedRate(item);
-          
+
           // Set currency
           item.currency = this.selected_currency;
         }
@@ -409,26 +427,26 @@ export default {
         this.$refs.debounce_search.focus();
       }
     },
-    search_onchange: _.debounce(function(newSearchTerm) {
-        const vm = this;
-        if(newSearchTerm) vm.search = newSearchTerm;
-        
-        if (vm.pos_profile.pose_use_limit_search) {
-            vm.get_items();
-        } else {
-            // Save the current filtered items before search to maintain quantity data
-            const current_items = [...vm.filtered_items];
-            if(vm.search && vm.search.length >=3) {
-              vm.enter_event();
-            }
-            
-            // After search, update quantities for newly filtered items
-            if (vm.filtered_items && vm.filtered_items.length > 0) {
-                setTimeout(() => {
-                    vm.update_items_details(vm.filtered_items);
-                }, 300);
-            }
+    search_onchange: _.debounce(function (newSearchTerm) {
+      const vm = this;
+      if (newSearchTerm) vm.search = newSearchTerm;
+
+      if (vm.pos_profile.pose_use_limit_search) {
+        vm.get_items();
+      } else {
+        // Save the current filtered items before search to maintain quantity data
+        const current_items = [...vm.filtered_items];
+        if (vm.search && vm.search.length >= 3) {
+          vm.enter_event();
         }
+
+        // After search, update quantities for newly filtered items
+        if (vm.filtered_items && vm.filtered_items.length > 0) {
+          setTimeout(() => {
+            vm.update_items_details(vm.filtered_items);
+          }, 300);
+        }
+      }
     }, 300),
     get_item_qty(first_search) {
       let scal_qty = Math.abs(this.qty);
@@ -482,7 +500,7 @@ export default {
       }
 
       vm.abortController = new AbortController();
-      
+
       vm.currentRequest = frappe.call({
         method: "posawesome.posawesome.api.posapp.get_items_details",
         args: {
@@ -491,10 +509,10 @@ export default {
         },
         freeze: true,
         signal: vm.abortController.signal,
-        callback: function(r) {
+        callback: function (r) {
           if (r.message) {
             let qtyChanged = false;
-            
+
             items.forEach((item) => {
               const updated_item = r.message.find(
                 (element) => element.item_code == item.item_code
@@ -502,11 +520,11 @@ export default {
               if (updated_item) {
                 // Save previous quantity for comparison
                 const prev_qty = item.actual_qty;
-                
+
                 item.actual_qty = updated_item.actual_qty;
                 item.serial_no_data = updated_item.serial_no_data;
                 item.batch_no_data = updated_item.batch_no_data;
-                
+
                 // Properly handle UOMs data
                 if (updated_item.item_uoms && updated_item.item_uoms.length > 0) {
                   item.item_uoms = updated_item.item_uoms;
@@ -514,10 +532,10 @@ export default {
                   // If no UOMs found, at least add the stock UOM
                   item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
                 }
-                
+
                 item.has_batch_no = updated_item.has_batch_no;
                 item.has_serial_no = updated_item.has_serial_no;
-                
+
                 // Log and track significant quantity changes
                 if (prev_qty > 0 && item.actual_qty === 0) {
                   console.log(`Item ${item.item_code} quantity changed from ${prev_qty} to 0`);
@@ -525,14 +543,14 @@ export default {
                 }
               }
             });
-            
+
             // Force update if any item's quantity changed significantly
             if (qtyChanged) {
               vm.$forceUpdate();
             }
           }
         },
-        error: function(err) {
+        error: function (err) {
           if (err.name !== 'AbortError') {
             console.error("Error fetching item details:", err);
             setTimeout(() => {
@@ -541,7 +559,7 @@ export default {
           }
         }
       });
-      
+
       // Cleanup on component destroy
       this.cleanupBeforeDestroy = () => {
         if (vm.abortController) {
@@ -561,7 +579,7 @@ export default {
         if (document._scannerAttached) {
           return;
         }
-        
+
         onScan.attachTo(document, {
           suffixKeyCodes: [],
           keyCodeMapper: function (oEvent) {
@@ -574,7 +592,7 @@ export default {
             }, 300);
           },
         });
-        
+
         // Mark document as having scanner attached
         document._scannerAttached = true;
       } catch (error) {
@@ -620,7 +638,7 @@ export default {
       this.search = "";
       // No need to call get_items() again
     },
-    
+
     restoreSearch() {
       if (this.first_search === "") {
         this.first_search = this.search_backup;
@@ -634,10 +652,163 @@ export default {
       // Optionally, you might want to also clear search_backup if the behaviour should be a full reset on focus
       // this.search_backup = ""; 
     },
+
+    startCameraScanning() {
+      if (this.$refs.cameraScanner) {
+        this.$refs.cameraScanner.startScanning();
+      }
+    },
+      onBarcodeScanned(scannedCode) {
+        console.log('Barcode scanned:', scannedCode);
+        
+        // Clear any previous search
+        this.search = '';
+        this.first_search = '';
+        
+        // Set the scanned code as search term
+        this.first_search = scannedCode;
+        this.search = scannedCode;
+        
+        // Show scanning feedback
+        frappe.show_alert({
+          message: `Scanning for: ${scannedCode}`,
+          indicator: 'blue'
+        }, 2);
+        
+        // Enhanced item search and submission logic
+        setTimeout(() => {
+          this.processScannedItem(scannedCode);
+        }, 300);
+      },
+      
+      processScannedItem(scannedCode) {
+        // First try to find exact match by barcode
+        let foundItem = this.items.find(item => 
+          item.barcode === scannedCode || 
+          item.item_code === scannedCode ||
+          (item.barcodes && item.barcodes.some(bc => bc.barcode === scannedCode))
+        );
+        
+        if (foundItem) {
+          console.log('Found item by exact match:', foundItem);
+          this.addScannedItemToInvoice(foundItem, scannedCode);
+          return;
+        }
+        
+        // If no exact match, try partial search
+        const searchResults = this.searchItemsByCode(scannedCode);
+        
+        if (searchResults.length === 1) {
+          console.log('Found item by search:', searchResults[0]);
+          this.addScannedItemToInvoice(searchResults[0], scannedCode);
+        } else if (searchResults.length > 1) {
+          // Multiple matches - show selection dialog
+          this.showMultipleItemsDialog(searchResults, scannedCode);
+        } else {
+          // No matches found
+          this.handleItemNotFound(scannedCode);
+        }
+      },
+      
+      searchItemsByCode(code) {
+        return this.items.filter(item => {
+          const searchTerm = code.toLowerCase();
+          return (
+            item.item_code.toLowerCase().includes(searchTerm) ||
+            item.item_name.toLowerCase().includes(searchTerm) ||
+            (item.barcode && item.barcode.toLowerCase().includes(searchTerm)) ||
+            (item.barcodes && item.barcodes.some(bc => bc.barcode.toLowerCase().includes(searchTerm)))
+          );
+        });
+      },
+      
+      addScannedItemToInvoice(item, scannedCode) {
+        console.log('Adding scanned item to invoice:', item, scannedCode);
+        
+        // Use existing add_item method with enhanced feedback
+        this.add_item(item);
+        
+        // Show success message
+        frappe.show_alert({
+          message: `Added: ${item.item_name}`,
+          indicator: 'green'
+        }, 3);
+        
+        // Clear search after successful addition
+        setTimeout(() => {
+          this.clearSearch();
+        }, 1000);
+      },
+      
+      showMultipleItemsDialog(items, scannedCode) {
+        // Create a dialog to let user choose from multiple matches
+        const dialog = new frappe.ui.Dialog({
+          title: __('Multiple Items Found'),
+          fields: [
+            {
+              fieldtype: 'HTML',
+              fieldname: 'items_html',
+              options: this.generateItemSelectionHTML(items, scannedCode)
+            }
+          ],
+          primary_action_label: __('Cancel'),
+          primary_action: () => dialog.hide()
+        });
+        
+        dialog.show();
+        
+        // Add click handlers for item selection
+        setTimeout(() => {
+          items.forEach((item, index) => {
+            const button = dialog.$wrapper.find(`[data-item-index="${index}"]`);
+            button.on('click', () => {
+              this.addScannedItemToInvoice(item, scannedCode);
+              dialog.hide();
+            });
+          });
+        }, 100);
+      },
+      
+      generateItemSelectionHTML(items, scannedCode) {
+        let html = `<div class="mb-3"><strong>Scanned Code:</strong> ${scannedCode}</div>`;
+        html += '<div class="item-selection-list">';
+        
+        items.forEach((item, index) => {
+          html += `
+            <div class="item-option p-3 mb-2 border rounded cursor-pointer" data-item-index="${index}" style="border: 1px solid #ddd; cursor: pointer;">
+              <div class="d-flex align-items-center">
+                <img src="${item.image || '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'}" 
+                     style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;" />
+                <div>
+                  <div class="font-weight-bold">${item.item_name}</div>
+                  <div class="text-muted small">${item.item_code}</div>
+                  <div class="text-primary">${this.format_currency(item.rate, this.pos_profile.currency)}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        });
+        
+        html += '</div>';
+        return html;
+      },
+      
+      handleItemNotFound(scannedCode) {
+        console.warn('Item not found for scanned code:', scannedCode);
+        
+        // Show error message
+        frappe.show_alert({
+          message: `Item not found: ${scannedCode}`,
+          indicator: 'red'
+        }, 5);
+        
+        // Keep the search term for manual search
+        this.trigger_onscan(scannedCode);
+      },
     getConvertedRate(item) {
       if (!item.rate) return 0;
       if (!this.exchange_rate) return item.rate;
-      
+
       // If exchange rate is 300 PKR = 1 USD
       // To convert PKR to USD: divide by exchange rate
       // Example: 3000 PKR / 300 = 10 USD
@@ -649,29 +820,29 @@ export default {
     },
     format_currency(value, currency, precision) {
       if (!value) return '0';
-      
+
       // Convert to string for checking decimal points
       let valueStr = value.toString();
-      
+
       // If value has decimal points, show 4 decimal places
       if (valueStr.includes('.')) {
         return flt(value, 4).toString();
       }
-      
+
       // For whole numbers, return as is
       return valueStr;
     },
     format_number(value, precision) {
       if (!value) return '0';
-      
+
       // Convert to string for checking decimal points
       let valueStr = value.toString();
-      
+
       // If value has decimal points, show 4 decimal places
       if (valueStr.includes('.')) {
         return flt(value, 4).toString();
       }
-      
+
       // For whole numbers, return as is
       return valueStr;
     },
@@ -712,14 +883,14 @@ export default {
           } else {
             filtered = filtred_group_list.slice(0, 50);
           }
-          
+
           // Ensure quantities are defined
           filtered.forEach(item => {
             if (item.actual_qty === undefined) {
               item.actual_qty = 0;
             }
           });
-          
+
           return filtered;
         } else if (this.search) {
           filtred_list = filtred_group_list.filter((item) => {
@@ -791,7 +962,7 @@ export default {
             }
           }
         }
-        
+
         let final_filtered_list = [];
         if (
           this.pos_profile.posa_show_template_items &&
@@ -801,32 +972,32 @@ export default {
         } else {
           final_filtered_list = filtred_list.slice(0, 50);
         }
-        
+
         // Ensure quantities are defined for each item
         final_filtered_list.forEach(item => {
           if (item.actual_qty === undefined) {
             item.actual_qty = 0;
           }
         });
-        
+
         // Force request quantity update for filtered items
         if (final_filtered_list.length > 0) {
           setTimeout(() => {
             this.update_items_details(final_filtered_list);
           }, 100);
         }
-        
+
         return final_filtered_list;
       } else {
         const items_list = this.items.slice(0, 50);
-        
+
         // Ensure quantities are defined
         items_list.forEach(item => {
           if (item.actual_qty === undefined) {
             item.actual_qty = 0;
           }
         });
-        
+
         return items_list;
       }
     },
@@ -867,7 +1038,7 @@ export default {
     this.eventBus.on("update_customer", (data) => {
       this.customer = data;
     });
-    
+
     // Setup auto-refresh for item quantities
     this.refresh_interval = setInterval(() => {
       if (this.filtered_items && this.filtered_items.length > 0) {
@@ -885,18 +1056,18 @@ export default {
   mounted() {
     this.scan_barcoud();
   },
-  
+
   beforeUnmount() {
     // Clear interval when component is destroyed
     if (this.refresh_interval) {
       clearInterval(this.refresh_interval);
     }
-    
+
     // Call cleanup function for abort controller
     if (this.cleanupBeforeDestroy) {
       this.cleanupBeforeDestroy();
     }
-    
+
     // Detach scanner if it was attached
     if (document._scannerAttached) {
       try {
@@ -918,13 +1089,18 @@ export default {
 }
 
 .sleek-data-table {
-  border-radius: 12px !important; /* Match Customer.vue style */
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important; /* Match Customer.vue style */
-  background-color: #fff !important; /* Match Customer.vue style */
-  overflow: hidden !important; /* Ensures border-radius applies correctly */
+  border-radius: 12px !important;
+  /* Match Customer.vue style */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
+  /* Match Customer.vue style */
+  background-color: #fff !important;
+  /* Match Customer.vue style */
+  overflow: hidden !important;
+  /* Ensures border-radius applies correctly */
 }
 
 .sleek-data-table:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important; /* Match Customer.vue style */
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  /* Match Customer.vue style */
 }
 </style>
