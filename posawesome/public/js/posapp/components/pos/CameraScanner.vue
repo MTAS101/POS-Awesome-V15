@@ -345,7 +345,7 @@ export default {
                 } catch (error) {
                     console.warn('Barcode detection frame error:', error);
                 }
-            }, 500); // Check every 500ms
+            }, 100); // Check every 100ms
         },
 
         detectBarcodeInImageData(imageData) {
