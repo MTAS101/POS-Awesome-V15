@@ -5,7 +5,7 @@
                 <v-icon class="mr-2" size="large">mdi-camera</v-icon>
                 {{ __('Scan QR Code/Barcode') }}
                 <v-chip class="ml-2" size="small" color="primary">
-                    Auto Detect
+                    {{ scanType === 'Both' ? 'Auto Detect' : scanType }}
                 </v-chip>
                 <v-spacer></v-spacer>
                 <v-btn 
@@ -21,32 +21,28 @@
             <v-card-text class="pa-0">
                 <div v-if="!cameraPermissionDenied">
                     <!-- Scanner container -->
-                    <div class="scanner-container">
-                        <!-- Unified video element for both QR and barcode scanning -->
-                        <video 
-                            ref="videoElement" 
+                    <div class="scanner-container" v-if="isScanning && scannerDialog">
+                        <qrcode-stream 
+                            :formats="readerFormats" 
+                            :torch="torchActive"
+                            :camera="selectedDeviceId ? { deviceId: selectedDeviceId, exact: selectedDeviceId } : 'auto'"
+                            @detect="onDetect"
+                            @error="onError"
+                            @camera-on="isScanning = true" 
+                            @camera-off="isScanning = false" 
                             style="width: 100%; height: 350px; object-fit: cover;"
-                            autoplay
-                            muted
-                            playsinline
-                        ></video>
-
-                        <!-- Hidden canvas for barcode processing -->
-                        <canvas 
-                            ref="barcodeCanvas"
-                            style="display: none;"
-                        ></canvas>
-
-                        <!-- Scanning overlay -->
-                        <div v-if="!scanResult" class="scanning-overlay">
-                            <div class="scan-line"></div>
-                            <div class="scan-corners">
-                                <div class="corner top-left"></div>
-                                <div class="corner top-right"></div>
-                                <div class="corner bottom-left"></div>
-                                <div class="corner bottom-right"></div>
+                        >
+                            <!-- Optional: You can put a loading indicator or overlay here -->
+                             <div v-if="!scanResult" class="scanning-overlay">
+                                <div class="scan-line"></div>
+                                <div class="scan-corners">
+                                    <div class="corner top-left"></div>
+                                    <div class="corner top-right"></div>
+                                    <div class="corner bottom-left"></div>
+                                    <div class="corner bottom-right"></div>
+                                </div>
                             </div>
-                        </div>
+                        </qrcode-stream>
                     </div>
 
                     <!-- Status messages -->
@@ -62,10 +58,10 @@
                             <br><small>Format: {{ scanFormat }}</small>
                         </v-alert>
 
-                        <v-alert v-if="!scanResult && !errorMessage && isScanning" type="info" variant="tonal">
+                        <v-alert v-if="!scanResult && !errorMessage && isScanning && scannerDialog" type="info" variant="tonal">
                             <v-icon>mdi-information</v-icon>
                             {{ __('Position the QR code or barcode within the scanning area') }}
-                            <br><small>{{ __('Auto-detecting format...') }}</small>
+                            <br><small>{{ __('Detecting formats:') }} {{ readerFormats.join(', ') }}</small>
                         </v-alert>
                     </div>
                 </div>
@@ -75,9 +71,7 @@
                     <v-icon size="64" color="error">mdi-camera-off</v-icon>
                     <h3 class="mt-2">{{ __('Camera Access Required') }}</h3>
                     <p class="mt-2">{{ __('Please allow camera access to scan codes') }}</p>
-                    <v-btn @click="requestCameraPermission" color="primary" class="mt-2">
-                        {{ __('Grant Permission') }}
-                    </v-btn>
+                    <!-- Requesting permission is handled by the browser when QrcodeStream tries to access camera -->
                 </div>
             </v-card-text>
 
@@ -86,19 +80,19 @@
                 <div class="d-flex gap-2">
                     <!-- Flashlight toggle -->
                     <v-btn 
-                        v-if="flashlightSupported"
-                        @click="toggleFlashlight"
-                        :color="flashlightOn ? 'warning' : 'default'"
+                        v-if="isScanning && cameras.length > 0" 
+                        @click="toggleTorch"
+                        :color="torchActive ? 'warning' : 'default'"
                         variant="outlined"
                         size="small"
                     >
-                        <v-icon>{{ flashlightOn ? 'mdi-flashlight' : 'mdi-flashlight-off' }}</v-icon>
-                        {{ flashlightOn ? __('Flash On') : __('Flash Off') }}
+                        <v-icon>{{ torchActive ? 'mdi-flashlight' : 'mdi-flashlight-off' }}</v-icon>
+                        {{ torchActive ? __('Flash On') : __('Flash Off') }}
                     </v-btn>
 
                     <!-- Camera switch -->
                     <v-btn 
-                        v-if="multipleCameras"
+                        v-if="isScanning && cameras.length > 1"
                         @click="switchCamera"
                         color="default"
                         variant="outlined"
@@ -207,36 +201,66 @@
 </style>
 
 <script>
-import QrScanner from 'qr-scanner';
-import Quagga from 'quagga';
+import { QrcodeStream } from 'vue-qrcode-reader';
 
 export default {
     name: 'CameraScanner',
+    components: {
+        QrcodeStream
+    },
     props: {
         scanType: {
             type: String,
-            default: 'Both' // 'QR Code', 'Barcode', 'Both'
+            default: 'Both' // 'QR Code', 'Barcode', 'Both'. Note: vue-qrcode-reader uses a 'formats' prop.
         }
     },
 
     data() {
         return {
             scannerDialog: false,
-            qrScanner: null,
             scanResult: '',
-            scanFormat: '',
+            scanFormat: '', // We might get this from the 'detect' event payload
             errorMessage: '',
             cameraPermissionDenied: false,
-            flashlightSupported: false,
-            flashlightOn: false,
-            multipleCameras: false,
-            currentCameraId: null,
-            availableCameras: [],
             isScanning: false,
-            barcodeDetectionInterval: null,
-            isDecodingBarcode: false,
-            videoStream: null
+            torchActive: false,
+            selectedDeviceId: null, // For camera switching
+            cameras: [], // To store available cameras
+            // Old properties to be removed or re-evaluated:
+            // qrScanner: null,
+            // flashlightSupported: false, // vue-qrcode-reader handles this via QrcodeStream's torch prop
+            // flashlightOn: false, // replaced by torchActive
+            // multipleCameras: false, // Handled by checking cameras.length
+            // currentCameraId: null, // replaced by selectedDeviceId
+            // availableCameras: [], // replaced by cameras
+            // barcodeDetectionInterval: null,
+            // isDecodingBarcode: false,
+            // videoStream: null
         };
+    },
+
+    computed: {
+        readerFormats() {
+            // Define the formats based on scanType prop or default to all common ones
+            // Ensure these format names are valid as per vue-qrcode-reader documentation
+            const availableFormats = [
+                'qr_code',
+                'ean_13', 'ean_8', 
+                'code_128', 'code_39', 'code_93',
+                'codabar', 
+                'upc_a', 'upc_e',
+                'itf', // ITF (Interleaved 2 of 5)
+                // Add other formats if needed and supported by zxing-wasm
+            ];
+            
+            if (this.scanType === 'QR Code') {
+                return ['qr_code'];
+            }
+            if (this.scanType === 'Barcode') {
+                return availableFormats.filter(f => f !== 'qr_code');
+            }
+            return availableFormats; // 'Both'
+        }
     },
 
     methods: {
@@ -246,280 +270,117 @@ export default {
             this.scanResult = '';
             this.scanFormat = '';
             this.cameraPermissionDenied = false;
-            this.isScanning = false;
-
-            // Wait for dialog to render
+            this.isScanning = true; // QrcodeStream will attempt to start camera automatically
+            // We might need to await this.$nextTick() if QrcodeStream is inside v-if controlled by scannerDialog
             await this.$nextTick();
-
-            try {
-                // Check camera permissions first
-                const hasCamera = await QrScanner.hasCamera();
-                if (!hasCamera) {
-                    throw new Error('No camera found');
-                }
-
-                // Get available cameras
-                this.availableCameras = await QrScanner.listCameras(true);
-                this.multipleCameras = this.availableCameras.length > 1;
-
-                // Start unified scanner with auto-detection
-                await this.initializeAutoDetectionScanner();
-                
-            } catch (error) {
-                this.handleScannerError(error);
-            }
+            // Camera listing can be done here or in a dedicated method
+            // vue-qrcode-reader doesn't directly list cameras in QrcodeStream, 
+            // but we can use navigator.mediaDevices.enumerateDevices()
+            await this.listCameras();
         },
 
-        async initializeAutoDetectionScanner() {
+        async listCameras() {
             try {
-                await this.$nextTick();
-                
-                const videoElement = this.$refs.videoElement;
-                if (!videoElement) {
-                    throw new Error('Video element not found');
-                }
-
-                // Initialize QR Scanner
-                this.qrScanner = new QrScanner(
-                    videoElement,
-                    result => this.onScanSuccess(result.data, 'QR Code'),
-                    {
-                        returnDetailedScanResult: true,
-                        highlightScanRegion: true,
-                        highlightCodeOutline: true,
-                        preferredCamera: this.currentCameraId || 'environment'
-                    }
-                );
-
-                await this.qrScanner.start();
-                this.isScanning = true;
-                
-                // Check for flashlight support
-                this.flashlightSupported = await this.qrScanner.hasFlash();
-                
-                // Start barcode detection in parallel
-                this.startBarcodeDetection();
-                
-                console.log('Auto-detection scanner initialized successfully');
-                
-            } catch (error) {
-                console.error('Auto-detection scanner initialization error:', error);
-                this.handleScannerError(error);
-            }
-        },
-
-        startBarcodeDetection() {
-            const videoElement = this.$refs.videoElement;
-            const canvas = this.$refs.barcodeCanvas;
-            
-            if (!videoElement || !canvas) {
-                console.warn('Video element or canvas not found for barcode detection');
-                return;
-            }
-
-            const context = canvas.getContext('2d');
-            
-            // Set up periodic barcode scanning
-            this.barcodeDetectionInterval = setInterval(() => {
-                if (!this.isScanning || this.scanResult || this.isDecodingBarcode) {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                    console.warn('MediaDevices API not supported.');
+                    this.cameras = [];
                     return;
                 }
-
-                try {
-                    // Set canvas size to match video
-                    canvas.width = videoElement.videoWidth;
-                    canvas.height = videoElement.videoHeight;
-                    
-                    if (canvas.width === 0 || canvas.height === 0) {
-                        return; // Video not ready yet
-                    }
-
-                    // Draw current video frame to canvas
-                    context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-                    
-                    // Get image data for barcode detection
-                    const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                    
-                    // Use Quagga for barcode detection
-                    this.detectBarcodeInImageData(imageData);
-                    
-                } catch (error) {
-                    console.warn('Barcode detection frame error:', error);
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                this.cameras = devices.filter(device => device.kind === 'videoinput');
+                if (this.cameras.length > 0 && !this.selectedDeviceId) {
+                    // Select the first available camera by default, or environment facing if possible
+                    const rearCamera = this.cameras.find(camera => /back|rear|environment/i.test(camera.label));
+                    this.selectedDeviceId = rearCamera ? rearCamera.deviceId : this.cameras[0].deviceId;
                 }
-            }, 150); // Check every 150ms
+            } catch (error) {
+                console.error('Error listing cameras:', error);
+                this.cameras = [];
+            }
         },
 
-        detectBarcodeInImageData(imageData) {
-            // Create a temporary canvas for Quagga
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = imageData.width;
-            tempCanvas.height = imageData.height;
-            const tempContext = tempCanvas.getContext('2d');
-            tempContext.putImageData(imageData, 0, 0);
-
-            this.isDecodingBarcode = true; // Set flag before decoding
-
-            // Configure Quagga for single image processing
-            const config = {
-                inputStream: {
-                    name: "Live",
-                    type: "ImageStream",
-                    src: tempCanvas.toDataURL(),
-                    sequence: false,
-                    size: 800
-                },
-                locator: {
-                    patchSize: "medium",
-                    halfSample: true
-                },
-                numOfWorkers: 0,
-                decoder: {
-                    readers: [
-                        "code_128_reader",
-                        "ean_reader",
-                        "ean_8_reader",
-                        "code_39_reader",
-                        "code_39_vin_reader",
-                        "codabar_reader",
-                        "upc_reader",
-                        "upc_e_reader",
-                        "i2of5_reader"
-                    ]
-                },
-                locate: true
-            };
-
-            // Process single frame
-            Quagga.decodeSingle(config, (result) => {
-                this.isDecodingBarcode = false; // Reset flag after decoding
-                if (result && result.codeResult) {
-                    const code = result.codeResult.code;
-                    const format = result.codeResult.format;
-                    this.onScanSuccess(code, format.toUpperCase());
+        onDetect(detectedCodes) {
+            // detectedCodes is an array of objects, each with rawValue, format, etc.
+            if (detectedCodes && detectedCodes.length > 0) {
+                const firstResult = detectedCodes[0];
+                this.scanResult = firstResult.rawValue;
+                this.scanFormat = firstResult.format;
+                this.errorMessage = '';
+                this.isScanning = false; // Stop further scanning attempts by QrcodeStream or hide it
+                
+                this.$emit('barcode-scanned', this.scanResult);
+                
+                if (typeof frappe !== 'undefined' && frappe.show_alert) {
+                    frappe.show_alert({
+                        message: this.__('Code scanned successfully') + ` (${this.scanFormat})`,
+                        indicator: 'green'
+                    }, 3);
                 }
-            });
+                
+                setTimeout(() => {
+                    this.stopScanning(); 
+                }, 3000);
+            }
         },
 
-        onScanSuccess(decodedText, format = 'Unknown') {
-            console.log('Scan successful:', decodedText, 'Format:', format);
-            this.scanResult = decodedText;
-            this.scanFormat = format;
-            this.errorMessage = '';
-            
-            // Stop all scanning
-            this.stopCurrentScanner();
+        onError(error) {
+            this.errorMessage = error.name || 'Unknown error';
+            if (error.name === 'NotAllowedError') {
+                this.cameraPermissionDenied = true;
+                this.errorMessage = this.__('Camera permission denied. Please allow camera access in your browser settings.');
+            } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                this.errorMessage = this.__('No camera found on this device.');
+            } else if (error.name === 'NotSupportedError') {
+                this.errorMessage = this.__('Secure context (HTTPS) required for camera access.');
+            } else if (error.name === 'AbortError') {
+                this.errorMessage = this.__('Camera access aborted.');
+            } else {
+                this.errorMessage = this.__('Error accessing camera:') + ` ${error.message}`;
+            }
+            console.error('Camera error:', error);
             this.isScanning = false;
-            
-            // Emit the scanned result to parent component
-            this.$emit('barcode-scanned', decodedText);
-            
-            // Show success feedback
-            if (typeof frappe !== 'undefined' && frappe.show_alert) {
-                frappe.show_alert({
-                    message: this.__('Code scanned successfully') + ` (${format})`,
-                    indicator: 'green'
-                }, 3);
-            }
-            
-            // Auto-close after 3 seconds
-            setTimeout(() => {
-                this.stopScanning();
-            }, 3000);
-        },
-
-        stopCurrentScanner() {
-            // Stop QR scanner
-            if (this.qrScanner) {
-                this.qrScanner.stop();
-                this.qrScanner.destroy();
-                this.qrScanner = null;
-            }
-            
-            // Stop barcode detection interval
-            if (this.barcodeDetectionInterval) {
-                clearInterval(this.barcodeDetectionInterval);
-                this.barcodeDetectionInterval = null;
-            }
-        },
-
-        // ... existing code ...
-        
-        async toggleFlashlight() {
-            if (this.qrScanner && this.flashlightSupported) {
-                try {
-                    if (this.flashlightOn) {
-                        await this.qrScanner.turnFlashOff();
-                        this.flashlightOn = false;
-                    } else {
-                        await this.qrScanner.turnFlashOn();
-                        this.flashlightOn = true;
-                    }
-                } catch (error) {
-                    console.warn('Flashlight toggle failed:', error);
-                }
-            }
-        },
-
-        async switchCamera() {
-            if (this.multipleCameras) {
-                try {
-                    const currentIndex = this.availableCameras.findIndex(
-                        camera => camera.id === this.currentCameraId
-                    );
-                    const nextIndex = (currentIndex + 1) % this.availableCameras.length;
-                    const nextCamera = this.availableCameras[nextIndex];
-                    
-                    this.currentCameraId = nextCamera.id;
-                    
-                    // Restart scanner with new camera
-                    this.stopCurrentScanner();
-                    await this.initializeAutoDetectionScanner();
-                    
-                    if (typeof frappe !== 'undefined' && frappe.show_alert) {
-                        frappe.show_alert({
-                            message: this.__('Switched to: ') + nextCamera.label,
-                            indicator: 'blue'
-                        }, 2);
-                    }
-                } catch (error) {
-                    console.warn('Camera switch failed:', error);
-                }
-            }
         },
 
         stopScanning() {
-            console.log('Stopping scanner');
-            
-            try {
-                // Stop all scanners
-                this.stopCurrentScanner();
-                
-                // Reset component state
-                this.scannerDialog = false;
-                this.scanResult = '';
-                this.scanFormat = '';
-                this.errorMessage = '';
-                this.flashlightOn = false;
-                this.cameraPermissionDenied = false;
+            this.isScanning = false; // This should make QrcodeStream stop/hide
+            this.scannerDialog = false;
+            this.scanResult = '';
+            this.scanFormat = '';
+            this.errorMessage = '';
+            this.torchActive = false;
+            // selectedDeviceId and cameras can remain as they are for next scan
+            this.$emit('scanner-closed');
+        },
+
+        async toggleTorch() {
+            this.torchActive = !this.torchActive;
+            // The QrcodeStream component has a :torch prop, binding this.torchActive to it should work.
+        },
+
+        async switchCamera() {
+            if (this.cameras.length > 1) {
+                const currentIndex = this.cameras.findIndex(cam => cam.deviceId === this.selectedDeviceId);
+                const nextIndex = (currentIndex + 1) % this.cameras.length;
+                this.selectedDeviceId = this.cameras[nextIndex].deviceId;
+                // QrcodeStream should react to changes in :camera prop (if we bind selectedDeviceId to it)
+                // Or we might need to re-initialize or force a re-render of QrcodeStream
+                // Forcing re-render by toggling isScanning or using a v-if with a key
                 this.isScanning = false;
-                
-                // Emit close event to parent component
-                this.$emit('scanner-closed');
-                
-                // Show feedback to user
-                if (typeof frappe !== 'undefined' && frappe.show_alert) {
+                await this.$nextTick();
+                this.isScanning = true;
+                 if (typeof frappe !== 'undefined' && frappe.show_alert) {
                     frappe.show_alert({
-                        message: this.__('Scanner closed'),
+                        message: this.__('Switched to: ') + (this.cameras[nextIndex].label || `Camera ${nextIndex + 1}`),
                         indicator: 'blue'
                     }, 2);
                 }
-                
-            } catch (error) {
-                console.error('Error stopping scanner:', error);
-                // Force close the dialog even if there's an error
-                this.scannerDialog = false;
             }
         },
+        
+        // Old methods to remove or adapt:
+        // initializeAutoDetectionScanner, startBarcodeDetection, detectBarcodeInImageData, 
+        // onScanSuccess (replaced by onDetect), stopCurrentScanner, toggleFlashlight (replaced by toggleTorch)
+        // handleScannerError (replaced by onError)
 
         handleEscKey(event) {
             if (event.key === 'Escape' && this.scannerDialog) {
@@ -529,19 +390,32 @@ export default {
         }
     },
 
+    watch: {
+        scannerDialog(newVal) {
+            if (newVal) {
+                // When dialog opens, if no camera is selected, list them.
+                if (!this.selectedDeviceId && this.cameras.length === 0) {
+                    this.listCameras();
+                }
+            } else {
+                // When dialog closes, ensure scanning is stopped.
+                this.isScanning = false;
+                this.torchActive = false;
+            }
+        }
+    },
+
     mounted() {
-        // Add ESC key listener
         if (typeof document !== 'undefined') {
             document.addEventListener('keydown', this.handleEscKey);
         }
     },
 
     beforeUnmount() {
-        // Remove ESC key listener
         if (typeof document !== 'undefined') {
             document.removeEventListener('keydown', this.handleEscKey);
         }
-        this.stopScanning();
+        this.stopScanning(); // Ensure scanner stops when component is unmounted
     }
 };
 </script>
