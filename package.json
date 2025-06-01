@@ -2,6 +2,7 @@
   "name": "posawesome",
   "scripts": {
     "dev": "vite"
+    "build": "yarn install && vite build"
   },
   "dependencies": {
     "lodash": "^4.17.21",
