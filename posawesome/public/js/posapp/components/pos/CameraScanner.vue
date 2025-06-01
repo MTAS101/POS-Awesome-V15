@@ -372,7 +372,7 @@ export default {
                     patchSize: "medium",
                     halfSample: true
                 },
-                numOfWorkers: 1,
+                numOfWorkers: 4,
                 decoder: {
                     readers: [
                         "code_128_reader",
