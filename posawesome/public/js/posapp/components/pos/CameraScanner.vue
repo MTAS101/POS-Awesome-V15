@@ -234,6 +234,7 @@ export default {
             availableCameras: [],
             isScanning: false,
             barcodeDetectionInterval: null,
+            isDecodingBarcode: false,
             videoStream: null
         };
     },
@@ -320,7 +321,7 @@ export default {
             
             // Set up periodic barcode scanning
             this.barcodeDetectionInterval = setInterval(() => {
-                if (!this.isScanning || this.scanResult) {
+                if (!this.isScanning || this.scanResult || this.isDecodingBarcode) {
                     return;
                 }
 
@@ -345,7 +346,7 @@ export default {
                 } catch (error) {
                     console.warn('Barcode detection frame error:', error);
                 }
-            }, 100); // Check every 100ms
+            }, 150); // Check every 150ms
         },
 
         detectBarcodeInImageData(imageData) {
@@ -355,6 +356,8 @@ export default {
             tempCanvas.height = imageData.height;
             const tempContext = tempCanvas.getContext('2d');
             tempContext.putImageData(imageData, 0, 0);
+
+            this.isDecodingBarcode = true; // Set flag before decoding
 
             // Configure Quagga for single image processing
             const config = {
@@ -388,6 +391,7 @@ export default {
 
             // Process single frame
             Quagga.decodeSingle(config, (result) => {
+                this.isDecodingBarcode = false; // Reset flag after decoding
                 if (result && result.codeResult) {
                     const code = result.codeResult.code;
                     const format = result.codeResult.format;
