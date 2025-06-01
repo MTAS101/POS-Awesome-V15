@@ -1,7 +1,7 @@
 <template>
   <!-- Main navigation container -->
   <nav>
-     <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
+    <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
     <v-app-bar app flat height="56" color="white" class="border-bottom">
       <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary" />
 
@@ -242,79 +242,134 @@ export default {
     }
   },
   methods: {
+
     /**
-     * Initializes the Socket.IO connection to the backend server.
-     * This method sets up the connection parameters and defines event listeners
-     * for various connection states (connect, disconnect, error).
+     * Initializes a Socket.IO connection, adapting the URL based on the environment:
+     * - Development: localhost / 127.0.0.1
+     * - Production: domain names (not IP addresses)
+     * - Fallback: IP addresses (e.g., 192.168.x.x), default to port 9000
      */
+
     initSocketConnection() {
-      this.serverConnecting = true; // Set state to indicate connection attempt is in progress
-      this.serverOnline = false; // Assume server is offline until a successful connection is made
+      this.serverConnecting = true;
+      this.serverOnline = false;
 
       try {
-        // Get the current window location to determine the server URL
-        const protocol = window.location.protocol;
-        const host = window.location.hostname;
-        const port = window.location.port || (protocol === 'https:' ? '443' : '80');
+        const { protocol, hostname: host, port: currentPort } = window.location;
 
-        // Use the same host and port as the current page
-        this.socket = io(`${protocol}//${host}:${port}`, {
-          path: '/socket.io', // Standard path for Socket.IO connections
-          transports: ['websocket', 'polling'], // Preferred transport methods (websocket is faster)
-          reconnection: true, // Enable automatic reconnection attempts if connection is lost
-          reconnectionAttempts: Infinity, // Attempt to reconnect indefinitely
-          reconnectionDelay: 1000, // Initial delay before first reconnection attempt (1 second)
-          reconnectionDelayMax: 5000, // Maximum delay between reconnection attempts (5 seconds)
-          timeout: 20000, // How long to wait before considering the connection failed (20 seconds)
+        /**
+         * Checks if the host is a local development address.
+         */
+        const isLocalhost = () => ['localhost', '127.0.0.1'].includes(host);
+
+        /**
+         * Checks if the host is a valid IPv4 address.
+         */
+        const isIpAddress = (hostname) => /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+
+        /**
+         * Determine the environment:
+         * - Development: localhost or 127.0.0.1
+         * - Production: not an IP address
+         * - Fallback: IP address (not localhost)
+         */
+        const isDevelopment = isLocalhost();
+        const isProduction = !isDevelopment && !isIpAddress(host);
+        const isFallback = !isDevelopment && isIpAddress(host);
+
+        /**
+         * Returns the appropriate Socket.IO URL based on environment.
+         */
+        const getSocketUrl = () => {
+          if (isProduction) {
+            // Production: use current port or default for protocol
+            const port = currentPort || (protocol === 'https:' ? '443' : '80');
+            const url = `${protocol}//${host}:${port}`;
+            console.log('Production environment detected, using:', url);
+            return url;
+          }
+
+          if (isDevelopment) {
+            // Development: use dev socket port (9000 or Frappe-configured)
+            const socketPort = window.frappe?.boot?.socketio_port || '9000';
+            const url = `${protocol}//${host}:${socketPort}`;
+            console.log('Development environment detected, using:', url);
+            return url;
+          }
+
+          if (isFallback) {
+            // Fallback: IP addresses (e.g., 192.168.x.x), default to port 9000
+            const fallbackUrl = `${protocol}//${host}:9000`;
+            console.log('IP-based host detected, using fallback:', fallbackUrl);
+            return fallbackUrl;
+          }
+
+          // As a final fallback, use port 9000
+          const defaultFallbackUrl = `${protocol}//${host}:9000`;
+          console.log('Unknown environment, using fallback:', defaultFallbackUrl);
+          return defaultFallbackUrl;
+        };
+
+        // Create the Socket.IO client with connection options
+        this.socket = io(getSocketUrl(), {
+          path: '/socket.io',
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 1000,
+          reconnectionDelayMax: 5000,
+          timeout: 20000,
           forceNew: true
         });
 
-        // Event listener for a successful connection to the Socket.IO server.
+        /**
+         * Event: Successfully connected
+         */
         this.socket.on('connect', () => {
-          this.serverOnline = true; // Update server status to online
-          this.serverConnecting = false; // Connection attempt is complete
+          this.serverOnline = true;
+          this.serverConnecting = false;
           console.log('Socket.IO: Connected to server');
         });
 
-        // Event listener for disconnection from the Socket.IO server
+        /**
+         * Event: Disconnected from server
+         */
         this.socket.on('disconnect', (reason) => {
-          this.serverOnline = false; // Update server status to offline
-          this.serverConnecting = false; // No longer connecting if disconnected
+          this.serverOnline = false;
+          this.serverConnecting = false;
           console.warn('Socket.IO: Disconnected from server. Reason:', reason);
-          
-          // Show error message to user
+
           this.showMessage({
             color: 'error',
             title: this.__('Server connection lost. Please check your internet connection.')
           });
         });
 
-        // Event listener for connection errors (e.g., server not found, refused connection).
+        /**
+         * Event: Connection error
+         */
         this.socket.on('connect_error', (error) => {
-          this.serverOnline = false; // Update server status to offline
-          this.serverConnecting = false; // No longer connecting if an error occurred
+          this.serverOnline = false;
+          this.serverConnecting = false;
           console.error('Socket.IO: Connection error:', error.message);
-          
-          // Show error message to user
+
           this.showMessage({
             color: 'error',
             title: this.__('Unable to connect to server. Please try again later.')
           });
         });
-
       } catch (err) {
-        // Catch any errors during the initial Socket.IO client instantiation.
         this.serverOnline = false;
         this.serverConnecting = false;
         console.error('Failed to initialize Socket.IO connection:', err);
-        
-        // Show error message to user
+
         this.showMessage({
           color: 'error',
           title: this.__('Failed to initialize server connection.')
         });
       }
     },
+
     // --- SIGNAL ONLINE/OFFLINE EVENTS ---
     /**
      * Handles the browser's native 'online' event.
