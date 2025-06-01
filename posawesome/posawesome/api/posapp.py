@@ -38,13 +38,17 @@ from typing import List, Dict
 def get_opening_dialog_data():
     data = {}
     data["companies"] = frappe.get_list("Company", limit_page_length=0, order_by="name")
-    data["pos_profiles_data"] = frappe.get_list(
-        "POS Profile",
-        filters={"disabled": 0},
-        fields=["name", "company", "currency"],
-        limit_page_length=0,
-        order_by="name",
-    )
+    
+    # Get only POS Profiles where current user is defined in POS Profile User table
+    pos_profiles_data = frappe.db.sql("""
+        SELECT DISTINCT p.name, p.company, p.currency 
+        FROM `tabPOS Profile` p
+        INNER JOIN `tabPOS Profile User` u ON u.parent = p.name
+        WHERE p.disabled = 0 AND u.user = %s
+        ORDER BY p.name
+    """, frappe.session.user, as_dict=1)
+    
+    data["pos_profiles_data"] = pos_profiles_data
 
     pos_profiles_list = []
     for i in data["pos_profiles_data"]:
