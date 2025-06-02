@@ -8,32 +8,20 @@
                     {{ scanType === 'Both' ? 'Auto Detect' : scanType }}
                 </v-chip>
                 <v-spacer></v-spacer>
-                <v-btn 
-                    icon="mdi-close" 
-                    @click.stop="stopScanning" 
-                    color="error" 
-                    variant="text"
-                    size="large"
-                    :title="__('Close Scanner')"
-                ></v-btn>
+                <v-btn icon="mdi-close" @click.stop="stopScanning" color="error" variant="text" size="large"
+                    :title="__('Close Scanner')"></v-btn>
             </v-card-title>
 
             <v-card-text class="pa-0">
                 <div v-if="!cameraPermissionDenied">
                     <!-- Scanner container -->
                     <div class="scanner-container" v-if="isScanning && scannerDialog">
-                        <qrcode-stream 
-                            :formats="readerFormats" 
-                            :torch="torchActive"
+                        <qrcode-stream :formats="readerFormats" :torch="torchActive"
                             :camera="selectedDeviceId ? { deviceId: selectedDeviceId, exact: selectedDeviceId } : 'auto'"
-                            @detect="onDetect"
-                            @error="onError"
-                            @camera-on="isScanning = true" 
-                            @camera-off="isScanning = false" 
-                            style="width: 100%; height: 350px; object-fit: cover;"
-                        >
+                            @detect="onDetect" @error="onError" @camera-on="isScanning = true"
+                            @camera-off="isScanning = false" style="width: 100%; height: 350px; object-fit: cover;">
                             <!-- Optional: You can put a loading indicator or overlay here -->
-                             <div v-if="!scanResult" class="scanning-overlay">
+                            <div v-if="!scanResult" class="scanning-overlay">
                                 <div class="scan-line"></div>
                                 <div class="scan-corners">
                                     <div class="corner top-left"></div>
@@ -53,13 +41,12 @@
                         </v-alert>
 
                         <v-alert v-if="scanResult" type="success" variant="tonal" class="mb-2">
-                            <v-icon>mdi-check-circle</v-icon>
                             {{ __('Successfully scanned:') }} <strong>{{ scanResult }}</strong>
                             <br><small>Format: {{ scanFormat }}</small>
                         </v-alert>
 
-                        <v-alert v-if="!scanResult && !errorMessage && isScanning && scannerDialog" type="info" variant="tonal">
-                            <v-icon>mdi-information</v-icon>
+                        <v-alert v-if="!scanResult && !errorMessage && isScanning && scannerDialog" type="info"
+                            variant="tonal">
                             {{ __('Position the QR code or barcode within the scanning area') }}
                             <br><small>{{ __('Detecting formats:') }} {{ readerFormats.join(', ') }}</small>
                         </v-alert>
@@ -79,36 +66,22 @@
             <v-card-actions class="justify-space-between pa-3">
                 <div class="d-flex gap-2">
                     <!-- Flashlight toggle -->
-                    <v-btn 
-                        v-if="isScanning && cameras.length > 0" 
-                        @click="toggleTorch"
-                        :color="torchActive ? 'warning' : 'default'"
-                        variant="outlined"
-                        size="small"
-                    >
+                    <v-btn v-if="isScanning && cameras.length > 0" @click="toggleTorch"
+                        :color="torchActive ? 'warning' : 'default'" variant="outlined" size="small">
                         <v-icon>{{ torchActive ? 'mdi-flashlight' : 'mdi-flashlight-off' }}</v-icon>
                         {{ torchActive ? __('Flash On') : __('Flash Off') }}
                     </v-btn>
 
                     <!-- Camera switch -->
-                    <v-btn 
-                        v-if="isScanning && cameras.length > 1"
-                        @click="switchCamera"
-                        color="default"
-                        variant="outlined"
-                        size="small"
-                    >
+                    <v-btn v-if="isScanning && cameras.length > 1" @click="switchCamera" color="default"
+                        variant="outlined" size="small">
                         <v-icon>mdi-camera-switch</v-icon>
                         {{ __('Switch Camera') }}
                     </v-btn>
                 </div>
 
                 <!-- Cancel button -->
-                <v-btn 
-                    @click.stop="stopScanning" 
-                    color="error" 
-                    variant="outlined"
-                >
+                <v-btn @click.stop="stopScanning" color="error" variant="outlined">
                     {{ __('Cancel') }}
                 </v-btn>
             </v-card-actions>
@@ -148,8 +121,13 @@
 }
 
 @keyframes scan {
-    0% { transform: translateY(-100px); }
-    100% { transform: translateY(100px); }
+    0% {
+        transform: translateY(-100px);
+    }
+
+    100% {
+        transform: translateY(100px);
+    }
 }
 
 .scan-corners {
@@ -245,14 +223,14 @@ export default {
             // Ensure these format names are valid as per vue-qrcode-reader documentation
             const availableFormats = [
                 'qr_code',
-                'ean_13', 'ean_8', 
+                'ean_13', 'ean_8',
                 'code_128', 'code_39', 'code_93',
-                'codabar', 
+                'codabar',
                 'upc_a', 'upc_e',
                 'itf', // ITF (Interleaved 2 of 5)
                 // Add other formats if needed and supported by zxing-wasm
             ];
-            
+
             if (this.scanType === 'QR Code') {
                 return ['qr_code'];
             }
@@ -307,18 +285,18 @@ export default {
                 this.scanFormat = firstResult.format;
                 this.errorMessage = '';
                 this.isScanning = false; // Stop further scanning attempts by QrcodeStream or hide it
-                
+
                 this.$emit('barcode-scanned', this.scanResult);
-                
+
                 if (typeof frappe !== 'undefined' && frappe.show_alert) {
                     frappe.show_alert({
                         message: this.__('Code scanned successfully') + ` (${this.scanFormat})`,
                         indicator: 'green'
                     }, 3);
                 }
-                
+
                 setTimeout(() => {
-                    this.stopScanning(); 
+                    this.stopScanning();
                 }, 3000);
             }
         },
@@ -368,7 +346,7 @@ export default {
                 this.isScanning = false;
                 await this.$nextTick();
                 this.isScanning = true;
-                 if (typeof frappe !== 'undefined' && frappe.show_alert) {
+                if (typeof frappe !== 'undefined' && frappe.show_alert) {
                     frappe.show_alert({
                         message: this.__('Switched to: ') + (this.cameras[nextIndex].label || `Camera ${nextIndex + 1}`),
                         indicator: 'blue'
@@ -376,7 +354,7 @@ export default {
                 }
             }
         },
-        
+
         // Old methods to remove or adapt:
         // initializeAutoDetectionScanner, startBarcodeDetection, detectBarcodeInImageData, 
         // onScanSuccess (replaced by onDetect), stopCurrentScanner, toggleFlashlight (replaced by toggleTorch)

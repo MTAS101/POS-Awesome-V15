@@ -2,8 +2,7 @@
   "name": "posawesome",
   "scripts": {
     "dev": "vite",
-    "prebuild": "yarn install",
-    "build": "vite build"
+    "prebuild": "npm install"
   },
   "dependencies": {
     "lodash": "^4.17.21",
@@ -17,6 +16,7 @@
   "devDependencies": {
     "@eslint/js": "^9.16.0",
     "@vitejs/plugin-vue": "^5.2.3",
+    "esbuild": "^0.25.5",
     "eslint": "^9.16.0",
     "eslint-plugin-vue": "^9.32.0",
     "eslint-plugin-vuetify": "^2.5.1",
