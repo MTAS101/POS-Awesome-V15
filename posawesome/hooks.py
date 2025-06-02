@@ -11,9 +11,6 @@ app_color = "grey"
 app_email = "youssef@totrox.com"
 app_license = "GPLv3"
 
-# Before build
-before_build = "posawesome.install.before_build"
-
 # Includes in <head>
 # ------------------
 
