@@ -26,16 +26,22 @@ export function clearOfflineInvoices() {
   localStorage.removeItem('offline_invoices');
 }
 
+export function getPendingOfflineInvoiceCount() {
+  return getOfflineInvoices().length;
+}
+
 export async function syncOfflineInvoices() {
   const invoices = getOfflineInvoices();
-  if (!invoices.length) return;
+  if (!invoices.length) return { pending: 0, synced: 0 };
   const failures = [];
+  let synced = 0;
   for (const inv of invoices) {
     try {
       await frappe.call({
         method: 'posawesome.posawesome.api.posapp.submit_invoice',
         args: inv
       });
+      synced += 1;
     } catch (err) {
       console.error('Failed to sync offline invoice', err);
       failures.push(inv);
@@ -46,4 +52,5 @@ export async function syncOfflineInvoices() {
   } else {
     clearOfflineInvoices();
   }
+  return { pending: invoices.length, synced };
 }

@@ -604,7 +604,11 @@
 <script>
 // Importing format mixin for currency and utility functions
 import format from "../../format";
-import { saveOfflineInvoice, syncOfflineInvoices } from "../../../offline";
+import {
+  saveOfflineInvoice,
+  syncOfflineInvoices,
+  getPendingOfflineInvoiceCount,
+} from "../../../offline";
 
 export default {
   // Using format mixin for shared formatting methods
@@ -1515,14 +1519,31 @@ export default {
     // Get change amount for display
     get_change_amount() {
       return Math.max(0, this.total_payments - this.invoice_doc.grand_total);
+    },
+    // Sync any invoices stored offline and show pending/synced counts
+    async syncPendingInvoices() {
+      const pending = getPendingOfflineInvoiceCount();
+      if (pending) {
+        this.eventBus.emit("show_message", {
+          title: `${pending} invoice${pending > 1 ? 's' : ''} pending for sync`,
+          color: "warning",
+        });
+      }
+      const result = await syncOfflineInvoices();
+      if (result && result.synced) {
+        this.eventBus.emit("show_message", {
+          title: `${result.synced} offline invoice${result.synced > 1 ? 's' : ''} synced`,
+          color: "success",
+        });
+      }
     }
   },
   // Lifecycle hook: created
   created() {
     // Register keyboard shortcut for payment
     document.addEventListener("keydown", this.shortPay.bind(this));
-    syncOfflineInvoices();
-    this.eventBus.on("network-online", syncOfflineInvoices);
+    this.syncPendingInvoices();
+    this.eventBus.on("network-online", this.syncPendingInvoices);
   },
   // Lifecycle hook: mounted
   mounted() {
@@ -1616,7 +1637,7 @@ export default {
     this.eventBus.off("set_pos_settings");
     this.eventBus.off("set_customer_info_to_edit");
     this.eventBus.off("set_mpesa_payment");
-    this.eventBus.off("network-online", syncOfflineInvoices);
+    this.eventBus.off("network-online", this.syncPendingInvoices);
   },
   // Lifecycle hook: unmounted
   unmounted() {
