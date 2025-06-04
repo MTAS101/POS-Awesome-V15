@@ -89,9 +89,49 @@ export default {
             this.eventBus.emit('set_company', r.message.company);
             frappe.realtime.emit('pos_profile_registered');
             console.info('LoadPosProfile');
+            try {
+              localStorage.setItem('pos_opening_storage', JSON.stringify(r.message));
+            } catch (e) {
+              console.error('Failed to cache opening data', e);
+            }
           } else {
+            const cached = localStorage.getItem('pos_opening_storage');
+            if (cached) {
+              try {
+                const data = JSON.parse(cached);
+                this.pos_profile = data.pos_profile;
+                this.pos_opening_shift = data.pos_opening_shift;
+                this.get_offers(this.pos_profile.name);
+                this.eventBus.emit('register_pos_profile', data);
+                this.eventBus.emit('set_company', data.company);
+                frappe.realtime.emit('pos_profile_registered');
+                console.info('LoadPosProfile (cached)');
+                return;
+              } catch (e) {
+                console.error('Failed to parse cached opening data', e);
+              }
+            }
             this.create_opening_voucher();
           }
+        })
+        .catch(() => {
+          const cached = localStorage.getItem('pos_opening_storage');
+          if (cached) {
+            try {
+              const data = JSON.parse(cached);
+              this.pos_profile = data.pos_profile;
+              this.pos_opening_shift = data.pos_opening_shift;
+              this.get_offers(this.pos_profile.name);
+              this.eventBus.emit('register_pos_profile', data);
+              this.eventBus.emit('set_company', data.company);
+              frappe.realtime.emit('pos_profile_registered');
+              console.info('LoadPosProfile (cached)');
+              return;
+            } catch (e) {
+              console.error('Failed to parse cached opening data', e);
+            }
+          }
+          this.create_opening_voucher();
         });
     },
     create_opening_voucher() {

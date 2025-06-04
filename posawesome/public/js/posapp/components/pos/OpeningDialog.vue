@@ -126,9 +126,9 @@ export default {
           const cached = JSON.parse(localStorage.getItem('opening_dialog_storage'));
           if (cached) {
             vm.companies = cached.companies.map(c => c.name);
-            vm.company = vm.companies[0] || '';
             vm.pos_profiles_data = cached.pos_profiles_data || [];
             vm.payments_method_data = cached.payments_method || [];
+            vm.company = vm.companies[0] || '';
           }
         } catch (e) {
           console.error('Failed to parse opening dialog cache', e);
@@ -141,9 +141,9 @@ export default {
         callback: function (r) {
           if (r.message) {
             vm.companies = r.message.companies.map(element => element.name);
-            vm.company = vm.companies[0] || '';
             vm.pos_profiles_data = r.message.pos_profiles_data;
             vm.payments_method_data = r.message.payments_method;
+            vm.company = vm.companies[0] || '';
             try {
               localStorage.setItem('opening_dialog_storage', JSON.stringify(r.message));
             } catch (e) {
@@ -169,6 +169,11 @@ export default {
           if (r.message) {
             vm.eventBus.emit('register_pos_data', r.message);
             vm.eventBus.emit('set_company', r.message.company);
+            try {
+              localStorage.setItem('pos_opening_storage', JSON.stringify(r.message));
+            } catch (e) {
+              console.error('Failed to cache opening data', e);
+            }
             vm.close_opening_dialog();
             is_loading = false;
           }
