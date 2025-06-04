@@ -48,6 +48,11 @@ frappe.PosApp.posapp = class {
         app.use(eventBus);
         app.use(vuetify)
         app.mount(this.$el[0]);
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/assets/posawesome/js/sw.js')
+                .catch(err => console.error('SW registration failed', err));
+        }
     }
     setup_header() {
 

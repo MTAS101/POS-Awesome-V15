@@ -604,6 +604,7 @@
 <script>
 // Importing format mixin for currency and utility functions
 import format from "../../format";
+import { saveOfflineInvoice, syncOfflineInvoices } from "@/offline";
 export default {
   // Using format mixin for shared formatting methods
   mixins: [format],
@@ -1049,6 +1050,15 @@ export default {
         is_cashback: this.is_cashback,
       };
       const vm = this;
+
+      if (!navigator.onLine) {
+        saveOfflineInvoice({ data: data, invoice: this.invoice_doc });
+        vm.eventBus.emit("show_message", { title: __("Invoice saved offline"), color: "warning" });
+        vm.eventBus.emit("clear_invoice");
+        vm.eventBus.emit("reset_posting_date");
+        vm.back_to_invoice();
+        return;
+      }
       frappe.call({
         method: "posawesome.posawesome.api.posapp.submit_invoice",
         args: {
@@ -1510,6 +1520,8 @@ export default {
   created() {
     // Register keyboard shortcut for payment
     document.addEventListener("keydown", this.shortPay.bind(this));
+    syncOfflineInvoices();
+    this.eventBus.on("network-online", syncOfflineInvoices);
   },
   // Lifecycle hook: mounted
   mounted() {
@@ -1603,6 +1615,7 @@ export default {
     this.eventBus.off("set_pos_settings");
     this.eventBus.off("set_customer_info_to_edit");
     this.eventBus.off("set_mpesa_payment");
+    this.eventBus.off("network-online", syncOfflineInvoices);
   },
   // Lifecycle hook: unmounted
   unmounted() {

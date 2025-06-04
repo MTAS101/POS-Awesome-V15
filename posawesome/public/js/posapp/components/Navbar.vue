@@ -331,6 +331,7 @@ export default {
           this.serverOnline = true;
           this.serverConnecting = false;
           console.log('Socket.IO: Connected to server');
+          this.eventBus.emit('server-online');
         });
 
         /**
@@ -340,6 +341,8 @@ export default {
           this.serverOnline = false;
           this.serverConnecting = false;
           console.warn('Socket.IO: Disconnected from server. Reason:', reason);
+
+          this.eventBus.emit('server-offline');
 
           this.showMessage({
             color: 'error',
@@ -354,6 +357,7 @@ export default {
           this.serverOnline = false;
           this.serverConnecting = false;
           console.error('Socket.IO: Connection error:', error.message);
+          this.eventBus.emit('server-offline');
 
           this.showMessage({
             color: 'error',
@@ -381,6 +385,7 @@ export default {
     handleOnline() {
       this.networkOnline = true; // Browser is now online
       console.log('Browser is online');
+      this.eventBus.emit('network-online');
       // If the server is not online and not currently connecting, and a socket instance exists,
       // explicitly try to connect the socket. This helps in re-establishing server connection
       // immediately after internet recovery.
@@ -401,6 +406,7 @@ export default {
       this.serverOnline = false; // Server is considered unreachable if there's no internet
       this.serverConnecting = false; // Stop any ongoing connection attempts
       console.log('Browser is offline');
+      this.eventBus.emit('network-offline');
       // Disconnect the socket gracefully if the network goes offline.
       if (this.socket) {
         this.socket.disconnect();
