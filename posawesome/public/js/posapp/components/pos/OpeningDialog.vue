@@ -169,6 +169,11 @@ export default {
           if (r.message) {
             vm.eventBus.emit('register_pos_data', r.message);
             vm.eventBus.emit('set_company', r.message.company);
+            try {
+              localStorage.setItem('pos_opening_storage', JSON.stringify(r.message));
+            } catch (e) {
+              console.error('Failed to cache opening data', e);
+            }
             vm.close_opening_dialog();
             is_loading = false;
           }
