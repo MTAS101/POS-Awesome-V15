@@ -50,7 +50,7 @@ frappe.PosApp.posapp = class {
         app.mount(this.$el[0]);
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/assets/posawesome/js/sw.js')
+            navigator.serviceWorker.register('/sw.js')
                 .catch(err => console.error('SW registration failed', err));
         }
     }
