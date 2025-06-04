@@ -33,11 +33,13 @@ self.addEventListener('fetch', event => {
       }
       return fetch(event.request).then(resp => {
 
-        const clone = resp.clone();
-        caches.open('posawesome-cache-v1').then(cache => cache.put(event.request, clone));
+        // Cache only full successful responses
+        if (resp && resp.ok && resp.status === 200) {
+          const clone = resp.clone();
+          caches.open('posawesome-cache-v1').then(cache => cache.put(event.request, clone));
+        }
         return resp;
       });
-
     }).catch(() => caches.match(event.request))
 
   );
