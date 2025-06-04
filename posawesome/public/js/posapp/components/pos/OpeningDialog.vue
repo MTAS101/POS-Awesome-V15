@@ -175,7 +175,7 @@ export default {
               console.error('Failed to cache opening data', e);
             }
             vm.close_opening_dialog();
-            is_loading = false;
+            vm.is_loading = false;
           }
         });
     },
