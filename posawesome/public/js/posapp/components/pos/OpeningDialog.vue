@@ -152,7 +152,7 @@ export default {
             vm.eventBus.emit('register_pos_data', r.message);
             vm.eventBus.emit('set_company', r.message.company);
             vm.close_opening_dialog();
-            is_loading = false;
+            vm.is_loading = false;
           }
         });
     },
