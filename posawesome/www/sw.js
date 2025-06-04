@@ -27,11 +27,18 @@ self.addEventListener('fetch', event => {
 
   event.respondWith(
     caches.match(event.request).then(response => {
-      return response || fetch(event.request).then(resp => {
+
+      if (response) {
+        return response;
+      }
+      return fetch(event.request).then(resp => {
+
         const clone = resp.clone();
         caches.open('posawesome-cache-v1').then(cache => cache.put(event.request, clone));
         return resp;
       });
-    }).catch(() => {})
+
+    }).catch(() => caches.match(event.request))
+
   );
 });
