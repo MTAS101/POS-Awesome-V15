@@ -1531,6 +1531,10 @@ export default {
         });
         this.eventBus.emit("pending_invoices_changed", pending);
       }
+      if (!navigator.onLine) {
+        // Don't attempt to sync while offline; just update the counter
+        return;
+      }
       const result = await syncOfflineInvoices();
       if (result && result.synced) {
         this.eventBus.emit("show_message", {
