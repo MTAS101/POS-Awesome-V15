@@ -1517,6 +1517,12 @@ export default {
     // Update invoice in backend
     update_invoice(doc) {
       var vm = this;
+      if (!navigator.onLine) {
+        // When offline, simply merge the passed doc with the current invoice_doc
+        // to allow offline invoice creation without server calls
+        vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
+        return vm.invoice_doc;
+      }
       frappe.call({
         method: "posawesome.posawesome.api.posapp.update_invoice",
         args: {
@@ -1535,6 +1541,11 @@ export default {
     // Update invoice from order in backend
     update_invoice_from_order(doc) {
       var vm = this;
+      if (!navigator.onLine) {
+        // Offline mode - merge doc locally without server update
+        vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
+        return vm.invoice_doc;
+      }
       frappe.call({
         method: "posawesome.posawesome.api.posapp.update_invoice_from_order",
         args: {
