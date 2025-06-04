@@ -16,18 +16,22 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+  if (event.request.url.includes('socket.io')) return;
+
   event.respondWith(
     caches.match(event.request).then(response => {
-      return (
-        response ||
-        fetch(event.request).then(resp => {
+      if (response) {
+        return response;
+      }
+      return fetch(event.request).then(resp => {
+        if (resp && resp.ok && resp.status === 200) {
           const respClone = resp.clone();
-          caches.open('posawesome-cache-v1').then(cache => {
-            cache.put(event.request, respClone);
-          });
-          return resp;
-        }).catch(() => response)
-      );
-    })
+          caches.open('posawesome-cache-v1').then(cache => cache.put(event.request, respClone));
+        }
+        return resp;
+      });
+    }).catch(() => caches.match(event.request).then(r => r || Response.error()))
   );
 });

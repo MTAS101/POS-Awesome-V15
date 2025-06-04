@@ -17,6 +17,9 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
+  const url = new URL(event.request.url);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+  if (event.request.url.includes('socket.io')) return;
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
@@ -40,7 +43,7 @@ self.addEventListener('fetch', event => {
         }
         return resp;
       });
-    }).catch(() => caches.match(event.request))
+    }).catch(() => caches.match(event.request).then(r => r || Response.error()))
 
   );
 });
