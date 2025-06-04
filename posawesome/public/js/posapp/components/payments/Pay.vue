@@ -419,7 +419,12 @@ export default {
             vm.eventBus.emit("payments_register_pos_profile", r.message);
             vm.eventBus.emit("set_company", r.message.company);
             this.set_payment_methods();
-            
+            try {
+              localStorage.setItem("pos_opening_storage", JSON.stringify(r.message));
+            } catch (e) {
+              console.error("Failed to cache opening data", e);
+            }
+
             // Initialize pos_profile_search as empty
             this.pos_profile_search = "";
             
@@ -438,8 +443,55 @@ export default {
             this.get_outstanding_invoices();
             this.get_draft_mpesa_payments_register();
           } else {
+            const cached = localStorage.getItem("pos_opening_storage");
+            if (cached) {
+              try {
+                const data = JSON.parse(cached);
+                this.pos_profile = data.pos_profile;
+                this.pos_opening_shift = data.pos_opening_shift;
+                this.company = data.company.name;
+                vm.eventBus.emit("payments_register_pos_profile", data);
+                vm.eventBus.emit("set_company", data.company);
+                this.set_payment_methods();
+                this.payment_methods_list = [];
+                this.pos_profile.payments.forEach((element) => {
+                  this.payment_methods_list.push(element.mode_of_payment);
+                });
+                this.get_available_pos_profiles();
+                this.get_outstanding_invoices();
+                this.get_draft_mpesa_payments_register();
+                return;
+              } catch (e) {
+                console.error("Failed to parse cached opening data", e);
+              }
+            }
             this.create_opening_voucher();
           }
+        })
+        .catch(() => {
+          const cached = localStorage.getItem("pos_opening_storage");
+          if (cached) {
+            try {
+              const data = JSON.parse(cached);
+              this.pos_profile = data.pos_profile;
+              this.pos_opening_shift = data.pos_opening_shift;
+              this.company = data.company.name;
+              vm.eventBus.emit("payments_register_pos_profile", data);
+              vm.eventBus.emit("set_company", data.company);
+              this.set_payment_methods();
+              this.payment_methods_list = [];
+              this.pos_profile.payments.forEach((element) => {
+                this.payment_methods_list.push(element.mode_of_payment);
+              });
+              this.get_available_pos_profiles();
+              this.get_outstanding_invoices();
+              this.get_draft_mpesa_payments_register();
+              return;
+            } catch (e) {
+              console.error("Failed to parse cached opening data", e);
+            }
+          }
+          this.create_opening_voucher();
         });
     },
     get_available_pos_profiles() {
