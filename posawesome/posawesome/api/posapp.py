@@ -614,8 +614,14 @@ def update_invoice(data):
 def submit_invoice(invoice, data):
     data = json.loads(data)
     invoice = json.loads(invoice)
-    invoice_doc = frappe.get_doc("Sales Invoice", invoice.get("name"))
-    invoice_doc.update(invoice)
+    invoice_name = invoice.get("name")
+    if not invoice_name or not frappe.db.exists("Sales Invoice", invoice_name):
+        created = update_invoice(json.dumps(invoice))
+        invoice_name = created.get("name")
+        invoice_doc = frappe.get_doc("Sales Invoice", invoice_name)
+    else:
+        invoice_doc = frappe.get_doc("Sales Invoice", invoice_name)
+        invoice_doc.update(invoice)
     if invoice.get("posa_delivery_date"):
         invoice_doc.update_stock = 0
     mop_cash_list = [
