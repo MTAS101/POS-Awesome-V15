@@ -17,6 +17,8 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http')) return;
+  if (event.request.url.includes('socket.io')) return;
+
 
   event.respondWith(
     caches.match(event.request).then(response => {
@@ -30,6 +32,6 @@ self.addEventListener('fetch', event => {
         }
         return resp;
       });
-    }).catch(() => caches.match(event.request))
+    }).catch(() => caches.match(event.request).then(r => r || new Response('')))
   );
 });
