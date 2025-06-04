@@ -139,6 +139,7 @@ export default {
       serverOnline: false,             // Boolean: Reflects the real-time server health via WebSocket (true if connected, false if disconnected)
       serverConnecting: false,         // Boolean: Indicates if the client is currently attempting to establish a connection to the server via WebSocket
       socket: null                     // Instance of the Socket.IO client, used for real-time communication with the server
+      offlineMessageShown: false       // Flag to avoid repeating offline warnings
     };
   },
   computed: {
@@ -341,6 +342,7 @@ export default {
         this.socket.on('connect', () => {
           this.serverOnline = true;
           this.serverConnecting = false;
+          this.offlineMessageShown = false; // reset offline warning flag
           console.log('Socket.IO: Connected to server');
           this.eventBus.emit('server-online');
         });
@@ -355,10 +357,13 @@ export default {
 
           this.eventBus.emit('server-offline');
 
-          this.showMessage({
-            color: 'error',
-            title: this.__('Server connection lost. Please check your internet connection.')
-          });
+          if (!this.offlineMessageShown) {
+            this.showMessage({
+              color: 'error',
+              title: this.__('Server connection lost. Please check your internet connection.')
+            });
+            this.offlineMessageShown = true;
+          }
         });
 
         /**
@@ -370,10 +375,13 @@ export default {
           console.error('Socket.IO: Connection error:', error.message);
           this.eventBus.emit('server-offline');
 
-          this.showMessage({
-            color: 'error',
-            title: this.__('Unable to connect to server. Please try again later.')
-          });
+          if (!this.offlineMessageShown) {
+            this.showMessage({
+              color: 'error',
+              title: this.__('Unable to connect to server. Please try again later.')
+            });
+            this.offlineMessageShown = true;
+          }
         });
       } catch (err) {
         this.serverOnline = false;
@@ -396,6 +404,7 @@ export default {
     handleOnline() {
       this.networkOnline = true; // Browser is now online
       console.log('Browser is online');
+      this.offlineMessageShown = false; // allow future offline warnings
       this.eventBus.emit('network-online');
       // If the server is not online and not currently connecting, and a socket instance exists,
       // explicitly try to connect the socket. This helps in re-establishing server connection
