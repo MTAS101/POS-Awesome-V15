@@ -19,7 +19,6 @@ self.addEventListener('fetch', event => {
   if (!event.request.url.startsWith('http')) return;
   if (event.request.url.includes('socket.io')) return;
 
-
   event.respondWith(
     caches.match(event.request).then(response => {
       if (response) {
