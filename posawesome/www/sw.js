@@ -42,6 +42,7 @@ self.addEventListener('fetch', event => {
         }
         return resp;
       });
+
     }).catch(() => caches.match(event.request).then(r => r || Response.error()))
 
   );
