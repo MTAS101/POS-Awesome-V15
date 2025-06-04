@@ -1058,6 +1058,7 @@ export default {
 
       if (!navigator.onLine) {
         saveOfflineInvoice({ data: data, invoice: this.invoice_doc });
+        this.eventBus.emit("pending_invoices_changed", getPendingOfflineInvoiceCount());
         vm.eventBus.emit("show_message", { title: __("Invoice saved offline"), color: "warning" });
         vm.eventBus.emit("clear_invoice");
         vm.eventBus.emit("reset_posting_date");
@@ -1528,6 +1529,7 @@ export default {
           title: `${pending} invoice${pending > 1 ? 's' : ''} pending for sync`,
           color: "warning",
         });
+        this.eventBus.emit("pending_invoices_changed", pending);
       }
       const result = await syncOfflineInvoices();
       if (result && result.synced) {
@@ -1536,6 +1538,7 @@ export default {
           color: "success",
         });
       }
+      this.eventBus.emit("pending_invoices_changed", getPendingOfflineInvoiceCount());
     }
   },
   // Lifecycle hook: created

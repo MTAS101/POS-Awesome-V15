@@ -19,13 +19,15 @@
            It changes color and icon based on whether there's internet, server connection, or if it's connecting. -->
       <v-tooltip bottom>
         <template #activator="{ on, attrs }">
-          <v-btn icon v-bind="attrs" v-on="on" :title="statusText" class="mx-2">
-            <v-progress-circular v-if="serverConnecting" indeterminate color="blue" size="24"
-              width="2"></v-progress-circular>
-            <v-icon v-else :color="statusColor" size="24">
-              {{ statusIcon }}
-            </v-icon>
-          </v-btn>
+          <v-badge :content="pendingInvoices" :model-value="pendingInvoices > 0" color="red" overlap offset-x="4" offset-y="4">
+            <v-btn icon v-bind="attrs" v-on="on" :title="statusText" class="mx-2">
+              <v-progress-circular v-if="serverConnecting" indeterminate color="blue" size="24"
+                width="2"></v-progress-circular>
+              <v-icon v-else :color="statusColor" size="24">
+                {{ statusIcon }}
+              </v-icon>
+            </v-btn>
+          </v-badge>
         </template>
         <span>{{ statusText }}</span>
       </v-tooltip>
@@ -110,6 +112,7 @@
 // Import the Socket.IO client library for real-time server status monitoring.
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
+import { getPendingOfflineInvoiceCount } from '../../offline.js';
 
 export default {
   name: 'NavBar', // Component name
@@ -129,6 +132,8 @@ export default {
       freeze: false, // Controls the visibility of the freeze dialog (true for visible, false for hidden)
       freezeTitle: '', // Title text for the freeze dialog
       freezeMsg: '', // Message text for the freeze dialog
+      // --- PENDING OFFLINE INVOICES ---
+      pendingInvoices: 0, // Number of invoices saved locally while offline
       // --- SIGNAL INDICATOR STATES ---
       networkOnline: navigator.onLine, // Boolean: Reflects the browser's current network connectivity (true if online, false if offline)
       serverOnline: false,             // Boolean: Reflects the real-time server health via WebSocket (true if connected, false if disconnected)
@@ -191,6 +196,10 @@ export default {
     // Register event listeners on the global event bus. These listeners react to events
     // emitted from other parts of the application to update the NavBar's state.
     this.$nextTick(() => {
+      // Initialize pending invoices count
+      this.updatePendingInvoices();
+      // Listen for changes in pending invoices from other components
+      this.eventBus.on('pending_invoices_changed', this.updatePendingInvoices);
       this.eventBus.on('show_message', this.showMessage); // Listens for requests to show a snackbar message
       this.eventBus.on('set_company', data => { // Listens for updates to company details (name, logo)
         this.company = data.name || this.company;
@@ -233,6 +242,8 @@ export default {
     // when the component is destroyed (e.g., navigating away from the page).
     window.removeEventListener('online', this.handleOnline);
     window.removeEventListener('offline', this.handleOffline);
+    // Remove event bus listener for pending invoices
+    this.eventBus.off('pending_invoices_changed', this.updatePendingInvoices);
     // --- CLOSE SOCKET ---
     // Disconnect and clean up Socket.IO listeners to ensure proper resource management.
     if (this.socket) {
@@ -527,6 +538,13 @@ export default {
           }
         }
       });
+    },
+    /**
+     * Reads the current number of invoices stored offline and updates the badge
+     * counter in the navigation bar.
+     */
+    updatePendingInvoices() {
+      this.pendingInvoices = getPendingOfflineInvoiceCount();
     },
     /**
      * Displays a snackbar message at the top right of the screen.
