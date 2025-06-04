@@ -138,7 +138,7 @@ export default {
       networkOnline: navigator.onLine, // Boolean: Reflects the browser's current network connectivity (true if online, false if offline)
       serverOnline: false,             // Boolean: Reflects the real-time server health via WebSocket (true if connected, false if disconnected)
       serverConnecting: false,         // Boolean: Indicates if the client is currently attempting to establish a connection to the server via WebSocket
-      socket: null                     // Instance of the Socket.IO client, used for real-time communication with the server
+      socket: null,                    // Instance of the Socket.IO client, used for real-time communication with the server
       offlineMessageShown: false       // Flag to avoid repeating offline warnings
     };
   },
