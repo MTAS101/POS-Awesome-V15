@@ -605,6 +605,7 @@
 // Importing format mixin for currency and utility functions
 import format from "../../format";
 import { saveOfflineInvoice, syncOfflineInvoices } from "../../../offline";
+
 export default {
   // Using format mixin for shared formatting methods
   mixins: [format],

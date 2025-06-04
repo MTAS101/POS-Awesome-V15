@@ -27,10 +27,12 @@ self.addEventListener('fetch', event => {
 
   event.respondWith(
     caches.match(event.request).then(response => {
+
       if (response) {
         return response;
       }
       return fetch(event.request).then(resp => {
+
         // Cache only full successful responses
         if (resp && resp.ok && resp.status === 200) {
           const clone = resp.clone();
@@ -39,5 +41,6 @@ self.addEventListener('fetch', event => {
         return resp;
       });
     }).catch(() => caches.match(event.request))
+
   );
 });
