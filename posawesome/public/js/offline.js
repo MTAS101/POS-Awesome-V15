@@ -33,6 +33,10 @@ export function getPendingOfflineInvoiceCount() {
 export async function syncOfflineInvoices() {
   const invoices = getOfflineInvoices();
   if (!invoices.length) return { pending: 0, synced: 0 };
+  if (!navigator.onLine) {
+    // When offline just return the pending count without attempting a sync
+    return { pending: invoices.length, synced: 0 };
+  }
   const failures = [];
   let synced = 0;
   for (const inv of invoices) {
