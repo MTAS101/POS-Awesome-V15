@@ -28,64 +28,16 @@
                 v-model="invoice_name" density="compact" clearable></v-text-field>
             </v-col>
             <v-col cols="12" sm="3">
-              <v-menu
-                v-model="fromDateMenu"
-                :close-on-content-click="false"
-                transition="scale-transition"
-                offset-y
-                min-width="auto"
-              >
-                <template v-slot:activator="{ props }">
-                  <v-text-field
-                    v-model="from_date_formatted"
-                    :label="frappe._('From Date')"
-                    prepend-icon="mdi-calendar"
-                    readonly
-                    v-bind="props"
-                    clearable
-                    @click:clear="clearFromDate"
-                    hide-details
-                    dense
-                    color="primary"
-                    outlined
-                  ></v-text-field>
-                </template>
-                <v-date-picker
-                  v-model="from_date"
-                  no-title
-                  @update:model-value="fromDateMenu = false; formatFromDate();"
-                ></v-date-picker>
-              </v-menu>
+              <DatePicker
+                v-model="from_date"
+                :label="frappe._('From Date')"
+              />
             </v-col>
             <v-col cols="12" sm="3">
-              <v-menu
-                v-model="toDateMenu"
-                :close-on-content-click="false"
-                transition="scale-transition"
-                offset-y
-                min-width="auto"
-              >
-                <template v-slot:activator="{ props }">
-                  <v-text-field
-                    v-model="to_date_formatted"
-                    :label="frappe._('To Date')"
-                    prepend-icon="mdi-calendar"
-                    readonly
-                    v-bind="props"
-                    clearable
-                    @click:clear="clearToDate"
-                    hide-details
-                    dense
-                    color="primary"
-                    outlined
-                  ></v-text-field>
-                </template>
-                <v-date-picker
-                  v-model="to_date"
-                  no-title
-                  @update:model-value="toDateMenu = false; formatToDate();"
-                ></v-date-picker>
-              </v-menu>
+              <DatePicker
+                v-model="to_date"
+                :label="frappe._('To Date')"
+              />
             </v-col>
           </v-row>
 
@@ -252,8 +204,10 @@
 
 <script>
 import format from '../../format';
+import DatePicker from '../helpers/DatePicker.vue';
 
 export default {
+  components: { DatePicker },
   mixins: [format],
   data: () => ({
     invoicesDialog: false,
@@ -272,8 +226,6 @@ export default {
     to_date_formatted: null,
     min_amount: '',
     max_amount: '',
-    fromDateMenu: false,
-    toDateMenu: false,
     pos_profile: '',
     page: 1,
     has_more_invoices: false,
