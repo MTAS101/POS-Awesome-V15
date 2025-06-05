@@ -70,12 +70,25 @@
       <v-row align="center" class="items px-2 py-1 mt-0 pt-0" v-if="pos_profile.posa_allow_change_posting_date">
         <!-- Posting Date Selection with Date Picker -->
         <v-col cols="6" class="pb-2">
-          <DatePicker
-            v-model="posting_date"
-            :label="frappe._('Posting Date')"
-            :min="frappe.datetime.add_days(frappe.datetime.nowdate(true), -7)"
-            :max="frappe.datetime.add_days(frappe.datetime.nowdate(true), 7)"
-          />
+          <v-menu v-model="posting_date_menu" :close-on-content-click="false" transition="scale-transition"
+            density="default">
+            <template v-slot:activator="{ props }">
+              <v-text-field v-model="formatted_posting_date" :label="frappe._('Posting Date')" readonly
+                variant="solo" density="compact" clearable color="primary" hide-details
+                prepend-inner-icon="mdi-calendar"
+                v-bind="props"></v-text-field>
+            </template>
+            <v-date-picker v-model="posting_date" no-title scrollable color="primary"
+              :min="frappe.datetime.add_days(frappe.datetime.nowdate(true), -7)"
+              :max="frappe.datetime.add_days(frappe.datetime.nowdate(true), 7)">
+              <template #actions>
+                <v-spacer></v-spacer>
+                <v-btn text color="primary" @click="posting_date = null; posting_date_menu = false">{{ __('Clear')
+                  }}</v-btn>
+                <v-btn text color="primary" @click="posting_date_menu = false">{{ __('OK') }}</v-btn>
+              </template>
+            </v-date-picker>
+          </v-menu>
         </v-col>
         <!-- Customer Balance Display (Only if enabled in POS profile) -->
         <v-col v-if="pos_profile.posa_show_customer_balance" cols="6" class="pb-2 d-flex align-center">
@@ -305,12 +318,28 @@
 
                 <!-- Delivery Date (if sales order and order type) -->
                 <v-col cols="12" sm="4" v-if="pos_profile.posa_allow_sales_order && invoiceType == 'Order'">
-                  <DatePicker
-                    v-model="item.posa_delivery_date"
-                    :label="frappe._('Delivery Date')"
-                    :min="frappe.datetime.now_date()"
-                    @update:model-value="validate_due_date(item)"
-                  />
+                  <v-menu ref="item_delivery_date" v-model="item.item_delivery_date" :close-on-content-click="false"
+                    v-model:return-value="item.posa_delivery_date" transition="scale-transition">
+                    <template v-slot:activator="{ props }">
+                      <v-text-field v-model="item.posa_delivery_date" :label="frappe._('Delivery Date')" readonly
+                        variant="outlined" density="compact" clearable color="primary" hide-details
+                        v-bind="props"></v-text-field>
+                    </template>
+                    <v-date-picker v-model="item.posa_delivery_date" no-title scrollable color="primary"
+                      :min="frappe.datetime.now_date()">
+                      <v-spacer></v-spacer>
+                      <v-btn variant="text" color="primary" @click="item.item_delivery_date = false">
+                        Cancel
+                      </v-btn>
+                      <v-btn variant="text" color="primary" @click="
+                        [
+                          $refs.item_delivery_date.save(item.posa_delivery_date),
+                          validate_due_date(item),
+                        ]">
+                        OK
+                      </v-btn>
+                    </v-date-picker>
+                  </v-menu>
                 </v-col>
               </v-row>
             </td>
@@ -410,7 +439,6 @@
 
 import format from "../../format";
 import Customer from "./Customer.vue";
-import DatePicker from "../helpers/DatePicker.vue";
 
 export default {
   mixins: [format],
@@ -449,6 +477,7 @@ export default {
       selected_delivery_charge: "", // Selected delivery charge object
       invoice_posting_date: false, // Posting date dialog
       posting_date: frappe.datetime.nowdate(), // Invoice posting date
+      posting_date_menu: false, // Posting date menu visibility
       items_headers: [
         // Table headers for items
         {
@@ -471,7 +500,6 @@ export default {
 
   components: {
     Customer,
-    DatePicker,
   },
 
   computed: {
@@ -528,6 +556,25 @@ export default {
         }
       });
       return this.flt(sum, this.float_precision);
+    },
+    // Format posting_date for display as DD-MM-YYYY
+    formatted_posting_date: {
+      get() {
+        if (!this.posting_date) return '';
+        const parts = this.posting_date.split('-');
+        if (parts.length === 3) {
+          return `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+        return this.posting_date;
+      },
+      set(val) {
+        const parts = val.split('-');
+        if (parts.length === 3) {
+          this.posting_date = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else {
+          this.posting_date = val;
+        }
+      }
     },
     // Get currency symbol for display
     currencySymbol() {
