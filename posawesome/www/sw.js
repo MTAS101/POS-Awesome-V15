@@ -40,7 +40,8 @@ self.addEventListener('fetch', event => {
         try {
           return await fetch(event.request);
         } catch (err) {
-          return caches.match('/app/posapp', { ignoreSearch: true });
+          const cached = await caches.match(event.request, { ignoreSearch: true });
+          return cached || caches.match('/app/posapp');
         }
       })()
     );
