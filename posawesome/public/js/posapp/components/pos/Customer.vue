@@ -188,7 +188,12 @@ export default {
       if (this.customers.length > 0) return;
 
       if (vm.pos_profile.posa_local_storage && localStorage.customer_storage) {
-        vm.customers = JSON.parse(localStorage.getItem('customer_storage'));
+        try {
+          vm.customers = JSON.parse(localStorage.getItem('customer_storage')) || [];
+        } catch (e) {
+          console.error('Failed to parse customer cache:', e);
+          vm.customers = [];
+        }
       }
 
       this.loadingCustomers = true; // ? Start loading
@@ -238,6 +243,16 @@ export default {
   },
 
   created() {
+    // Load cached customers immediately for offline use
+    if (localStorage.customer_storage) {
+      try {
+        this.customers = JSON.parse(localStorage.getItem('customer_storage')) || [];
+      } catch (e) {
+        console.error('Failed to parse customer cache:', e);
+        this.customers = [];
+      }
+    }
+
     this.$nextTick(() => {
       this.eventBus.on('register_pos_profile', (pos_profile) => {
         this.pos_profile = pos_profile;
