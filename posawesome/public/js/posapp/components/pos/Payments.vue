@@ -608,6 +608,7 @@ import {
   saveOfflineInvoice,
   syncOfflineInvoices,
   getPendingOfflineInvoiceCount,
+  isOffline,
 } from "../../../offline";
 
 export default {
@@ -1056,7 +1057,7 @@ export default {
       };
       const vm = this;
 
-      if (!navigator.onLine) {
+      if (isOffline()) {
         saveOfflineInvoice({ data: data, invoice: this.invoice_doc });
         this.eventBus.emit("pending_invoices_changed", getPendingOfflineInvoiceCount());
         vm.eventBus.emit("show_message", { title: __("Invoice saved offline"), color: "warning" });
@@ -1531,7 +1532,7 @@ export default {
         });
         this.eventBus.emit("pending_invoices_changed", pending);
       }
-      if (!navigator.onLine) {
+      if (isOffline()) {
         // Don't attempt to sync while offline; just update the counter
         return;
       }
