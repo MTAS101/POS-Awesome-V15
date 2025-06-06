@@ -208,6 +208,10 @@ export default {
           }
           vm.loadingCustomers = false; // ? Stop loading
         },
+        error: function (err) {
+          console.error('Failed to fetch customers:', err);
+          vm.loadingCustomers = false; // Ensure field is re-enabled on failure
+        }
       });
     },
 
