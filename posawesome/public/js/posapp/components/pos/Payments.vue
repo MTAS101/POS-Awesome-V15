@@ -1061,6 +1061,9 @@ export default {
         saveOfflineInvoice({ data: data, invoice: this.invoice_doc });
         this.eventBus.emit("pending_invoices_changed", getPendingOfflineInvoiceCount());
         vm.eventBus.emit("show_message", { title: __("Invoice saved offline"), color: "warning" });
+        if (print) {
+          this.print_offline_invoice(this.invoice_doc);
+        }
         vm.eventBus.emit("clear_invoice");
         vm.eventBus.emit("reset_posting_date");
         vm.back_to_invoice();
@@ -1215,6 +1218,34 @@ export default {
         },
         true
       );
+    },
+    // Print invoice using a minimal offline template
+    print_offline_invoice(invoice) {
+      if (!invoice) return;
+      const itemsRows = (invoice.items || [])
+        .map(
+          (it) =>
+            `<tr><td>${it.item_name}</td><td style="text-align:right">${it.qty}</td><td style="text-align:right">${it.rate}</td><td style="text-align:right">${it.amount}</td></tr>`
+        )
+        .join("");
+      const total = invoice.rounded_total || invoice.grand_total || 0;
+      const html = `<!DOCTYPE html>
+        <html><head><title>Invoice ${invoice.name || ""}</title></head>
+        <body>
+          <h3>Invoice ${invoice.name || ""}</h3>
+          <p>Date: ${invoice.posting_date || ""}</p>
+          <p>Customer: ${invoice.customer || ""}</p>
+          <table border="1" cellspacing="0" cellpadding="4" style="width:100%;border-collapse:collapse;">
+            <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+            <tbody>${itemsRows}</tbody>
+          </table>
+          <h4 style="text-align:right">Total: ${total}</h4>
+        </body></html>`;
+      const win = window.open("", "_blank");
+      win.document.write(html);
+      win.document.close();
+      win.focus();
+      win.print();
     },
     // Validate due date (should not be in the past)
     validate_due_date() {
