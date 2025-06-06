@@ -226,8 +226,8 @@ export default {
 
         // Even when loading from localStorage, refresh the quantities
         setTimeout(() => {
-          if (vm.filtered_items && vm.filtered_items.length > 0) {
-            vm.update_items_details(vm.filtered_items);
+          if (vm.items && vm.items.length > 0) {
+            vm.update_items_details(vm.items);
           }
         }, 300);
       }
@@ -253,8 +253,8 @@ export default {
 
             // Always refresh quantities after items are loaded
             setTimeout(() => {
-              if (vm.filtered_items && vm.filtered_items.length > 0) {
-                vm.update_items_details(vm.filtered_items);
+              if (vm.items && vm.items.length > 0) {
+                vm.update_items_details(vm.items);
               }
             }, 300);
 
