@@ -19,13 +19,13 @@
   ],
   "screenshots": [
     {
-      "src": "/assets/posawesome/screenshots/screenshot-mobile.txt",
+      "src": "/assets/posawesome/screenshots/screenshot-mobile.png",
       "sizes": "720x1280",
       "type": "text/plain",
       "form_factor": "narrow"
     },
     {
-      "src": "/assets/posawesome/screenshots/screenshot-wide.txt",
+      "src": "/assets/posawesome/screenshots/screenshot-wide.png",
       "sizes": "1280x720",
       "type": "text/plain",
       "form_factor": "wide"
