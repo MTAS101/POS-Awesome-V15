@@ -1362,6 +1362,9 @@ export default {
       this.items.forEach((item) => {
         const new_item = {
           item_code: item.item_code,
+          // Retain the item name for offline invoices
+          // Fallback to item_code if item_name is not available
+          item_name: item.item_name || item.item_code,
           posa_row_id: item.posa_row_id,
           posa_offers: item.posa_offers,
           posa_offer_applied: item.posa_offer_applied,
@@ -1431,6 +1434,9 @@ export default {
       this.items.forEach((item) => {
         const new_item = {
           item_code: item.item_code,
+          // Retain item name to show on offline order documents
+          // Use item_code if item_name is missing
+          item_name: item.item_name || item.item_code,
           posa_row_id: item.posa_row_id,
           posa_offers: item.posa_offers,
           posa_offer_applied: item.posa_offer_applied,
