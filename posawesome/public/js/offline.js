@@ -90,13 +90,15 @@ export async function syncOfflineInvoices() {
     }
   }
 
-  if (failures.length) {
+  const pendingLeft = failures.length;
+
+  if (pendingLeft) {
     localStorage.setItem('offline_invoices', JSON.stringify(failures));
   } else {
     clearOfflineInvoices();
   }
 
-  const totals = { pending: invoices.length, synced, drafted };
+  const totals = { pending: pendingLeft, synced, drafted };
   setLastSyncTotals(totals);
   return totals;
 }
