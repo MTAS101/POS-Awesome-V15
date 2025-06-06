@@ -56,6 +56,7 @@ After switching branches or pulling latest changes:
 31. Accept new payments from customers against existing invoices
 32. Payments Reconciliation
 33. A lot more bug fixes from the version 14
+34. Offline invoices that fail to submit are saved as draft documents
 
 ### How to Install
 

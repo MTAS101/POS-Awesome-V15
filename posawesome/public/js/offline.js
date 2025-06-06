@@ -39,13 +39,16 @@ export function getPendingOfflineInvoiceCount() {
 
 export async function syncOfflineInvoices() {
   const invoices = getOfflineInvoices();
-  if (!invoices.length) return { pending: 0, synced: 0 };
+  if (!invoices.length) return { pending: 0, synced: 0, drafted: 0 };
   if (isOffline()) {
     // When offline just return the pending count without attempting a sync
-    return { pending: invoices.length, synced: 0 };
+    return { pending: invoices.length, synced: 0, drafted: 0 };
   }
+
   const failures = [];
   let synced = 0;
+  let drafted = 0;
+
   for (const inv of invoices) {
     try {
       await frappe.call({
@@ -54,14 +57,25 @@ export async function syncOfflineInvoices() {
       });
       synced += 1;
     } catch (err) {
-      console.error('Failed to sync offline invoice', err);
-      failures.push(inv);
+      console.error('Failed to submit invoice, saving as draft', err);
+      try {
+        await frappe.call({
+          method: 'posawesome.posawesome.api.posapp.update_invoice',
+          args: { data: inv.invoice }
+        });
+        drafted += 1;
+      } catch (draftErr) {
+        console.error('Failed to save invoice as draft', draftErr);
+        failures.push(inv);
+      }
     }
   }
+
   if (failures.length) {
     localStorage.setItem('offline_invoices', JSON.stringify(failures));
   } else {
     clearOfflineInvoices();
   }
-  return { pending: invoices.length, synced };
+
+  return { pending: invoices.length, synced, drafted };
 }

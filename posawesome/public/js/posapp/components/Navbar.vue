@@ -574,11 +574,19 @@ export default {
         return;
       }
       const result = await syncOfflineInvoices();
-      if (result && result.synced) {
-        this.showMessage({
-          title: `${result.synced} offline invoice${result.synced > 1 ? 's' : ''} synced`,
-          color: 'success'
-        });
+      if (result && (result.synced || result.drafted)) {
+        if (result.synced) {
+          this.showMessage({
+            title: `${result.synced} offline invoice${result.synced > 1 ? 's' : ''} synced`,
+            color: 'success'
+          });
+        }
+        if (result.drafted) {
+          this.showMessage({
+            title: `${result.drafted} offline invoice${result.drafted > 1 ? 's' : ''} saved as draft`,
+            color: 'warning'
+          });
+        }
       }
       this.updatePendingInvoices();
       this.eventBus.emit('pending_invoices_changed', this.pendingInvoices);
