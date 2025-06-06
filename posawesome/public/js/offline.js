@@ -56,15 +56,12 @@ export function getLastSyncTotals() {
 export async function syncOfflineInvoices() {
   const invoices = getOfflineInvoices();
   if (!invoices.length) {
-    const totals = { pending: 0, synced: 0, drafted: 0 };
-    setLastSyncTotals(totals);
-    return totals;
+    // No invoices to sync; keep previously stored totals
+    return getLastSyncTotals();
   }
   if (isOffline()) {
     // When offline just return the pending count without attempting a sync
-    const totals = { pending: invoices.length, synced: 0, drafted: 0 };
-    setLastSyncTotals(totals);
-    return totals;
+    return { pending: invoices.length, synced: 0, drafted: 0 };
   }
 
   const failures = [];

@@ -579,12 +579,6 @@ export default {
           color: 'warning'
         });
       }
-      this.syncTotals.pending = pending;
-      if (isOffline()) {
-        this.syncTotals.synced = 0;
-        this.syncTotals.drafted = 0;
-        return;
-      }
       const result = await syncOfflineInvoices();
       if (result && (result.synced || result.drafted)) {
         if (result.synced) {
