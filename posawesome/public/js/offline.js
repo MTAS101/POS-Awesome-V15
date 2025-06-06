@@ -102,3 +102,37 @@ export async function syncOfflineInvoices() {
   setLastSyncTotals(totals);
   return totals;
 }
+export function saveItemUOMs(itemCode, uoms) {
+  try {
+    const cache = JSON.parse(localStorage.getItem('uom_cache')) || {};
+    cache[itemCode] = uoms;
+    localStorage.setItem('uom_cache', JSON.stringify(cache));
+  } catch (e) {
+    console.error('Failed to cache UOMs', e);
+  }
+}
+
+export function getItemUOMs(itemCode) {
+  try {
+    const cache = JSON.parse(localStorage.getItem('uom_cache')) || {};
+    return cache[itemCode] || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveOffers(offers) {
+  try {
+    localStorage.setItem('offers_cache', JSON.stringify(offers));
+  } catch (e) {
+    console.error('Failed to cache offers', e);
+  }
+}
+
+export function getCachedOffers() {
+  try {
+    return JSON.parse(localStorage.getItem('offers_cache')) || [];
+  } catch (e) {
+    return [];
+  }
+}

@@ -44,6 +44,7 @@ import NewAddress from './NewAddress.vue';
 import Variants from './Variants.vue';
 import Returns from './Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
+import { getCachedOffers, saveOffers } from '../../offline.js';
 
 export default {
   data: function () {
@@ -174,6 +175,14 @@ export default {
         });
     },
     get_offers(pos_profile) {
+      // Load cached offers if available
+      if (this.pos_profile && this.pos_profile.posa_local_storage) {
+        const cached = getCachedOffers();
+        if (cached.length) {
+          this.eventBus.emit('set_offers', cached);
+        }
+      }
+
       return frappe
         .call('posawesome.posawesome.api.posapp.get_offers', {
           profile: pos_profile,
@@ -181,7 +190,15 @@ export default {
         .then((r) => {
           if (r.message) {
             console.info('LoadOffers');
+            saveOffers(r.message);
             this.eventBus.emit('set_offers', r.message);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to fetch offers:', err);
+          const cached = getCachedOffers();
+          if (cached.length) {
+            this.eventBus.emit('set_offers', cached);
           }
         });
     },

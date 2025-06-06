@@ -125,6 +125,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
+import { saveItemUOMs, getItemUOMs } from '../../offline.js';
 
 export default {
   mixins: [format],
@@ -534,9 +535,15 @@ export default {
                 // Properly handle UOMs data
                 if (updated_item.item_uoms && updated_item.item_uoms.length > 0) {
                   item.item_uoms = updated_item.item_uoms;
+                  saveItemUOMs(item.item_code, updated_item.item_uoms);
                 } else if (!item.item_uoms || !item.item_uoms.length) {
-                  // If no UOMs found, at least add the stock UOM
-                  item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
+                  // If no UOMs found, try cached values or add the stock UOM
+                  const cachedUoms = getItemUOMs(item.item_code);
+                  if (cachedUoms.length > 0) {
+                    item.item_uoms = cachedUoms;
+                  } else {
+                    item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
+                  }
                 }
 
                 item.has_batch_no = updated_item.has_batch_no;
@@ -559,6 +566,15 @@ export default {
         error: function (err) {
           if (err.name !== 'AbortError') {
             console.error("Error fetching item details:", err);
+            // Fallback to cached UOMs when offline or request fails
+            items.forEach(item => {
+              if (!item.item_uoms || item.item_uoms.length === 0) {
+                const cached = getItemUOMs(item.item_code);
+                if (cached.length > 0) {
+                  item.item_uoms = cached;
+                }
+              }
+            });
             setTimeout(() => {
               vm.update_items_details(items);
             }, 1000);
