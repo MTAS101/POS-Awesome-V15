@@ -9,25 +9,25 @@
     {
       "src": "/assets/posawesome/icons/logo-512.png",
       "sizes": "512x512",
-      "type": "text/plain"
+      "type": "image/png"
     },
     {
       "src": "/assets/posawesome/icons/logo-144.png",
       "sizes": "144x144",
-      "type": "text/plain"
+      "type": "image/png"
     }
   ],
   "screenshots": [
     {
       "src": "/assets/posawesome/screenshots/screenshot-mobile.png",
       "sizes": "349x852",
-      "type": "text/plain",
+      "type": "image/png",
       "form_factor": "narrow"
     },
     {
       "src": "/assets/posawesome/screenshots/screenshot-wide.png",
       "sizes": "1906x920",
-      "type": "text/plain",
+      "type": "image/png",
       "form_factor": "wide"
     }
   ]
