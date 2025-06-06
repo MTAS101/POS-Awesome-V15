@@ -1,14 +1,13 @@
 <template>
   <div>
-    <v-card class="selection mx-auto bg-grey-lighten-5 mt-3" style="max-height: 75vh; height: 75vh">
-      <v-progress-linear :active="loading" :indeterminate="loading" absolute :location="top"
+    <v-card class="selection mx-auto bg-grey-lighten-5 pt-2" style="max-height: 63vh; height: 63vh">
+      <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
-      <v-row class="items px-2 py-1">
+      <v-row class="items px-2 py-2">
         <v-col class="pb-0 mb-2">
           <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
             :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
             bg-color="white" hide-details v-model="debounce_search" @keydown.esc="esc_event"
-
             @keydown.enter="search_onchange" @click:clear="clearSearch" prepend-inner-icon="mdi-magnify"
             @focus="handleItemSearchFocus" ref="debounce_search">
             <!-- Add camera scan button if enabled -->
@@ -31,7 +30,7 @@
         </v-col>
         <v-col cols="12" class="pt-0 mt-0">
           <div fluid class="items" v-if="items_view == 'card'">
-            <v-row density="default" class="overflow-y-auto" style="max-height: 67vh">
+            <v-row density="default" class="overflow-y-auto" style="max-height: 55vh">
               <v-col v-for="(item, idx) in filtered_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
                 min-height="50">
                 <v-card hover="hover" @click="add_item(item)">
@@ -60,7 +59,7 @@
             </v-row>
           </div>
           <div fluid class="items" v-if="items_view == 'list'">
-            <div class="my-0 py-0 overflow-y-auto" style="max-height: 65vh">
+            <div class="my-0 py-0 overflow-y-auto" style="max-height: 53vh">
               <v-data-table :headers="getItemsHeaders()" :items="filtered_items" item-key="item_code" item-value="item-"
 
                 class="elevation-0 sleek-data-table" :items-per-page="itemsPerPage" hide-default-footer
@@ -125,7 +124,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import { saveItemUOMs, getItemUOMs } from '../../../offline.js';
+import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, fetchItemStockQuantities } from '../../../offline.js';
 
 export default {
   mixins: [format],
@@ -224,9 +223,10 @@ export default {
         vm.loading = false;
         vm.items_loaded = true;
 
-        // Even when loading from localStorage, refresh the quantities
-        setTimeout(() => {
+        // Pre-populate stock cache when loading from localStorage
+        setTimeout(async () => {
           if (vm.items && vm.items.length > 0) {
+            await vm.prePopulateStockCache(vm.items);
             vm.update_items_details(vm.items);
           }
         }, 300);
@@ -240,13 +240,17 @@ export default {
           search_value: sr,
           customer: vm.customer,
         },
-        callback: function (r) {
+        callback: async function (r) {
           if (r.message) {
             vm.items = r.message;
             vm.eventBus.emit("set_all_items", vm.items);
             vm.loading = false;
             vm.items_loaded = true;
             console.info("Items Loaded");
+            
+            // Pre-populate stock cache when items are freshly loaded
+            await vm.prePopulateStockCache(vm.items);
+            
             vm.$nextTick(() => {
               if (vm.search) vm.search_onchange();
             });
@@ -500,6 +504,17 @@ export default {
       const vm = this;
       if (!items || !items.length) return;
 
+      // If offline, use cached local stock quantities
+      if (isOffline()) {
+        items.forEach((item) => {
+          const localQty = getLocalStock(item.item_code);
+          if (localQty !== null) {
+            item.actual_qty = localQty;
+          }
+        });
+        return;
+      }
+
       // Cancel previous request
       if (vm.currentRequest) {
         vm.abortController.abort();
@@ -566,8 +581,13 @@ export default {
         error: function (err) {
           if (err.name !== 'AbortError') {
             console.error("Error fetching item details:", err);
-            // Fallback to cached UOMs when offline or request fails
-            items.forEach(item => {
+            // Fallback to local stock if server call fails
+            items.forEach((item) => {
+              const localQty = getLocalStock(item.item_code);
+              if (localQty !== null) {
+                item.actual_qty = localQty;
+              }
+              // Fallback to cached UOMs when offline or request fails
               if (!item.item_uoms || item.item_uoms.length === 0) {
                 const cached = getItemUOMs(item.item_code);
                 if (cached.length > 0) {
@@ -592,6 +612,33 @@ export default {
     update_cur_items_details() {
       if (this.filtered_items && this.filtered_items.length > 0) {
         this.update_items_details(this.filtered_items);
+      }
+    },
+    async prePopulateStockCache(items) {
+      try {
+        console.info('Pre-populating stock cache for', items.length, 'items');
+        
+        // Fetch current stock quantities for all items
+        const updatedItems = await fetchItemStockQuantities(items, this.pos_profile);
+        
+        if (updatedItems && updatedItems.length > 0) {
+          // Populate the local stock cache with actual quantities
+          const stockCache = JSON.parse(localStorage.getItem('local_stock_cache')) || {};
+          
+          updatedItems.forEach(item => {
+            if (item.actual_qty !== undefined) {
+              stockCache[item.item_code] = {
+                actual_qty: item.actual_qty,
+                last_updated: new Date().toISOString()
+              };
+            }
+          });
+          
+          localStorage.setItem('local_stock_cache', JSON.stringify(stockCache));
+          console.info('Stock cache populated with', Object.keys(stockCache).length, 'items');
+        }
+      } catch (error) {
+        console.error('Failed to pre-populate stock cache:', error);
       }
     },
     scan_barcoud() {

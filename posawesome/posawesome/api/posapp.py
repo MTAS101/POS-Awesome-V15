@@ -2252,23 +2252,23 @@ def get_available_currencies():
 @frappe.whitelist()
 def get_app_info() -> Dict[str, List[Dict[str, str]]]:
     """
-    Return a list of installed apps and their versions,
-    as recorded in the Installed Application DocType.
+    Return a list of installed apps and their versions.
     """
-    # Fetch raw records from the DocType
-    app_records = frappe.get_all(
-        "Installed Application",
-        fields=["app_name", "app_version"],
-        order_by="app_name asc"
-    )
-
-    # Transform into the shape your API expects
-    apps_info = [
-        {
-            "app_name": record["app_name"],
-            "installed_version": record["app_version"]
-        }
-        for record in app_records
-    ]
-
+    # Get installed apps using Frappe's built-in function
+    installed_apps = frappe.get_installed_apps()
+    
+    # Get app versions
+    apps_info = []
+    for app_name in installed_apps:
+        try:
+            # Get app version from hooks or __init__.py
+            app_version = frappe.get_attr(f"{app_name}.__version__") or "Unknown"
+        except (AttributeError, ImportError):
+            app_version = "Unknown"
+        
+        apps_info.append({
+            "app_name": app_name,
+            "installed_version": app_version
+        })
+    
     return {"apps": apps_info}

@@ -4,8 +4,8 @@
 
     <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
 
-    <v-app-bar app flat height="56" color="white" class="border-bottom">
-      <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary" />
+    <v-app-bar app flat height="64" color="white" class="navbar-enhanced elevation-2">
+      <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary nav-icon" />
 
       <v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32" class="mx-3" />
 
@@ -15,57 +15,68 @@
 
       <v-spacer />
 
-      <!-- This component visually indicates the current network and server connectivity status.
-           It changes color and icon based on whether there's internet, server connection, or if it's connecting. -->
-      <v-tooltip bottom>
-        <template #activator="{ on, attrs }">
-          <v-badge :content="pendingInvoices" :model-value="pendingInvoices > 0" color="red" overlap offset-x="4" offset-y="4">
-            <v-btn icon v-bind="attrs" v-on="on" :title="statusText" class="mx-2">
-              <v-progress-circular v-if="serverConnecting" indeterminate color="blue" size="24"
-                width="2"></v-progress-circular>
-              <v-icon v-else :color="statusColor" size="24">
-                {{ statusIcon }}
-              </v-icon>
-            </v-btn>
-          </v-badge>
-        </template>
-        <span>{{ statusText }}</span>
-      </v-tooltip>
-      <span class="mx-2 text-caption">{{ syncInfoText }}</span>
+      <!-- Enhanced connectivity status indicator - Always visible -->
+      <div class="status-section-enhanced">
+        <v-badge :content="pendingInvoices" :model-value="pendingInvoices > 0" color="red" overlap offset-x="4"
+          offset-y="4">
+          <v-btn icon :title="statusText" class="status-btn-enhanced" :color="statusColor">
+            <v-icon :color="statusColor">{{ statusIcon }}</v-icon>
+          </v-btn>
+        </v-badge>
+        <div class="status-info-always-visible">
+          <div class="status-title-inline"
+            :class="{ 'status-connected': statusColor === 'green', 'status-offline': statusColor === 'red' }">{{
+            statusText }}</div>
+          <div class="status-detail-inline">{{ syncInfoText }}</div>
+        </div>
+      </div>
 
-      <v-btn style="cursor: unset; text-transform: none;" variant="text" color="primary">
-        {{ posProfile.name }}
-      </v-btn>
+      <div class="profile-section">
+        <v-chip color="primary" variant="outlined" class="profile-chip">
+          <v-icon start>mdi-account-circle</v-icon>
+          {{ posProfile.name }}
+        </v-chip>
+      </div>
 
       <v-menu offset-y offset-x :min-width="200">
         <template #activator="{ props }">
-          <v-btn v-bind="props" color="primary" theme="dark" variant="text" class="user-menu-btn">
+          <v-btn v-bind="props" color="primary" variant="elevated" class="menu-btn-enhanced">
             {{ __('Menu') }}
             <v-icon right>mdi-menu-down</v-icon>
           </v-btn>
         </template>
-        <v-card class="user-menu-card" tile>
-          <v-list dense class="user-menu-list">
-            <v-list-item v-if="!posProfile.posa_hide_closing_shift" @click="openCloseShift" class="user-menu-item">
-              <v-list-item-icon><v-icon>mdi-content-save-move-outline</v-icon></v-list-item-icon>
+        <v-card class="menu-card-enhanced" elevation="8">
+          <v-list density="compact" class="menu-list-enhanced">
+            <v-list-item v-if="!posProfile.posa_hide_closing_shift" @click="openCloseShift" class="menu-item-enhanced">
+              <template v-slot:prepend>
+                <v-icon color="primary" size="20">mdi-content-save-move-outline</v-icon>
+              </template>
               <v-list-item-title>{{ __('Close Shift') }}</v-list-item-title>
             </v-list-item>
             <v-list-item v-if="posProfile.posa_allow_print_last_invoice && lastInvoiceId" @click="printLastInvoice"
-              class="user-menu-item">
-              <v-list-item-icon><v-icon>mdi-printer</v-icon></v-list-item-icon>
+              class="menu-item-enhanced">
+              <template v-slot:prepend>
+                <v-icon color="primary" size="20">mdi-printer</v-icon>
+              </template>
               <v-list-item-title>{{ __('Print Last Invoice') }}</v-list-item-title>
             </v-list-item>
-            <v-list-item @click="syncPendingInvoices" class="user-menu-item">
-              <v-list-item-icon><v-icon>mdi-sync</v-icon></v-list-item-icon>
+            <v-list-item @click="syncPendingInvoices" class="menu-item-enhanced">
+              <template v-slot:prepend>
+                <v-icon color="primary" size="20">mdi-sync</v-icon>
+              </template>
               <v-list-item-title>{{ __('Sync Offline Invoices') }}</v-list-item-title>
             </v-list-item>
-            <v-divider class="my-2" />
-            <v-list-item @click="logOut" class="user-menu-item">
-              <v-list-item-icon><v-icon>mdi-logout</v-icon></v-list-item-icon>
+            <v-divider />
+            <v-list-item @click="logOut" class="menu-item-enhanced logout-item">
+              <template v-slot:prepend>
+                <v-icon color="error" size="20">mdi-logout</v-icon>
+              </template>
               <v-list-item-title>{{ __('Logout') }}</v-list-item-title>
             </v-list-item>
-            <v-list-item @click="goAbout" class="user-menu-item">
-              <v-list-item-icon><v-icon>mdi-information-outline</v-icon></v-list-item-icon>
+            <v-list-item @click="goAbout" class="menu-item-enhanced">
+              <template v-slot:prepend>
+                <v-icon color="info" size="20">mdi-information-outline</v-icon>
+              </template>
               <v-list-item-title>{{ __('About') }}</v-list-item-title>
             </v-list-item>
           </v-list>
@@ -151,13 +162,12 @@ export default {
   computed: {
     /**
      * Determines the color of the status icon based on current network and server connectivity.
-     * @returns {string} A Vuetify color string ('blue', 'green', 'orange', 'red').
+     * @returns {string} A Vuetify color string ('green', 'red').
      */
     statusColor() {
-      if (this.serverConnecting) return 'blue'; // Blue when actively trying to connect to the server
-      if (this.networkOnline && this.serverOnline) return 'green'; // Green when both internet and server are connected
-      if (this.networkOnline && !this.serverOnline) return 'orange'; // Orange when internet is available but server is unreachable
-      return 'red'; // Red when there is no internet connection at all
+      // Simplified: Green when connected to server, Red when offline
+      if (this.networkOnline && this.serverOnline) return 'green'; // Green when connected to server
+      return 'red'; // Red for any offline state (no internet or server offline)
     },
     /**
      * Determines the Material Design Icon to display based on network and server status.
@@ -184,7 +194,23 @@ export default {
      */
     syncInfoText() {
       const { pending, synced, drafted } = this.syncTotals;
-      return `To Sync: ${pending} | Synced: ${synced} | Draft: ${drafted}`;
+
+      // Ensure we have valid numbers
+      const pendingCount = pending || 0;
+      const syncedCount = synced || 0;
+      const draftedCount = drafted || 0;
+
+      if (!this.networkOnline) {
+        // In offline mode, show all available information
+        if (pendingCount > 0 || syncedCount > 0 || draftedCount > 0) {
+          return `Pending: ${pendingCount} | Synced: ${syncedCount} | Draft: ${draftedCount}`;
+        } else {
+          return 'Offline Mode';
+        }
+      }
+
+      // Online mode - show full status
+      return `To Sync: ${pendingCount} | Synced: ${syncedCount} | Draft: ${draftedCount}`;
     }
   },
   created() {
@@ -213,7 +239,15 @@ export default {
     this.$nextTick(() => {
       // Initialize pending invoices count
       this.updatePendingInvoices();
-      this.syncPendingInvoices();
+
+      // Initialize sync totals from localStorage
+      this.syncTotals = getLastSyncTotals();
+
+      // Only sync if online
+      if (this.networkOnline) {
+        this.syncPendingInvoices();
+      }
+
       // Listen for changes in pending invoices from other components
       this.eventBus.on('pending_invoices_changed', this.updatePendingInvoices);
       this.eventBus.on('show_message', this.showMessage); // Listens for requests to show a snackbar message
@@ -734,5 +768,269 @@ export default {
 /* Margin for dividers within the user menu list. */
 .user-menu-card .v-divider {
   margin: 8px 0;
+}
+
+/* --- Status Indicator Styling --- */
+.status-btn {
+  transition: all 0.3s ease;
+}
+
+.status-btn:hover {
+  transform: scale(1.1);
+}
+
+.status-tooltip {
+  padding: 4px 0;
+  text-align: center;
+}
+
+.status-title {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.status-detail {
+  font-size: 0.8rem;
+  opacity: 0.9;
+}
+
+.status-warning {
+  font-size: 0.8rem;
+  color: #ff9800;
+  margin-top: 4px;
+}
+
+/* --- Sync Info Styling --- */
+.sync-chip {
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sync-chip:hover {
+  transform: scale(1.05);
+}
+
+.sync-text {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+/* Enhanced Navbar Styling */
+.navbar-enhanced {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+  border-bottom: 2px solid #e3f2fd !important;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.navbar-enhanced:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Logo and Brand Styling */
+.logo-container {
+  margin: 0 12px;
+  padding: 4px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-img {
+  filter: brightness(0) invert(1);
+  transition: transform 0.3s ease;
+}
+
+.logo-container:hover .logo-img {
+  transform: scale(1.1);
+}
+
+.brand-title {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  background: linear-gradient(135deg, #1976d2, #42a5f5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: all 0.3s ease;
+}
+
+.brand-title:hover {
+  transform: scale(1.05);
+}
+
+.brand-pos {
+  font-weight: 300;
+}
+
+.brand-awesome {
+  font-weight: 800;
+}
+
+/* Navigation Icon */
+.nav-icon {
+  border-radius: 12px;
+  padding: 8px;
+  transition: all 0.3s ease;
+}
+
+.nav-icon:hover {
+  background-color: rgba(25, 118, 210, 0.1);
+  transform: scale(1.1);
+}
+
+/* Profile Section */
+.profile-section {
+  margin: 0 16px;
+}
+
+.profile-chip {
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 20px;
+  transition: all 0.3s ease;
+}
+
+.profile-chip:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+/* Enhanced Status Section */
+.status-section-enhanced {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-right: 16px;
+}
+
+.status-btn-enhanced {
+  background: rgba(25, 118, 210, 0.1) !important;
+  border: 1px solid rgba(25, 118, 210, 0.3);
+  transition: all 0.3s ease;
+}
+
+.status-btn-enhanced:hover {
+  background: rgba(25, 118, 210, 0.2) !important;
+  transform: scale(1.05);
+}
+
+.status-info-always-visible {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 120px;
+}
+
+.status-title-inline {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  transition: color 0.3s ease;
+}
+
+.status-title-inline.status-connected {
+  color: #4caf50;
+  /* Green when connected */
+}
+
+.status-title-inline.status-offline {
+  color: #f44336;
+  /* Red when offline */
+}
+
+.status-detail-inline {
+  font-size: 11px;
+  color: #666;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+/* Enhanced Menu Button */
+.menu-btn-enhanced {
+  margin-left: 12px;
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-weight: 600;
+  text-transform: none;
+  box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+  transition: all 0.3s ease;
+}
+
+.menu-btn-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.4);
+}
+
+/* Enhanced Menu Card */
+.menu-card-enhanced {
+  border-radius: 16px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid rgba(25, 118, 210, 0.1);
+}
+
+.menu-list-enhanced {
+  padding: 8px;
+}
+
+.menu-item-enhanced {
+  border-radius: 12px;
+  margin: 4px 0;
+  padding: 12px 16px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.menu-item-enhanced:hover {
+  background: linear-gradient(135deg, rgba(25, 118, 210, 0.1), rgba(66, 165, 245, 0.1));
+  transform: translateX(4px);
+}
+
+.menu-item-enhanced.logout-item:hover {
+  background: linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(255, 82, 82, 0.1));
+}
+
+.menu-item-enhanced .v-list-item-title {
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .brand-title {
+    font-size: 1.2rem !important;
+  }
+
+  .profile-section {
+    margin: 0 8px;
+  }
+
+  .profile-chip {
+    padding: 6px 12px;
+  }
+
+  .menu-btn-enhanced {
+    padding: 6px 16px;
+  }
+
+  .status-info-always-visible {
+    display: none;
+  }
+
+  .status-section-enhanced {
+    margin-right: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-container {
+    margin: 0 8px;
+  }
+
+  .brand-title {
+    font-size: 1rem !important;
+  }
 }
 </style>

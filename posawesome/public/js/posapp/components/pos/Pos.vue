@@ -1,5 +1,5 @@
 <template>
-  <div fluid class="mt-2">
+  <div class="pos-main-container pt-2"> <!-- Added pt-2 for top padding -->
     <ClosingDialog></ClosingDialog>
     <Drafts></Drafts>
     <SalesOrders></SalesOrders>
@@ -8,8 +8,8 @@
     <MpesaPayments></MpesaPayments>
     <Variants></Variants>
     <OpeningDialog v-if="dialog" :dialog="dialog"></OpeningDialog>
-    <v-row v-show="!dialog">
-      <v-col v-show="!payment && !offers && !coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pr-0">
+    <v-row v-show="!dialog" dense class="ma-0 pa-0">
+      <v-col v-show="!payment && !offers && !coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pa-2"> <!-- Increased padding -->
         <ItemsSelector></ItemsSelector>
       </v-col>
       <v-col v-show="offers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pr-0">
@@ -18,11 +18,11 @@
       <v-col v-show="coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pr-0">
         <PosCoupons></PosCoupons>
       </v-col>
-      <v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pr-0">
+      <v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pa-1"> <!-- Added pa-1 -->
         <Payments></Payments>
       </v-col>
 
-      <v-col xl="7" lg="7" md="7" sm="7" cols="12" class="pos">
+      <v-col xl="7" lg="7" md="7" sm="7" cols="12" class="pos pa-1"> <!-- Added pa-1 -->
         <Invoice></Invoice>
       </v-col>
     </v-row>
@@ -45,6 +45,8 @@ import Variants from './Variants.vue';
 import Returns from './Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
 import { getCachedOffers, saveOffers } from '../../../offline.js';
+// Import the cache cleanup function
+import { clearExpiredCustomerBalances } from "../../../offline.js";
 
 export default {
   data: function () {
@@ -255,7 +257,26 @@ export default {
     this.eventBus.off('open_closing_dialog');
     this.eventBus.off('submit_closing_pos');
   },
+  // In the created() or mounted() lifecycle hook
+  created() {
+    // Clean up expired customer balance cache on POS load
+    clearExpiredCustomerBalances();
+  },
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.pos-main-container {
+  height: calc(100vh - 56px - 8px); /* Reduced margins */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pos {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+</style>
