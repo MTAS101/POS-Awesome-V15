@@ -6,6 +6,8 @@ self.addEventListener('install', event => {
       const resources = [
         '/assets/posawesome/js/posawesome.bundle.js',
         '/assets/posawesome/js/offline.js',
+        '/manifest.json',
+        '/offline.html',
       ];
       await Promise.all(resources.map(async url => {
         try {
@@ -46,6 +48,6 @@ self.addEventListener('fetch', event => {
         return resp;
       });
 
-    }).catch(() => caches.match(event.request).then(r => r || Response.error()))
+    }).catch(() => caches.match(event.request).then(r => r || caches.match('/offline.html') || Response.error()))
   );
 });

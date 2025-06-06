@@ -6,7 +6,9 @@ self.addEventListener('install', event => {
       const resources = [
         '/app/posapp',
         '/assets/posawesome/js/posawesome.bundle.js',
-        '/assets/posawesome/js/offline.js'
+        '/assets/posawesome/js/offline.js',
+        '/manifest.json',
+        '/offline.html'
       ];
       await Promise.all(resources.map(async url => {
         try {
@@ -41,7 +43,7 @@ self.addEventListener('fetch', event => {
           return await fetch(event.request);
         } catch (err) {
           const cached = await caches.match(event.request, { ignoreSearch: true });
-          return cached || caches.match('/app/posapp');
+          return cached || caches.match('/app/posapp') || caches.match('/offline.html');
         }
       })()
     );
