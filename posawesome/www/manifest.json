@@ -1,0 +1,33 @@
+{
+  "name": "POS Awesome",
+  "short_name": "POS",
+  "start_url": "/app/posapp",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0097A7",
+  "icons": [
+    {
+      "src": "/assets/posawesome/icons/logo-192.txt",
+      "sizes": "192x192",
+      "type": "text/plain"
+    },
+    {
+      "src": "/assets/posawesome/icons/logo-512.txt",
+      "sizes": "512x512",
+      "type": "text/plain"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/posawesome/screenshots/wide.txt",
+      "sizes": "960x540",
+      "type": "text/plain",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/assets/posawesome/screenshots/mobile.txt",
+      "sizes": "540x960",
+      "type": "text/plain"
+    }
+  ]
+}

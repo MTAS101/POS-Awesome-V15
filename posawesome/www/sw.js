@@ -1,14 +1,25 @@
 self.addEventListener('install', event => {
+  self.skipWaiting();
   event.waitUntil(
-    caches.open('posawesome-cache-v1').then(cache => {
-      return cache.addAll([
+    (async () => {
+      const cache = await caches.open('posawesome-cache-v1');
+      const resources = [
         '/app/posapp',
         '/assets/posawesome/js/posawesome.bundle.js',
         '/assets/posawesome/js/offline.js'
-      ]);
-    })
+      ];
+      await Promise.all(resources.map(async url => {
+        try {
+          const resp = await fetch(url);
+          if (resp && resp.ok) {
+            await cache.put(url, resp.clone());
+          }
+        } catch (err) {
+          console.warn('SW install failed to fetch', url, err);
+        }
+      }));
+    })()
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
@@ -25,7 +36,13 @@ self.addEventListener('fetch', event => {
 
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match('/app/posapp'))
+      (async () => {
+        try {
+          return await fetch(event.request);
+        } catch (err) {
+          return caches.match('/app/posapp', { ignoreSearch: true });
+        }
+      })()
     );
     return;
   }

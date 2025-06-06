@@ -49,6 +49,13 @@ frappe.PosApp.posapp = class {
         app.use(vuetify)
         app.mount(this.$el[0]);
 
+        if (!document.querySelector('link[rel="manifest"]')) {
+            const link = document.createElement('link');
+            link.rel = 'manifest';
+            link.href = '/manifest.json';
+            document.head.appendChild(link);
+        }
+
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js')
                 .catch(err => console.error('SW registration failed', err));
