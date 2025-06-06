@@ -1566,6 +1566,8 @@ export default {
     document.addEventListener("keydown", this.shortPay.bind(this));
     this.syncPendingInvoices();
     this.eventBus.on("network-online", this.syncPendingInvoices);
+    // Also sync when the server connection is re-established
+    this.eventBus.on("server-online", this.syncPendingInvoices);
   },
   // Lifecycle hook: mounted
   mounted() {
@@ -1660,6 +1662,7 @@ export default {
     this.eventBus.off("set_customer_info_to_edit");
     this.eventBus.off("set_mpesa_payment");
     this.eventBus.off("network-online", this.syncPendingInvoices);
+    this.eventBus.off("server-online", this.syncPendingInvoices);
   },
   // Lifecycle hook: unmounted
   unmounted() {
