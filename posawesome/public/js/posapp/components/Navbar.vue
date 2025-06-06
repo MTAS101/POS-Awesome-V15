@@ -117,7 +117,7 @@
 // Import the Socket.IO client library for real-time server status monitoring.
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
-import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline } from '../../offline.js';
+import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals } from '../../offline.js';
 
 export default {
   name: 'NavBar', // Component name
@@ -139,11 +139,7 @@ export default {
       freezeMsg: '', // Message text for the freeze dialog
       // --- PENDING OFFLINE INVOICES ---
       pendingInvoices: 0, // Number of invoices saved locally while offline
-      syncTotals: {
-        pending: 0, // Total invoices attempted to sync when coming online
-        synced: 0,  // Successfully synced invoices from the last attempt
-        drafted: 0  // Invoices that failed to sync and were saved as draft
-      },
+      syncTotals: getLastSyncTotals(),
       // --- SIGNAL INDICATOR STATES ---
       networkOnline: navigator.onLine, // Boolean: Reflects the browser's current network connectivity (true if online, false if offline)
       serverOnline: false,             // Boolean: Reflects the real-time server health via WebSocket (true if connected, false if disconnected)
@@ -604,8 +600,9 @@ export default {
           });
         }
       }
-      this.syncTotals.synced = result ? result.synced : 0;
-      this.syncTotals.drafted = result ? result.drafted : 0;
+      if (result) {
+        this.syncTotals = { ...result };
+      }
       this.updatePendingInvoices();
       this.eventBus.emit('pending_invoices_changed', this.pendingInvoices);
     },
@@ -615,7 +612,6 @@ export default {
      */
     updatePendingInvoices() {
       this.pendingInvoices = getPendingOfflineInvoiceCount();
-      this.syncTotals.pending = this.pendingInvoices;
     },
     /**
      * Displays a snackbar message at the top right of the screen.

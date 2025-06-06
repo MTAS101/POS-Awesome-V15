@@ -37,12 +37,34 @@ export function getPendingOfflineInvoiceCount() {
   return getOfflineInvoices().length;
 }
 
+export function setLastSyncTotals(totals) {
+  try {
+    localStorage.setItem('pos_last_sync_totals', JSON.stringify(totals));
+  } catch (e) {
+    console.error('Failed to persist last sync totals', e);
+  }
+}
+
+export function getLastSyncTotals() {
+  try {
+    return JSON.parse(localStorage.getItem('pos_last_sync_totals')) || { pending: 0, synced: 0, drafted: 0 };
+  } catch (e) {
+    return { pending: 0, synced: 0, drafted: 0 };
+  }
+}
+
 export async function syncOfflineInvoices() {
   const invoices = getOfflineInvoices();
-  if (!invoices.length) return { pending: 0, synced: 0, drafted: 0 };
+  if (!invoices.length) {
+    const totals = { pending: 0, synced: 0, drafted: 0 };
+    setLastSyncTotals(totals);
+    return totals;
+  }
   if (isOffline()) {
     // When offline just return the pending count without attempting a sync
-    return { pending: invoices.length, synced: 0, drafted: 0 };
+    const totals = { pending: invoices.length, synced: 0, drafted: 0 };
+    setLastSyncTotals(totals);
+    return totals;
   }
 
   const failures = [];
@@ -77,5 +99,7 @@ export async function syncOfflineInvoices() {
     clearOfflineInvoices();
   }
 
-  return { pending: invoices.length, synced, drafted };
+  const totals = { pending: invoices.length, synced, drafted };
+  setLastSyncTotals(totals);
+  return totals;
 }
