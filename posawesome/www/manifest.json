@@ -20,13 +20,13 @@
   "screenshots": [
     {
       "src": "/assets/posawesome/screenshots/screenshot-mobile.png",
-      "sizes": "720x1280",
+      "sizes": "349x852",
       "type": "text/plain",
       "form_factor": "narrow"
     },
     {
       "src": "/assets/posawesome/screenshots/screenshot-wide.png",
-      "sizes": "1280x720",
+      "sizes": "1906x920",
       "type": "text/plain",
       "form_factor": "wide"
     }
