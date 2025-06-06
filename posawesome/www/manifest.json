@@ -16,5 +16,19 @@
       "sizes": "512x512",
       "type": "text/plain"
     }
+  ],
+  "screenshots": [
+    {
+      "src": "/assets/posawesome/screenshots/screenshot-mobile.txt",
+      "sizes": "720x1280",
+      "type": "text/plain",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/assets/posawesome/screenshots/screenshot-wide.txt",
+      "sizes": "1280x720",
+      "type": "text/plain",
+      "form_factor": "wide"
+    }
   ]
 }
