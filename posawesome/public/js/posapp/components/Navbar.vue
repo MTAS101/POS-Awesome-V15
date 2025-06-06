@@ -54,6 +54,10 @@
               <v-list-item-icon><v-icon>mdi-printer</v-icon></v-list-item-icon>
               <v-list-item-title>{{ __('Print Last Invoice') }}</v-list-item-title>
             </v-list-item>
+            <v-list-item @click="syncPendingInvoices" class="user-menu-item">
+              <v-list-item-icon><v-icon>mdi-sync</v-icon></v-list-item-icon>
+              <v-list-item-title>{{ __('Sync Offline Invoices') }}</v-list-item-title>
+            </v-list-item>
             <v-divider class="my-2" />
             <v-list-item @click="logOut" class="user-menu-item">
               <v-list-item-icon><v-icon>mdi-logout</v-icon></v-list-item-icon>
@@ -112,7 +116,7 @@
 // Import the Socket.IO client library for real-time server status monitoring.
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
-import { getPendingOfflineInvoiceCount } from '../../offline.js';
+import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline } from '../../offline.js';
 
 export default {
   name: 'NavBar', // Component name
@@ -200,6 +204,7 @@ export default {
     this.$nextTick(() => {
       // Initialize pending invoices count
       this.updatePendingInvoices();
+      this.syncPendingInvoices();
       // Listen for changes in pending invoices from other components
       this.eventBus.on('pending_invoices_changed', this.updatePendingInvoices);
       this.eventBus.on('show_message', this.showMessage); // Listens for requests to show a snackbar message
@@ -411,6 +416,7 @@ export default {
       console.log('Browser is online');
       this.offlineMessageShown = false; // allow future offline warnings
       this.eventBus.emit('network-online');
+      this.syncPendingInvoices();
       window.serverOnline = this.serverOnline;
       // If the server is not online and not currently connecting, and a socket instance exists,
       // explicitly try to connect the socket. This helps in re-establishing server connection
@@ -554,6 +560,28 @@ export default {
           }
         }
       });
+    },
+
+    async syncPendingInvoices() {
+      const pending = getPendingOfflineInvoiceCount();
+      if (pending) {
+        this.showMessage({
+          title: `${pending} invoice${pending > 1 ? 's' : ''} pending for sync`,
+          color: 'warning'
+        });
+      }
+      if (isOffline()) {
+        return;
+      }
+      const result = await syncOfflineInvoices();
+      if (result && result.synced) {
+        this.showMessage({
+          title: `${result.synced} offline invoice${result.synced > 1 ? 's' : ''} synced`,
+          color: 'success'
+        });
+      }
+      this.updatePendingInvoices();
+      this.eventBus.emit('pending_invoices_changed', this.pendingInvoices);
     },
     /**
      * Reads the current number of invoices stored offline and updates the badge
