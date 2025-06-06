@@ -1,5 +1,5 @@
 <template>
-  <div class="pos-main-container pt-2"> <!-- Added pt-2 for top padding -->
+  <div class="pos-main-container pt-3"> <!-- Changed pt-2 to pt-3 for more top padding -->
     <ClosingDialog></ClosingDialog>
     <Drafts></Drafts>
     <SalesOrders></SalesOrders>
@@ -9,7 +9,7 @@
     <Variants></Variants>
     <OpeningDialog v-if="dialog" :dialog="dialog"></OpeningDialog>
     <v-row v-show="!dialog" dense class="ma-0 pa-0">
-      <v-col v-show="!payment && !offers && !coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pa-2"> <!-- Increased padding -->
+      <v-col v-show="!payment && !offers && !coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pa-2"> <!-- Changed pa-3 to pa-2 for consistent padding -->
         <ItemsSelector></ItemsSelector>
       </v-col>
       <v-col v-show="offers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pr-0">
@@ -18,11 +18,11 @@
       <v-col v-show="coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pr-0">
         <PosCoupons></PosCoupons>
       </v-col>
-      <v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pa-1"> <!-- Added pa-1 -->
+      <v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pa-2"> <!-- Changed pa-1 to pa-2 for consistent padding -->
         <Payments></Payments>
       </v-col>
 
-      <v-col xl="7" lg="7" md="7" sm="7" cols="12" class="pos pa-1"> <!-- Added pa-1 -->
+      <v-col xl="7" lg="7" md="7" sm="7" cols="12" class="pos pa-2"> <!-- Changed pa-1 to pa-2 for consistent padding -->
         <Invoice></Invoice>
       </v-col>
     </v-row>

@@ -28,13 +28,13 @@
     <v-card style="max-height: 68vh; height: 68vh"
       :class="['cards my-0 py-0 mt-3 bg-grey-lighten-5', { 'return-mode': invoiceType === 'Return' }]">
       <!-- Top Row: Customer Selection and Invoice Type -->
-      <v-row align="center" class="items px-2 py-1">
-        <v-col :cols="pos_profile.posa_allow_sales_order ? 9 : 12" class="pb-2 pr-0">
+      <v-row align="center" class="items px-3 py-2">
+        <v-col :cols="pos_profile.posa_allow_sales_order ? 9 : 12" class="pb-0 pr-0">
           <!-- Customer selection component -->
           <Customer />
         </v-col>
         <!-- Invoice Type Selection (Only shown if sales orders are allowed) -->
-        <v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-2">
+        <v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-0">
           <v-select density="compact" hide-details variant="outlined" color="primary" bg-color="white"
             :items="invoiceTypes" :label="frappe._('Type')" v-model="invoiceType"
             :disabled="invoiceType == 'Return'"></v-select>
@@ -42,7 +42,7 @@
       </v-row>
 
       <!-- Delivery Charges Section (Only if enabled in POS profile) -->
-      <v-row align="center" class="items px-2 py-1 mt-0 pt-0" v-if="pos_profile.posa_use_delivery_charges">
+      <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_use_delivery_charges">
         <v-col cols="8" class="pb-0 mb-0 pr-0 pt-0">
           <!-- Delivery Charges Selection Dropdown -->
           <v-autocomplete density="compact" clearable auto-select-first variant="outlined" color="primary"
@@ -67,7 +67,7 @@
       </v-row>
 
       <!-- Posting Date and Customer Balance Section -->
-      <v-row align="center" class="items px-2 py-1 mt-0 pt-0" v-if="pos_profile.posa_allow_change_posting_date">
+      <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_change_posting_date">
         <!-- Posting Date Selection with Date Picker -->
         <v-col cols="6" class="pb-2">
           <v-menu v-model="posting_date_menu" :close-on-content-click="false" transition="scale-transition"
@@ -99,7 +99,7 @@
       </v-row>
 
       <!-- Multi-Currency Section (Only if enabled in POS profile) -->
-      <v-row align="center" class="items px-2 py-1 mt-0 pt-0" v-if="pos_profile.posa_allow_multi_currency">
+      <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_multi_currency">
         <!-- Currency Selection Dropdown -->
         <v-col cols="4" class="pb-2">
           <v-select density="compact" variant="outlined" color="primary" :label="frappe._('Currency')" bg-color="white"
@@ -115,10 +115,10 @@
       </v-row>
 
       <!-- Items Table Section (Main items list for invoice) -->
-      <div class="my-0 py-0 overflow-y-auto mt-3" style="max-height: calc(68vh - 180px)">
+      <div class="my-2 py-0 overflow-y-auto" style="max-height: calc(68vh - 180px)">
         <!-- Main Items Data Table -->
         <v-data-table :headers="items_headers" :items="items" v-model:expanded="expanded" show-expand
-          item-value="posa_row_id" class="elevation-1" :items-per-page="itemsPerPage" expand-on-click density="compact"
+          item-value="posa_row_id" class="elevation-2" :items-per-page="itemsPerPage" expand-on-click density="compact"
           hide-default-footer :single-expand="true" @update:expanded="handleExpandedUpdate">
           <!-- Quantity Column Template -->
           <template v-slot:item.qty="{ item }">{{

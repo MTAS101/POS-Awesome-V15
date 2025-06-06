@@ -4,10 +4,10 @@
 
     <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
 
-    <v-app-bar app flat height="64" color="white" class="navbar-enhanced elevation-2">
+    <v-app-bar app flat height="64" color="white" class="navbar-enhanced elevation-2 px-2">
       <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary nav-icon" />
 
-      <v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32" class="mx-3" />
+      <v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32" class="mx-2" />
 
       <v-toolbar-title @click="goDesk" class="text-h6 font-weight-bold text-primary" style="cursor: pointer;">
         <span class="font-weight-light">POS</span><span>Awesome</span>
@@ -16,7 +16,7 @@
       <v-spacer />
 
       <!-- Enhanced connectivity status indicator - Always visible -->
-      <div class="status-section-enhanced">
+      <div class="status-section-enhanced mx-2">
         <v-badge :content="pendingInvoices" :model-value="pendingInvoices > 0" color="red" overlap offset-x="4"
           offset-y="4">
           <v-btn icon :title="statusText" class="status-btn-enhanced" :color="statusColor">
@@ -31,7 +31,7 @@
         </div>
       </div>
 
-      <div class="profile-section">
+      <div class="profile-section mx-2">
         <v-chip color="primary" variant="outlined" class="profile-chip">
           <v-icon start>mdi-account-circle</v-icon>
           {{ posProfile.name }}

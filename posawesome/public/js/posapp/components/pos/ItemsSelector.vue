@@ -1,10 +1,10 @@
 <template>
   <div>
-    <v-card class="selection mx-auto bg-grey-lighten-5 pt-2" style="max-height: 63vh; height: 63vh">
+    <v-card class="selection mx-auto bg-grey-lighten-5 my-0 py-0 mt-3" style="max-height: 63vh; height: 63vh">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
-      <v-row class="items px-2 py-2">
-        <v-col class="pb-0 mb-2">
+      <v-row class="items px-3 py-2">
+        <v-col class="pb-0">
           <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
             :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
             bg-color="white" hide-details v-model="debounce_search" @keydown.esc="esc_event"
@@ -19,12 +19,12 @@
           </v-text-field>
 
         </v-col>
-        <v-col cols="3" class="pb-0 mb-2" v-if="pos_profile.posa_input_qty">
+        <v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
           <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')" bg-color="white"
             hide-details v-model.number="qty" type="number" @keydown.enter="enter_event"
             @keydown.esc="esc_event"></v-text-field>
         </v-col>
-        <v-col cols="2" class="pb-0 mb-2" v-if="pos_profile.posa_new_line">
+        <v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
           <v-checkbox v-model="new_line" color="accent" value="true" label="NLine" density="default"
             hide-details></v-checkbox>
         </v-col>
@@ -61,7 +61,6 @@
           <div fluid class="items" v-if="items_view == 'list'">
             <div class="my-0 py-0 overflow-y-auto" style="max-height: 53vh">
               <v-data-table :headers="getItemsHeaders()" :items="filtered_items" item-key="item_code" item-value="item-"
-
                 class="elevation-0 sleek-data-table" :items-per-page="itemsPerPage" hide-default-footer
                 @click:row="click_item_row">
 
@@ -247,10 +246,10 @@ export default {
             vm.loading = false;
             vm.items_loaded = true;
             console.info("Items Loaded");
-            
+
             // Pre-populate stock cache when items are freshly loaded
             await vm.prePopulateStockCache(vm.items);
-            
+
             vm.$nextTick(() => {
               if (vm.search) vm.search_onchange();
             });
@@ -617,14 +616,14 @@ export default {
     async prePopulateStockCache(items) {
       try {
         console.info('Pre-populating stock cache for', items.length, 'items');
-        
+
         // Fetch current stock quantities for all items
         const updatedItems = await fetchItemStockQuantities(items, this.pos_profile);
-        
+
         if (updatedItems && updatedItems.length > 0) {
           // Populate the local stock cache with actual quantities
           const stockCache = JSON.parse(localStorage.getItem('local_stock_cache')) || {};
-          
+
           updatedItems.forEach(item => {
             if (item.actual_qty !== undefined) {
               stockCache[item.item_code] = {
@@ -633,7 +632,7 @@ export default {
               };
             }
           });
-          
+
           localStorage.setItem('local_stock_cache', JSON.stringify(stockCache));
           console.info('Stock cache populated with', Object.keys(stockCache).length, 'items');
         }
@@ -729,21 +728,21 @@ export default {
     },
     onBarcodeScanned(scannedCode) {
       console.log('Barcode scanned:', scannedCode);
-      
+
       // Clear any previous search
       this.search = '';
       this.first_search = '';
-      
+
       // Set the scanned code as search term
       this.first_search = scannedCode;
       this.search = scannedCode;
-      
+
       // Show scanning feedback
       frappe.show_alert({
         message: `Scanning for: ${scannedCode}`,
         indicator: 'blue'
       }, 2);
-      
+
       // Enhanced item search and submission logic
       setTimeout(() => {
         this.processScannedItem(scannedCode);
@@ -751,21 +750,21 @@ export default {
     },
     processScannedItem(scannedCode) {
       // First try to find exact match by barcode
-      let foundItem = this.items.find(item => 
-        item.barcode === scannedCode || 
+      let foundItem = this.items.find(item =>
+        item.barcode === scannedCode ||
         item.item_code === scannedCode ||
         (item.barcodes && item.barcodes.some(bc => bc.barcode === scannedCode))
       );
-      
+
       if (foundItem) {
         console.log('Found item by exact match:', foundItem);
         this.addScannedItemToInvoice(foundItem, scannedCode);
         return;
       }
-      
+
       // If no exact match, try partial search
       const searchResults = this.searchItemsByCode(scannedCode);
-      
+
       if (searchResults.length === 1) {
         console.log('Found item by search:', searchResults[0]);
         this.addScannedItemToInvoice(searchResults[0], scannedCode);
@@ -790,16 +789,16 @@ export default {
     },
     addScannedItemToInvoice(item, scannedCode) {
       console.log('Adding scanned item to invoice:', item, scannedCode);
-      
+
       // Use existing add_item method with enhanced feedback
       this.add_item(item);
-      
+
       // Show success message
       frappe.show_alert({
         message: `Added: ${item.item_name}`,
         indicator: 'green'
       }, 3);
-      
+
       // Clear search after successful addition
       setTimeout(() => {
         this.clearSearch();
@@ -819,9 +818,9 @@ export default {
         primary_action_label: __('Cancel'),
         primary_action: () => dialog.hide()
       });
-      
+
       dialog.show();
-      
+
       // Add click handlers for item selection
       setTimeout(() => {
         items.forEach((item, index) => {
@@ -836,7 +835,7 @@ export default {
     generateItemSelectionHTML(items, scannedCode) {
       let html = `<div class="mb-3"><strong>Scanned Code:</strong> ${scannedCode}</div>`;
       html += '<div class="item-selection-list">';
-      
+
       items.forEach((item, index) => {
         html += `
           <div class="item-option p-3 mb-2 border rounded cursor-pointer" data-item-index="${index}" style="border: 1px solid #ddd; cursor: pointer;">
@@ -852,19 +851,19 @@ export default {
           </div>
         `;
       });
-      
+
       html += '</div>';
       return html;
     },
     handleItemNotFound(scannedCode) {
       console.warn('Item not found for scanned code:', scannedCode);
-      
+
       // Show error message
       frappe.show_alert({
         message: `Item not found: ${scannedCode}`,
         indicator: 'red'
       }, 5);
-      
+
       // Keep the search term for manual search
       this.trigger_onscan(scannedCode);
     },
