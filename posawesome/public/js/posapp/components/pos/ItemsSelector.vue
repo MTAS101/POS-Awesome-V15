@@ -125,7 +125,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import { saveItemUOMs, getItemUOMs } from '../../offline.js';
+import { saveItemUOMs, getItemUOMs } from '../../../offline.js';
 
 export default {
   mixins: [format],

@@ -44,7 +44,7 @@ import NewAddress from './NewAddress.vue';
 import Variants from './Variants.vue';
 import Returns from './Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
-import { getCachedOffers, saveOffers } from '../../offline.js';
+import { getCachedOffers, saveOffers } from '../../../offline.js';
 
 export default {
   data: function () {
