@@ -180,6 +180,7 @@ export default {
     const bootCompany = frappe?.boot?.user_info?.company;
     this.company = bootCompany || this.company; // Use boot company or default 'POS Awesome'
     console.log('Fetched company:', this.company);
+    window.serverOnline = this.serverOnline;
 
     // If a specific company name is found (not the default), fetch its logo from Frappe.
     if (this.company !== 'POS Awesome') {
@@ -341,6 +342,7 @@ export default {
          */
         this.socket.on('connect', () => {
           this.serverOnline = true;
+          window.serverOnline = true;
           this.serverConnecting = false;
           this.offlineMessageShown = false; // reset offline warning flag
           console.log('Socket.IO: Connected to server');
@@ -352,6 +354,7 @@ export default {
          */
         this.socket.on('disconnect', (reason) => {
           this.serverOnline = false;
+          window.serverOnline = false;
           this.serverConnecting = false;
           console.warn('Socket.IO: Disconnected from server. Reason:', reason);
 
@@ -371,6 +374,7 @@ export default {
          */
         this.socket.on('connect_error', (error) => {
           this.serverOnline = false;
+          window.serverOnline = false;
           this.serverConnecting = false;
           console.error('Socket.IO: Connection error:', error.message);
           this.eventBus.emit('server-offline');
@@ -385,6 +389,7 @@ export default {
         });
       } catch (err) {
         this.serverOnline = false;
+        window.serverOnline = false;
         this.serverConnecting = false;
         console.error('Failed to initialize Socket.IO connection:', err);
 
@@ -406,6 +411,7 @@ export default {
       console.log('Browser is online');
       this.offlineMessageShown = false; // allow future offline warnings
       this.eventBus.emit('network-online');
+      window.serverOnline = this.serverOnline;
       // If the server is not online and not currently connecting, and a socket instance exists,
       // explicitly try to connect the socket. This helps in re-establishing server connection
       // immediately after internet recovery.
@@ -424,6 +430,7 @@ export default {
     handleOffline() {
       this.networkOnline = false; // Browser is now offline
       this.serverOnline = false; // Server is considered unreachable if there's no internet
+      window.serverOnline = false;
       this.serverConnecting = false; // Stop any ongoing connection attempts
       console.log('Browser is offline');
       this.eventBus.emit('network-offline');

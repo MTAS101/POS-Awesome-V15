@@ -14,6 +14,13 @@ export function saveOfflineInvoice(entry) {
   }
 }
 
+export function isOffline() {
+  if (typeof window !== 'undefined' && typeof window.serverOnline === 'boolean') {
+    return !navigator.onLine || !window.serverOnline;
+  }
+  return !navigator.onLine;
+}
+
 export function getOfflineInvoices() {
   try {
     return JSON.parse(localStorage.getItem('offline_invoices')) || [];
@@ -33,7 +40,7 @@ export function getPendingOfflineInvoiceCount() {
 export async function syncOfflineInvoices() {
   const invoices = getOfflineInvoices();
   if (!invoices.length) return { pending: 0, synced: 0 };
-  if (!navigator.onLine) {
+  if (isOffline()) {
     // When offline just return the pending count without attempting a sync
     return { pending: invoices.length, synced: 0 };
   }

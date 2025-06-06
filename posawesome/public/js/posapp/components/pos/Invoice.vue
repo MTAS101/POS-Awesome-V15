@@ -439,6 +439,7 @@
 
 import format from "../../format";
 import Customer from "./Customer.vue";
+import { isOffline } from "../../../offline";
 
 export default {
   mixins: [format],
@@ -1517,7 +1518,7 @@ export default {
     // Update invoice in backend
     update_invoice(doc) {
       var vm = this;
-      if (!navigator.onLine) {
+      if (isOffline()) {
         // When offline, simply merge the passed doc with the current invoice_doc
         // to allow offline invoice creation without server calls
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
@@ -1541,7 +1542,7 @@ export default {
     // Update invoice from order in backend
     update_invoice_from_order(doc) {
       var vm = this;
-      if (!navigator.onLine) {
+      if (isOffline()) {
         // Offline mode - merge doc locally without server update
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
         return vm.invoice_doc;
