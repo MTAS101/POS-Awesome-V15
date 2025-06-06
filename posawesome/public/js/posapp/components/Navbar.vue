@@ -31,6 +31,7 @@
         </template>
         <span>{{ statusText }}</span>
       </v-tooltip>
+      <span class="mx-2 text-caption">{{ syncInfoText }}</span>
 
       <v-btn style="cursor: unset; text-transform: none;" variant="text" color="primary">
         {{ posProfile.name }}
@@ -138,6 +139,11 @@ export default {
       freezeMsg: '', // Message text for the freeze dialog
       // --- PENDING OFFLINE INVOICES ---
       pendingInvoices: 0, // Number of invoices saved locally while offline
+      syncTotals: {
+        pending: 0, // Total invoices attempted to sync when coming online
+        synced: 0,  // Successfully synced invoices from the last attempt
+        drafted: 0  // Invoices that failed to sync and were saved as draft
+      },
       // --- SIGNAL INDICATOR STATES ---
       networkOnline: navigator.onLine, // Boolean: Reflects the browser's current network connectivity (true if online, false if offline)
       serverOnline: false,             // Boolean: Reflects the real-time server health via WebSocket (true if connected, false if disconnected)
@@ -176,6 +182,13 @@ export default {
       if (this.serverConnecting) return this.__('Connecting to server...'); // Message when connecting
       if (!this.networkOnline) return this.__('No Internet Connection'); // Message when no internet
       return this.serverOnline ? this.__('Connected to Server') : this.__('Server Offline'); // Messages for server status
+    },
+    /**
+     * Returns a short string summarizing the last offline invoice sync results.
+     */
+    syncInfoText() {
+      const { pending, synced, drafted } = this.syncTotals;
+      return `To Sync: ${pending} | Synced: ${synced} | Draft: ${drafted}`;
     }
   },
   created() {
@@ -570,7 +583,10 @@ export default {
           color: 'warning'
         });
       }
+      this.syncTotals.pending = pending;
       if (isOffline()) {
+        this.syncTotals.synced = 0;
+        this.syncTotals.drafted = 0;
         return;
       }
       const result = await syncOfflineInvoices();
@@ -588,6 +604,8 @@ export default {
           });
         }
       }
+      this.syncTotals.synced = result ? result.synced : 0;
+      this.syncTotals.drafted = result ? result.drafted : 0;
       this.updatePendingInvoices();
       this.eventBus.emit('pending_invoices_changed', this.pendingInvoices);
     },
@@ -597,6 +615,7 @@ export default {
      */
     updatePendingInvoices() {
       this.pendingInvoices = getPendingOfflineInvoiceCount();
+      this.syncTotals.pending = this.pendingInvoices;
     },
     /**
      * Displays a snackbar message at the top right of the screen.
