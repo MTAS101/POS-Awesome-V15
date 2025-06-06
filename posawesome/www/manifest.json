@@ -7,13 +7,13 @@
   "theme_color": "#0097A7",
   "icons": [
     {
-      "src": "/assets/posawesome/icons/logo-192.txt",
+      "src": "/assets/posawesome/icons/logo-192.png",
       "sizes": "192x192",
       "type": "text/plain"
     },
     {
-      "src": "/assets/posawesome/icons/logo-512.txt",
-      "sizes": "512x512",
+      "src": "/assets/posawesome/icons/logo-144.png",
+      "sizes": "144x144",
       "type": "text/plain"
     }
   ],
