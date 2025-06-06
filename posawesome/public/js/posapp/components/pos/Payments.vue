@@ -610,6 +610,7 @@ import {
   getPendingOfflineInvoiceCount,
   isOffline,
 } from "../../../offline";
+import generateOfflineInvoiceHTML from "../../../offline_print_template";
 
 export default {
   // Using format mixin for shared formatting methods
@@ -1219,28 +1220,10 @@ export default {
         true
       );
     },
-    // Print invoice using a minimal offline template
+    // Print invoice using a more detailed offline template
     print_offline_invoice(invoice) {
       if (!invoice) return;
-      const itemsRows = (invoice.items || [])
-        .map(
-          (it) =>
-            `<tr><td>${it.item_name}</td><td style="text-align:right">${it.qty}</td><td style="text-align:right">${it.rate}</td><td style="text-align:right">${it.amount}</td></tr>`
-        )
-        .join("");
-      const total = invoice.rounded_total || invoice.grand_total || 0;
-      const html = `<!DOCTYPE html>
-        <html><head><title>Invoice ${invoice.name || ""}</title></head>
-        <body>
-          <h3>Invoice ${invoice.name || ""}</h3>
-          <p>Date: ${invoice.posting_date || ""}</p>
-          <p>Customer: ${invoice.customer || ""}</p>
-          <table border="1" cellspacing="0" cellpadding="4" style="width:100%;border-collapse:collapse;">
-            <thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
-            <tbody>${itemsRows}</tbody>
-          </table>
-          <h4 style="text-align:right">Total: ${total}</h4>
-        </body></html>`;
+      const html = generateOfflineInvoiceHTML(invoice);
       const win = window.open("", "_blank");
       win.document.write(html);
       win.document.close();
