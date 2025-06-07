@@ -1,8 +1,8 @@
 <template>
-  <div class="pa-0">
-    <v-card class="selection mx-auto bg-grey-lighten-5 pa-1" style="max-height: 68vh; height: 68vh">
+  <div class="pa-0 dynamic-container" :style="responsiveStyles">
+    <v-card class="selection mx-auto bg-grey-lighten-5 pa-1 dynamic-card" :style="{ height: responsiveStyles["--container-height"], maxHeight: responsiveStyles["--container-height"] }">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top" color="info"></v-progress-linear>
-      <div class="overflow-y-auto px-2 pt-2" style="max-height: 67vh">
+      <div class="overflow-y-auto px-2 pt-2" :style="{ maxHeight: "calc(" + responsiveStyles["--container-height"] + " - 1vh)" }">
         
         <!-- Payment Summary (Paid, To Be Paid, Change) -->
         <v-row v-if="invoice_doc" class="px-1 py-0" dense>
@@ -603,6 +603,7 @@
 <script>
 // Importing format mixin for currency and utility functions
 import format from "../../format";
+import { responsiveMixin } from "../../mixins/responsive.js";
 import {
   saveOfflineInvoice,
   syncOfflineInvoices,
@@ -613,7 +614,7 @@ import generateOfflineInvoiceHTML from "../../../offline_print_template";
 
 export default {
   // Using format mixin for shared formatting methods
-  mixins: [format],
+  mixins: [format, responsiveMixin],
   data() {
     return {
       loading: false, // UI loading state
@@ -1695,5 +1696,22 @@ export default {
 
 .v-text-field--readonly:hover {
   background-color: transparent;
+}
+
+.dynamic-container {
+  padding-top: var(--dynamic-md);
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .dynamic-container {
+    padding-top: var(--dynamic-sm);
+  }
+}
+
+.dynamic-card {
+  transition: all 0.3s ease;
+  max-height: var(--container-height);
+  height: var(--container-height);
 }
 </style>
