@@ -1,6 +1,6 @@
 <template>
   <div class="pa-0">
-    <v-card class="selection mx-auto bg-grey-lighten-5 pa-1" style="max-height: 68vh; height: 68vh">
+    <v-card class="selection mx-auto bg-grey-lighten-5 pa-1 my-0 py-0 mt-3" style="max-height: 68vh; height: 68vh">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top" color="info"></v-progress-linear>
       <div class="overflow-y-auto px-2 pt-2" style="max-height: 67vh">
         
