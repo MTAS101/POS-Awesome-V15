@@ -1,5 +1,5 @@
 <template>
-  <div class="pos-main-container pt-3"> <!-- Changed pt-2 to pt-3 for more top padding -->
+  <div class="pos-main-container dynamic-container" :style="responsiveStyles">
     <ClosingDialog></ClosingDialog>
     <Drafts></Drafts>
     <SalesOrders></SalesOrders>
@@ -8,21 +8,21 @@
     <MpesaPayments></MpesaPayments>
     <Variants></Variants>
     <OpeningDialog v-if="dialog" :dialog="dialog"></OpeningDialog>
-    <v-row v-show="!dialog" dense class="ma-0 pa-0">
-      <v-col v-show="!payment && !offers && !coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pa-2"> <!-- Changed pa-3 to pa-2 for consistent padding -->
+    <v-row v-show="!dialog" dense class="ma-0 dynamic-main-row">
+      <v-col v-show="!payment && !offers && !coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
         <ItemsSelector></ItemsSelector>
       </v-col>
-      <v-col v-show="offers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pr-0">
+      <v-col v-show="offers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
         <PosOffers></PosOffers>
       </v-col>
-      <v-col v-show="coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pr-0">
+      <v-col v-show="coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
         <PosCoupons></PosCoupons>
       </v-col>
-      <v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos pa-2"> <!-- Changed pa-1 to pa-2 for consistent padding -->
+      <v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
         <Payments></Payments>
       </v-col>
 
-      <v-col xl="7" lg="7" md="7" sm="7" cols="12" class="pos pa-2"> <!-- Changed pa-1 to pa-2 for consistent padding -->
+      <v-col xl="7" lg="7" md="7" sm="7" cols="12" class="pos dynamic-col">
         <Invoice></Invoice>
       </v-col>
     </v-row>
@@ -47,8 +47,10 @@ import MpesaPayments from './Mpesa-Payments.vue';
 import { getCachedOffers, saveOffers } from '../../../offline.js';
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline.js";
+import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
+  mixins: [responsiveMixin],
   data: function () {
     return {
       dialog: false,
@@ -266,17 +268,28 @@ export default {
 </script>
 
 <style scoped>
-.pos-main-container {
-  height: calc(100vh - 56px - 8px); /* Reduced margins */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+.dynamic-container {
+  padding-top: var(--dynamic-md);
+  transition: all 0.3s ease;
 }
 
-.pos {
-  padding-bottom: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  margin-top: 0 !important;
+.dynamic-main-row {
+  padding: 0;
+  margin: 0;
+}
+
+.dynamic-col {
+  padding: var(--dynamic-sm);
+  transition: padding 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .dynamic-container {
+    padding-top: var(--dynamic-sm);
+  }
+  
+  .dynamic-col {
+    padding: var(--dynamic-xs);
+  }
 }
 </style>

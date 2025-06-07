@@ -1,9 +1,10 @@
 <template>
-  <div>
-    <v-card class="selection mx-auto bg-grey-lighten-5 my-0 py-0 mt-3" style="max-height: 68vh; height: 68vh">
+  <div :style="responsiveStyles">
+    <v-card class="selection mx-auto bg-grey-lighten-5 my-0 py-0 mt-3 dynamic-card" 
+            :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'] }">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
-      <v-row class="items px-3 py-2">
+      <v-row class="items dynamic-padding">
         <v-col class="pb-0">
           <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
             :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
@@ -30,10 +31,11 @@
         </v-col>
         <v-col cols="12" class="pt-0 mt-0">
           <div fluid class="items" v-if="items_view == 'card'">
-            <v-row density="default" class="overflow-y-auto" style="max-height: 60vh">
+            <v-row density="default" class="overflow-y-auto dynamic-scroll" 
+                   :style="{ maxHeight: responsiveStyles['--card-height'] }">
               <v-col v-for="(item, idx) in filtered_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
                 min-height="50">
-                <v-card hover="hover" @click="add_item(item)">
+                <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
                   <v-img :src="item.image ||
                     '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
                     " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
@@ -59,7 +61,8 @@
             </v-row>
           </div>
           <div fluid class="items" v-if="items_view == 'list'">
-            <div class="my-0 py-0 overflow-y-auto" style="max-height: 58vh">
+            <div class="my-0 py-0 overflow-y-auto dynamic-scroll" 
+                 :style="{ maxHeight: responsiveStyles['--card-height'] }">
               <v-data-table :headers="getItemsHeaders()" :items="filtered_items" item-key="item_code" item-value="item-"
                 class="elevation-0 sleek-data-table" :items-per-page="itemsPerPage" hide-default-footer
                 @click:row="click_item_row">
@@ -84,7 +87,7 @@
         </v-col>
       </v-row>
     </v-card>
-    <v-card class="cards mb-0 mt-3 pa-2 bg-grey-lighten-5">
+    <v-card class="cards mb-0 mt-3 dynamic-padding bg-grey-lighten-5">
       <v-row no-gutters align="center" justify="center">
         <v-col cols="12">
 
@@ -124,9 +127,10 @@ import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, fetchItemStockQuantities } from '../../../offline.js';
+import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
-  mixins: [format],
+  mixins: [format, responsiveMixin],
   components: {
     CameraScanner
   },
@@ -1147,25 +1151,53 @@ export default {
 </script>
 
 <style scoped>
+.dynamic-card {
+  transition: all 0.3s ease;
+}
+
+.dynamic-padding {
+  padding: var(--dynamic-md) var(--dynamic-sm);
+}
+
+.dynamic-scroll {
+  transition: max-height 0.3s ease;
+}
+
+.dynamic-item-card {
+  margin: var(--dynamic-xs);
+  transition: all 0.3s ease;
+}
+
+.dynamic-item-card:hover {
+  transform: scale(calc(1 + 0.02 * var(--font-scale)));
+}
+
 .text-success {
   color: #4CAF50 !important;
 }
 
 .sleek-data-table {
-
-  border-radius: 12px !important;
-  /* Match Customer.vue style */
+  border-radius: calc(12px * var(--font-scale)) !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
-  /* Match Customer.vue style */
   background-color: #fff !important;
-  /* Match Customer.vue style */
   overflow: hidden !important;
-  /* Ensures border-radius applies correctly */
+  margin: var(--dynamic-xs);
 }
 
 .sleek-data-table:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
-  /* Match Customer.vue style */
+}
 
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  .dynamic-padding {
+    padding: var(--dynamic-sm) var(--dynamic-xs);
+  }
+}
+
+@media (max-width: 480px) {
+  .dynamic-padding {
+    padding: var(--dynamic-xs);
+  }
 }
 </style>
