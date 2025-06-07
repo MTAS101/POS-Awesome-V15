@@ -82,7 +82,7 @@ export async function syncOfflineInvoices() {
       });
       synced++;
     } catch (error) {
-      console.error('Failed to submit invoice, saving as draft', err);
+      console.error('Failed to submit invoice, saving as draft', error);
       try {
         await frappe.call({
           method: 'posawesome.posawesome.api.posapp.update_invoice',
