@@ -1,9 +1,9 @@
 <template>
-  <div fluid class="payments-container dynamic-container" :style="responsiveStyles">
+  <div fluid>
     <v-row v-show="!dialog">
       <v-col md="8" cols="12" class="pb-2 pr-0">
         <v-card class="main mx-auto bg-grey-lighten-5 mt-3 p-3 pb-16 overflow-y-auto"
-          :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'] }">
+          style="max-height: 94vh; height: 94vh">
           <Customer></Customer>
           <v-divider></v-divider>
           <div>
@@ -159,8 +159,7 @@
         </v-card>
       </v-col>
       <v-col md="4" cols="12" class="pb-3">
-        <v-card class="invoices mx-auto bg-grey-lighten-5 mt-3 p-3"
-          :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'] }">
+        <v-card class="invoices mx-auto bg-grey-lighten-5 mt-3 p-3" style="max-height: 94vh; height: 94vh">
           <strong>
             <h4 class="text-primary">Totals</h4>
             <v-row>
@@ -247,10 +246,9 @@
 import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
-import { responsiveMixin } from "../../mixins/responsive.js";
 
 export default {
-  mixins: [format, responsiveMixin],
+  mixins: [format],
   data: function () {
     return {
       dialog: false,
@@ -989,26 +987,5 @@ input[total_selected_mpesa_payments] {
 
 .selected-row {
   background-color: #e3f2fd !important;
-}
-
-.payments-container {
-  width: 100%;
-}
-
-.dynamic-container {
-  padding-top: var(--dynamic-md);
-  transition: all 0.3s ease;
-}
-
-@media (max-width: 768px) {
-  .dynamic-container {
-    padding-top: var(--dynamic-sm);
-  }
-}
-
-.main,
-.invoices {
-  max-height: var(--container-height);
-  height: var(--container-height);
 }
 </style>
