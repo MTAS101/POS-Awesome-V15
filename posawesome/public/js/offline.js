@@ -78,7 +78,10 @@ export async function syncOfflineInvoices() {
     try {
       await frappe.call({
         method: 'posawesome.posawesome.api.posapp.submit_invoice',
-        args: inv
+        args: {
+          invoice: inv.invoice,
+          data: inv.data,
+        },
       });
       synced++;
     } catch (error) {
