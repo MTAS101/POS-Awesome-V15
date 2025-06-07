@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-card class="selection mx-auto bg-grey-lighten-5 my-0 py-0 mt-3" style="max-height: 63vh; height: 63vh">
+    <v-card class="selection mx-auto bg-grey-lighten-5 my-0 py-0 mt-3" style="max-height: 68vh; height: 68vh">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
       <v-row class="items px-3 py-2">
@@ -30,7 +30,7 @@
         </v-col>
         <v-col cols="12" class="pt-0 mt-0">
           <div fluid class="items" v-if="items_view == 'card'">
-            <v-row density="default" class="overflow-y-auto" style="max-height: 55vh">
+            <v-row density="default" class="overflow-y-auto" style="max-height: 60vh">
               <v-col v-for="(item, idx) in filtered_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
                 min-height="50">
                 <v-card hover="hover" @click="add_item(item)">
@@ -59,7 +59,7 @@
             </v-row>
           </div>
           <div fluid class="items" v-if="items_view == 'list'">
-            <div class="my-0 py-0 overflow-y-auto" style="max-height: 53vh">
+            <div class="my-0 py-0 overflow-y-auto" style="max-height: 58vh">
               <v-data-table :headers="getItemsHeaders()" :items="filtered_items" item-key="item_code" item-value="item-"
                 class="elevation-0 sleek-data-table" :items-per-page="itemsPerPage" hide-default-footer
                 @click:row="click_item_row">

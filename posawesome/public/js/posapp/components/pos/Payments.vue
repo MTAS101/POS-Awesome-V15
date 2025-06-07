@@ -1,8 +1,8 @@
 <template>
   <div class="pa-0">
-    <v-card class="selection mx-auto bg-grey-lighten-5 pa-1" style="max-height: 63vh; height: 63vh">
+    <v-card class="selection mx-auto bg-grey-lighten-5 pa-1" style="max-height: 68vh; height: 68vh">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top" color="info"></v-progress-linear>
-      <div class="overflow-y-auto px-2 pt-2" style="max-height: 62vh">
+      <div class="overflow-y-auto px-2 pt-2" style="max-height: 67vh">
         
         <!-- Payment Summary (Paid, To Be Paid, Change) -->
         <v-row v-if="invoice_doc" class="px-1 py-0" dense>
