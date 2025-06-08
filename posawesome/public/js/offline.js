@@ -415,6 +415,15 @@ export function setOpeningStorage(data) {
   }
 }
 
+export function clearOpeningStorage() {
+  try {
+    memory.pos_opening_storage = null;
+    persist('pos_opening_storage');
+  } catch (e) {
+    console.error('Failed to clear opening storage', e);
+  }
+}
+
 export function getOpeningDialogStorage() {
   return memory.opening_dialog_storage || null;
 }

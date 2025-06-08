@@ -44,7 +44,7 @@ import NewAddress from './NewAddress.vue';
 import Variants from './Variants.vue';
 import Returns from './Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
-import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, initPromise } from '../../../offline.js';
+import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, clearOpeningStorage, initPromise } from '../../../offline.js';
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline.js";
 import { responsiveMixin } from '../../mixins/responsive.js';
@@ -171,6 +171,13 @@ export default {
         )
         .then((r) => {
           if (r.message) {
+            // Clear the cached opening shift data
+            this.pos_opening_shift = null;
+            this.pos_profile = null;
+
+            // Clear from local storage
+            clearOpeningStorage();
+
             this.eventBus.emit('show_message', {
               title: `POS Shift Closed`,
               color: 'success',
@@ -290,7 +297,7 @@ export default {
   .dynamic-container {
     padding-top: var(--dynamic-sm);
   }
-  
+
   .dynamic-col {
     padding: var(--dynamic-xs);
   }
