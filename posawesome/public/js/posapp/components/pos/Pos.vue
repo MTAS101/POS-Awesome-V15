@@ -44,7 +44,7 @@ import NewAddress from './NewAddress.vue';
 import Variants from './Variants.vue';
 import Returns from './Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
-import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage } from '../../../offline.js';
+import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, initPromise } from '../../../offline.js';
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline.js";
 import { responsiveMixin } from '../../mixins/responsive.js';
@@ -80,7 +80,8 @@ export default {
   },
 
   methods: {
-    check_opening_entry() {
+    async check_opening_entry() {
+      await initPromise;
       return frappe
         .call('posawesome.posawesome.api.posapp.check_opening_shift', {
           user: frappe.session.user,
@@ -92,7 +93,11 @@ export default {
             this.get_offers(this.pos_profile.name);
             this.eventBus.emit('register_pos_profile', r.message);
             this.eventBus.emit('set_company', r.message.company);
-            frappe.realtime.emit('pos_profile_registered');
+            try {
+              frappe.realtime.emit('pos_profile_registered');
+            } catch (e) {
+              console.warn('Realtime emit failed', e);
+            }
             console.info('LoadPosProfile');
             try {
               setOpeningStorage(r.message);
@@ -107,7 +112,11 @@ export default {
               this.get_offers(this.pos_profile.name);
               this.eventBus.emit('register_pos_profile', data);
               this.eventBus.emit('set_company', data.company);
-              frappe.realtime.emit('pos_profile_registered');
+              try {
+                frappe.realtime.emit('pos_profile_registered');
+              } catch (e) {
+                console.warn('Realtime emit failed', e);
+              }
               console.info('LoadPosProfile (cached)');
               return;
             }
@@ -122,7 +131,11 @@ export default {
             this.get_offers(this.pos_profile.name);
             this.eventBus.emit('register_pos_profile', data);
             this.eventBus.emit('set_company', data.company);
-            frappe.realtime.emit('pos_profile_registered');
+            try {
+              frappe.realtime.emit('pos_profile_registered');
+            } catch (e) {
+              console.warn('Realtime emit failed', e);
+            }
             console.info('LoadPosProfile (cached)');
             return;
           }

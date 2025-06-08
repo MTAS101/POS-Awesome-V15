@@ -246,7 +246,7 @@
 import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
-import { getOpeningStorage, setOpeningStorage } from "../../../offline.js";
+import { getOpeningStorage, setOpeningStorage, initPromise } from "../../../offline.js";
 
 export default {
   mixins: [format],
@@ -406,8 +406,9 @@ export default {
   },
 
   methods: {
-    check_opening_entry() {
+    async check_opening_entry() {
       var vm = this;
+      await initPromise;
       return frappe
         .call("posawesome.posawesome.api.posapp.check_opening_shift", {
           user: frappe.session.user,

@@ -18,7 +18,7 @@ const memory = {
   sales_persons_storage: []
 };
 
-async function init() {
+export const initPromise = (async () => {
   try {
     await db.open();
     for (const key of Object.keys(memory)) {
@@ -30,8 +30,7 @@ async function init() {
   } catch (e) {
     console.error('Failed to initialize offline DB', e);
   }
-}
-init();
+})();
 
 function persist(key) {
   db.table('keyval')
@@ -408,8 +407,12 @@ export function getOpeningStorage() {
 }
 
 export function setOpeningStorage(data) {
-  memory.pos_opening_storage = data;
-  persist('pos_opening_storage');
+  try {
+    memory.pos_opening_storage = JSON.parse(JSON.stringify(data));
+    persist('pos_opening_storage');
+  } catch (e) {
+    console.error('Failed to set opening storage', e);
+  }
 }
 
 export function getOpeningDialogStorage() {
@@ -417,8 +420,12 @@ export function getOpeningDialogStorage() {
 }
 
 export function setOpeningDialogStorage(data) {
-  memory.opening_dialog_storage = data;
-  persist('opening_dialog_storage');
+  try {
+    memory.opening_dialog_storage = JSON.parse(JSON.stringify(data));
+    persist('opening_dialog_storage');
+  } catch (e) {
+    console.error('Failed to set opening dialog storage', e);
+  }
 }
 
 export function getLocalStockCache() {

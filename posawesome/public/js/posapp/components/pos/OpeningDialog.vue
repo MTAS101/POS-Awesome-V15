@@ -50,7 +50,7 @@
 <script>
 
 import format from '../../format';
-import { getOpeningDialogStorage, setOpeningDialogStorage, setOpeningStorage } from '../../../offline.js';
+import { getOpeningDialogStorage, setOpeningDialogStorage, setOpeningStorage, initPromise } from '../../../offline.js';
 export default {
   mixins: [format],
   props: ['dialog'],
@@ -119,8 +119,9 @@ export default {
     close_opening_dialog() {
       this.eventBus.emit('close_opening_dialog');
     },
-    get_opening_dialog_data() {
+    async get_opening_dialog_data() {
       const vm = this;
+      await initPromise;
       // Load cached data first for offline usage
       const cached = getOpeningDialogStorage();
       if (cached) {
