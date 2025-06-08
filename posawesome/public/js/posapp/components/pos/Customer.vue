@@ -99,7 +99,7 @@
 
 <script>
 import UpdateCustomer from './UpdateCustomer.vue';
-import { getCustomerStorage, setCustomerStorage, initPromise, isOffline } from '../../../offline.js';
+import { getCustomerStorage, setCustomerStorage } from '../../../offline.js';
 
 export default {
   props: {
@@ -184,11 +184,9 @@ export default {
     },
 
     // Fetch customers list
-    async get_customer_names() {
-      const vm = this;
+    get_customer_names() {
+      var vm = this;
       if (this.customers.length > 0) return;
-
-      await initPromise;
 
       if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
         try {
@@ -199,12 +197,7 @@ export default {
         }
       }
 
-      if (isOffline()) {
-        vm.loadingCustomers = false;
-        return;
-      }
-
-      vm.loadingCustomers = true; // Start loading
+      this.loadingCustomers = true; // ? Start loading
       frappe.call({
         method: 'posawesome.posawesome.api.posapp.get_customer_names',
         args: {
@@ -218,7 +211,7 @@ export default {
               setCustomerStorage(r.message);
             }
           }
-          vm.loadingCustomers = false; // Stop loading
+          vm.loadingCustomers = false; // ? Stop loading
         },
         error: function (err) {
           console.error('Failed to fetch customers:', err);
@@ -250,18 +243,15 @@ export default {
   },
 
   created() {
-    (async () => {
-      await initPromise;
-      // Load cached customers immediately for offline use
-      if (getCustomerStorage().length) {
-        try {
-          this.customers = getCustomerStorage();
-        } catch (e) {
-          console.error('Failed to parse customer cache:', e);
-          this.customers = [];
-        }
+    // Load cached customers immediately for offline use
+    if (getCustomerStorage().length) {
+      try {
+        this.customers = getCustomerStorage();
+      } catch (e) {
+        console.error('Failed to parse customer cache:', e);
+        this.customers = [];
       }
-    })();
+    }
 
     this.$nextTick(() => {
       this.eventBus.on('register_pos_profile', (pos_profile) => {
