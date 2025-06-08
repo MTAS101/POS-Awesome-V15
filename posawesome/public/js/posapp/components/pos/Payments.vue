@@ -608,7 +608,9 @@ import {
   syncOfflineInvoices,
   getPendingOfflineInvoiceCount,
   isOffline,
-} from "../../../offline";
+  getSalesPersonsStorage,
+  setSalesPersonsStorage,
+} from "../../../offline.js";
 import generateOfflineInvoiceHTML from "../../../offline_print_template";
 
 export default {
@@ -1327,9 +1329,9 @@ export default {
     // Get sales person names from API/localStorage
     get_sales_person_names() {
       const vm = this;
-      if (vm.pos_profile.posa_local_storage && localStorage.sales_persons_storage) {
+      if (vm.pos_profile.posa_local_storage && getSalesPersonsStorage().length) {
         try {
-          vm.sales_persons = JSON.parse(localStorage.getItem("sales_persons_storage"));
+          vm.sales_persons = getSalesPersonsStorage();
         } catch(e) {}
       }
       frappe.call({
@@ -1343,7 +1345,7 @@ export default {
               name: sp.name
             }));
             if (vm.pos_profile.posa_local_storage) {
-              localStorage.setItem("sales_persons_storage", JSON.stringify(vm.sales_persons));
+              setSalesPersonsStorage(vm.sales_persons);
             }
           } else {
             vm.sales_persons = [];

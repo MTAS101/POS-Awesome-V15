@@ -246,6 +246,7 @@
 import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
+import { getOpeningStorage, setOpeningStorage } from "../../../offline.js";
 
 export default {
   mixins: [format],
@@ -420,7 +421,7 @@ export default {
             vm.eventBus.emit("set_company", r.message.company);
             this.set_payment_methods();
             try {
-              localStorage.setItem("pos_opening_storage", JSON.stringify(r.message));
+              setOpeningStorage(r.message);
             } catch (e) {
               console.error("Failed to cache opening data", e);
             }
@@ -443,10 +444,8 @@ export default {
             this.get_outstanding_invoices();
             this.get_draft_mpesa_payments_register();
           } else {
-            const cached = localStorage.getItem("pos_opening_storage");
-            if (cached) {
-              try {
-                const data = JSON.parse(cached);
+            const data = getOpeningStorage();
+            if (data) {
                 this.pos_profile = data.pos_profile;
                 this.pos_opening_shift = data.pos_opening_shift;
                 this.company = data.company.name;
@@ -461,18 +460,13 @@ export default {
                 this.get_outstanding_invoices();
                 this.get_draft_mpesa_payments_register();
                 return;
-              } catch (e) {
-                console.error("Failed to parse cached opening data", e);
-              }
             }
             this.create_opening_voucher();
           }
         })
         .catch(() => {
-          const cached = localStorage.getItem("pos_opening_storage");
-          if (cached) {
-            try {
-              const data = JSON.parse(cached);
+          const data = getOpeningStorage();
+          if (data) {
               this.pos_profile = data.pos_profile;
               this.pos_opening_shift = data.pos_opening_shift;
               this.company = data.company.name;
@@ -487,9 +481,6 @@ export default {
               this.get_outstanding_invoices();
               this.get_draft_mpesa_payments_register();
               return;
-            } catch (e) {
-              console.error("Failed to parse cached opening data", e);
-            }
           }
           this.create_opening_voucher();
         });

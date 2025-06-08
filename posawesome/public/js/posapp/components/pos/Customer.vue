@@ -99,6 +99,7 @@
 
 <script>
 import UpdateCustomer from './UpdateCustomer.vue';
+import { getCustomerStorage, setCustomerStorage } from '../../../offline.js';
 
 export default {
   props: {
@@ -187,9 +188,9 @@ export default {
       var vm = this;
       if (this.customers.length > 0) return;
 
-      if (vm.pos_profile.posa_local_storage && localStorage.customer_storage) {
+      if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
         try {
-          vm.customers = JSON.parse(localStorage.getItem('customer_storage')) || [];
+          vm.customers = getCustomerStorage();
         } catch (e) {
           console.error('Failed to parse customer cache:', e);
           vm.customers = [];
@@ -207,8 +208,7 @@ export default {
             vm.customers = r.message;
 
             if (vm.pos_profile.posa_local_storage) {
-              localStorage.setItem('customer_storage', '');
-              localStorage.setItem('customer_storage', JSON.stringify(r.message));
+              setCustomerStorage(r.message);
             }
           }
           vm.loadingCustomers = false; // ? Stop loading
@@ -244,9 +244,9 @@ export default {
 
   created() {
     // Load cached customers immediately for offline use
-    if (localStorage.customer_storage) {
+    if (getCustomerStorage().length) {
       try {
-        this.customers = JSON.parse(localStorage.getItem('customer_storage')) || [];
+        this.customers = getCustomerStorage();
       } catch (e) {
         console.error('Failed to parse customer cache:', e);
         this.customers = [];

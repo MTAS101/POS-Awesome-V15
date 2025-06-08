@@ -126,7 +126,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, fetchItemStockQuantities } from '../../../offline.js';
+import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache } from '../../../offline.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
@@ -218,10 +218,10 @@ export default {
       }
       if (
         vm.pos_profile.posa_local_storage &&
-        localStorage.items_storage &&
+        getItemsStorage().length &&
         !vm.pos_profile.pose_use_limit_search
       ) {
-        vm.items = JSON.parse(localStorage.getItem("items_storage"));
+        vm.items = getItemsStorage();
         this.eventBus.emit("set_all_items", vm.items);
         vm.loading = false;
         vm.items_loaded = true;
@@ -269,12 +269,8 @@ export default {
               vm.pos_profile.posa_local_storage &&
               !vm.pos_profile.pose_use_limit_search
             ) {
-              localStorage.setItem("items_storage", "");
               try {
-                localStorage.setItem(
-                  "items_storage",
-                  JSON.stringify(r.message)
-                );
+                setItemsStorage(r.message);
               } catch (e) {
                 console.error(e);
               }
@@ -630,26 +626,7 @@ export default {
     async prePopulateStockCache(items) {
       try {
         console.info('Pre-populating stock cache for', items.length, 'items');
-
-        // Fetch current stock quantities for all items
-        const updatedItems = await fetchItemStockQuantities(items, this.pos_profile);
-
-        if (updatedItems && updatedItems.length > 0) {
-          // Populate the local stock cache with actual quantities
-          const stockCache = JSON.parse(localStorage.getItem('local_stock_cache')) || {};
-
-          updatedItems.forEach(item => {
-            if (item.actual_qty !== undefined) {
-              stockCache[item.item_code] = {
-                actual_qty: item.actual_qty,
-                last_updated: new Date().toISOString()
-              };
-            }
-          });
-
-          localStorage.setItem('local_stock_cache', JSON.stringify(stockCache));
-          console.info('Stock cache populated with', Object.keys(stockCache).length, 'items');
-        }
+        await initializeStockCache(items, this.pos_profile);
       } catch (error) {
         console.error('Failed to pre-populate stock cache:', error);
       }

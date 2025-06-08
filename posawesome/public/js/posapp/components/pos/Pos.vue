@@ -44,7 +44,7 @@ import NewAddress from './NewAddress.vue';
 import Variants from './Variants.vue';
 import Returns from './Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
-import { getCachedOffers, saveOffers } from '../../../offline.js';
+import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage } from '../../../offline.js';
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline.js";
 import { responsiveMixin } from '../../mixins/responsive.js';
@@ -95,35 +95,13 @@ export default {
             frappe.realtime.emit('pos_profile_registered');
             console.info('LoadPosProfile');
             try {
-              localStorage.setItem('pos_opening_storage', JSON.stringify(r.message));
+              setOpeningStorage(r.message);
             } catch (e) {
               console.error('Failed to cache opening data', e);
             }
           } else {
-            const cached = localStorage.getItem('pos_opening_storage');
-            if (cached) {
-              try {
-                const data = JSON.parse(cached);
-                this.pos_profile = data.pos_profile;
-                this.pos_opening_shift = data.pos_opening_shift;
-                this.get_offers(this.pos_profile.name);
-                this.eventBus.emit('register_pos_profile', data);
-                this.eventBus.emit('set_company', data.company);
-                frappe.realtime.emit('pos_profile_registered');
-                console.info('LoadPosProfile (cached)');
-                return;
-              } catch (e) {
-                console.error('Failed to parse cached opening data', e);
-              }
-            }
-            this.create_opening_voucher();
-          }
-        })
-        .catch(() => {
-          const cached = localStorage.getItem('pos_opening_storage');
-          if (cached) {
-            try {
-              const data = JSON.parse(cached);
+            const data = getOpeningStorage();
+            if (data) {
               this.pos_profile = data.pos_profile;
               this.pos_opening_shift = data.pos_opening_shift;
               this.get_offers(this.pos_profile.name);
@@ -132,9 +110,21 @@ export default {
               frappe.realtime.emit('pos_profile_registered');
               console.info('LoadPosProfile (cached)');
               return;
-            } catch (e) {
-              console.error('Failed to parse cached opening data', e);
             }
+            this.create_opening_voucher();
+          }
+        })
+        .catch(() => {
+          const data = getOpeningStorage();
+          if (data) {
+            this.pos_profile = data.pos_profile;
+            this.pos_opening_shift = data.pos_opening_shift;
+            this.get_offers(this.pos_profile.name);
+            this.eventBus.emit('register_pos_profile', data);
+            this.eventBus.emit('set_company', data.company);
+            frappe.realtime.emit('pos_profile_registered');
+            console.info('LoadPosProfile (cached)');
+            return;
           }
           this.create_opening_voucher();
         });

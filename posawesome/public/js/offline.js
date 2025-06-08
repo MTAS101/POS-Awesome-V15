@@ -10,7 +10,12 @@ const memory = {
   uom_cache: {},
   offers_cache: [],
   customer_balance_cache: {},
-  local_stock_cache: {}
+  local_stock_cache: {},
+  items_storage: [],
+  customer_storage: [],
+  pos_opening_storage: null,
+  opening_dialog_storage: null,
+  sales_persons_storage: []
 };
 
 async function init() {
@@ -368,4 +373,59 @@ export function updateLocalStockWithActualQuantities(invoiceItems, serverItems) 
   } catch (e) {
     console.error('Failed to update local stock with actual quantities', e);
   }
+}
+
+// --- Generic getters and setters for cached data ----------------------------
+export function getItemsStorage() {
+  return memory.items_storage || [];
+}
+
+export function setItemsStorage(items) {
+  memory.items_storage = items;
+  persist('items_storage');
+}
+
+export function getCustomerStorage() {
+  return memory.customer_storage || [];
+}
+
+export function setCustomerStorage(customers) {
+  memory.customer_storage = customers;
+  persist('customer_storage');
+}
+
+export function getSalesPersonsStorage() {
+  return memory.sales_persons_storage || [];
+}
+
+export function setSalesPersonsStorage(data) {
+  memory.sales_persons_storage = data;
+  persist('sales_persons_storage');
+}
+
+export function getOpeningStorage() {
+  return memory.pos_opening_storage || null;
+}
+
+export function setOpeningStorage(data) {
+  memory.pos_opening_storage = data;
+  persist('pos_opening_storage');
+}
+
+export function getOpeningDialogStorage() {
+  return memory.opening_dialog_storage || null;
+}
+
+export function setOpeningDialogStorage(data) {
+  memory.opening_dialog_storage = data;
+  persist('opening_dialog_storage');
+}
+
+export function getLocalStockCache() {
+  return memory.local_stock_cache || {};
+}
+
+export function setLocalStockCache(cache) {
+  memory.local_stock_cache = cache || {};
+  persist('local_stock_cache');
 }
