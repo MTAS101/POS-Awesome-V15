@@ -10,8 +10,8 @@
       <!-- Edit icon (left) -->
       <template #prepend-inner>
         <v-tooltip text="Edit customer">
-          <template #activator="{ props }">
-            <v-icon v-bind="props" class="icon-button" @mousedown.prevent.stop @click.stop="edit_customer">
+          <template #activator="{ on, attrs }">
+            <v-icon v-bind="attrs" v-on="on" class="icon-button" @mousedown.prevent.stop @click.stop="edit_customer">
               mdi-account-edit
             </v-icon>
           </template>
@@ -21,8 +21,8 @@
       <!-- Add icon (right) -->
       <template #append-inner>
         <v-tooltip text="Add new customer">
-          <template #activator="{ props }">
-            <v-icon v-bind="props" class="icon-button" @mousedown.prevent.stop @click.stop="new_customer">
+          <template #activator="{ on, attrs }">
+            <v-icon v-bind="attrs" v-on="on" class="icon-button" @mousedown.prevent.stop @click.stop="new_customer">
               mdi-plus
             </v-icon>
           </template>
@@ -102,13 +102,12 @@ import UpdateCustomer from './UpdateCustomer.vue';
 import { getCustomerStorage, setCustomerStorage, initPromise, isOffline } from '../../../offline.js';
 
 export default {
-  name: 'PosCustomer',
   props: {
     pos_profile: Object
   },
 
   data: () => ({
-    internalPosProfile: '',
+    pos_profile: '',
     customers: [],
     customer: '',                // Selected customer
     internalCustomer: null,      // Model bound to the dropdown
@@ -191,7 +190,7 @@ export default {
 
       await initPromise;
 
-      if (vm.internalPosProfile.posa_local_storage && getCustomerStorage().length) {
+      if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
         try {
           vm.customers = getCustomerStorage();
         } catch (e) {
@@ -209,13 +208,13 @@ export default {
       frappe.call({
         method: 'posawesome.posawesome.api.posapp.get_customer_names',
         args: {
-          pos_profile: this.internalPosProfile.pos_profile,
+          pos_profile: this.pos_profile.pos_profile,
         },
         callback: function (r) {
           if (r.message) {
             vm.customers = r.message;
 
-            if (vm.internalPosProfile.posa_local_storage) {
+            if (vm.pos_profile.posa_local_storage) {
               setCustomerStorage(r.message);
             }
           }
@@ -223,9 +222,6 @@ export default {
         },
         error: function (err) {
           console.error('Failed to fetch customers:', err);
-          if (vm.internalPosProfile.posa_local_storage && getCustomerStorage().length) {
-            vm.customers = getCustomerStorage();
-          }
           vm.loadingCustomers = false; // Ensure field is re-enabled on failure
         }
       });
@@ -269,12 +265,12 @@ export default {
 
     this.$nextTick(() => {
       this.eventBus.on('register_pos_profile', (pos_profile) => {
-        this.internalPosProfile = pos_profile;
+        this.pos_profile = pos_profile;
         this.get_customer_names();
       });
 
       this.eventBus.on('payments_register_pos_profile', (pos_profile) => {
-        this.internalPosProfile = pos_profile;
+        this.pos_profile = pos_profile;
         this.get_customer_names();
       });
 
