@@ -1101,11 +1101,13 @@ export default {
     });
 
     // Setup auto-refresh for item quantities
+    // Trigger an immediate refresh once items are available
+    this.update_cur_items_details();
     this.refresh_interval = setInterval(() => {
       if (this.filtered_items && this.filtered_items.length > 0) {
         this.update_cur_items_details();
       }
-    }, 30000); // Refresh every 30 seconds
+    }, 30000); // Refresh every 30 seconds after the initial fetch
 
     // Add new event listener for currency changes
     this.eventBus.on("update_currency", (data) => {
