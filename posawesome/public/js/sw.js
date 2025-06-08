@@ -1,8 +1,10 @@
+const CACHE_NAME = 'posawesome-cache-v1';
+
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
     (async () => {
-      const cache = await caches.open('posawesome-cache-v1');
+      const cache = await caches.open(CACHE_NAME);
       const resources = [
         '/assets/posawesome/js/posawesome.bundle.js',
         '/assets/posawesome/js/offline.js',
@@ -24,7 +26,15 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+      );
+      await self.clients.claim();
+    })()
+  );
 });
 
 self.addEventListener('fetch', event => {
@@ -43,7 +53,7 @@ self.addEventListener('fetch', event => {
       return fetch(event.request).then(resp => {
         if (resp && resp.ok && resp.status === 200) {
           const respClone = resp.clone();
-          caches.open('posawesome-cache-v1').then(cache => cache.put(event.request, respClone));
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, respClone));
         }
         return resp;
       });
