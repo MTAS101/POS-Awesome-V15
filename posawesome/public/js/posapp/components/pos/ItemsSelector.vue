@@ -1093,6 +1093,13 @@ export default {
       this.customer = data;
     });
 
+    // Refresh item quantities when connection to server is restored
+    this.eventBus.on("server-online", async () => {
+      if (this.items && this.items.length > 0) {
+        await this.update_items_details(this.items);
+      }
+    });
+
     // Setup auto-refresh for item quantities
     this.refresh_interval = setInterval(() => {
       if (this.filtered_items && this.filtered_items.length > 0) {
@@ -1133,6 +1140,7 @@ export default {
     }
 
     this.eventBus.off("update_currency");
+    this.eventBus.off("server-online");
   },
 };
 </script>
