@@ -507,12 +507,22 @@ export default {
       const vm = this;
       if (!items || !items.length) return;
 
-      // If offline, use cached local stock quantities
+      // If offline, use cached local stock quantities and UOMs
       if (isOffline()) {
         items.forEach((item) => {
           const localQty = getLocalStock(item.item_code);
           if (localQty !== null) {
             item.actual_qty = localQty;
+          }
+
+          // Retrieve cached UOMs to populate dropdowns when offline
+          if (!item.item_uoms || item.item_uoms.length === 0) {
+            const cachedUoms = getItemUOMs(item.item_code);
+            if (cachedUoms.length > 0) {
+              item.item_uoms = cachedUoms;
+            } else {
+              item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
+            }
           }
         });
         return;
