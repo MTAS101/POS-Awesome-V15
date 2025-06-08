@@ -126,7 +126,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache } from '../../../offline.js';
+import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise } from '../../../offline.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
@@ -189,7 +189,8 @@ export default {
     show_coupons() {
       this.eventBus.emit("show_coupons", "true");
     },
-    get_items() {
+    async get_items() {
+      await initPromise;
       if (!this.pos_profile) {
         console.error("No POS Profile");
         return;
@@ -1067,9 +1068,10 @@ export default {
 
   created: function () {
     this.$nextTick(function () { });
-    this.eventBus.on("register_pos_profile", (data) => {
+    this.eventBus.on("register_pos_profile", async (data) => {
+      await initPromise;
       this.pos_profile = data.pos_profile;
-      this.get_items();
+      await this.get_items();
       this.get_items_groups();
       this.items_view = this.pos_profile.posa_default_card_view
         ? "card"
