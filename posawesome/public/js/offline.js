@@ -1,21 +1,49 @@
-export function saveOfflineInvoice(entry) {
-  const key = 'offline_invoices';
-  let entries = [];
-  try {
-    entries = JSON.parse(localStorage.getItem(key)) || [];
-  } catch (e) {
-    entries = [];
-  }
-  entries.push(entry);
-  try {
-    localStorage.setItem(key, JSON.stringify(entries));
+import Dexie from 'dexie';
 
-    // Update local stock quantities
-    if (entry.invoice && entry.invoice.items) {
-      updateLocalStock(entry.invoice.items);
+// --- Dexie initialization ---------------------------------------------------
+const db = new Dexie('posawesome_offline');
+db.version(1).stores({ keyval: '&key' });
+
+const memory = {
+  offline_invoices: [],
+  pos_last_sync_totals: { pending: 0, synced: 0, drafted: 0 },
+  uom_cache: {},
+  offers_cache: [],
+  customer_balance_cache: {},
+  local_stock_cache: {}
+};
+
+async function init() {
+  try {
+    await db.open();
+    for (const key of Object.keys(memory)) {
+      const stored = await db.table('keyval').get(key);
+      if (stored && stored.value !== undefined) {
+        memory[key] = stored.value;
+      }
     }
   } catch (e) {
-    console.error('Failed to save offline invoice', e);
+    console.error('Failed to initialize offline DB', e);
+  }
+}
+init();
+
+function persist(key) {
+  db.table('keyval')
+    .put({ key, value: memory[key] })
+    .catch(e => console.error(`Failed to persist ${key}`, e));
+}
+
+export function saveOfflineInvoice(entry) {
+  const key = 'offline_invoices';
+  const entries = memory.offline_invoices;
+  entries.push(entry);
+  memory.offline_invoices = entries;
+  persist(key);
+
+  // Update local stock quantities
+  if (entry.invoice && entry.invoice.items) {
+    updateLocalStock(entry.invoice.items);
   }
 }
 
@@ -27,35 +55,25 @@ export function isOffline() {
 }
 
 export function getOfflineInvoices() {
-  try {
-    return JSON.parse(localStorage.getItem('offline_invoices')) || [];
-  } catch (e) {
-    return [];
-  }
+  return memory.offline_invoices;
 }
 
 export function clearOfflineInvoices() {
-  localStorage.removeItem('offline_invoices');
+  memory.offline_invoices = [];
+  persist('offline_invoices');
 }
 
 export function getPendingOfflineInvoiceCount() {
-  return getOfflineInvoices().length;
+  return memory.offline_invoices.length;
 }
 
 export function setLastSyncTotals(totals) {
-  try {
-    localStorage.setItem('pos_last_sync_totals', JSON.stringify(totals));
-  } catch (e) {
-    console.error('Failed to persist last sync totals', e);
-  }
+  memory.pos_last_sync_totals = totals;
+  persist('pos_last_sync_totals');
 }
 
 export function getLastSyncTotals() {
-  try {
-    return JSON.parse(localStorage.getItem('pos_last_sync_totals')) || { pending: 0, synced: 0, drafted: 0 };
-  } catch (e) {
-    return { pending: 0, synced: 0, drafted: 0 };
-  }
+  return memory.pos_last_sync_totals;
 }
 
 // Add sync function to clear local cache when invoices are successfully synced
@@ -108,7 +126,8 @@ export async function syncOfflineInvoices() {
   const pendingLeft = failures.length;
 
   if (pendingLeft) {
-    localStorage.setItem('offline_invoices', JSON.stringify(failures));
+    memory.offline_invoices = failures;
+    persist('offline_invoices');
   } else {
     clearOfflineInvoices();
   }
@@ -119,9 +138,10 @@ export async function syncOfflineInvoices() {
 }
 export function saveItemUOMs(itemCode, uoms) {
   try {
-    const cache = JSON.parse(localStorage.getItem('uom_cache')) || {};
+    const cache = memory.uom_cache;
     cache[itemCode] = uoms;
-    localStorage.setItem('uom_cache', JSON.stringify(cache));
+    memory.uom_cache = cache;
+    persist('uom_cache');
   } catch (e) {
     console.error('Failed to cache UOMs', e);
   }
@@ -129,7 +149,7 @@ export function saveItemUOMs(itemCode, uoms) {
 
 export function getItemUOMs(itemCode) {
   try {
-    const cache = JSON.parse(localStorage.getItem('uom_cache')) || {};
+    const cache = memory.uom_cache || {};
     return cache[itemCode] || [];
   } catch (e) {
     return [];
@@ -138,7 +158,8 @@ export function getItemUOMs(itemCode) {
 
 export function saveOffers(offers) {
   try {
-    localStorage.setItem('offers_cache', JSON.stringify(offers));
+    memory.offers_cache = offers;
+    persist('offers_cache');
   } catch (e) {
     console.error('Failed to cache offers', e);
   }
@@ -146,7 +167,7 @@ export function saveOffers(offers) {
 
 export function getCachedOffers() {
   try {
-    return JSON.parse(localStorage.getItem('offers_cache')) || [];
+    return memory.offers_cache || [];
   } catch (e) {
     return [];
   }
@@ -155,12 +176,13 @@ export function getCachedOffers() {
 // Customer balance caching functions
 export function saveCustomerBalance(customer, balance) {
   try {
-    const cache = JSON.parse(localStorage.getItem('customer_balance_cache')) || {};
+    const cache = memory.customer_balance_cache;
     cache[customer] = {
       balance: balance,
       timestamp: Date.now()
     };
-    localStorage.setItem('customer_balance_cache', JSON.stringify(cache));
+    memory.customer_balance_cache = cache;
+    persist('customer_balance_cache');
   } catch (e) {
     console.error('Failed to cache customer balance', e);
   }
@@ -168,10 +190,9 @@ export function saveCustomerBalance(customer, balance) {
 
 export function getCachedCustomerBalance(customer) {
   try {
-    const cache = JSON.parse(localStorage.getItem('customer_balance_cache')) || {};
+    const cache = memory.customer_balance_cache || {};
     const cachedData = cache[customer];
     if (cachedData) {
-      // Check if cache is less than 24 hours old
       const isValid = (Date.now() - cachedData.timestamp) < (24 * 60 * 60 * 1000);
       return isValid ? cachedData.balance : null;
     }
@@ -184,7 +205,8 @@ export function getCachedCustomerBalance(customer) {
 
 export function clearCustomerBalanceCache() {
   try {
-    localStorage.removeItem('customer_balance_cache');
+    memory.customer_balance_cache = {};
+    persist('customer_balance_cache');
   } catch (e) {
     console.error('Failed to clear customer balance cache', e);
   }
@@ -192,19 +214,19 @@ export function clearCustomerBalanceCache() {
 
 export function clearExpiredCustomerBalances() {
   try {
-    const cache = JSON.parse(localStorage.getItem('customer_balance_cache')) || {};
+    const cache = memory.customer_balance_cache || {};
     const now = Date.now();
     const validCache = {};
 
     Object.keys(cache).forEach(customer => {
       const cachedData = cache[customer];
-      // Keep balances that are less than 24 hours old
       if (cachedData && (now - cachedData.timestamp) < (24 * 60 * 60 * 1000)) {
         validCache[customer] = cachedData;
       }
     });
 
-    localStorage.setItem('customer_balance_cache', JSON.stringify(validCache));
+    memory.customer_balance_cache = validCache;
+    persist('customer_balance_cache');
   } catch (e) {
     console.error('Failed to clear expired customer balances', e);
   }
@@ -213,7 +235,7 @@ export function clearExpiredCustomerBalances() {
 // Local stock management functions
 export function updateLocalStock(items) {
   try {
-    const stockCache = JSON.parse(localStorage.getItem('local_stock_cache')) || {};
+    const stockCache = memory.local_stock_cache || {};
 
     items.forEach(item => {
       const key = item.item_code;
@@ -230,7 +252,8 @@ export function updateLocalStock(items) {
       // because we don't know the actual stock quantity
     });
 
-    localStorage.setItem('local_stock_cache', JSON.stringify(stockCache));
+    memory.local_stock_cache = stockCache;
+    persist('local_stock_cache');
   } catch (e) {
     console.error('Failed to update local stock', e);
   }
@@ -238,7 +261,7 @@ export function updateLocalStock(items) {
 
 export function getLocalStock(itemCode) {
   try {
-    const stockCache = JSON.parse(localStorage.getItem('local_stock_cache')) || {};
+    const stockCache = memory.local_stock_cache || {};
     return stockCache[itemCode]?.actual_qty || null;
   } catch (e) {
     return null;
@@ -246,7 +269,8 @@ export function getLocalStock(itemCode) {
 }
 
 export function clearLocalStockCache() {
-  localStorage.removeItem('local_stock_cache');
+  memory.local_stock_cache = {};
+  persist('local_stock_cache');
 }
 
 // Add this new function to fetch stock quantities
@@ -297,7 +321,8 @@ export async function initializeStockCache(items, pos_profile) {
         }
       });
 
-      localStorage.setItem('local_stock_cache', JSON.stringify(stockCache));
+      memory.local_stock_cache = stockCache;
+      persist('local_stock_cache');
       console.info('Stock cache initialized with', Object.keys(stockCache).length, 'items');
       return true;
     }
@@ -311,7 +336,7 @@ export async function initializeStockCache(items, pos_profile) {
 // New function to update local stock with actual quantities
 export function updateLocalStockWithActualQuantities(invoiceItems, serverItems) {
   try {
-    const stockCache = JSON.parse(localStorage.getItem('local_stock_cache')) || {};
+    const stockCache = memory.local_stock_cache || {};
 
     invoiceItems.forEach(invoiceItem => {
       const key = invoiceItem.item_code;
@@ -338,7 +363,8 @@ export function updateLocalStockWithActualQuantities(invoiceItems, serverItems) 
       }
     });
 
-    localStorage.setItem('local_stock_cache', JSON.stringify(stockCache));
+    memory.local_stock_cache = stockCache;
+    persist('local_stock_cache');
   } catch (e) {
     console.error('Failed to update local stock with actual quantities', e);
   }
