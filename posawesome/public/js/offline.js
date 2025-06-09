@@ -79,12 +79,14 @@ export function validateStockForOfflineInvoice(items) {
 }
 
 export function saveOfflineInvoice(entry) {
-  if (entry.invoice && entry.invoice.items) {
-    const validation = validateStockForOfflineInvoice(entry.invoice.items);
+  // Validate that invoice has items before saving
+  if (!entry.invoice || !Array.isArray(entry.invoice.items) || !entry.invoice.items.length) {
+    throw new Error('Cart is empty. Add items before saving.');
+  }
 
-    if (!validation.isValid) {
-      throw new Error(validation.errorMessage);
-    }
+  const validation = validateStockForOfflineInvoice(entry.invoice.items);
+  if (!validation.isValid) {
+    throw new Error(validation.errorMessage);
   }
 
   const key = 'offline_invoices';
