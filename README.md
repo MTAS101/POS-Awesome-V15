@@ -25,38 +25,39 @@ After switching branches or pulling latest changes:
     Exchange Rate is fetched automatically based on selected currency
     Invoices made with posawesome display Grand Total in both base and selected currency in erpnext.
     
-3. User-friendly and provides a good user experience and speed of use
-4. The cashier can either use list view or card view during sales transactions. Card view shows the images of the items
-5. Supports enqueue invoice submission after printing the receipt for faster processing
-6. Supports batch & serial numbering
-7. Supports batch-based pricing
-8. Supports UOM-specific barcode and pricing
-9. Supports sales of scale (weighted) products
-10. Ability to make returns from POS
-11. Supports Making returns for either cash or customer credit
-12. Supports using customer credit notes for payment
-13. Supports credit sales
-14. Allows the user to choose a due date for credit sales
-15. Supports customer loyalty points
-16. Shortcut keys
-17. Supports Customer Discount
-18. Supports POS Offers
-19. Auto-apply batches for bundle items
-20. Search and add items by Serial Number
-21. Create Sales Orders from POS directly
-22. Supports template items with variants
-23. Supports multiple languages
-24. Supports Mpesa mobile payment
-25. POS Coupons
-26. Supports Referral Code
-27. Supports Customer and Customer Group price list
-28. Supports Sales Person
-29. Supports Delivery Charges
-30. Search and add items by Batch Number
-31. Accept new payments from customers against existing invoices
-32. Payments Reconciliation
-33. A lot more bug fixes from the version 14
-34. Offline invoices that fail to submit are saved as draft documents
+3. Supports offline mode for creating invoices and customers, saves data locally with stock validation, and syncs automatically when reconnected.
+4. User-friendly and provides a good user experience and speed of use
+5. The cashier can either use list view or card view during sales transactions. Card view shows the images of the items
+6. Supports enqueue invoice submission after printing the receipt for faster processing
+7. Supports batch & serial numbering
+8. Supports batch-based pricing
+9. Supports UOM-specific barcode and pricing
+10. Supports sales of scale (weighted) products
+11. Ability to make returns from POS
+12. Supports Making returns for either cash or customer credit
+13. Supports using customer credit notes for payment
+14. Supports credit sales
+15. Allows the user to choose a due date for credit sales
+16. Supports customer loyalty points
+17. Shortcut keys
+18. Supports Customer Discount
+19. Supports POS Offers
+20. Auto-apply batches for bundle items
+21. Search and add items by Serial Number
+22. Create Sales Orders from POS directly
+23. Supports template items with variants
+24. Supports multiple languages
+25. Supports Mpesa mobile payment
+26. POS Coupons
+27. Supports Referral Code
+28. Supports Customer and Customer Group price list
+29. Supports Sales Person
+30. Supports Delivery Charges
+31. Search and add items by Batch Number
+32. Accept new payments from customers against existing invoices
+33. Payments Reconciliation
+34. A lot more bug fixes from the version 14
+35. Offline invoices that fail to submit are saved as draft documents
 
 ### How to Install
 
