@@ -492,10 +492,6 @@ export default {
       selected_currency: "", // Currently selected currency
       exchange_rate: 1, // Current exchange rate
       available_currencies: [], // List of available currencies
-      shortOpenPaymentHandler: null, // Reference to bound shortcut handler
-      shortDeleteFirstItemHandler: null, // Reference to bound shortcut handler
-      shortOpenFirstItemHandler: null, // Reference to bound shortcut handler
-      shortSelectDiscountHandler: null, // Reference to bound shortcut handler
     };
   },
 
@@ -4287,29 +4283,17 @@ export default {
   },
   // Register global keyboard shortcuts when component is created
   created() {
-    this.shortOpenPaymentHandler = this.shortOpenPayment.bind(this);
-    this.shortDeleteFirstItemHandler = this.shortDeleteFirstItem.bind(this);
-    this.shortOpenFirstItemHandler = this.shortOpenFirstItem.bind(this);
-    this.shortSelectDiscountHandler = this.shortSelectDiscount.bind(this);
-    document.addEventListener("keydown", this.shortOpenPaymentHandler);
-    document.addEventListener("keydown", this.shortDeleteFirstItemHandler);
-    document.addEventListener("keydown", this.shortOpenFirstItemHandler);
-    document.addEventListener("keydown", this.shortSelectDiscountHandler);
+    document.addEventListener("keydown", this.shortOpenPayment.bind(this));
+    document.addEventListener("keydown", this.shortDeleteFirstItem.bind(this));
+    document.addEventListener("keydown", this.shortOpenFirstItem.bind(this));
+    document.addEventListener("keydown", this.shortSelectDiscount.bind(this));
   },
   // Remove global keyboard shortcuts when component is unmounted
   unmounted() {
-    if (this.shortOpenPaymentHandler) {
-      document.removeEventListener("keydown", this.shortOpenPaymentHandler);
-    }
-    if (this.shortDeleteFirstItemHandler) {
-      document.removeEventListener("keydown", this.shortDeleteFirstItemHandler);
-    }
-    if (this.shortOpenFirstItemHandler) {
-      document.removeEventListener("keydown", this.shortOpenFirstItemHandler);
-    }
-    if (this.shortSelectDiscountHandler) {
-      document.removeEventListener("keydown", this.shortSelectDiscountHandler);
-    }
+    document.removeEventListener("keydown", this.shortOpenPayment);
+    document.removeEventListener("keydown", this.shortDeleteFirstItem);
+    document.removeEventListener("keydown", this.shortOpenFirstItem);
+    document.removeEventListener("keydown", this.shortSelectDiscount);
   },
   // Vue watchers for reactive data changes
   watch: {
