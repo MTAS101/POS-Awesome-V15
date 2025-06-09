@@ -38,7 +38,48 @@ function persist(key) {
     .catch(e => console.error(`Failed to persist ${key}`, e));
 }
 
+// Add new validation function
+export function validateStockForOfflineInvoice(items) {
+  const stockCache = memory.local_stock_cache || {};
+  const invalidItems = [];
+
+  items.forEach(item => {
+    const itemCode = item.item_code;
+    const requestedQty = Math.abs(item.qty || 0);
+    const currentStock = stockCache[itemCode]?.actual_qty || 0;
+    
+    // Check if stock will become negative after this transaction
+    if (currentStock - requestedQty < 0) {
+      invalidItems.push({
+        item_code: itemCode,
+        item_name: item.item_name || itemCode,
+        requested_qty: requestedQty,
+        available_qty: currentStock
+      });
+    }
+  });
+
+  return {
+    isValid: invalidItems.length === 0,
+    invalidItems: invalidItems
+  };
+}
+
+// Enhanced saveOfflineInvoice function
 export function saveOfflineInvoice(entry) {
+  // Validate stock before saving
+  if (entry.invoice && entry.invoice.items) {
+    const validation = validateStockForOfflineInvoice(entry.invoice.items);
+    
+    if (!validation.isValid) {
+      const errorMessage = validation.invalidItems.map(item => 
+        `${item.item_name}: Requested ${item.requested_qty}, Available ${item.available_qty}`
+      ).join('\n');
+      
+      throw new Error(`Cannot save offline invoice. Insufficient stock:\n${errorMessage}`);
+    }
+  }
+
   const key = 'offline_invoices';
   const entries = memory.offline_invoices;
   entries.push(entry);

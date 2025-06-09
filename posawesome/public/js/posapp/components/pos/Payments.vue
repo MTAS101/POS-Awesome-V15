@@ -1060,16 +1060,25 @@ export default {
       const vm = this;
 
       if (isOffline()) {
-        saveOfflineInvoice({ data: data, invoice: this.invoice_doc });
-        this.eventBus.emit("pending_invoices_changed", getPendingOfflineInvoiceCount());
-        vm.eventBus.emit("show_message", { title: __("Invoice saved offline"), color: "warning" });
-        if (print) {
-          this.print_offline_invoice(this.invoice_doc);
+        try {
+          saveOfflineInvoice({ data: data, invoice: this.invoice_doc });
+          this.eventBus.emit("pending_invoices_changed", getPendingOfflineInvoiceCount());
+          vm.eventBus.emit("show_message", { title: __("Invoice saved offline"), color: "warning" });
+          if (print) {
+            this.print_offline_invoice(this.invoice_doc);
+          }
+          vm.eventBus.emit("clear_invoice");
+          vm.eventBus.emit("reset_posting_date");
+          vm.back_to_invoice();
+          return;
+        } catch (error) {
+          vm.eventBus.emit("show_message", { 
+            title: __("Cannot Save Offline Invoice"), 
+            message: error.message,
+            color: "error" 
+          });
+          return;
         }
-        vm.eventBus.emit("clear_invoice");
-        vm.eventBus.emit("reset_posting_date");
-        vm.back_to_invoice();
-        return;
       }
       frappe.call({
         method: "posawesome.posawesome.api.posapp.submit_invoice",
