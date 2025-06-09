@@ -1070,6 +1070,10 @@ export default {
     this.$nextTick(function () { });
     this.eventBus.on("register_pos_profile", async (data) => {
       await initPromise;
+      if (!data || !data.pos_profile) {
+        this.pos_profile = null;
+        return;
+      }
       this.pos_profile = data.pos_profile;
       await this.get_items();
       this.get_items_groups();

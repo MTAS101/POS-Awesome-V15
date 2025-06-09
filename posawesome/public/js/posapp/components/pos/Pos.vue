@@ -178,6 +178,9 @@ export default {
             // Clear from local storage
             clearOpeningStorage();
 
+            // notify other components that the profile has been cleared
+            this.eventBus.emit('register_pos_profile', null);
+
             this.eventBus.emit('show_message', {
               title: `POS Shift Closed`,
               color: 'success',
