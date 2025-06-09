@@ -430,7 +430,10 @@ export default {
           this.serverOnline = false;
           window.serverOnline = false;
           this.serverConnecting = false;
-          console.warn('Socket.IO: Disconnected from server. Reason:', reason);
+          // Connection status is tracked through state variables and UI
+          // notifications, so avoid cluttering the browser console with a
+          // disconnection warning.
+          // console.warn('Socket.IO: Disconnected from server. Reason:', reason);
 
           this.eventBus.emit('server-offline');
 
