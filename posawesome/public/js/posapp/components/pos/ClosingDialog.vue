@@ -112,10 +112,6 @@ export default {
       this.dialog_data = data;
     });
     this.eventBus.on('register_pos_profile', (data) => {
-      if (!data || !data.pos_profile) {
-        this.pos_profile = null;
-        return;
-      }
       this.pos_profile = data.pos_profile;
       if (!this.pos_profile.hide_expected_amount) {
         this.headers.push({

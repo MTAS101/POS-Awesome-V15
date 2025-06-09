@@ -1628,10 +1628,6 @@ export default {
         this.get_sales_person_names();
       });
       this.eventBus.on("register_pos_profile", (data) => {
-        if (!data || !data.pos_profile) {
-          this.pos_profile = null;
-          return;
-        }
         this.pos_profile = data.pos_profile;
         this.get_mpesa_modes();
       });

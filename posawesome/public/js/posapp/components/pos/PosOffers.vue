@@ -233,10 +233,6 @@ export default {
   created: function () {
     this.$nextTick(function () {
       this.eventBus.on('register_pos_profile', (data) => {
-        if (!data || !data.pos_profile) {
-          this.pos_profile = null;
-          return;
-        }
         this.pos_profile = data.pos_profile;
       });
     });

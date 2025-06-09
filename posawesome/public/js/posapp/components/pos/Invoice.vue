@@ -4157,13 +4157,6 @@ export default {
   mounted() {
     // Register event listeners for POS profile, items, customer, offers, etc.
     this.eventBus.on("register_pos_profile", (data) => {
-      if (!data || !data.pos_profile) {
-        this.pos_profile = null;
-        this.customer = null;
-        this.pos_opening_shift = null;
-        this.stock_settings = null;
-        return;
-      }
       this.pos_profile = data.pos_profile;
       this.customer = data.pos_profile.customer;
       this.pos_opening_shift = data.pos_opening_shift;
