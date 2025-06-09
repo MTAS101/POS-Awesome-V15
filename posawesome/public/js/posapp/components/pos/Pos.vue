@@ -279,7 +279,8 @@ export default {
 
 <style scoped>
 .dynamic-container {
-  padding-top: var(--dynamic-md);
+  /* add space for the navbar */
+  padding-top: calc(64px + var(--dynamic-md));
   transition: all 0.3s ease;
 }
 
@@ -295,7 +296,7 @@ export default {
 
 @media (max-width: 768px) {
   .dynamic-container {
-    padding-top: var(--dynamic-sm);
+    padding-top: calc(64px + var(--dynamic-sm));
   }
 
   .dynamic-col {
