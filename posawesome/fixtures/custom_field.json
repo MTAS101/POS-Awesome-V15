@@ -5410,8 +5410,7 @@
     "__islocal": 1,
     "__unsaved": 1,
     "default": "0"
-  }
- ,
+  },
   {
     "doctype": "Custom Field",
     "dt": "POS Profile",
@@ -5419,6 +5418,7 @@
     "fieldtype": "Check",
     "insert_after": "posa_allow_delete",
     "label": "Allow Delete Offline Invoice",
-    "default": "0"
+    "default": "0",
+    "name": "POS Profile-posa_allow_delete_offline_invoice"
   }
- ]
+]
