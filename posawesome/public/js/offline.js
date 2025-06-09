@@ -6,6 +6,7 @@ db.version(1).stores({ keyval: '&key' });
 
 const memory = {
   offline_invoices: [],
+  offline_customers: [],
   pos_last_sync_totals: { pending: 0, synced: 0, drafted: 0 },
   uom_cache: {},
   offers_cache: [],
@@ -118,6 +119,23 @@ export function getPendingOfflineInvoiceCount() {
   return memory.offline_invoices.length;
 }
 
+export function saveOfflineCustomer(entry) {
+  const key = 'offline_customers';
+  const entries = memory.offline_customers;
+  entries.push(entry);
+  memory.offline_customers = entries;
+  persist(key);
+}
+
+export function getOfflineCustomers() {
+  return memory.offline_customers;
+}
+
+export function clearOfflineCustomers() {
+  memory.offline_customers = [];
+  persist('offline_customers');
+}
+
 export function setLastSyncTotals(totals) {
   memory.pos_last_sync_totals = totals;
   persist('pos_last_sync_totals');
@@ -186,6 +204,41 @@ export async function syncOfflineInvoices() {
   const totals = { pending: pendingLeft, synced, drafted };
   setLastSyncTotals(totals);
   return totals;
+}
+
+export async function syncOfflineCustomers() {
+  const customers = getOfflineCustomers();
+  if (!customers.length) {
+    return { pending: 0, synced: 0 };
+  }
+  if (isOffline()) {
+    return { pending: customers.length, synced: 0 };
+  }
+
+  const failures = [];
+  let synced = 0;
+
+  for (const cust of customers) {
+    try {
+      await frappe.call({
+        method: 'posawesome.posawesome.api.posapp.create_customer',
+        args: cust.args
+      });
+      synced++;
+    } catch (error) {
+      console.error('Failed to create customer', error);
+      failures.push(cust);
+    }
+  }
+
+  if (failures.length) {
+    memory.offline_customers = failures;
+    persist('offline_customers');
+  } else {
+    clearOfflineCustomers();
+  }
+
+  return { pending: failures.length, synced };
 }
 export function saveItemUOMs(itemCode, uoms) {
   try {

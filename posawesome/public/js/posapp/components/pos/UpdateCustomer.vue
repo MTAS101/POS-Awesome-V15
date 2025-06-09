@@ -137,6 +137,7 @@
 </template>
 
 <script>
+import { isOffline, saveOfflineCustomer } from '../../../offline.js';
 
 export default {
   data: () => ({
@@ -465,28 +466,26 @@ export default {
         customer_type: this.customer_type,
         gender: this.gender
       };
-      
+      const apiArgs = {
+        ...args,
+        company: vm.pos_profile.company,
+        pos_profile_doc: JSON.stringify(vm.pos_profile),
+        method: this.customer_id ? 'update' : 'create',
+      };
+
+      if (isOffline()) {
+        saveOfflineCustomer({ args: apiArgs });
+        vm.eventBus.emit('show_message', { title: __('Customer saved offline'), color: 'warning' });
+        args.name = this.customer_name;
+        vm.eventBus.emit('add_customer_to_list', args);
+        vm.eventBus.emit('set_customer', args.name);
+        vm.close_dialog();
+        return;
+      }
+
       frappe.call({
         method: 'posawesome.posawesome.api.posapp.create_customer',
-        args: {
-          customer_id: this.customer_id,
-          customer_name: this.customer_name,
-          tax_id: this.tax_id,
-          mobile_no: this.mobile_no,
-          address_line1: this.address_line1,
-          city: this.city,
-          country: this.country,
-          email_id: this.email_id,
-          referral_code: this.referral_code,
-          birthday: formatted_birthday || this.birthday,
-          customer_group: this.group,
-          territory: this.territory,
-          customer_type: this.customer_type,
-          gender: this.gender,
-          company: vm.pos_profile.company,
-          pos_profile_doc: JSON.stringify(vm.pos_profile),
-          method: this.customer_id ? 'update' : 'create',
-        },
+        args: apiArgs,
         callback: (r) => {
           if (!r.exc && r.message.name) {
             let text = __('Customer created successfully.');
