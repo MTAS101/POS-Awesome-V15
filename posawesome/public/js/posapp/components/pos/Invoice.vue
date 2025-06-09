@@ -25,7 +25,7 @@
     </v-dialog>
 
     <!-- Main Invoice Card (contains all invoice content) -->
-    <v-card style="max-height: 68vh; height: 68vh"
+    <v-card style="max-height: 75vh; height: 75vh"
       :class="['cards my-0 py-0 mt-3 bg-grey-lighten-5', { 'return-mode': invoiceType === 'Return' }]">
       <!-- Top Row: Customer Selection and Invoice Type -->
       <v-row align="center" class="items px-3 py-2">
@@ -115,43 +115,49 @@
       </v-row>
 
       <!-- Items Table Section (Main items list for invoice) -->
-      <div class="my-2 py-0 overflow-y-auto" style="max-height: calc(68vh - 180px)">
+      <div class="my-2 py-0 overflow-y-auto" style="height: calc(100vh - 280px)">
         <!-- Main Items Data Table -->
         <v-data-table :headers="items_headers" :items="items" v-model:expanded="expanded" show-expand
-          item-value="posa_row_id" class="elevation-2" :items-per-page="itemsPerPage" expand-on-click density="compact"
-          hide-default-footer :single-expand="true" @update:expanded="handleExpandedUpdate">
+          item-value="posa_row_id" class="enhanced-table-items elevation-2" :items-per-page="itemsPerPage"
+          expand-on-click density="compact" hide-default-footer :single-expand="true"
+          @update:expanded="handleExpandedUpdate" :search="itemSearch">
           <!-- Quantity Column Template -->
-          <template v-slot:item.qty="{ item }">{{
-            formatFloat(item.qty)
-            }}</template>
+          <template v-slot:item.qty="{ item }">
+            <div class="amount-value">{{ formatFloat(item.qty) }}</div>
+          </template>
+
           <!-- Rate Column Template with Currency Symbol -->
           <template v-slot:item.rate="{ item }">
-            <div class="d-flex align-center">
-              <span>{{ currencySymbol(displayCurrency) }}</span>
-              <span>{{ formatCurrency(item.rate) }}</span>
+            <div class="currency-display">
+              <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
+              <span class="amount-value">{{ formatCurrency(item.rate) }}</span>
             </div>
           </template>
+
           <!-- Amount Column Template with Currency Symbol -->
           <template v-slot:item.amount="{ item }">
-            <div class="d-flex align-center">
-              <span>{{ currencySymbol(displayCurrency) }}</span>
-              <span>{{ formatCurrency(item.qty * item.rate) }}</span>
+            <div class="currency-display">
+              <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
+              <span class="amount-value">{{ formatCurrency(item.qty * item.rate) }}</span>
             </div>
           </template>
+
           <!-- Discount Amount Column Template -->
           <template v-slot:item.discount_amount="{ item }">
-            <div class="d-flex align-center">
-              <span>{{ currencySymbol(displayCurrency) }}</span>
-              <span>{{ formatCurrency(item.discount_amount) }}</span>
+            <div class="currency-display">
+              <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
+              <span class="amount-value">{{ formatCurrency(item.discount_amount) }}</span>
             </div>
           </template>
+
           <!-- Price List Rate Column Template -->
           <template v-slot:item.price_list_rate="{ item }">
-            <div class="d-flex align-center">
-              <span>{{ currencySymbol(displayCurrency) }}</span>
-              <span>{{ formatCurrency(item.price_list_rate) }}</span>
+            <div class="currency-display">
+              <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
+              <span class="amount-value">{{ formatCurrency(item.price_list_rate) }}</span>
             </div>
           </template>
+
           <!-- Offer Checkbox Column Template -->
           <template v-slot:item.posa_is_offer="{ item }">
             <v-checkbox-btn v-model="item.posa_is_offer" class="center" @change="toggleOffer(item)"></v-checkbox-btn>
@@ -161,48 +167,48 @@
           <template v-slot:expanded-row="{ columns: headers, item }">
             <td :colspan="headers.length" class="ma-0 pa-2">
               <!-- Expanded Item Action Buttons Row -->
-              <v-row class="mb-2" dense>
+              <v-row class="mb-3" dense>
                 <v-col cols="auto">
                   <v-btn :disabled="!!item.posa_is_replace" icon="mdi-delete" size="large" color="error" variant="tonal"
-                    class="mr-2" width="52" height="52" @click.stop="remove_item(item)">
+                    class="item-action-btn delete-btn mr-2" @click.stop="remove_item(item)">
                     <v-icon size="large">mdi-delete</v-icon>
                   </v-btn>
                 </v-col>
                 <v-spacer></v-spacer>
                 <v-col cols="auto">
-                  <v-btn-group density="default" class="mx-2">
-                    <v-btn :disabled="!!item.posa_is_replace" size="large" color="error" variant="tonal" width="52"
-                      height="52" class="mr-1" @click.stop="subtract_one(item)">
-                      <v-icon size="large">mdi-minus</v-icon>
-                    </v-btn>
-                    <v-btn :disabled="!!item.posa_is_replace" size="large" color="success" variant="tonal" width="52"
-                      height="52" class="ml-1" @click.stop="add_one(item)">
-                      <v-icon size="large">mdi-plus</v-icon>
-                    </v-btn>
-                  </v-btn-group>
+                  <v-btn :disabled="!!item.posa_is_replace" size="large" color="error" variant="tonal"
+                    class="item-action-btn minus-btn mr-2" @click.stop="subtract_one(item)">
+                    <v-icon size="large">mdi-minus</v-icon>
+                  </v-btn>
+                  <v-btn :disabled="!!item.posa_is_replace" size="large" color="success" variant="tonal"
+                    class="item-action-btn plus-btn ml-2" @click.stop="add_one(item)">
+                    <v-icon size="large">mdi-plus</v-icon>
+                  </v-btn>
                 </v-col>
               </v-row>
 
               <!-- Expanded Item Details Form Row -->
-              <v-row dense class="mb-1">
+              <v-row dense class="item-details-form mb-2">
                 <!-- First Row -->
-                <v-col cols="12" sm="4">
+                <v-col cols="12" sm="4" class="field-with-icon">
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Item Code')"
-                    bg-color="white" hide-details v-model="item.item_code" disabled></v-text-field>
+                    bg-color="white" hide-details v-model="item.item_code" disabled
+                    prepend-inner-icon="mdi-barcode"></v-text-field>
                 </v-col>
-                <v-col cols="12" sm="4">
+                <v-col cols="12" sm="4" class="field-with-icon">
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('QTY')"
-                    bg-color="white" hide-details :model-value="formatFloat(item.qty)" @change="
-                      [
-                        setFormatedQty(item, 'qty', null, false, $event.target.value),
-                        calc_stock_qty(item, item.qty),
-                      ]" :rules="[isNumber]" :disabled="!!item.posa_is_replace"></v-text-field>
+                    bg-color="white" hide-details :model-value="formatFloat(item.qty)" @change="[
+                      setFormatedQty(item, 'qty', null, false, $event.target.value),
+                      calc_stock_qty(item, item.qty),
+                    ]" :rules="[isNumber]" :disabled="!!item.posa_is_replace"
+                    prepend-inner-icon="mdi-numeric"></v-text-field>
                 </v-col>
-                <v-col cols="12" sm="4">
+                <v-col cols="12" sm="4" class="field-with-icon">
                   <v-select density="compact" bg-color="white" :label="frappe._('UOM')" v-model="item.uom"
                     :items="item.item_uoms" variant="outlined" item-title="uom" item-value="uom" hide-details
-                    @update:model-value="calc_uom(item, $event)" :disabled="!!item.posa_is_replace ||
-                      (invoiceType === 'Return' && invoice_doc.return_against)"></v-select>
+                    @update:model-value="calc_uom(item, $event)"
+                    :disabled="!!item.posa_is_replace || (invoiceType === 'Return' && invoice_doc.return_against)"
+                    prepend-inner-icon="mdi-weight"></v-select>
                 </v-col>
 
                 <!-- Second Row -->
@@ -906,16 +912,16 @@ export default {
           method: "posawesome.posawesome.api.customer.get_customer_balance",
           args: { customer: this.customer }
         });
-        
+
         const balance = r?.message?.balance || 0;
         this.customer_balance = balance;
-        
+
         // Cache the balance for offline use
         saveCustomerBalance(this.customer, balance);
 
       } catch (error) {
         console.error("Error fetching balance:", error);
-        
+
         // Try to use cached balance as fallback
         const cachedBalance = getCachedCustomerBalance(this.customer);
         if (cachedBalance !== null) {
@@ -4469,5 +4475,139 @@ export default {
   font-weight: bold;
   border-bottom-left-radius: 8px;
   z-index: 1;
+}
+
+/* Enhanced Table Styling */
+.enhanced-table-items {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  margin-bottom: 16px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.enhanced-table-items :deep(.v-data-table__wrapper) {
+  border-radius: 8px;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.enhanced-table-items :deep(th) {
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  color: #424242;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  padding: 8px 12px;
+}
+
+.enhanced-table-items :deep(td) {
+  padding: 8px 12px;
+}
+
+.enhanced-table-items :deep(tr:hover) {
+  background: rgba(25, 118, 210, 0.04);
+}
+
+/* Improved Currency Display */
+.currency-display {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.currency-symbol {
+  font-weight: 600;
+  color: #1976d2;
+  font-size: 0.9rem;
+}
+
+.amount-value {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+/* Improved Action Buttons */
+.item-action-btn {
+  min-width: 44px !important;
+  height: 44px !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  margin: 0 3px !important;
+}
+
+.item-action-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12) !important;
+}
+
+.item-action-btn .v-icon {
+  font-size: 22px !important;
+}
+
+/* Delete button specific styling */
+.item-action-btn.delete-btn {
+  background-color: #ffebee !important;
+}
+
+.item-action-btn.delete-btn:hover {
+  background-color: #ffcdd2 !important;
+}
+
+/* Minus button specific styling */
+.item-action-btn.minus-btn {
+  background-color: #fff8e1 !important;
+}
+
+.item-action-btn.minus-btn:hover {
+  background-color: #ffecb3 !important;
+}
+
+/* Plus button specific styling */
+.item-action-btn.plus-btn {
+  background-color: #e8f5e9 !important;
+}
+
+.item-action-btn.plus-btn:hover {
+  background-color: #c8e6c9 !important;
+}
+
+/* Improved Form Fields Spacing */
+.item-details-form {
+  padding: 8px 12px;
+  background: rgba(25, 118, 210, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(25, 118, 210, 0.08);
+}
+
+.item-details-form .v-col {
+  padding: 8px 12px;
+}
+
+/* Improved Field Icons */
+.field-with-icon {
+  position: relative;
+}
+
+.field-with-icon :deep(.v-icon) {
+  color: #1976d2 !important;
+  opacity: 0.8;
+}
+
+/* Media query for responsive table height */
+@media (max-height: 900px) {
+  .my-2.py-0.overflow-y-auto {
+    height: calc(100vh - 240px);
+  }
+}
+
+@media (max-height: 700px) {
+  .my-2.py-0.overflow-y-auto {
+    height: calc(100vh - 220px);
+  }
 }
 </style>

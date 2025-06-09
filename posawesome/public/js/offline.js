@@ -556,8 +556,12 @@ export function getSalesPersonsStorage() {
 }
 
 export function setSalesPersonsStorage(data) {
-  memory.sales_persons_storage = data;
-  persist('sales_persons_storage');
+  try {
+    memory.sales_persons_storage = JSON.parse(JSON.stringify(data));
+    persist('sales_persons_storage');
+  } catch (e) {
+    console.error('Failed to set sales persons storage', e);
+  }
 }
 
 export function getOpeningStorage() {

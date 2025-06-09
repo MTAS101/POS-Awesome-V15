@@ -280,7 +280,7 @@ export default {
 <style scoped>
 .dynamic-container {
   /* add space for the navbar */
-  padding-top: calc(64px + var(--dynamic-md));
+  padding-top: calc(25px + var(--dynamic-md));
   transition: all 0.3s ease;
 }
 
