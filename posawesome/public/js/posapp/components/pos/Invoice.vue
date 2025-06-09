@@ -169,20 +169,20 @@
               <!-- Expanded Item Action Buttons Row -->
               <v-row class="mb-3" dense>
                 <v-col cols="auto">
-                  <v-btn :disabled="!!item.posa_is_replace" icon="mdi-delete" size="large" color="error" variant="tonal"
+                  <v-btn :disabled="!!item.posa_is_replace" icon="mdi-trash-can-outline" size="large" color="error" variant="tonal"
                     class="item-action-btn delete-btn mr-2" @click.stop="remove_item(item)">
-                    <v-icon size="large">mdi-delete</v-icon>
+                    <v-icon size="large">mdi-trash-can-outline</v-icon>
                   </v-btn>
                 </v-col>
                 <v-spacer></v-spacer>
                 <v-col cols="auto">
                   <v-btn :disabled="!!item.posa_is_replace" size="large" color="error" variant="tonal"
                     class="item-action-btn minus-btn mr-2" @click.stop="subtract_one(item)">
-                    <v-icon size="large">mdi-minus</v-icon>
+                    <v-icon size="large">mdi-minus-circle-outline</v-icon>
                   </v-btn>
                   <v-btn :disabled="!!item.posa_is_replace" size="large" color="success" variant="tonal"
                     class="item-action-btn plus-btn ml-2" @click.stop="add_one(item)">
-                    <v-icon size="large">mdi-plus</v-icon>
+                    <v-icon size="large">mdi-plus-circle-outline</v-icon>
                   </v-btn>
                 </v-col>
               </v-row>
@@ -4479,10 +4479,10 @@ export default {
 
 /* Enhanced Table Styling */
 .enhanced-table-items {
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.09);
   margin-bottom: 16px;
   height: 100%;
   display: flex;
@@ -4496,19 +4496,27 @@ export default {
 }
 
 .enhanced-table-items :deep(th) {
-  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  background: #ffffff;
   color: #424242;
   font-weight: 600;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-  padding: 8px 12px;
+  padding: 14px 18px; /* Increased padding */
+  font-size: 0.95rem;
 }
 
 .enhanced-table-items :deep(td) {
-  padding: 8px 12px;
+  padding: 14px 18px; /* Increased padding */
+  height: 64px; /* Slightly taller rows for better readability */
+  vertical-align: middle;
 }
 
 .enhanced-table-items :deep(tr:hover) {
-  background: rgba(25, 118, 210, 0.04);
+  background: rgba(25, 118, 210, 0.05);
+}
+
+.enhanced-table-items :deep(.v-data-table__expanded) {
+  padding: 20px 24px; /* More padding for expanded rows */
+  background-color: #fafafa;
 }
 
 /* Improved Currency Display */
@@ -4535,51 +4543,56 @@ export default {
   min-width: 44px !important;
   height: 44px !important;
   border-radius: 8px !important;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1) !important;
   margin: 0 3px !important;
+  position: relative;
+  overflow: hidden;
 }
 
 .item-action-btn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
 .item-action-btn .v-icon {
   font-size: 22px !important;
+  position: relative;
+  z-index: 2;
 }
 
 /* Delete button specific styling */
 .item-action-btn.delete-btn {
-  background-color: #ffebee !important;
+  background: linear-gradient(145deg, #ffebee, #ffcdd2) !important;
 }
 
 .item-action-btn.delete-btn:hover {
-  background-color: #ffcdd2 !important;
+  background: linear-gradient(145deg, #ffcdd2, #ef9a9a) !important;
 }
 
 /* Minus button specific styling */
 .item-action-btn.minus-btn {
-  background-color: #fff8e1 !important;
+  background: linear-gradient(145deg, #fff8e1, #ffecb3) !important;
 }
 
 .item-action-btn.minus-btn:hover {
-  background-color: #ffecb3 !important;
+  background: linear-gradient(145deg, #ffecb3, #ffe082) !important;
 }
 
 /* Plus button specific styling */
 .item-action-btn.plus-btn {
-  background-color: #e8f5e9 !important;
+  background: linear-gradient(145deg, #e8f5e9, #c8e6c9) !important;
 }
 
 .item-action-btn.plus-btn:hover {
-  background-color: #c8e6c9 !important;
+  background: linear-gradient(145deg, #c8e6c9, #a5d6a7) !important;
 }
 
 /* Improved Form Fields Spacing */
 .item-details-form {
-  padding: 8px 12px;
-  background: rgba(25, 118, 210, 0.02);
+  padding: 10px 5px;
+  margin-top: 5px;
+  background-color: rgba(0, 0, 0, 0.02);
   border-radius: 8px;
   border: 1px solid rgba(25, 118, 210, 0.08);
 }
@@ -4591,6 +4604,7 @@ export default {
 /* Improved Field Icons */
 .field-with-icon {
   position: relative;
+  margin-bottom: 10px;
 }
 
 .field-with-icon :deep(.v-icon) {
