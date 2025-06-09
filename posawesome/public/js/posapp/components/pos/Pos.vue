@@ -182,6 +182,8 @@ export default {
               title: `POS Shift Closed`,
               color: 'success',
             });
+            // Immediately show the opening dialog for the next shift
+            this.create_opening_voucher();
             this.check_opening_entry();
           } else {
             console.log(r);
