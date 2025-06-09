@@ -126,7 +126,11 @@
       </v-card>
     </v-dialog>
 
-    <OfflineInvoicesDialog v-model="showOfflineInvoices" @deleted="updateAfterDelete" />
+    <OfflineInvoicesDialog
+      v-model="showOfflineInvoices"
+      :pos-profile="posProfile"
+      @deleted="updateAfterDelete"
+    />
   </nav>
 </template>
 

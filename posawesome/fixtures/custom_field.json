@@ -5411,4 +5411,14 @@
     "__unsaved": 1,
     "default": "0"
   }
-]
+ ,
+  {
+    "doctype": "Custom Field",
+    "dt": "POS Profile",
+    "fieldname": "posa_allow_delete_offline_invoice",
+    "fieldtype": "Check",
+    "insert_after": "posa_allow_delete",
+    "label": "Allow Delete Offline Invoice",
+    "default": "0"
+  }
+ ]

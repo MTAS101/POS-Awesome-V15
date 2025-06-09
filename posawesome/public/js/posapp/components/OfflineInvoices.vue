@@ -27,7 +27,13 @@
                     {{ formatCurrency(item.invoice.grand_total || item.invoice.rounded_total) }}
                   </template>
                   <template #item.actions="{ index }">
-                    <v-btn icon color="error" size="small" @click="removeInvoice(index)">
+                    <v-btn
+                      icon
+                      color="error"
+                      size="small"
+                      @click="removeInvoice(index)"
+                      v-if="posProfile.posa_allow_delete_offline_invoice"
+                    >
                       <v-icon size="18">mdi-delete</v-icon>
                     </v-btn>
                   </template>
@@ -54,7 +60,11 @@ export default {
   name: 'OfflineInvoicesDialog',
   mixins: [format],
   props: {
-    modelValue: Boolean
+    modelValue: Boolean,
+    posProfile: {
+      type: Object,
+      default: () => ({})
+    }
   },
   emits: ['update:modelValue', 'deleted'],
   data() {
@@ -85,6 +95,9 @@ export default {
       this.invoices = getOfflineInvoices();
     },
     removeInvoice(index) {
+      if (!this.posProfile.posa_allow_delete_offline_invoice) {
+        return;
+      }
       deleteOfflineInvoice(index);
       this.loadInvoices();
       this.$emit('deleted', getPendingOfflineInvoiceCount());
