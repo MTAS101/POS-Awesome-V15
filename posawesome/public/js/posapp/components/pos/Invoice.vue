@@ -1685,7 +1685,7 @@ export default {
         }
 
         console.log('Basic validations passed, proceeding to main validation');
-        const isValid = this.validate();
+        const isValid = await this.validate();
         console.log('Main validation result:', isValid);
 
         if (!isValid) {
@@ -1694,7 +1694,7 @@ export default {
         }
 
         let invoice_doc;
-        if (this.invoice_doc.doctype == "Sales Order") {
+        if (this.invoice_doc && this.invoice_doc.doctype == "Sales Order") {
           console.log('Processing Sales Order payment');
           invoice_doc = await this.process_invoice_from_order();
         } else {
