@@ -1665,6 +1665,11 @@ export default {
       this.eventBus.on("set_mpesa_payment", (data) => {
         this.set_mpesa_payment(data);
       });
+      // Clear any stored invoice when parent emits clear_invoice
+      this.eventBus.on("clear_invoice", () => {
+        this.invoice_doc = "";
+        this.is_return = false;
+      });
     });
   },
   // Lifecycle hook: beforeUnmount
@@ -1678,6 +1683,7 @@ export default {
     this.eventBus.off("set_pos_settings");
     this.eventBus.off("set_customer_info_to_edit");
     this.eventBus.off("set_mpesa_payment");
+    this.eventBus.off("clear_invoice");
     this.eventBus.off("network-online", this.syncPendingInvoices);
     this.eventBus.off("server-online", this.syncPendingInvoices);
   },
