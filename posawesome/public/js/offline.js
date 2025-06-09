@@ -48,7 +48,6 @@ export function validateStockForOfflineInvoice(items) {
     const requestedQty = Math.abs(item.qty || 0);
     const currentStock = stockCache[itemCode]?.actual_qty || 0;
     
-    // Check if stock will become negative after this transaction
     if (currentStock - requestedQty < 0) {
       invalidItems.push({
         item_code: itemCode,
@@ -59,24 +58,31 @@ export function validateStockForOfflineInvoice(items) {
     }
   });
 
+  // Create clean error message
+  let errorMessage = "";
+  if (invalidItems.length === 1) {
+    const item = invalidItems[0];
+    errorMessage = `Not enough stock for ${item.item_name}. You need ${item.requested_qty} but only ${item.available_qty} available.`;
+  } else if (invalidItems.length > 1) {
+    errorMessage = "Insufficient stock for multiple items:\n" + 
+      invalidItems.map(item => 
+        `• ${item.item_name}: Need ${item.requested_qty}, Have ${item.available_qty}`
+      ).join('\n');
+  }
+
   return {
     isValid: invalidItems.length === 0,
-    invalidItems: invalidItems
+    invalidItems: invalidItems,
+    errorMessage: errorMessage
   };
 }
 
-// Enhanced saveOfflineInvoice function
 export function saveOfflineInvoice(entry) {
-  // Validate stock before saving
   if (entry.invoice && entry.invoice.items) {
     const validation = validateStockForOfflineInvoice(entry.invoice.items);
     
     if (!validation.isValid) {
-      const errorMessage = validation.invalidItems.map(item => 
-        `${item.item_name}: Requested ${item.requested_qty}, Available ${item.available_qty}`
-      ).join('\n');
-      
-      throw new Error(`Cannot save offline invoice. Insufficient stock:\n${errorMessage}`);
+      throw new Error(validation.errorMessage);
     }
   }
 

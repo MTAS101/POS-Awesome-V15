@@ -1073,8 +1073,7 @@ export default {
           return;
         } catch (error) {
           vm.eventBus.emit("show_message", { 
-            title: __("Cannot Save Offline Invoice"), 
-            message: error.message,
+            title: __("Cannot Save Offline Invoice: ") + (error.message || __("Unknown error")),
             color: "error" 
           });
           return;
