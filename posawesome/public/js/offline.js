@@ -168,6 +168,10 @@ export function getLastSyncTotals() {
 
 // Add sync function to clear local cache when invoices are successfully synced
 export async function syncOfflineInvoices() {
+  // Ensure any offline customers are synced first so that invoices
+  // referencing them do not fail during submission
+  await syncOfflineCustomers();
+
   const invoices = getOfflineInvoices();
   if (!invoices.length) {
     // No invoices to sync; keep previously stored totals
