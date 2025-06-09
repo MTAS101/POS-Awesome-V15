@@ -4,42 +4,55 @@
 
     <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
 
-    <v-app-bar app flat height="64" color="white" class="navbar-enhanced elevation-2 px-2">
+    <v-app-bar app flat height="56" color="white" class="navbar-enhanced elevation-2 px-2 pb-1">
       <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary nav-icon" />
 
       <v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32" class="mx-2" />
 
-      <v-toolbar-title @click="goDesk" class="text-h6 font-weight-bold text-primary" style="cursor: pointer;">
+      <v-toolbar-title @click="goDesk" class="text-h6 font-weight-bold text-primary navbar-title" style="cursor: pointer; text-decoration: none;">
         <span class="font-weight-light">POS</span><span>Awesome</span>
       </v-toolbar-title>
 
       <v-spacer />
 
       <!-- Enhanced connectivity status indicator - Always visible -->
-      <div class="status-section-enhanced mx-2">
-        <v-badge :content="pendingInvoices" :model-value="pendingInvoices > 0" color="red" overlap offset-x="4"
-          offset-y="4">
-          <v-btn icon :title="statusText" class="status-btn-enhanced" :color="statusColor">
-            <v-icon :color="statusColor">{{ statusIcon }}</v-icon>
-          </v-btn>
-        </v-badge>
+      <div class="status-section-enhanced mx-1">
+        <v-btn icon :title="statusText" class="status-btn-enhanced" :color="statusColor">
+          <v-icon :color="statusColor">{{ statusIcon }}</v-icon>
+        </v-btn>
         <div class="status-info-always-visible">
           <div class="status-title-inline"
-            :class="{ 'status-connected': statusColor === 'green', 'status-offline': statusColor === 'red' }">{{
-            statusText }}</div>
+            :class="{ 'status-connected': statusColor === 'green', 'status-offline': statusColor === 'red' }">{{ statusText }}</div>
           <div class="status-detail-inline">{{ syncInfoText }}</div>
         </div>
       </div>
 
-      <div class="profile-section mx-2">
+      <div class="profile-section mx-1">
         <v-chip color="primary" variant="outlined" class="profile-chip">
           <v-icon start>mdi-account-circle</v-icon>
           {{ posProfile.name }}
         </v-chip>
       </div>
 
-      <v-btn icon color="primary" class="mx-2" @click="showOfflineInvoices = true">
-        <v-icon>mdi-table</v-icon>
+      <v-btn 
+        icon 
+        color="primary" 
+        class="mx-1 offline-invoices-btn" 
+        @click="showOfflineInvoices = true"
+        :class="{ 'has-pending': pendingInvoices > 0 }"
+      >
+        <v-badge 
+          v-if="pendingInvoices > 0" 
+          :content="pendingInvoices" 
+          color="error" 
+          overlap
+        >
+          <v-icon>mdi-file-document-multiple-outline</v-icon>
+        </v-badge>
+        <v-icon v-else>mdi-file-document-multiple-outline</v-icon>
+        <v-tooltip activator="parent" location="bottom">
+          {{ __('Offline Invoices') }} ({{ pendingInvoices }})
+        </v-tooltip>
       </v-btn>
 
       <v-menu offset-y offset-x :min-width="200">
@@ -838,6 +851,7 @@ export default {
   border-bottom: 2px solid #e3f2fd !important;
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
+  padding-bottom: 4px !important; /* Reduced bottom padding */
 }
 
 .navbar-enhanced:hover {
@@ -845,9 +859,18 @@ export default {
 }
 
 /* Logo and Brand Styling */
+.navbar-title {
+  text-decoration: none !important;
+  border-bottom: none !important;
+}
+
+.navbar-title:hover {
+  text-decoration: none !important;
+}
+
 .logo-container {
-  margin: 0 12px;
-  padding: 4px;
+  margin: 0 8px; /* Reduced margin */
+  padding: 2px; /* Reduced padding */
   border-radius: 8px;
   background: linear-gradient(135deg, #1976d2, #42a5f5);
   display: flex;
@@ -872,10 +895,12 @@ export default {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   transition: all 0.3s ease;
+  text-decoration: none !important;
 }
 
 .brand-title:hover {
   transform: scale(1.05);
+  text-decoration: none !important;
 }
 
 .brand-pos {
@@ -889,7 +914,7 @@ export default {
 /* Navigation Icon */
 .nav-icon {
   border-radius: 12px;
-  padding: 8px;
+  padding: 6px; /* Reduced padding */
   transition: all 0.3s ease;
 }
 
@@ -900,12 +925,12 @@ export default {
 
 /* Profile Section */
 .profile-section {
-  margin: 0 16px;
+  margin: 0 8px; /* Reduced margin */
 }
 
 .profile-chip {
   font-weight: 500;
-  padding: 8px 16px;
+  padding: 6px 12px; /* Reduced padding */
   border-radius: 20px;
   transition: all 0.3s ease;
 }
@@ -919,14 +944,15 @@ export default {
 .status-section-enhanced {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-right: 16px;
+  gap: 8px; /* Reduced gap */
+  margin-right: 8px; /* Reduced margin */
 }
 
 .status-btn-enhanced {
   background: rgba(25, 118, 210, 0.1) !important;
   border: 1px solid rgba(25, 118, 210, 0.3);
   transition: all 0.3s ease;
+  padding: 4px; /* Reduced padding */
 }
 
 .status-btn-enhanced:hover {
@@ -950,12 +976,10 @@ export default {
 
 .status-title-inline.status-connected {
   color: #4caf50;
-  /* Green when connected */
 }
 
 .status-title-inline.status-offline {
   color: #f44336;
-  /* Red when offline */
 }
 
 .status-detail-inline {
@@ -967,8 +991,8 @@ export default {
 
 /* Enhanced Menu Button */
 .menu-btn-enhanced {
-  margin-left: 12px;
-  padding: 8px 20px;
+  margin-left: 8px; /* Reduced margin */
+  padding: 6px 16px; /* Reduced padding */
   border-radius: 20px;
   font-weight: 600;
   text-transform: none;
@@ -990,13 +1014,13 @@ export default {
 }
 
 .menu-list-enhanced {
-  padding: 8px;
+  padding: 6px; /* Reduced padding */
 }
 
 .menu-item-enhanced {
   border-radius: 12px;
-  margin: 4px 0;
-  padding: 12px 16px;
+  margin: 2px 0; /* Reduced margin */
+  padding: 8px 12px; /* Reduced padding */
   transition: all 0.3s ease;
   cursor: pointer;
 }
@@ -1012,6 +1036,46 @@ export default {
 
 .menu-item-enhanced .v-list-item-title {
   font-weight: 500;
+}
+
+/* Offline Invoices Button Enhancement */
+.offline-invoices-btn {
+  position: relative;
+  transition: all 0.3s ease;
+  padding: 4px; /* Reduced padding */
+}
+
+.offline-invoices-btn:hover {
+  transform: scale(1.05);
+}
+
+.offline-invoices-btn.has-pending {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(244, 67, 54, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(244, 67, 54, 0);
+  }
+}
+
+/* Remove any text decoration globally for navbar */
+.navbar-enhanced * {
+  text-decoration: none !important;
+}
+
+.navbar-enhanced a {
+  text-decoration: none !important;
+}
+
+.navbar-enhanced a:hover {
+  text-decoration: none !important;
 }
 
 /* Responsive Design */
@@ -1037,7 +1101,7 @@ export default {
   }
 
   .status-section-enhanced {
-    margin-right: 8px;
+    margin-right: 4px; /* Further reduced for mobile */
   }
 }
 
