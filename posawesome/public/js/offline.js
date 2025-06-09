@@ -81,7 +81,7 @@ export function validateStockForOfflineInvoice(items) {
 export function saveOfflineInvoice(entry) {
   if (entry.invoice && entry.invoice.items) {
     const validation = validateStockForOfflineInvoice(entry.invoice.items);
-    
+
     if (!validation.isValid) {
       throw new Error(validation.errorMessage);
     }
@@ -89,7 +89,19 @@ export function saveOfflineInvoice(entry) {
 
   const key = 'offline_invoices';
   const entries = memory.offline_invoices;
-  entries.push(entry);
+  // Clone the entry before storing to strip Vue reactivity
+  // and other non-serializable properties. IndexedDB only
+  // supports structured cloneable data, so reactive proxies
+  // cause a DataCloneError without this step.
+  let cleanEntry;
+  try {
+    cleanEntry = JSON.parse(JSON.stringify(entry));
+  } catch (e) {
+    console.error('Failed to serialize offline invoice', e);
+    throw e;
+  }
+
+  entries.push(cleanEntry);
   memory.offline_invoices = entries;
   persist(key);
 
@@ -122,7 +134,16 @@ export function getPendingOfflineInvoiceCount() {
 export function saveOfflineCustomer(entry) {
   const key = 'offline_customers';
   const entries = memory.offline_customers;
-  entries.push(entry);
+  // Serialize to avoid storing reactive objects that IndexedDB
+  // cannot clone.
+  let cleanEntry;
+  try {
+    cleanEntry = JSON.parse(JSON.stringify(entry));
+  } catch (e) {
+    console.error('Failed to serialize offline customer', e);
+    throw e;
+  }
+  entries.push(cleanEntry);
   memory.offline_customers = entries;
   persist(key);
 }
