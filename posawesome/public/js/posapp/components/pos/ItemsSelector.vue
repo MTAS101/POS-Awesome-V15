@@ -1,70 +1,70 @@
 <template>
   <div :style="responsiveStyles">
-    <v-card class="selection mx-auto bg-grey-lighten-5 my-0 py-0 mt-3 dynamic-card" 
-            :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'] }">
+    <v-card class="selection mx-auto bg-grey-lighten-5 my-0 py-0 mt-3 dynamic-card"
+      :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'] }">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
-      <v-row class="items dynamic-padding">
-        <v-col class="pb-0">
-          <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
-            :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
-            bg-color="white" hide-details v-model="debounce_search" @keydown.esc="esc_event"
-            @keydown.enter="search_onchange" @click:clear="clearSearch" prepend-inner-icon="mdi-magnify"
-            @focus="handleItemSearchFocus" ref="debounce_search">
-            <!-- Add camera scan button if enabled -->
-            <template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
-              <v-btn icon="mdi-camera" size="small" color="primary" variant="text" @click="startCameraScanning"
-                :title="__('Scan with Camera')">
-              </v-btn>
-            </template>
-          </v-text-field>
+      <!-- Add dynamic-padding wrapper like Invoice component -->
+      <div class="dynamic-padding">
+        <v-row class="items">
+          <v-col class="pb-0">
+            <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
+              :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
+              bg-color="white" hide-details v-model="debounce_search" @keydown.esc="esc_event"
+              @keydown.enter="search_onchange" @click:clear="clearSearch" prepend-inner-icon="mdi-magnify"
+              @focus="handleItemSearchFocus" ref="debounce_search">
+              <!-- Add camera scan button if enabled -->
+              <template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
+                <v-btn icon="mdi-camera" size="small" color="primary" variant="text" @click="startCameraScanning"
+                  :title="__('Scan with Camera')">
+                </v-btn>
+              </template>
+            </v-text-field>
 
-        </v-col>
-        <v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
-          <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')" bg-color="white"
-            hide-details v-model.number="qty" type="number" @keydown.enter="enter_event"
-            @keydown.esc="esc_event"></v-text-field>
-        </v-col>
-        <v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
-          <v-checkbox v-model="new_line" color="accent" value="true" label="NLine" density="default"
-            hide-details></v-checkbox>
-        </v-col>
-        <v-col cols="12" class="pt-0 mt-0">
-          <div fluid class="items" v-if="items_view == 'card'">
-            <v-row density="default" class="overflow-y-auto dynamic-scroll" 
-                   :style="{ maxHeight: responsiveStyles['--card-height'] }">
-              <v-col v-for="(item, idx) in filtered_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
-                min-height="50">
-                <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
-                  <v-img :src="item.image ||
-                    '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
-                    " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
-                    <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
-                  </v-img>
-                  <v-card-text class="text--primary pa-1">
-                    <div class="text-caption text-primary">
-                      {{ currencySymbol(pos_profile.currency) || "" }}
-                      {{ format_currency(item.rate, pos_profile.currency, 4) }}
-                    </div>
-                    <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
-                      class="text-caption text-success">
-                      {{ currencySymbol(selected_currency) || "" }}
-                      {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
-                    </div>
-                    <div class="text-caption golden--text">
-                      {{ format_number(item.actual_qty, 4) || 0 }}
-                      {{ item.stock_uom || "" }}
-                    </div>
-                  </v-card-text>
-                </v-card>
-              </v-col>
-            </v-row>
-          </div>
-          <div fluid class="items" v-if="items_view == 'list'">
-            <div class="my-0 py-0 overflow-y-auto dynamic-scroll" 
-                 :style="{ maxHeight: responsiveStyles['--card-height'] }">
-              <v-data-table :headers="getItemsHeaders()" :items="filtered_items" item-key="item_code" item-value="item-"
-                class="elevation-0 sleek-data-table" :items-per-page="itemsPerPage" hide-default-footer
+          </v-col>
+          <v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')" bg-color="white"
+              hide-details v-model.number="qty" type="number" @keydown.enter="enter_event"
+              @keydown.esc="esc_event"></v-text-field>
+          </v-col>
+          <v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
+            <v-checkbox v-model="new_line" color="accent" value="true" label="NLine" density="default"
+              hide-details></v-checkbox>
+          </v-col>
+          <v-col cols="12" class="pt-0 mt-0">
+            <div fluid class="items" v-if="items_view == 'card'">
+              <v-row density="default" class="overflow-y-auto dynamic-scroll"
+                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
+                <v-col v-for="(item, idx) in filtered_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
+                  min-height="50">
+                  <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
+                    <v-img :src="item.image ||
+                      '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
+                      " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
+                      <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
+                    </v-img>
+                    <v-card-text class="text--primary pa-1">
+                      <div class="text-caption text-primary">
+                        {{ currencySymbol(pos_profile.currency) || "" }}
+                        {{ format_currency(item.rate, pos_profile.currency, 4) }}
+                      </div>
+                      <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                        class="text-caption text-success">
+                        {{ currencySymbol(selected_currency) || "" }}
+                        {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
+                      </div>
+                      <div class="text-caption golden--text">
+                        {{ format_number(item.actual_qty, 4) || 0 }}
+                        {{ item.stock_uom || "" }}
+                      </div>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </div>
+            <div v-else>
+              <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table overflow-y-auto"
+                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }" item-key="item_code"
                 @click:row="click_item_row">
 
                 <template v-slot:item.rate="{ item }">
@@ -81,34 +81,35 @@
                 <template v-slot:item.actual_qty="{ item }">
                   <span class="golden--text">{{ format_number(item.actual_qty, 4) }}</span>
                 </template>
-              </v-data-table>
+              </v-data-table-virtual>
             </div>
-          </div>
-        </v-col>
-      </v-row>
+          </v-col>
+        </v-row>
+      </div>
     </v-card>
     <v-card class="cards mb-0 mt-3 dynamic-padding bg-grey-lighten-5">
-      <v-row no-gutters align="center" justify="center">
-        <v-col cols="12">
-
+      <v-row no-gutters align="center" justify="center" class="dynamic-spacing-sm">
+        <v-col cols="12" class="mb-2">
           <v-select :items="items_group" :label="frappe._('Items Group')" density="compact" variant="solo" hide-details
             v-model="item_group"></v-select>
-
         </v-col>
-        <v-col cols="3" class="mt-1">
+        <v-col cols="3" class="dynamic-margin-xs">
           <v-btn-toggle v-model="items_view" color="primary" group density="compact" rounded>
             <v-btn size="small" value="list">{{ __("List") }}</v-btn>
             <v-btn size="small" value="card">{{ __("Card") }}</v-btn>
           </v-btn-toggle>
         </v-col>
-        <v-col cols="4" class="mt-2">
-          <v-btn size="small" block color="primary" variant="text" @click="show_coupons">{{ couponsCount }} {{
-            __("Coupons")
+        <v-col cols="4" class="dynamic-margin-xs">
+          <v-btn size="small" block color="primary" variant="text" @click="show_coupons"
+            class="action-btn-consistent">{{
+              couponsCount }} {{
+              __("Coupons")
             }}</v-btn>
         </v-col>
-        <v-col cols="5" class="mt-2">
-          <v-btn size="small" block color="primary" variant="text" @click="show_offers">{{ offersCount }} {{
-            __("Offers") }}
+        <v-col cols="5" class="dynamic-margin-xs">
+          <v-btn size="small" block color="primary" variant="text" @click="show_offers" class="action-btn-consistent">{{
+            offersCount }} {{
+              __("Offers") }}
             : {{ appliedOffersCount }}
             {{ __("Applied") }}</v-btn>
         </v-col>
@@ -912,6 +913,9 @@ export default {
   },
 
   computed: {
+    headers() {
+      return this.getItemsHeaders();
+    },
     filtered_items() {
       this.search = this.get_search(this.first_search);
       if (!this.pos_profile.pose_use_limit_search) {
@@ -1155,7 +1159,7 @@ export default {
 }
 
 .dynamic-padding {
-  padding: var(--dynamic-md) var(--dynamic-sm);
+  padding: var(--dynamic-xs) var(--dynamic-sm) var(--dynamic-xs) var(--dynamic-sm);
 }
 
 .dynamic-scroll {
@@ -1187,16 +1191,51 @@ export default {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
 }
 
+/* Consistent spacing with navbar and system */
+.dynamic-spacing-sm {
+  padding: var(--dynamic-sm) !important;
+}
+
+.action-btn-consistent {
+  margin-top: var(--dynamic-xs) !important;
+  padding: var(--dynamic-xs) var(--dynamic-sm) !important;
+  transition: all 0.3s ease !important;
+}
+
+.action-btn-consistent:hover {
+  background-color: rgba(25, 118, 210, 0.1) !important;
+  transform: translateY(-1px) !important;
+}
+
+/* Ensure consistent spacing with navbar pattern */
+.cards {
+  margin-top: var(--dynamic-sm) !important;
+  padding: var(--dynamic-sm) !important;
+}
+
 /* Responsive breakpoints */
 @media (max-width: 768px) {
   .dynamic-padding {
-    padding: var(--dynamic-sm) var(--dynamic-xs);
+    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+  }
+
+  .dynamic-spacing-sm {
+    padding: var(--dynamic-xs) !important;
+  }
+
+  .action-btn-consistent {
+    padding: var(--dynamic-xs) !important;
+    font-size: 0.875rem !important;
   }
 }
 
 @media (max-width: 480px) {
   .dynamic-padding {
-    padding: var(--dynamic-xs);
+    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+  }
+
+  .cards {
+    padding: var(--dynamic-xs) !important;
   }
 }
 </style>

@@ -118,25 +118,29 @@
 
         <!-- Enhanced Footer -->
         <v-divider></v-divider>
-        <v-card-actions class="pa-4 white-background">
+        <v-card-actions class="dialog-actions-container">
           <v-btn 
             v-if="invoices.length > 0" 
-            color="primary" 
+            theme="dark"
             variant="elevated" 
             prepend-icon="mdi-sync"
             @click="$emit('sync-all')"
-            class="sync-btn mr-3"
+            class="pos-action-btn sync-action-btn"
+            size="large"
+            elevation="2"
           >
             {{ __('Sync All') }}
           </v-btn>
           <v-spacer></v-spacer>
           <v-btn 
-            color="grey-darken-1" 
-            variant="text" 
+            theme="dark"
             @click="dialog = false"
-            class="close-btn"
+            class="pos-action-btn cancel-action-btn"
+            size="large"
+            elevation="2"
           >
-            {{ __('Close') }}
+            <v-icon start>mdi-close-circle-outline</v-icon>
+            <span>{{ __('Close') }}</span>
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -426,5 +430,63 @@ export default {
   .table-container {
     overflow-x: auto;
   }
+}
+
+/* Action Buttons - Updated to match standard */
+.dialog-actions-container {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+  border-top: 1px solid #e0e0e0 !important;
+  padding: 16px 24px !important;
+  gap: 12px !important;
+}
+
+.pos-action-btn {
+  border-radius: 12px !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  padding: 12px 32px !important;
+  min-width: 120px !important;
+  transition: all 0.3s ease !important;
+  color: white !important;
+}
+
+.pos-action-btn .v-icon {
+  color: white !important;
+}
+
+.pos-action-btn span {
+  color: white !important;
+}
+
+.cancel-action-btn {
+  background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%) !important;
+}
+
+.sync-action-btn {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important;
+}
+
+.cancel-action-btn:hover,
+.sync-action-btn:hover {
+  transform: translateY(-2px) !important;
+}
+
+.cancel-action-btn:hover {
+  box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4) !important;
+}
+
+.sync-action-btn:hover {
+  box-shadow: 0 6px 20px rgba(25, 118, 210, 0.4) !important;
+}
+
+.pos-action-btn:disabled {
+  opacity: 0.6 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.pos-action-btn:disabled .v-icon,
+.pos-action-btn:disabled span {
+  color: white !important;
 }
 </style>

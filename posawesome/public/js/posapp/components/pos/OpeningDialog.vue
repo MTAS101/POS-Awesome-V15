@@ -98,10 +98,9 @@
           </v-container>
         </v-card-text>
 
-        <!-- Actions Section - Compact -->
+        <!-- Actions Section -->
         <v-card-actions class="dialog-actions-container">
           <v-btn
-            color="error"
             theme="dark"
             @click="go_desk"
             class="pos-action-btn cancel-action-btn"
@@ -113,7 +112,6 @@
           </v-btn>
           <v-spacer />
           <v-btn
-            color="success"
             theme="dark"
             :disabled="is_loading"
             :loading="is_loading"
@@ -618,23 +616,22 @@ export default {
 
 /* Action buttons with improved naming and styling */
 .dialog-actions-container {
-  padding: 24px 32px; /* Increased from 16px to 24px vertical and 32px horizontal */
-  display: flex;
-  gap: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-top: 1px solid #e0e0e0;
+  padding: 16px 24px;
+  gap: 12px;
 }
 
 .pos-action-btn {
-  padding: 8px 24px; /* Increased horizontal padding from 16px to 24px */
-  border-radius: 6px;
-  font-weight: 500;
+  border-radius: 12px;
   text-transform: none;
-  transition: all 0.2s ease;
-  min-width: 110px;
-  font-size: 1rem;
-  letter-spacing: 0.5px;
+  font-weight: 600;
+  padding: 12px 32px;
+  min-width: 120px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-/* Force white text color for all button elements */
 .pos-action-btn,
 .pos-action-btn .v-icon,
 .pos-action-btn span,
@@ -643,48 +640,25 @@ export default {
 }
 
 .cancel-action-btn {
-  background-color: #f44336 !important;
-  border: 1px solid #d32f2f;
+  background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%) !important;
 }
 
 .cancel-action-btn:hover {
-  background-color: #d32f2f !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4);
 }
 
 .submit-action-btn {
-  background-color: #4caf50 !important;
-  border: 1px solid #388e3c;
+  background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%) !important;
 }
 
 .submit-action-btn:hover {
-  background-color: #388e3c !important;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(46, 125, 50, 0.4);
 }
 
 .submit-action-btn:disabled {
-  opacity: 0.7;
-  background-color: #9e9e9e !important;
-  border-color: #757575;
-}
-
-/* Lighter focus states for autocomplete fields */
-.enhanced-field :deep(.v-autocomplete--focused .v-field__outline) {
-  border-color: rgba(25, 118, 210, 0.25) !important;
-}
-
-.enhanced-field :deep(.v-text-field--focused .v-field__outline) {
-  border-color: rgba(25, 118, 210, 0.25) !important;
-}
-
-/* Lighter hover states */
-.field-focused {
-  background: rgba(25, 118, 210, 0.01);
-  border-radius: 8px;
-}
-
-.amount-display-compact:hover {
-  background: rgba(25, 118, 210, 0.06);
-  transform: scale(1.01);
+  opacity: 0.6;
+  transform: none;
 }
 </style>

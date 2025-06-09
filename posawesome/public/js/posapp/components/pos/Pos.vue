@@ -279,8 +279,9 @@ export default {
 
 <style scoped>
 .dynamic-container {
-  /* add space for the navbar */
-  padding-top: calc(25px + var(--dynamic-md));
+  /* add space for the navbar with better spacing */
+  padding-top: calc(25px + var(--dynamic-lg));
+  /* Navbar height (25px) + larger spacing */
   transition: all 0.3s ease;
 }
 
@@ -292,15 +293,19 @@ export default {
 .dynamic-col {
   padding: var(--dynamic-sm);
   transition: padding 0.3s ease;
+  margin-top: var(--dynamic-sm);
+  /* Add top margin for better separation */
 }
 
 @media (max-width: 768px) {
   .dynamic-container {
-    padding-top: calc(64px + var(--dynamic-sm));
+    padding-top: calc(56px + var(--dynamic-md));
+    /* Consistent navbar height + medium spacing */
   }
 
   .dynamic-col {
     padding: var(--dynamic-xs);
+    margin-top: var(--dynamic-xs);
   }
 }
 </style>

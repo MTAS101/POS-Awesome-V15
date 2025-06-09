@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-card class="selection mx-auto bg-grey-lighten-5" style="max-height: 80vh; height: 80vh">
+    <v-card class="selection mx-auto bg-grey-lighten-5 mt-3" style="max-height: 80vh; height: 80vh">
       <v-card-title>
         <span class="text-h6 text-primary">{{ __('Offers') }}</span>
       </v-card-title>
