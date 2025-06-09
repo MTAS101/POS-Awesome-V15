@@ -647,6 +647,7 @@ export default {
       sales_person: "", // Selected sales person
       addresses: [], // List of customer addresses
       is_user_editing_paid_change: false, // User interaction flag
+      shortPayHandler: null, // Reference to bound keyboard handler
     };
   },
   computed: {
@@ -1580,7 +1581,8 @@ export default {
   // Lifecycle hook: created
   created() {
     // Register keyboard shortcut for payment
-    document.addEventListener("keydown", this.shortPay.bind(this));
+    this.shortPayHandler = this.shortPay.bind(this);
+    document.addEventListener("keydown", this.shortPayHandler);
     this.syncPendingInvoices();
     this.eventBus.on("network-online", this.syncPendingInvoices);
     // Also sync when the server connection is re-established
@@ -1684,7 +1686,9 @@ export default {
   // Lifecycle hook: unmounted
   unmounted() {
     // Remove keyboard shortcut listener
-    document.removeEventListener("keydown", this.shortPay);
+    if (this.shortPayHandler) {
+      document.removeEventListener("keydown", this.shortPayHandler);
+    }
   },
 };
 </script>
