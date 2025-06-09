@@ -648,7 +648,6 @@ export default {
       addresses: [], // List of customer addresses
       is_user_editing_paid_change: false, // User interaction flag
       shortPayHandler: null, // Reference to bound keyboard handler
-      shortcutActive: false, // Track if shortcut is active
     };
   },
   computed: {
@@ -1581,20 +1580,9 @@ export default {
   },
   // Lifecycle hook: created
   created() {
-    // Prepare the keyboard shortcut handler
+    // Register keyboard shortcut for payment
     this.shortPayHandler = this.shortPay.bind(this);
-    // Toggle shortcut based on payments visibility
-    this.toggleShortcut = (state) => {
-      const open = state === "true";
-      if (open && !this.shortcutActive) {
-        document.addEventListener("keydown", this.shortPayHandler);
-        this.shortcutActive = true;
-      } else if (!open && this.shortcutActive) {
-        document.removeEventListener("keydown", this.shortPayHandler);
-        this.shortcutActive = false;
-      }
-    };
-    this.eventBus.on("show_payment", this.toggleShortcut);
+    document.addEventListener("keydown", this.shortPayHandler);
     this.syncPendingInvoices();
     this.eventBus.on("network-online", this.syncPendingInvoices);
     // Also sync when the server connection is re-established
@@ -1694,12 +1682,11 @@ export default {
     this.eventBus.off("set_mpesa_payment");
     this.eventBus.off("network-online", this.syncPendingInvoices);
     this.eventBus.off("server-online", this.syncPendingInvoices);
-    this.eventBus.off("show_payment", this.toggleShortcut);
   },
   // Lifecycle hook: unmounted
   unmounted() {
     // Remove keyboard shortcut listener
-    if (this.shortPayHandler && this.shortcutActive) {
+    if (this.shortPayHandler) {
       document.removeEventListener("keydown", this.shortPayHandler);
     }
   },
