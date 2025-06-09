@@ -127,6 +127,17 @@ export function clearOfflineInvoices() {
   persist('offline_invoices');
 }
 
+export function deleteOfflineInvoice(index) {
+  if (
+    Array.isArray(memory.offline_invoices) &&
+    index >= 0 &&
+    index < memory.offline_invoices.length
+  ) {
+    memory.offline_invoices.splice(index, 1);
+    persist('offline_invoices');
+  }
+}
+
 export function getPendingOfflineInvoiceCount() {
   return memory.offline_invoices.length;
 }

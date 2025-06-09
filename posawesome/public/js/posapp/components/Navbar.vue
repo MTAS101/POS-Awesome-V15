@@ -38,6 +38,10 @@
         </v-chip>
       </div>
 
+      <v-btn icon color="primary" class="mx-2" @click="showOfflineInvoices = true">
+        <v-icon>mdi-table</v-icon>
+      </v-btn>
+
       <v-menu offset-y offset-x :min-width="200">
         <template #activator="{ props }">
           <v-btn v-bind="props" color="primary" variant="elevated" class="menu-btn-enhanced">
@@ -121,6 +125,8 @@
         <v-card-text>{{ freezeMsg }}</v-card-text>
       </v-card>
     </v-dialog>
+
+    <OfflineInvoicesDialog v-model="showOfflineInvoices" @deleted="updateAfterDelete" />
   </nav>
 </template>
 
@@ -129,9 +135,11 @@
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
 import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals } from '../../offline.js';
+import OfflineInvoicesDialog from './OfflineInvoices.vue';
 
 export default {
   name: 'NavBar', // Component name
+  components: { OfflineInvoicesDialog },
   data() {
     return {
       drawer: false, // Controls the visibility of the side navigation drawer (true for open, false for closed)
@@ -156,7 +164,8 @@ export default {
       serverOnline: false,             // Boolean: Reflects the real-time server health via WebSocket (true if connected, false if disconnected)
       serverConnecting: false,         // Boolean: Indicates if the client is currently attempting to establish a connection to the server via WebSocket
       socket: null,                    // Instance of the Socket.IO client, used for real-time communication with the server
-      offlineMessageShown: false       // Flag to avoid repeating offline warnings
+      offlineMessageShown: false,      // Flag to avoid repeating offline warnings
+      showOfflineInvoices: false       // Controls the Offline Invoices dialog
     };
   },
   computed: {
@@ -640,6 +649,10 @@ export default {
      */
     updatePendingInvoices() {
       this.pendingInvoices = getPendingOfflineInvoiceCount();
+    },
+    updateAfterDelete() {
+      this.updatePendingInvoices();
+      this.eventBus.emit('pending_invoices_changed', this.pendingInvoices);
     },
     /**
      * Displays a snackbar message at the top right of the screen.
