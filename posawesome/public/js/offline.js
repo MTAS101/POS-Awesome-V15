@@ -159,6 +159,24 @@ export function saveOfflineCustomer(entry) {
   persist(key);
 }
 
+export function updateOfflineInvoicesCustomer(oldName, newName) {
+  let updated = false;
+  const invoices = memory.offline_invoices || [];
+  invoices.forEach(inv => {
+    if (inv.invoice && inv.invoice.customer === oldName) {
+      inv.invoice.customer = newName;
+      if (inv.invoice.customer_name) {
+        inv.invoice.customer_name = newName;
+      }
+      updated = true;
+    }
+  });
+  if (updated) {
+    memory.offline_invoices = invoices;
+    persist('offline_invoices');
+  }
+}
+
 export function getOfflineCustomers() {
   return memory.offline_customers;
 }
@@ -256,11 +274,15 @@ export async function syncOfflineCustomers() {
 
   for (const cust of customers) {
     try {
-      await frappe.call({
+      const result = await frappe.call({
         method: 'posawesome.posawesome.api.posapp.create_customer',
         args: cust.args
       });
       synced++;
+      if (result && result.message && result.message.name &&
+          result.message.name !== cust.args.customer_name) {
+        updateOfflineInvoicesCustomer(cust.args.customer_name, result.message.name);
+      }
     } catch (error) {
       console.error('Failed to create customer', error);
       failures.push(cust);
