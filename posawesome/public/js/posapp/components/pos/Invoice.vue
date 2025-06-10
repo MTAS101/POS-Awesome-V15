@@ -83,8 +83,8 @@
               </template>
               <v-date-picker v-model="posting_date" no-title scrollable color="primary"
                 class="custom-date-picker"
-                :min="frappe.datetime.add_days(frappe.datetime.now_date(), -7)"
-                :max="frappe.datetime.add_days(frappe.datetime.now_date(), 7)">
+                :min="frappe.datetime.add_days(frappe.datetime.nowdate(true), -7)"
+                :max="frappe.datetime.add_days(frappe.datetime.nowdate(true), 7)">
                 <template #actions>
                   <v-spacer></v-spacer>
                   <v-btn text color="primary" @click="posting_date = null; posting_date_menu = false">{{ __('Clear')
