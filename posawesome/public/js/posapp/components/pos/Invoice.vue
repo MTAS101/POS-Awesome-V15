@@ -78,8 +78,6 @@
               v-model="posting_date_display"
               model-type="format"
               format="dd-MM-yyyy"
-              :min-date="new Date(frappe.datetime.add_days(frappe.datetime.nowdate(true), -7))"
-              :max-date="new Date(frappe.datetime.add_days(frappe.datetime.nowdate(true), 7))"
               auto-apply
             />
           </v-col>
