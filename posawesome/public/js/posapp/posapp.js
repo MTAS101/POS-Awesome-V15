@@ -1,5 +1,7 @@
 import { createVuetify } from 'vuetify';
 import { createApp } from 'vue';
+import VueDatePicker from '@vuepic/vue-datepicker';
+import '@vuepic/vue-datepicker/dist/main.css';
 import eventBus from './bus';
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -45,6 +47,7 @@ frappe.PosApp.posapp = class {
             }
         );
         const app = createApp(Home)
+        app.component('VueDatePicker', VueDatePicker)
         app.use(eventBus);
         app.use(vuetify)
         app.mount(this.$el[0]);

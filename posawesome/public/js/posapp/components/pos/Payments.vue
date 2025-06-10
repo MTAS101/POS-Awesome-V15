@@ -281,37 +281,13 @@
 
           <!-- Delivery Date and Address (if applicable) -->
           <v-col cols="6" v-if="pos_profile.posa_allow_sales_order && invoiceType === 'Order'">
-            <v-menu 
-              ref="order_delivery_date" 
-              v-model="order_delivery_date" 
-              :close-on-content-click="false" 
-              transition="scale-transition" 
-              density="default"
-              location="bottom"
-            >
-              <template v-slot:activator="{ props }">
-                <v-text-field
-                  v-model="invoice_doc.posa_delivery_date"
-                  :label="frappe._('Delivery Date')"
-                  readonly
-                  variant="outlined"
-                  density="compact"
-                  bg-color="white"
-                  clearable
-                  color="primary"
-                  hide-details
-                  v-bind="props"
-                ></v-text-field>
-              </template>
-              <v-date-picker
-                v-model="new_delivery_date"
-                no-title
-                color="primary"
-                :min="frappe.datetime.now_date()"
-                @update:model-value="order_delivery_date = false; update_delivery_date()"
-                class="custom-date-picker"
-              ></v-date-picker>
-            </v-menu>
+            <VueDatePicker
+              v-model="new_delivery_date"
+              model-type="format"
+              format="yyyy-MM-dd"
+              :min-date="new Date()"
+              @update:model-value="update_delivery_date()"
+            />
           </v-col>
           <!-- Shipping Address Selection (if delivery date is set) -->
           <v-col cols="12" v-if="invoice_doc.posa_delivery_date">
@@ -400,28 +376,22 @@
               ></v-text-field>
             </v-col>
             <v-col cols="6">
-              <v-menu ref="po_date_menu" v-model="po_date_menu" :close-on-content-click="false" transition="scale-transition">
-                <template v-slot:activator="{ on, attrs }">
-                  <v-text-field
-                    v-model="invoice_doc.po_date"
-                    :label="frappe._('Purchase Order Date')"
-                    readonly
-                    variant="outlined"
-                    density="compact"
-                    hide-details
-                    v-bind="attrs"
-                    v-on="on"
-                    color="primary"
-                  ></v-text-field>
-                </template>
-                <v-date-picker
-                  v-model="new_po_date"
-                  no-title
-                  scrollable
-                  color="primary"
-                  @input="po_date_menu = false; update_po_date()"
-                ></v-date-picker>
-              </v-menu>
+              <VueDatePicker
+                v-model="new_po_date"
+                model-type="format"
+                format="yyyy-MM-dd"
+                :min-date="new Date()"
+                @update:model-value="update_po_date()"
+              />
+              <v-text-field
+                v-model="invoice_doc.po_date"
+                :label="frappe._('Purchase Order Date')"
+                readonly
+                variant="outlined"
+                density="compact"
+                hide-details
+                color="primary"
+              ></v-text-field>
             </v-col>
           </v-row>
         </div>
@@ -453,30 +423,11 @@
             ></v-switch>
           </v-col>
           <v-col cols="6" v-if="is_credit_sale">
-            <v-menu ref="date_menu" v-model="date_menu" :close-on-content-click="false" transition="scale-transition" min-width="auto">
-              <template v-slot:activator="{ props }">
-                <v-text-field
-                  v-model="invoice_doc.due_date"
-                  :label="frappe._('Due Date')"
-                  readonly
-                  variant="outlined"
-                  density="compact"
-                  hide-details
-                  v-bind="props"
-                  color="primary"
-                  clearable
-                  @click:clear="invoice_doc.due_date = ''"
-                ></v-text-field>
-              </template>
-              <v-date-picker
-                v-model="new_credit_due_date"
-                no-title
-                scrollable
-                color="primary"
-                :min="frappe.datetime.now_date()"
-                @update:model-value="date_menu = false; update_credit_due_date()"
-              ></v-date-picker>
-            </v-menu>
+            <VueDatePicker
+              v-model="new_credit_due_date"
+              :min-date="new Date()"
+              @update:model-value="update_credit_due_date()"
+            />
           </v-col>
           <v-col cols="6" v-if="!invoice_doc.is_return && pos_profile.use_customer_credit">
             <v-switch
@@ -641,11 +592,8 @@ export default {
       customer_credit_dict: [], // List of available customer credits
       paid_change_rules: [], // Validation rules for paid change
       phone_dialog: false, // Show phone payment dialog
-      order_delivery_date: false, // Delivery date menu state
       new_delivery_date: null, // New delivery date value
-      po_date_menu: false, // PO date menu state
       new_po_date: null, // New PO date value
-      date_menu: false, // Due date menu state
       new_credit_due_date: null, // New credit due date value
       customer_info: "", // Customer info
       mpesa_modes: [], // List of available M-Pesa modes
