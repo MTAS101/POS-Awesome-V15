@@ -79,7 +79,7 @@
               <template v-slot:activator="{ props }">
                 <v-text-field v-model="formatted_posting_date" :label="frappe._('Posting Date')" readonly variant="solo"
                   density="compact" clearable color="primary" hide-details prepend-inner-icon="mdi-calendar"
-                  v-bind="props" @click="debouncedClearPostingDate"></v-text-field>
+                  v-bind="props"></v-text-field>
               </template>
               <v-date-picker v-model="posting_date" no-title scrollable color="primary"
                 class="custom-date-picker"
@@ -451,7 +451,6 @@
 import format from "../../format";
 import Customer from "./Customer.vue";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
-import _ from "lodash";
 
 export default {
   mixins: [format],
@@ -491,7 +490,6 @@ export default {
       invoice_posting_date: false, // Posting date dialog
       posting_date: frappe.datetime.now_date(), // Invoice posting date
       posting_date_menu: false, // Posting date menu visibility
-      previous_posting_date: null, // Store previous posting date
       items_headers: [
         // Table headers for items
         {
@@ -634,10 +632,6 @@ export default {
   },
 
   methods: {
-    // Clear posting date with debounce when field clicked
-    debouncedClearPostingDate: _.debounce(function () {
-      this.posting_date = null;
-    }, 300),
     shortOpenFirstItem(e) {
       if (e.key.toLowerCase() === "a" && (e.ctrlKey || e.metaKey)) {
         try {
@@ -4392,17 +4386,6 @@ export default {
         this.posting_date = dateStr;
       },
       immediate: true
-    },
-    posting_date_menu(newVal) {
-      if (newVal) {
-        // Menu opened - store current date
-        this.previous_posting_date = this.posting_date;
-      } else {
-        // Menu closed - restore if no date selected
-        if (!this.posting_date) {
-          this.posting_date = this.previous_posting_date;
-        }
-      }
     },
   },
 };
