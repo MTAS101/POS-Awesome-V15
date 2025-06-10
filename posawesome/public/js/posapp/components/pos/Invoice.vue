@@ -75,9 +75,9 @@
           <!-- Posting Date Selection with Date Picker -->
           <v-col cols="6" class="pb-2">
             <VueDatePicker
-              v-model="posting_date"
+              v-model="posting_date_display"
               model-type="format"
-              format="yyyy-MM-dd"
+              format="dd-MM-yyyy"
               :min-date="new Date(frappe.datetime.add_days(frappe.datetime.nowdate(true), -7))"
               :max-date="new Date(frappe.datetime.add_days(frappe.datetime.nowdate(true), 7))"
             />
@@ -317,7 +317,7 @@
                     <VueDatePicker
                       v-model="item.posa_delivery_date"
                       model-type="format"
-                      format="yyyy-MM-dd"
+                      format="dd-MM-yyyy"
                       :min-date="new Date()"
                       @update:model-value="validate_due_date(item)"
                     />
@@ -461,6 +461,7 @@ export default {
       selected_delivery_charge: "", // Selected delivery charge object
       invoice_posting_date: false, // Posting date dialog
       posting_date: frappe.datetime.nowdate(), // Invoice posting date
+      posting_date_display: '', // Display value for date picker
       items_headers: [
         // Table headers for items
         {
@@ -995,7 +996,9 @@ export default {
       }
 
       this.customer = data.customer;
-      this.posting_date = data.posting_date || frappe.datetime.nowdate();
+      this.posting_date = this.formatDateForBackend(
+        data.posting_date || frappe.datetime.nowdate()
+      );
       this.discount_amount = data.discount_amount;
       this.additional_discount_percentage =
         data.additional_discount_percentage;
@@ -1105,7 +1108,9 @@ export default {
           }
         });
         this.customer = data.customer;
-        this.posting_date = data.posting_date || frappe.datetime.nowdate();
+        this.posting_date = this.formatDateForBackend(
+          data.posting_date || frappe.datetime.nowdate()
+        );
         this.discount_amount = data.discount_amount;
         this.additional_discount_percentage =
           data.additional_discount_percentage;
@@ -1253,7 +1258,7 @@ export default {
       doc.posa_coupons = this.posa_coupons;
       doc.posa_delivery_charges = this.selected_delivery_charge.name;
       doc.posa_delivery_charges_rate = this.delivery_charges_rate || 0;
-      doc.posting_date = this.posting_date;
+      doc.posting_date = this.formatDateForBackend(this.posting_date_display);
 
       // Add flags to ensure proper rate handling
       doc.ignore_pricing_rule = 1;
@@ -1352,7 +1357,9 @@ export default {
           item.discount_amount = flt(updatedData.discount_amount);
           item.batch_no = updatedData.batch_no;
           item.posa_notes = updatedData.posa_notes;
-          item.posa_delivery_date = updatedData.posa_delivery_date;
+          item.posa_delivery_date = this.formatDateForDisplay(
+            updatedData.posa_delivery_date
+          );
           item.price_list_rate = updatedData.price_list_rate;
           Items.push(item);
         }
@@ -1397,7 +1404,7 @@ export default {
           discount_percentage: flt(item.discount_percentage),
           batch_no: item.batch_no,
           posa_notes: item.posa_notes,
-          posa_delivery_date: item.posa_delivery_date,
+          posa_delivery_date: this.formatDateForBackend(item.posa_delivery_date),
         };
 
         // Handle currency conversion for rates and amounts
@@ -1595,7 +1602,7 @@ export default {
           const updated_doc = this.update_invoice(doc);
           // Update posting date after invoice update
           if (updated_doc && updated_doc.posting_date) {
-            this.posting_date = updated_doc.posting_date;
+            this.posting_date = this.formatDateForBackend(updated_doc.posting_date);
           }
           return updated_doc;
         } catch (error) {
@@ -1611,7 +1618,7 @@ export default {
           const updated_doc = this.update_invoice(doc);
           // Update posting date after invoice creation
           if (updated_doc && updated_doc.posting_date) {
-            this.posting_date = updated_doc.posting_date;
+            this.posting_date = this.formatDateForBackend(updated_doc.posting_date);
           }
           return updated_doc;
         } catch (error) {
@@ -3608,11 +3615,15 @@ export default {
     validate_due_date(item) {
       const today = frappe.datetime.now_date();
       const parse_today = Date.parse(today);
-      const new_date = Date.parse(item.posa_delivery_date);
-      if (new_date < parse_today) {
+      // Convert to backend format for comparison
+      const backend_date = this.formatDateForBackend(item.posa_delivery_date);
+      const new_date = Date.parse(backend_date);
+      if (isNaN(new_date) || new_date < parse_today) {
         setTimeout(() => {
-          item.posa_delivery_date = today;
+          item.posa_delivery_date = this.formatDateForDisplay(today);
         }, 0);
+      } else {
+        item.posa_delivery_date = this.formatDateForDisplay(backend_date);
       }
     },
     load_print_page(invoice_name) {
@@ -3639,6 +3650,43 @@ export default {
         },
         true
       );
+    },
+
+    formatDateForBackend(date) {
+      if (!date) return null;
+      if (typeof date === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          return date;
+        }
+        if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(date)) {
+          const [d, m, y] = date.split('-');
+          return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+      }
+      const d = new Date(date);
+      if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = (`0${d.getMonth() + 1}`).slice(-2);
+        const day = (`0${d.getDate()}`).slice(-2);
+        return `${year}-${month}-${day}`;
+      }
+      return date;
+    },
+
+    formatDateForDisplay(date) {
+      if (!date) return '';
+      if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const [y, m, d] = date.split('-');
+        return `${d}-${m}-${y}`;
+      }
+      const d = new Date(date);
+      if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = (`0${d.getMonth() + 1}`).slice(-2);
+        const day = (`0${d.getDate()}`).slice(-2);
+        return `${day}-${month}-${year}`;
+      }
+      return date;
     },
 
     toggleOffer(item) {
@@ -4335,28 +4383,16 @@ export default {
         this.additional_discount_percentage = 0;
       }
     },
-    // Watch for posting date changes and ensure correct format
+    // Keep display date in sync with posting_date
     posting_date: {
       handler(newVal) {
-        if (!newVal) return;
-        // Make sure the date is in YYYY-MM-DD format
-        if (typeof newVal === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(newVal)) {
-          return; // Already in correct format
-        }
-
-        let dateStr;
-        if (newVal instanceof Date) {
-          const year = newVal.getFullYear();
-          const month = String(newVal.getMonth() + 1).padStart(2, '0');
-          const day = String(newVal.getDate()).padStart(2, '0');
-          dateStr = `${year}-${month}-${day}`;
-        } else {
-          dateStr = frappe.datetime.nowdate();
-        }
-
-        this.posting_date = dateStr;
+        this.posting_date_display = this.formatDateForDisplay(newVal);
       },
-      immediate: true
+      immediate: true,
+    },
+    // Update posting_date when user changes the display value
+    posting_date_display(newVal) {
+      this.posting_date = this.formatDateForBackend(newVal);
     },
   },
 };

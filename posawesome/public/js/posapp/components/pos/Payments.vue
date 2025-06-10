@@ -284,7 +284,7 @@
             <VueDatePicker
               v-model="new_delivery_date"
               model-type="format"
-              format="yyyy-MM-dd"
+              format="dd-MM-yyyy"
               :min-date="new Date()"
               @update:model-value="update_delivery_date()"
             />
@@ -376,13 +376,13 @@
               ></v-text-field>
             </v-col>
             <v-col cols="6">
-              <VueDatePicker
-                v-model="new_po_date"
-                model-type="format"
-                format="yyyy-MM-dd"
-                :min-date="new Date()"
-                @update:model-value="update_po_date()"
-              />
+            <VueDatePicker
+              v-model="new_po_date"
+              model-type="format"
+              format="dd-MM-yyyy"
+              :min-date="new Date()"
+              @update:model-value="update_po_date()"
+            />
               <v-text-field
                 v-model="invoice_doc.po_date"
                 :label="frappe._('Purchase Order Date')"
@@ -425,6 +425,8 @@
           <v-col cols="6" v-if="is_credit_sale">
             <VueDatePicker
               v-model="new_credit_due_date"
+              model-type="format"
+              format="dd-MM-yyyy"
               :min-date="new Date()"
               @update:model-value="update_credit_due_date()"
             />
@@ -1457,11 +1459,39 @@ export default {
     // Format date to YYYY-MM-DD
     formatDate(date) {
       if (!date) return null;
+      if (typeof date === 'string') {
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+          return date;
+        }
+        if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(date)) {
+          const [d, m, y] = date.split('-');
+          return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+      }
       const d = new Date(date);
-      const year = d.getFullYear();
-      const month = (`0${d.getMonth() + 1}`).slice(-2);
-      const day = (`0${d.getDate()}`).slice(-2);
-      return `${year}-${month}-${day}`;
+      if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = (`0${d.getMonth() + 1}`).slice(-2);
+        const day = (`0${d.getDate()}`).slice(-2);
+        return `${year}-${month}-${day}`;
+      }
+      return date;
+    },
+
+    formatDateDisplay(date) {
+      if (!date) return '';
+      if (typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        const [y, m, d] = date.split('-');
+        return `${d}-${m}-${y}`;
+      }
+      const d = new Date(date);
+      if (!isNaN(d.getTime())) {
+        const year = d.getFullYear();
+        const month = (`0${d.getMonth() + 1}`).slice(-2);
+        const day = (`0${d.getDate()}`).slice(-2);
+        return `${day}-${month}-${year}`;
+      }
+      return date;
     },
     // Show paid amount info message
     showPaidAmount() {
@@ -1601,7 +1631,7 @@ export default {
           this.invoice_doc.shipping_address_name = null;
         } else if (this.invoice_doc && data === "Order") {
           // Initialize delivery date to today when switching to Order type
-          this.new_delivery_date = frappe.datetime.now_date();
+          this.new_delivery_date = this.formatDateDisplay(frappe.datetime.now_date());
           this.update_delivery_date();
         }
         // Handle return invoices properly

@@ -31,7 +31,7 @@
               <VueDatePicker
                 v-model="from_date"
                 model-type="format"
-                format="yyyy-MM-dd"
+                format="dd-MM-yyyy"
                 :enable-time-picker="false"
                 @update:model-value="formatFromDate()"
               />
@@ -40,7 +40,7 @@
               <VueDatePicker
                 v-model="to_date"
                 model-type="format"
-                format="yyyy-MM-dd"
+                format="dd-MM-yyyy"
                 :enable-time-picker="false"
                 @update:model-value="formatToDate()"
               />
@@ -275,10 +275,10 @@ export default {
     formatDateDisplay(dateStr) {
       if (!dateStr) return '';
       try {
-        // Convert YYYY-MM-DD to DD/MM/YYYY
+        // Convert YYYY-MM-DD to DD-MM-YYYY
         const parts = dateStr.split('-');
         if (parts.length === 3) {
-          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+          return `${parts[2]}-${parts[1]}-${parts[0]}`;
         }
       } catch (error) {
         console.error("Error formatting date:", error);
@@ -295,13 +295,13 @@ export default {
             const day = String(this.from_date.getDate()).padStart(2, '0');
             const month = String(this.from_date.getMonth() + 1).padStart(2, '0');
             const year = this.from_date.getFullYear();
-            dateString = `${day}/${month}/${year}`;
+            dateString = `${day}-${month}-${year}`;
           }
           // Handle string in YYYY-MM-DD format
           else if (typeof this.from_date === 'string' && this.from_date.includes('-')) {
             const parts = this.from_date.split('-');
             if (parts.length === 3) {
-              dateString = `${parts[2]}/${parts[1]}/${parts[0]}`;
+              dateString = `${parts[2]}-${parts[1]}-${parts[0]}`;
             } else {
               dateString = this.from_date;
             }
@@ -330,13 +330,13 @@ export default {
             const day = String(this.to_date.getDate()).padStart(2, '0');
             const month = String(this.to_date.getMonth() + 1).padStart(2, '0');
             const year = this.to_date.getFullYear();
-            dateString = `${day}/${month}/${year}`;
+            dateString = `${day}-${month}-${year}`;
           }
           // Handle string in YYYY-MM-DD format
           else if (typeof this.to_date === 'string' && this.to_date.includes('-')) {
             const parts = this.to_date.split('-');
             if (parts.length === 3) {
-              dateString = `${parts[2]}/${parts[1]}/${parts[0]}`;
+              dateString = `${parts[2]}-${parts[1]}-${parts[0]}`;
             } else {
               dateString = this.to_date;
             }
@@ -417,8 +417,14 @@ export default {
               formattedFromDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
             }
           } else if (vm.from_date.includes('-')) {
-            // Already in YYYY-MM-DD format
-            formattedFromDate = vm.from_date;
+            const parts = vm.from_date.split('-');
+            if (parts.length === 3) {
+              if (parts[0].length === 4) {
+                formattedFromDate = vm.from_date; // Already YYYY-MM-DD
+              } else {
+                formattedFromDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+              }
+            }
           } else {
             // Invalid format, skip date filter
             formattedFromDate = null;
@@ -442,8 +448,14 @@ export default {
               formattedToDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
             }
           } else if (vm.to_date.includes('-')) {
-            // Already in YYYY-MM-DD format
-            formattedToDate = vm.to_date;
+            const parts = vm.to_date.split('-');
+            if (parts.length === 3) {
+              if (parts[0].length === 4) {
+                formattedToDate = vm.to_date; // Already YYYY-MM-DD
+              } else {
+                formattedToDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+              }
+            }
           } else {
             // Invalid format, skip date filter
             formattedToDate = null;
