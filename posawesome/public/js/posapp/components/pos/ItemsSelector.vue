@@ -643,6 +643,12 @@ export default {
     },
     async prePopulateStockCache(items) {
       try {
+        const cache = getLocalStockCache();
+        if (cache && Object.keys(cache).length > 0) {
+          console.debug('Stock cache already populated with', Object.keys(cache).length, 'items');
+          return;
+        }
+
         console.info('Pre-populating stock cache for', items.length, 'items');
         await initializeStockCache(items, this.pos_profile);
       } catch (error) {
