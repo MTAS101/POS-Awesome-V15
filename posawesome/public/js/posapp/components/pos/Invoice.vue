@@ -75,7 +75,7 @@
           <!-- Posting Date Selection with Date Picker -->
           <v-col cols="6" class="pb-2">
           <v-menu v-model="posting_date_menu" :close-on-content-click="false" transition="scale-transition"
-              density="default" location="bottom">
+              density="default" location="bottom" min-width="auto">
               <template v-slot:activator="{ props }">
                 <v-text-field v-model="formatted_posting_date" :label="frappe._('Posting Date')" readonly variant="solo"
                   density="compact" clearable color="primary" hide-details prepend-inner-icon="mdi-calendar"
@@ -83,8 +83,8 @@
               </template>
               <v-date-picker v-model="posting_date" no-title scrollable color="primary"
                 class="custom-date-picker"
-                :min="frappe.datetime.add_days(frappe.datetime.nowdate(true), -7)"
-                :max="frappe.datetime.add_days(frappe.datetime.nowdate(true), 7)">
+                :min="frappe.datetime.add_days(frappe.datetime.now_date(), -7)"
+                :max="frappe.datetime.add_days(frappe.datetime.now_date(), 7)">
                 <template #actions>
                   <v-spacer></v-spacer>
                   <v-btn text color="primary" @click="posting_date = null; posting_date_menu = false">{{ __('Clear')
@@ -327,7 +327,7 @@
                   <!-- Delivery Date (if sales order and order type) -->
                   <v-col cols="12" sm="4" v-if="pos_profile.posa_allow_sales_order && invoiceType == 'Order'">
                     <v-menu ref="item_delivery_date" v-model="item.item_delivery_date" :close-on-content-click="false"
-                      v-model:return-value="item.posa_delivery_date" transition="scale-transition" density="default" location="bottom">
+                      v-model:return-value="item.posa_delivery_date" transition="scale-transition" density="default" location="bottom" min-width="auto">
                       <template v-slot:activator="{ props }">
                         <v-text-field v-model="item.posa_delivery_date" :label="frappe._('Delivery Date')" readonly
                           variant="outlined" density="compact" clearable color="primary" hide-details
