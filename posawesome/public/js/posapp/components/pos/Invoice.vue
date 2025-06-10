@@ -80,6 +80,7 @@
               format="dd-MM-yyyy"
               :min-date="new Date(frappe.datetime.add_days(frappe.datetime.nowdate(true), -7))"
               :max-date="new Date(frappe.datetime.add_days(frappe.datetime.nowdate(true), 7))"
+              auto-apply
             />
           </v-col>
           <!-- Customer Balance Display (Only if enabled in POS profile) -->
@@ -319,6 +320,7 @@
                       model-type="format"
                       format="dd-MM-yyyy"
                       :min-date="new Date()"
+                      auto-apply
                       @update:model-value="validate_due_date(item)"
                     />
                   </v-col>

@@ -28,22 +28,24 @@
                 v-model="invoice_name" density="compact" clearable></v-text-field>
             </v-col>
             <v-col cols="12" sm="3">
-              <VueDatePicker
-                v-model="from_date"
-                model-type="format"
-                format="dd-MM-yyyy"
-                :enable-time-picker="false"
-                @update:model-value="formatFromDate()"
-              />
+          <VueDatePicker
+            v-model="from_date"
+            model-type="format"
+            format="dd-MM-yyyy"
+            :enable-time-picker="false"
+            auto-apply
+            @update:model-value="formatFromDate()"
+          />
             </v-col>
             <v-col cols="12" sm="3">
-              <VueDatePicker
-                v-model="to_date"
-                model-type="format"
-                format="dd-MM-yyyy"
-                :enable-time-picker="false"
-                @update:model-value="formatToDate()"
-              />
+          <VueDatePicker
+            v-model="to_date"
+            model-type="format"
+            format="dd-MM-yyyy"
+            :enable-time-picker="false"
+            auto-apply
+            @update:model-value="formatToDate()"
+          />
             </v-col>
           </v-row>
 

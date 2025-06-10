@@ -286,6 +286,7 @@
               model-type="format"
               format="dd-MM-yyyy"
               :min-date="new Date()"
+              auto-apply
               @update:model-value="update_delivery_date()"
             />
           </v-col>
@@ -381,6 +382,7 @@
               model-type="format"
               format="dd-MM-yyyy"
               :min-date="new Date()"
+              auto-apply
               @update:model-value="update_po_date()"
             />
               <v-text-field
@@ -423,13 +425,14 @@
             ></v-switch>
           </v-col>
           <v-col cols="6" v-if="is_credit_sale">
-            <VueDatePicker
-              v-model="new_credit_due_date"
-              model-type="format"
-              format="dd-MM-yyyy"
-              :min-date="new Date()"
-              @update:model-value="update_credit_due_date()"
-            />
+          <VueDatePicker
+            v-model="new_credit_due_date"
+            model-type="format"
+            format="dd-MM-yyyy"
+            :min-date="new Date()"
+            auto-apply
+            @update:model-value="update_credit_due_date()"
+          />
           </v-col>
           <v-col cols="6" v-if="!invoice_doc.is_return && pos_profile.use_customer_credit">
             <v-switch
