@@ -488,7 +488,7 @@ export default {
       delivery_charges_rate: 0, // Selected delivery charge rate
       selected_delivery_charge: "", // Selected delivery charge object
       invoice_posting_date: false, // Posting date dialog
-      posting_date: frappe.datetime.nowdate(), // Invoice posting date
+      posting_date: frappe.datetime.now_date(), // Invoice posting date
       posting_date_menu: false, // Posting date menu visibility
       items_headers: [
         // Table headers for items
@@ -880,7 +880,7 @@ export default {
       this.delivery_charges_rate = 0;
       this.selected_delivery_charge = "";
       // Reset posting date to today
-      this.posting_date = frappe.datetime.nowdate();
+      this.posting_date = frappe.datetime.now_date();
 
       // Always reset to default customer after invoice
       this.customer = this.pos_profile.customer;
@@ -957,7 +957,7 @@ export default {
         ? "Order"
         : "Invoice";
       this.invoiceTypes = ["Invoice", "Order"];
-      this.posting_date = frappe.datetime.nowdate();
+      this.posting_date = frappe.datetime.now_date();
       var vm = this;
       if (doc.name && this.pos_profile.posa_allow_delete) {
         await frappe.call({
@@ -1024,7 +1024,7 @@ export default {
       }
 
       this.customer = data.customer;
-      this.posting_date = data.posting_date || frappe.datetime.nowdate();
+      this.posting_date = data.posting_date || frappe.datetime.now_date();
       this.discount_amount = data.discount_amount;
       this.additional_discount_percentage =
         data.additional_discount_percentage;
@@ -1134,7 +1134,7 @@ export default {
           }
         });
         this.customer = data.customer;
-        this.posting_date = data.posting_date || frappe.datetime.nowdate();
+        this.posting_date = data.posting_date || frappe.datetime.now_date();
         this.discount_amount = data.discount_amount;
         this.additional_discount_percentage =
           data.additional_discount_percentage;
@@ -3869,7 +3869,7 @@ export default {
           args: {
             from_currency: currency,         // Selected currency (e.g. USD)
             to_currency: this.pos_profile.currency,  // Base currency (e.g. PKR)
-            transaction_date: this.posting_date || frappe.datetime.nowdate()
+            transaction_date: this.posting_date || frappe.datetime.now_date()
           }
         });
 
@@ -4280,7 +4280,7 @@ export default {
     }
     // Listen for reset_posting_date to reset posting date after invoice submission
     this.eventBus.on("reset_posting_date", () => {
-      this.posting_date = frappe.datetime.nowdate();
+      this.posting_date = frappe.datetime.now_date();
     });
     this.eventBus.on("open_variants_model", this.open_variants_model);
     this.eventBus.on("calc_uom", this.calc_uom);
@@ -4380,7 +4380,7 @@ export default {
           const day = String(newVal.getDate()).padStart(2, '0');
           dateStr = `${year}-${month}-${day}`;
         } else {
-          dateStr = frappe.datetime.nowdate();
+          dateStr = frappe.datetime.now_date();
         }
 
         this.posting_date = dateStr;
