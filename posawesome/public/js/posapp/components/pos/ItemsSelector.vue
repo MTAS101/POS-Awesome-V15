@@ -186,6 +186,21 @@ export default {
   },
 
   methods: {
+    pauseRefreshInterval() {
+      if (this.refresh_interval) {
+        clearInterval(this.refresh_interval);
+        this.refresh_interval = null;
+      }
+    },
+    startRefreshInterval() {
+      if (!this.refresh_interval) {
+        this.refresh_interval = setInterval(() => {
+          if (this.filtered_items && this.filtered_items.length > 0) {
+            this.update_cur_items_details();
+          }
+        }, 30000);
+      }
+    },
     show_offers() {
       this.eventBus.emit("show_offers", "true");
     },
@@ -1125,17 +1140,25 @@ export default {
     // Setup auto-refresh for item quantities
     // Trigger an immediate refresh once items are available
     this.update_cur_items_details();
-    this.refresh_interval = setInterval(() => {
-      if (this.filtered_items && this.filtered_items.length > 0) {
-        this.update_cur_items_details();
-      }
-    }, 30000); // Refresh every 30 seconds after the initial fetch
+    this.startRefreshInterval();
 
     // Add new event listener for currency changes
     this.eventBus.on("update_currency", (data) => {
       this.selected_currency = data.currency;
       this.exchange_rate = data.exchange_rate;
     });
+
+    // Pause or resume refresh when navigating to other screens
+    const toggleRefresh = (data) => {
+      if (data === "true") {
+        this.pauseRefreshInterval();
+      } else {
+        this.startRefreshInterval();
+      }
+    };
+    this.eventBus.on("show_payment", toggleRefresh);
+    this.eventBus.on("show_offers", toggleRefresh);
+    this.eventBus.on("show_coupons", toggleRefresh);
   },
 
   mounted() {
@@ -1170,6 +1193,9 @@ export default {
 
     this.eventBus.off("update_currency");
     this.eventBus.off("server-online");
+    this.eventBus.off("show_payment");
+    this.eventBus.off("show_offers");
+    this.eventBus.off("show_coupons");
   },
 };
 </script>
