@@ -19,19 +19,29 @@ const memory = {
   sales_persons_storage: []
 };
 
-export const initPromise = (async () => {
-  try {
-    await db.open();
-    for (const key of Object.keys(memory)) {
-      const stored = await db.table('keyval').get(key);
-      if (stored && stored.value !== undefined) {
-        memory[key] = stored.value;
+export const initPromise = new Promise(resolve => {
+  const init = async () => {
+    try {
+      await db.open();
+      for (const key of Object.keys(memory)) {
+        const stored = await db.table('keyval').get(key);
+        if (stored && stored.value !== undefined) {
+          memory[key] = stored.value;
+        }
       }
+    } catch (e) {
+      console.error('Failed to initialize offline DB', e);
+    } finally {
+      resolve();
     }
-  } catch (e) {
-    console.error('Failed to initialize offline DB', e);
+  };
+
+  if (typeof requestIdleCallback === 'function') {
+    requestIdleCallback(init);
+  } else {
+    setTimeout(init, 0);
   }
-})();
+});
 
 function persist(key) {
   db.table('keyval')
