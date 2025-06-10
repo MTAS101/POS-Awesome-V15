@@ -281,8 +281,15 @@
 
           <!-- Delivery Date and Address (if applicable) -->
           <v-col cols="6" v-if="pos_profile.posa_allow_sales_order && invoiceType === 'Order'">
-            <v-menu ref="order_delivery_date" v-model="order_delivery_date" :close-on-content-click="false" transition="scale-transition" density="default">
-              <template v-slot:activator="{ on, attrs }">
+            <v-menu 
+              ref="order_delivery_date" 
+              v-model="order_delivery_date" 
+              :close-on-content-click="false" 
+              transition="scale-transition" 
+              density="default"
+              location="bottom"
+            >
+              <template v-slot:activator="{ props }">
                 <v-text-field
                   v-model="invoice_doc.posa_delivery_date"
                   :label="frappe._('Delivery Date')"
@@ -293,17 +300,16 @@
                   clearable
                   color="primary"
                   hide-details
-                  v-bind="attrs"
-                  v-on="on"
+                  v-bind="props"
                 ></v-text-field>
               </template>
               <v-date-picker
                 v-model="new_delivery_date"
                 no-title
-                scrollable
                 color="primary"
                 :min="frappe.datetime.now_date()"
-                @input="order_delivery_date = false; update_delivery_date()"
+                @update:model-value="order_delivery_date = false; update_delivery_date()"
+                class="custom-date-picker"
               ></v-date-picker>
             </v-menu>
           </v-col>
@@ -1487,6 +1493,10 @@ export default {
     // Update delivery date after selection
     update_delivery_date() {
       this.invoice_doc.posa_delivery_date = this.formatDate(this.new_delivery_date);
+      // After setting delivery date, fetch addresses if not already loaded
+      if (this.invoice_doc.customer && (!this.addresses || this.addresses.length === 0)) {
+        this.get_addresses();
+      }
     },
     // Update purchase order date after selection
     update_po_date() {
@@ -1641,6 +1651,10 @@ export default {
           this.invoice_doc.posa_delivery_date = null;
           this.invoice_doc.posa_notes = null;
           this.invoice_doc.shipping_address_name = null;
+        } else if (this.invoice_doc && data === "Order") {
+          // Initialize delivery date to today when switching to Order type
+          this.new_delivery_date = frappe.datetime.now_date();
+          this.update_delivery_date();
         }
         // Handle return invoices properly
         if (this.invoice_doc && data === "Return") {
@@ -1711,5 +1725,44 @@ export default {
 
 .v-text-field--readonly:hover {
   background-color: transparent;
+}
+
+/* Custom date picker styling */
+.custom-date-picker {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 320px;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+}
+
+.custom-date-picker .v-date-picker-header {
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.custom-date-picker .v-date-picker-month {
+  padding: 8px;
+}
+
+.custom-date-picker .v-btn {
+  margin: 2px;
+  min-width: 36px !important;
+  height: 36px !important;
+  border-radius: 50%;
+}
+
+.custom-date-picker .v-btn--active {
+  background-color: var(--v-theme-primary) !important;
+  color: white !important;
+}
+
+/* Position the menu below the field */
+.v-menu__content {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 4px;
 }
 </style>
