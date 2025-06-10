@@ -158,6 +158,8 @@ export default {
     refresh_interval: null,
     currentRequest: null,
     abortController: null,
+    itemDetailsRetryCount: 0,
+    itemDetailsRetryTimeout: null,
     items_loaded: false,
     selected_currency: "",
     exchange_rate: 1,
@@ -505,8 +507,15 @@ export default {
       const vm = this;
       if (!items || !items.length) return;
 
+      // reset any pending retry timer
+      if (vm.itemDetailsRetryTimeout) {
+        clearTimeout(vm.itemDetailsRetryTimeout);
+        vm.itemDetailsRetryTimeout = null;
+      }
+
       // If offline, use cached local stock quantities and UOMs
       if (isOffline()) {
+        vm.itemDetailsRetryCount = 0;
         items.forEach((item) => {
           const localQty = getLocalStock(item.item_code);
           if (localQty !== null) {
@@ -544,6 +553,7 @@ export default {
         signal: vm.abortController.signal,
         callback: function (r) {
           if (r.message) {
+            vm.itemDetailsRetryCount = 0;
             let qtyChanged = false;
 
             items.forEach((item) => {
@@ -606,9 +616,15 @@ export default {
                 }
               }
             });
-            setTimeout(() => {
-              vm.update_items_details(items);
-            }, 1000);
+
+            // do not retry if offline, wait for "server-online" event instead
+            if (!isOffline()) {
+              vm.itemDetailsRetryCount += 1;
+              const delay = Math.min(32000, 1000 * Math.pow(2, vm.itemDetailsRetryCount - 1));
+              vm.itemDetailsRetryTimeout = setTimeout(() => {
+                vm.update_items_details(items);
+              }, delay);
+            }
           }
         }
       });
@@ -1131,6 +1147,11 @@ export default {
     if (this.refresh_interval) {
       clearInterval(this.refresh_interval);
     }
+
+    if (this.itemDetailsRetryTimeout) {
+      clearTimeout(this.itemDetailsRetryTimeout);
+    }
+    this.itemDetailsRetryCount = 0;
 
     // Call cleanup function for abort controller
     if (this.cleanupBeforeDestroy) {
