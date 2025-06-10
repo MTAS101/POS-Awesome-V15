@@ -74,14 +74,15 @@
         <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_change_posting_date">
           <!-- Posting Date Selection with Date Picker -->
           <v-col cols="6" class="pb-2">
-            <v-menu v-model="posting_date_menu" :close-on-content-click="false" transition="scale-transition"
-              density="default">
+          <v-menu v-model="posting_date_menu" :close-on-content-click="false" transition="scale-transition"
+              density="default" location="bottom">
               <template v-slot:activator="{ props }">
                 <v-text-field v-model="formatted_posting_date" :label="frappe._('Posting Date')" readonly variant="solo"
                   density="compact" clearable color="primary" hide-details prepend-inner-icon="mdi-calendar"
                   v-bind="props"></v-text-field>
               </template>
               <v-date-picker v-model="posting_date" no-title scrollable color="primary"
+                class="custom-date-picker"
                 :min="frappe.datetime.add_days(frappe.datetime.nowdate(true), -7)"
                 :max="frappe.datetime.add_days(frappe.datetime.nowdate(true), 7)">
                 <template #actions>
@@ -326,13 +327,14 @@
                   <!-- Delivery Date (if sales order and order type) -->
                   <v-col cols="12" sm="4" v-if="pos_profile.posa_allow_sales_order && invoiceType == 'Order'">
                     <v-menu ref="item_delivery_date" v-model="item.item_delivery_date" :close-on-content-click="false"
-                      v-model:return-value="item.posa_delivery_date" transition="scale-transition">
+                      v-model:return-value="item.posa_delivery_date" transition="scale-transition" density="default" location="bottom">
                       <template v-slot:activator="{ props }">
                         <v-text-field v-model="item.posa_delivery_date" :label="frappe._('Delivery Date')" readonly
                           variant="outlined" density="compact" clearable color="primary" hide-details
                           v-bind="props"></v-text-field>
                       </template>
                       <v-date-picker v-model="item.posa_delivery_date" no-title scrollable color="primary"
+                        class="custom-date-picker"
                         :min="frappe.datetime.now_date()">
                         <v-spacer></v-spacer>
                         <v-btn variant="text" color="primary" @click="item.item_delivery_date = false">
@@ -4668,5 +4670,62 @@ export default {
   .dynamic-padding .v-col {
     padding: 1px 2px;
   }
+}
+
+/* Input field interactions */
+.v-text-field {
+  cursor: text;
+}
+
+.v-text-field:hover {
+  background-color: rgba(var(--v-theme-primary), 0.05);
+}
+
+/* Remove readonly styling */
+.v-text-field--readonly {
+  cursor: text;
+}
+
+.v-text-field--readonly:hover {
+  background-color: transparent;
+}
+
+/* Custom date picker styling */
+.custom-date-picker {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 320px;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+}
+
+.custom-date-picker .v-date-picker-header {
+  padding: 12px;
+  background-color: #f5f5f5;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.custom-date-picker .v-date-picker-month {
+  padding: 8px;
+}
+
+.custom-date-picker .v-btn {
+  margin: 2px;
+  min-width: 36px !important;
+  height: 36px !important;
+  border-radius: 50%;
+}
+
+.custom-date-picker .v-btn--active {
+  background-color: var(--v-theme-primary) !important;
+  color: white !important;
+}
+
+/* Position the menu below the field */
+.v-menu__content {
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 4px;
 }
 </style>
