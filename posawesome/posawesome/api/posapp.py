@@ -34,6 +34,13 @@ from frappe.utils.caching import redis_cache
 from typing import List, Dict
 
 
+def ensure_child_doctype(doc, table_field, child_doctype):
+    """Ensure child rows have the correct doctype set."""
+    for row in doc.get(table_field, []):
+        if not row.get("doctype"):
+            row.doctype = child_doctype
+
+
 @frappe.whitelist()
 def get_opening_dialog_data():
     data = {}
@@ -691,7 +698,9 @@ def submit_invoice(invoice, data):
                     "allocated_amount": row["credit_to_redeem"],
                 }
 
-                invoice_doc.append("advances", advance_payment)
+                advance_row = invoice_doc.append("advances", {})
+                advance_row.update(advance_payment)
+                ensure_child_doctype(invoice_doc, "advances", "Sales Invoice Advance")
                 invoice_doc.is_pos = 0
                 is_payment_entry = 1
 
@@ -807,34 +816,43 @@ def redeeming_customer_credit(
                     }
                 )
 
-                jv_debit_entry = {
-                    "account": outstanding_invoice.debit_to,
-                    "party_type": "Customer",
-                    "party": invoice_doc.customer,
-                    "reference_type": "Sales Invoice",
-                    "reference_name": outstanding_invoice.name,
-                    "debit_in_account_currency": row["credit_to_redeem"],
-                    "cost_center": cost_center,
-                }
+                debit_row = jv_doc.append("accounts", {})
+                debit_row.update(
+                    {
+                        "account": outstanding_invoice.debit_to,
+                        "party_type": "Customer",
+                        "party": invoice_doc.customer,
+                        "reference_type": "Sales Invoice",
+                        "reference_name": outstanding_invoice.name,
+                        "debit_in_account_currency": row["credit_to_redeem"],
+                        "cost_center": cost_center,
+                    }
+                )
 
-                jv_credit_entry = {
-                    "account": invoice_doc.debit_to,
-                    "party_type": "Customer",
-                    "party": invoice_doc.customer,
-                    "reference_type": "Sales Invoice",
-                    "reference_name": invoice_doc.name,
-                    "credit_in_account_currency": row["credit_to_redeem"],
-                    "cost_center": cost_center,
-                }
+                credit_row = jv_doc.append("accounts", {})
+                credit_row.update(
+                    {
+                        "account": invoice_doc.debit_to,
+                        "party_type": "Customer",
+                        "party": invoice_doc.customer,
+                        "reference_type": "Sales Invoice",
+                        "reference_name": invoice_doc.name,
+                        "credit_in_account_currency": row["credit_to_redeem"],
+                        "cost_center": cost_center,
+                    }
+                )
 
-                jv_doc.append("accounts", jv_debit_entry)
-                jv_doc.append("accounts", jv_credit_entry)
+                ensure_child_doctype(jv_doc, "accounts", "Journal Entry Account")
 
                 jv_doc.flags.ignore_permissions = True
                 frappe.flags.ignore_account_permission = True
                 jv_doc.set_missing_values()
-                jv_doc.save()
-                jv_doc.submit()
+                try:
+                    jv_doc.save()
+                    jv_doc.submit()
+                except Exception as e:
+                    frappe.log_error(frappe.get_traceback(), "POSAwesome JV Error")
+                    frappe.throw(_("Unable to create Journal Entry for customer credit."))
 
     if is_payment_entry and total_cash > 0:
         for payment in payments:
@@ -865,7 +883,11 @@ def redeeming_customer_credit(
                 "reference_name": invoice_doc.name,
             }
 
-            payment_entry_doc.append("references", payment_reference)
+            ref_row = payment_entry_doc.append("references", {})
+            ref_row.update(payment_reference)
+            ensure_child_doctype(
+                payment_entry_doc, "references", "Payment Entry Reference"
+            )
             payment_entry_doc.flags.ignore_permissions = True
             frappe.flags.ignore_account_permission = True
             payment_entry_doc.save()
