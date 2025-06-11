@@ -229,7 +229,7 @@
                     </v-col>
                     <v-col cols="12">
                       <v-autocomplete v-model="item.serial_no_selected" :items="item.serial_no_data"
-                        item-title="serial_no" variant="outlined" density="compact" chips color="primary" small-chips
+                        item-title="serial_no" variant="outlined" density="compact" chips color="primary"
                         :label="frappe._('Serial No')" multiple
                         @update:model-value="set_serial_no(item)"></v-autocomplete>
                     </v-col>
@@ -253,9 +253,10 @@
                         @update:model-value="set_batch_qty(item, $event)" hide-details>
                         <template v-slot:item="{ props, item }">
                           <v-list-item v-bind="props">
+                            <!-- eslint-disable-next-line vue/no-v-text-v-html-on-component -->
                             <v-list-item-title v-html="item.raw.batch_no"></v-list-item-title>
-                            <v-list-item-subtitle v-html="`Available QTY  '${item.raw.batch_qty}' - Expiry Date ${item.raw.expiry_date}`
-                              "></v-list-item-subtitle>
+                            <!-- eslint-disable-next-line vue/no-v-text-v-html-on-component -->
+                            <v-list-item-subtitle v-html="`Available QTY  '${item.raw.batch_qty}' - Expiry Date ${item.raw.expiry_date}`"></v-list-item-subtitle>
                           </v-list-item>
                         </template>
                       </v-autocomplete>
@@ -281,63 +282,30 @@
       </div>
     </v-card>
     <!-- Payment Section -->
-    <v-card class="cards mb-0 mt-3 py-2 px-3 rounded-lg bg-grey-lighten-4">
-      <v-row dense>
-        <!-- Summary Info -->
-        <v-col cols="12" md="7">
-          <v-row dense>
-            <!-- Total Qty -->
-            <v-col cols="6">
-              <v-text-field :model-value="formatFloat(total_qty)" :label="frappe._('Total Qty')"
-                prepend-inner-icon="mdi-format-list-numbered" variant="solo" density="compact" readonly
-                color="accent" />
-            </v-col>
-            <!-- Additional Discount (Amount or Percentage) -->
-            <v-col cols="6" v-if="!pos_profile.posa_use_percentage_discount">
-              <v-text-field v-model="additional_discount" :label="frappe._('Additional Discount')"
-                prepend-inner-icon="mdi-cash-minus" variant="solo" density="compact" color="warning"
-                :prefix="currencySymbol(pos_profile.currency)"
-                :disabled="!pos_profile.posa_allow_user_to_edit_additional_discount" />
-            </v-col>
-
-            <v-col cols="6" v-else>
-              <v-text-field v-model="additional_discount_percentage" @change="update_discount_umount()"
-                :rules="[isNumber]" :label="frappe._('Additional Discount %')" suffix="%"
-                prepend-inner-icon="mdi-percent" variant="solo" density="compact" color="warning"
-                :disabled="!pos_profile.posa_allow_user_to_edit_additional_discount || !!discount_percentage_offer_name" />
-            </v-col>
-
-            <!-- Items Discount -->
-            <v-col cols="6">
-              <v-text-field :model-value="formatCurrency(total_items_discount_amount)"
-                :prefix="currencySymbol(displayCurrency)" :label="frappe._('Items Discounts')"
-                prepend-inner-icon="mdi-tag-minus" variant="solo" density="compact" color="warning" readonly />
-            </v-col>
-
-            <!-- Total (moved to maintain row alignment) -->
-            <v-col cols="6">
-              <v-text-field :model-value="formatCurrency(subtotal)" :prefix="currencySymbol(displayCurrency)"
-                :label="frappe._('Total')" prepend-inner-icon="mdi-cash" variant="solo" density="compact" readonly
-                color="success" />
-            </v-col>
-          </v-row>
-        </v-col>
-
-        <!-- Action Buttons -->
-        <v-col cols="12" md="5">
-          <InvoiceActions
-            :pos_profile="pos_profile"
-            @save-and-clear="save_and_clear_invoice"
-            @load-drafts="get_draft_invoices"
-            @select-order="get_draft_orders"
-            @cancel-sale="cancel_dialog = true"
-            @open-returns="open_returns"
-            @print-draft="print_draft_invoice"
-            @show-payment="show_payment"
-          />
-        </v-col>
-      </v-row>
-    </v-card>
+    <InvoiceSummary
+      :pos_profile="pos_profile"
+      :total_qty="total_qty"
+      :additional_discount="additional_discount"
+      :additional_discount_percentage="additional_discount_percentage"
+      :total_items_discount_amount="total_items_discount_amount"
+      :subtotal="subtotal"
+      :displayCurrency="displayCurrency"
+      :formatFloat="formatFloat"
+      :formatCurrency="formatCurrency"
+      :currencySymbol="currencySymbol"
+      :discount_percentage_offer_name="discount_percentage_offer_name"
+      :isNumber="isNumber"
+      @update:additional_discount="val => additional_discount = val"
+      @update:additional_discount_percentage="val => additional_discount_percentage = val"
+      @update_discount_umount="update_discount_umount"
+      @save-and-clear="save_and_clear_invoice"
+      @load-drafts="get_draft_invoices"
+      @select-order="get_draft_orders"
+      @cancel-sale="cancel_dialog = true"
+      @open-returns="open_returns"
+      @print-draft="print_draft_invoice"
+      @show-payment="show_payment"
+    />
   </div>
 </template>
 
@@ -348,11 +316,12 @@ import Customer from "./Customer.vue";
 import DeliveryCharges from "./DeliveryCharges.vue";
 import PostingDateRow from "./PostingDateRow.vue";
 import MultiCurrencyRow from "./MultiCurrencyRow.vue";
-import InvoiceActions from "./InvoiceActions.vue";
 import CancelSaleDialog from "./CancelSaleDialog.vue";
+import InvoiceSummary from "./InvoiceSummary.vue";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
+  name: 'POSInvoice',
   mixins: [format],
   data() {
     return {
@@ -415,7 +384,7 @@ export default {
     DeliveryCharges,
     PostingDateRow,
     MultiCurrencyRow,
-    InvoiceActions,
+    InvoiceSummary,
     CancelSaleDialog,
   },
 
