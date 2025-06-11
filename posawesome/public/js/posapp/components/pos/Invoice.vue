@@ -1000,6 +1000,10 @@ export default {
           uom: item.uom,
           conversion_factor: item.conversion_factor,
           serial_no: item.serial_no,
+          // Link to original Sales Invoice Item when doing returns
+          // Needed for backend validation that the item exists in
+          // the referenced Sales Invoice
+          ...(item.si_detail && { si_detail: item.si_detail }),
           discount_percentage: flt(item.discount_percentage),
           batch_no: item.batch_no,
           posa_notes: item.posa_notes,
