@@ -177,6 +177,8 @@ import MultiCurrencyRow from "./MultiCurrencyRow.vue";
 import CancelSaleDialog from "./CancelSaleDialog.vue";
 import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemDetails from "./ItemDetails.vue";
+import invoiceComputed from "./invoiceComputed";
+import invoiceWatchers from "./invoiceWatchers";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
@@ -247,127 +249,8 @@ export default {
     CancelSaleDialog,
     ItemDetails,
   },
+  computed: invoiceComputed,
 
-  computed: {
-    // Calculate total quantity of all items
-    total_qty() {
-      this.close_payments();
-      let qty = 0;
-      this.items.forEach((item) => {
-        qty += flt(item.qty);
-      });
-      return this.flt(qty, this.float_precision);
-    },
-    // Calculate total amount for all items (handles returns)
-    Total() {
-      let sum = 0;
-      this.items.forEach((item) => {
-        // For returns, use absolute value for correct calculation
-        const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
-        const rate = flt(item.rate);
-        sum += qty * rate;
-      });
-      return this.flt(sum, this.currency_precision);
-    },
-    // Calculate subtotal after discounts and delivery charges
-    subtotal() {
-      this.close_payments();
-      let sum = 0;
-      this.items.forEach((item) => {
-        // For returns, use absolute value for correct calculation
-        const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
-        const rate = flt(item.rate);
-        sum += qty * rate;
-      });
-
-      // Subtract additional discount
-      const additional_discount = this.flt(this.additional_discount);
-      sum -= additional_discount;
-
-      // Add delivery charges
-      const delivery_charges = this.flt(this.delivery_charges_rate);
-      sum += delivery_charges;
-
-      return this.flt(sum, this.currency_precision);
-    },
-    // Calculate total discount amount for all items
-    total_items_discount_amount() {
-      let sum = 0;
-      this.items.forEach((item) => {
-        // For returns, use absolute value for correct calculation
-        if (this.isReturnInvoice) {
-          sum += Math.abs(flt(item.qty)) * flt(item.discount_amount);
-        } else {
-          sum += flt(item.qty) * flt(item.discount_amount);
-        }
-      });
-      return this.flt(sum, this.float_precision);
-    },
-    // Format posting_date for display as DD-MM-YYYY
-    formatted_posting_date: {
-      get() {
-        if (!this.posting_date) return '';
-        const parts = this.posting_date.split('-');
-        if (parts.length === 3) {
-          return `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-        return this.posting_date;
-      },
-      set(val) {
-        const parts = val.split('-');
-        if (parts.length === 3) {
-          this.posting_date = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        } else {
-          this.posting_date = val;
-        }
-      }
-    },
-    // Get currency symbol for display
-    currencySymbol() {
-      return (currency) => {
-        return get_currency_symbol(currency || this.selected_currency || this.pos_profile.currency);
-      };
-    },
-    // Get display currency
-    displayCurrency() {
-      return this.selected_currency || this.pos_profile.currency;
-    },
-    // Determine if current invoice is a return
-    isReturnInvoice() {
-      return this.invoiceType === 'Return' || (this.invoice_doc && this.invoice_doc.is_return);
-    },
-    // Table headers for item table (for another table if needed)
-    itemTableHeaders() {
-      return [
-        {
-          text: __('Item'),
-          value: 'item_name',
-          width: '35%',
-        },
-        {
-          text: __('Qty'),
-          value: 'qty',
-          width: '15%',
-        },
-        {
-          text: __(`Rate (${this.displayCurrency})`),
-          value: 'rate',
-          width: '20%',
-        },
-        {
-          text: __(`Amount (${this.displayCurrency})`),
-          value: 'amount',
-          width: '20%',
-        },
-        {
-          text: __('Action'),
-          value: 'actions',
-          sortable: false,
-          width: '10%',
-        },
-      ];
-    },
-  },
 
   methods: {
     shortOpenFirstItem(e) {
@@ -4068,72 +3951,7 @@ export default {
     document.removeEventListener("keydown", this.shortOpenFirstItem);
     document.removeEventListener("keydown", this.shortSelectDiscount);
   },
-  // Vue watchers for reactive data changes
-  watch: {
-    // Watch for customer change and update related data
-    customer() {
-      this.close_payments();
-      this.eventBus.emit("set_customer", this.customer);
-      this.fetch_customer_details();
-      this.fetch_customer_balance();
-      this.set_delivery_charges();
-    },
-    // Watch for customer_info change and emit to edit form
-    customer_info() {
-      this.eventBus.emit("set_customer_info_to_edit", this.customer_info);
-    },
-    // Watch for expanded row change and update item detail
-    expanded(data_value) {
-      if (data_value.length > 0) {
-        this.update_item_detail(data_value[0]);
-      }
-    },
-    // Watch for discount offer name change and emit
-    discount_percentage_offer_name() {
-      this.eventBus.emit("update_discount_percentage_offer_name", {
-        value: this.discount_percentage_offer_name,
-      });
-    },
-    // Watch for items array changes (deep) and re-handle offers
-    items: {
-      deep: true,
-      handler(items) {
-        this.handelOffers();
-        this.$forceUpdate();
-      },
-    },
-    // Watch for invoice type change and emit
-    invoiceType() {
-      this.eventBus.emit("update_invoice_type", this.invoiceType);
-    },
-    // Watch for additional discount and update percentage accordingly
-    additional_discount() {
-      if (!this.additional_discount || this.additional_discount == 0) {
-        this.additional_discount_percentage = 0;
-      } else if (this.pos_profile.posa_use_percentage_discount) {
-        // Prevent division by zero which causes NaN
-        if (this.Total && this.Total !== 0) {
-          this.additional_discount_percentage =
-            (this.additional_discount / this.Total) * 100;
-        } else {
-          this.additional_discount_percentage = 0;
-        }
-      } else {
-        this.additional_discount_percentage = 0;
-      }
-    },
-    // Keep display date in sync with posting_date
-    posting_date: {
-      handler(newVal) {
-        this.posting_date_display = this.formatDateForDisplay(newVal);
-      },
-      immediate: true,
-    },
-    // Update posting_date when user changes the display value
-    posting_date_display(newVal) {
-      this.posting_date = this.formatDateForBackend(newVal);
-    },
-  },
+  watch: invoiceWatchers,
 };
 </script>
 
