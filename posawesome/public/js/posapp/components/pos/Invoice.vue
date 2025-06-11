@@ -45,66 +45,37 @@
         </v-row>
 
         <!-- Delivery Charges Section (Only if enabled in POS profile) -->
-        <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_use_delivery_charges">
-          <v-col cols="8" class="pb-0 mb-0 pr-0 pt-0">
-            <!-- Delivery Charges Selection Dropdown -->
-            <v-autocomplete density="compact" clearable auto-select-first variant="outlined" color="primary"
-              :label="frappe._('Delivery Charges')" v-model="selected_delivery_charge" :items="delivery_charges"
-              item-title="name" item-value="name" return-object bg-color="white" :no-data-text="__('Charges not found')"
-              hide-details :customFilter="deliveryChargesFilter" :disabled="readonly"
-              @update:model-value="update_delivery_charges()">
-              <template v-slot:item="{ props, item }">
-                <v-list-item v-bind="props">
-                  <v-list-item-title class="text-primary text-subtitle-1" v-html="item.raw.name"></v-list-item-title>
-                  <v-list-item-subtitle v-html="`Rate: ${item.raw.rate}`"></v-list-item-subtitle>
-                </v-list-item>
-              </template>
-            </v-autocomplete>
-          </v-col>
-          <!-- Delivery Charges Rate Display -->
-          <v-col cols="4" class="pb-0 mb-0 pt-0">
-            <v-text-field density="compact" variant="outlined" color="primary"
-              :label="frappe._('Delivery Charges Rate')" bg-color="white" hide-details
-              :model-value="formatCurrency(delivery_charges_rate)" :prefix="currencySymbol(pos_profile.currency)"
-              disabled></v-text-field>
-          </v-col>
-        </v-row>
+        <DeliveryCharges
+          :pos_profile="pos_profile"
+          :delivery_charges="delivery_charges"
+          :selected_delivery_charge="selected_delivery_charge"
+          :delivery_charges_rate="delivery_charges_rate"
+          :deliveryChargesFilter="deliveryChargesFilter"
+          :formatCurrency="formatCurrency"
+          :currencySymbol="currencySymbol"
+          :readonly="readonly"
+          @update:selected_delivery_charge="(val) => { selected_delivery_charge = val; update_delivery_charges(); }"
+        />
 
         <!-- Posting Date and Customer Balance Section -->
-        <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_change_posting_date">
-          <!-- Posting Date Selection with Date Picker -->
-          <v-col cols="6" class="pb-2">
-            <VueDatePicker
-              v-model="posting_date_display"
-              model-type="format"
-              format="dd-MM-yyyy"
-              auto-apply
-            />
-          </v-col>
-          <!-- Customer Balance Display (Only if enabled in POS profile) -->
-          <v-col v-if="pos_profile.posa_show_customer_balance" cols="6" class="pb-2 d-flex align-center">
-            <div class="balance-field">
-              <strong>Balance:</strong>
-              <span class="balance-value">{{ formatCurrency(customer_balance) }}</span>
-            </div>
-          </v-col>
-        </v-row>
+        <PostingDateRow
+          :pos_profile="pos_profile"
+          :posting_date_display="posting_date_display"
+          :customer_balance="customer_balance"
+          :formatCurrency="formatCurrency"
+          @update:posting_date_display="(val) => { posting_date_display = val; }"
+        />
 
         <!-- Multi-Currency Section (Only if enabled in POS profile) -->
-        <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_multi_currency">
-          <!-- Currency Selection Dropdown -->
-          <v-col cols="4" class="pb-2">
-            <v-select density="compact" variant="outlined" color="primary" :label="frappe._('Currency')"
-              bg-color="white" hide-details v-model="selected_currency" :items="available_currencies"
-              @update:model-value="update_currency"></v-select>
-          </v-col>
-          <!-- Exchange Rate Input Field -->
-          <v-col cols="4" class="pb-2">
-            <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Exchange Rate')"
-              bg-color="white" hide-details v-model="exchange_rate" :rules="[isNumber]"
-              @change="update_exchange_rate"></v-text-field>
-          </v-col>
-        </v-row>
+        <MultiCurrencyRow
+          :pos_profile="pos_profile"
+          :selected_currency="selected_currency"
+          :exchange_rate="exchange_rate"
+          :available_currencies="available_currencies"
+          :isNumber="isNumber"
+          @update:selected_currency="(val) => { selected_currency = val; update_currency(val); }"
+          @update:exchange_rate="(val) => { exchange_rate = val; update_exchange_rate(); }"
+        />
 
         <!-- Items Table Section (Main items list for invoice) -->
         <div class="my-0 py-0 overflow-y-auto"
@@ -422,6 +393,9 @@
 
 import format from "../../format";
 import Customer from "./Customer.vue";
+import DeliveryCharges from "./DeliveryCharges.vue";
+import PostingDateRow from "./PostingDateRow.vue";
+import MultiCurrencyRow from "./MultiCurrencyRow.vue";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
@@ -484,6 +458,9 @@ export default {
 
   components: {
     Customer,
+    DeliveryCharges,
+    PostingDateRow,
+    MultiCurrencyRow,
   },
 
   computed: {
