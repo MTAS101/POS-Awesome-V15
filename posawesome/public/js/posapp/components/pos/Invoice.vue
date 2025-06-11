@@ -1009,6 +1009,9 @@ export default {
           posa_notes: item.posa_notes,
           posa_delivery_date: this.formatDateForBackend(item.posa_delivery_date),
         };
+        if (isReturn && !new_item.si_detail && item.name) {
+          new_item.si_detail = item.name;
+        }
 
         // Handle currency conversion for rates and amounts
         if (this.selected_currency !== this.pos_profile.currency) {
