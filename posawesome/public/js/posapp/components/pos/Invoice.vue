@@ -6,7 +6,7 @@
 
     <!-- Main Invoice Card (contains all invoice content) -->
     <v-card :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)' }"
-      :class="['cards my-0 py-0 mt-3 bg-grey-lighten-5', { 'return-mode': invoiceType === 'Return' }]">
+      :class="['cards my-0 py-0 mt-3 bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]">
 
       <!-- Dynamic padding wrapper -->
       <div class="dynamic-padding">
@@ -151,7 +151,7 @@
                     <v-select density="compact" bg-color="white" :label="frappe._('UOM')" v-model="item.uom"
                       :items="item.item_uoms" variant="outlined" item-title="uom" item-value="uom" hide-details
                       @update:model-value="calc_uom(item, $event)"
-                      :disabled="!!item.posa_is_replace || (invoiceType === 'Return' && invoice_doc.return_against)"
+                      :disabled="!!item.posa_is_replace || (isReturnInvoice && invoice_doc.return_against)"
                       prepend-inner-icon="mdi-weight"></v-select>
                   </v-col>
 
@@ -166,7 +166,7 @@
                         ]" :rules="[isNumber]" id="rate" :disabled="!!item.posa_is_replace ||
                           !!item.posa_offer_applied ||
                           !pos_profile.posa_allow_user_to_edit_rate ||
-                          (invoiceType === 'Return' && invoice_doc.return_against)"></v-text-field>
+                          (isReturnInvoice && invoice_doc.return_against)"></v-text-field>
                   </v-col>
                   <v-col cols="12" sm="4">
                     <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Discount %')"
@@ -177,7 +177,7 @@
                         ]" :rules="[isNumber]" id="discount_percentage" :disabled="!!item.posa_is_replace ||
                           item.posa_offer_applied ||
                           !pos_profile.posa_allow_user_to_edit_item_discount ||
-                          (invoiceType === 'Return' && invoice_doc.return_against)" suffix="%"></v-text-field>
+                          (isReturnInvoice && invoice_doc.return_against)" suffix="%"></v-text-field>
                   </v-col>
                   <v-col cols="12" sm="4">
                     <v-text-field density="compact" variant="outlined" color="primary"
@@ -185,7 +185,7 @@
                       :model-value="formatCurrency(item.discount_amount || 0)" ref="discount"
                       @change="(event) => { if (expanded && expanded.length === 1 && expanded[0] === item.posa_row_id) { calc_prices(item, event.target.value, { target: { id: 'discount_amount' } }); } }"
                       :rules="['isNumber']" id="discount_amount"
-                      :disabled="!!item.posa_is_replace || item.posa_offer_applied || !pos_profile.posa_allow_user_to_edit_item_discount || (invoiceType === 'Return' && invoice_doc.return_against)"
+                      :disabled="!!item.posa_is_replace || item.posa_offer_applied || !pos_profile.posa_allow_user_to_edit_item_discount || (isReturnInvoice && invoice_doc.return_against)"
                       :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
                   </v-col>
 
@@ -403,7 +403,7 @@ export default {
       let sum = 0;
       this.items.forEach((item) => {
         // For returns, use absolute value for correct calculation
-        const qty = this.invoiceType === "Return" ? Math.abs(flt(item.qty)) : flt(item.qty);
+        const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
         const rate = flt(item.rate);
         sum += qty * rate;
       });
@@ -415,7 +415,7 @@ export default {
       let sum = 0;
       this.items.forEach((item) => {
         // For returns, use absolute value for correct calculation
-        const qty = this.invoiceType === "Return" ? Math.abs(flt(item.qty)) : flt(item.qty);
+        const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
         const rate = flt(item.rate);
         sum += qty * rate;
       });
@@ -435,7 +435,7 @@ export default {
       let sum = 0;
       this.items.forEach((item) => {
         // For returns, use absolute value for correct calculation
-        if (this.invoiceType === "Return") {
+        if (this.isReturnInvoice) {
           sum += Math.abs(flt(item.qty)) * flt(item.discount_amount);
         } else {
           sum += flt(item.qty) * flt(item.discount_amount);
@@ -471,6 +471,10 @@ export default {
     // Get display currency
     displayCurrency() {
       return this.selected_currency || this.pos_profile.currency;
+    },
+    // Determine if current invoice is a return
+    isReturnInvoice() {
+      return this.invoiceType === 'Return' || (this.invoice_doc && this.invoice_doc.is_return);
     },
     // Table headers for item table (for another table if needed)
     itemTableHeaders() {
@@ -618,7 +622,7 @@ export default {
           this.set_batch_qty(new_item, new_item.batch_no, false);
         }
         // Make quantity negative for returns
-        if (this.invoiceType === "Return") {
+        if (this.isReturnInvoice) {
           new_item.qty = -Math.abs(new_item.qty || 1);
         }
         this.items.unshift(new_item);
@@ -650,7 +654,7 @@ export default {
         }
 
         // For returns, subtract from quantity to make it more negative
-        if (this.invoiceType === "Return") {
+        if (this.isReturnInvoice) {
           cur_item.qty -= (item.qty || 1);
         } else {
           cur_item.qty += (item.qty || 1);
@@ -689,7 +693,7 @@ export default {
       new_item._manual_rate_set = false;
 
       // Set negative quantity for return invoices
-      if (this.invoiceType === "Return" && item.qty > 0) {
+      if (this.isReturnInvoice && item.qty > 0) {
         item.qty = -Math.abs(item.qty);
       }
 
@@ -1059,7 +1063,7 @@ export default {
       doc.customer = this.customer;
 
       // Determine if this is a return invoice
-      const isReturn = this.invoiceType === 'Return' || this.invoice_doc.is_return;
+      const isReturn = this.isReturnInvoice;
       doc.is_return = isReturn ? 1 : 0;
 
       // Calculate amounts in selected currency
@@ -1285,7 +1289,7 @@ export default {
     // Prepare items array for invoice doc
     get_invoice_items() {
       const items_list = [];
-      const isReturn = this.invoiceType === 'Return' || this.invoice_doc.is_return;
+      const isReturn = this.isReturnInvoice;
 
       this.items.forEach((item) => {
         const new_item = {
@@ -1402,7 +1406,7 @@ export default {
         const payment_amount = index === 0 ? remaining_amount : (payment.amount || 0);
 
         // For return invoices, ensure payment amounts are negative
-        const adjusted_amount = this.invoiceType === 'Return' || this.invoice_doc.is_return ?
+        const adjusted_amount = this.isReturnInvoice ?
           -Math.abs(payment_amount) : payment_amount;
 
         // Handle currency conversion
@@ -1499,38 +1503,19 @@ export default {
     // Process and save invoice (handles update or create)
     process_invoice() {
       const doc = this.get_invoice_doc();
-      if (doc.name) {
-        try {
-          const updated_doc = this.update_invoice(doc);
-          // Update posting date after invoice update
-          if (updated_doc && updated_doc.posting_date) {
-            this.posting_date = this.formatDateForBackend(updated_doc.posting_date);
-          }
-          return updated_doc;
-        } catch (error) {
-          console.error('Error in process_invoice:', error);
-          this.eventBus.emit('show_message', {
-            title: __(error.message || 'Error processing invoice'),
-            color: 'error'
-          });
-          return false;
+      try {
+        const updated_doc = this.update_invoice(doc);
+        if (updated_doc && updated_doc.posting_date) {
+          this.posting_date = this.formatDateForBackend(updated_doc.posting_date);
         }
-      } else {
-        try {
-          const updated_doc = this.update_invoice(doc);
-          // Update posting date after invoice creation
-          if (updated_doc && updated_doc.posting_date) {
-            this.posting_date = this.formatDateForBackend(updated_doc.posting_date);
-          }
-          return updated_doc;
-        } catch (error) {
-          console.error('Error in process_invoice:', error);
-          this.eventBus.emit('show_message', {
-            title: __(error.message || 'Error processing invoice'),
-            color: 'error'
-          });
-          return false;
-        }
+        return updated_doc;
+      } catch (error) {
+        console.error('Error in process_invoice:', error);
+        this.eventBus.emit('show_message', {
+          title: __(error.message || 'Error processing invoice'),
+          color: 'error'
+        });
+        return false;
       }
     },
 
@@ -1613,7 +1598,7 @@ export default {
         invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
 
         // Check if this is a return invoice
-        if (this.invoiceType === 'Return' || invoice_doc.is_return) {
+        if (this.isReturnInvoice || invoice_doc.is_return) {
           console.log('Preparing RETURN invoice for payment with:', {
             is_return: invoice_doc.is_return,
             invoiceType: this.invoiceType,
@@ -1646,7 +1631,7 @@ export default {
         console.log('Final payment data:', invoice_doc.payments);
 
         // Double-check return invoice payments are negative
-        if ((this.invoiceType === 'Return' || invoice_doc.is_return) && invoice_doc.payments.length) {
+        if ((this.isReturnInvoice || invoice_doc.is_return) && invoice_doc.payments.length) {
           invoice_doc.payments.forEach(payment => {
             if (payment.amount > 0) payment.amount = -Math.abs(payment.amount);
             if (payment.base_amount > 0) payment.base_amount = -Math.abs(payment.base_amount);
@@ -1673,7 +1658,7 @@ export default {
       console.log('Starting return validation');
 
       // For all returns, check if amounts are negative
-      if (this.invoiceType === 'Return' || this.invoice_doc.is_return) {
+      if (this.isReturnInvoice) {
         console.log('Validating return invoice values');
 
         // Check if quantities are negative
@@ -3685,7 +3670,7 @@ export default {
       let parsedValue = this.setFormatedFloat(item, field_name, precision, no_negative, value);
 
       // Ensure negative value for return invoices
-      if (this.invoiceType === "Return" && parsedValue > 0) {
+      if (this.isReturnInvoice && parsedValue > 0) {
         parsedValue = -Math.abs(parsedValue);
         item[field_name] = parsedValue;
       }
@@ -4061,12 +4046,8 @@ export default {
 
     // Increase quantity of an item (handles return logic)
     add_one(item) {
-      // For returns, we need to add (make more negative)
-      if (this.invoiceType === "Return") {
-        item.qty++;
-      } else {
-        item.qty++;
-      }
+      // Increase quantity, return items remain negative
+      item.qty++;
       if (item.qty == 0) {
         this.remove_item(item);
       }
@@ -4076,12 +4057,8 @@ export default {
 
     // Decrease quantity of an item (handles return logic)
     subtract_one(item) {
-      // For returns, we need to subtract (make less negative)
-      if (this.invoiceType === "Return") {
-        item.qty--;
-      } else {
-        item.qty--;
-      }
+      // Decrease quantity, return items remain negative
+      item.qty--;
       if (item.qty == 0) {
         this.remove_item(item);
       }
