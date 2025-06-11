@@ -345,44 +345,16 @@
 
         <!-- Action Buttons -->
         <v-col cols="12" md="5">
-          <v-row dense>
-            <v-col cols="6">
-              <v-btn block color="accent" theme="dark" prepend-icon="mdi-content-save" @click="save_and_clear_invoice">
-                {{ __("Save & Clear") }}
-              </v-btn>
-            </v-col>
-            <v-col cols="6">
-              <v-btn block color="warning" theme="dark" prepend-icon="mdi-file-document" @click="get_draft_invoices">
-                {{ __("Load Drafts") }}
-              </v-btn>
-            </v-col>
-            <v-col cols="6" v-if="pos_profile.custom_allow_select_sales_order === 1">
-              <v-btn block color="info" theme="dark" prepend-icon="mdi-book-search" @click="get_draft_orders">
-                {{ __("Select S.O") }}
-              </v-btn>
-            </v-col>
-            <v-col cols="6">
-              <v-btn block color="error" theme="dark" prepend-icon="mdi-close-circle" @click="cancel_dialog = true">
-                {{ __("Cancel Sale") }}
-              </v-btn>
-            </v-col>
-            <v-col cols="6" v-if="pos_profile.posa_allow_return == 1">
-              <v-btn block color="secondary" theme="dark" prepend-icon="mdi-backup-restore" @click="open_returns">
-                {{ __("Sales Return") }}
-              </v-btn>
-            </v-col>
-            <v-col cols="6" v-if="pos_profile.posa_allow_print_draft_invoices">
-              <v-btn block color="primary" theme="dark" prepend-icon="mdi-printer" @click="print_draft_invoice">
-                {{ __("Print Draft") }}
-              </v-btn>
-            </v-col>
-            <v-col cols="12">
-              <v-btn block color="success" theme="dark" size="large" prepend-icon="mdi-credit-card"
-                @click="show_payment">
-                {{ __("PAY") }}
-              </v-btn>
-            </v-col>
-          </v-row>
+          <InvoiceActions
+            :pos_profile="pos_profile"
+            @save-and-clear="save_and_clear_invoice"
+            @load-drafts="get_draft_invoices"
+            @select-order="get_draft_orders"
+            @cancel-sale="cancel_dialog = true"
+            @open-returns="open_returns"
+            @print-draft="print_draft_invoice"
+            @show-payment="show_payment"
+          />
         </v-col>
       </v-row>
     </v-card>
@@ -396,6 +368,7 @@ import Customer from "./Customer.vue";
 import DeliveryCharges from "./DeliveryCharges.vue";
 import PostingDateRow from "./PostingDateRow.vue";
 import MultiCurrencyRow from "./MultiCurrencyRow.vue";
+import InvoiceActions from "./InvoiceActions.vue";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
@@ -461,6 +434,7 @@ export default {
     DeliveryCharges,
     PostingDateRow,
     MultiCurrencyRow,
+    InvoiceActions,
   },
 
   computed: {
