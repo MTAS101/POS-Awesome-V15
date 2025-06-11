@@ -424,6 +424,14 @@
               class="my-0 py-0"
             ></v-switch>
           </v-col>
+          <v-col cols="6" v-if="invoice_doc.is_return">
+            <v-switch
+              v-model="is_credit_return"
+              flat
+              :label="frappe._('Credit Return?')"
+              class="my-0 py-0"
+            ></v-switch>
+          </v-col>
           <v-col cols="6" v-if="is_credit_sale">
           <VueDatePicker
             v-model="new_credit_due_date"
@@ -593,6 +601,7 @@ export default {
       is_credit_sale: false, // Is this a credit sale?
       is_write_off_change: false, // Write-off for change enabled
       is_cashback: true, // Cashback enabled
+      is_credit_return: false, // Is this a credit return?
       redeem_customer_credit: false, // Redeem customer credit?
       customer_credit_dict: [], // List of available customer credits
       paid_change_rules: [], // Validation rules for paid change
@@ -822,6 +831,23 @@ export default {
         });
       }
     },
+    // Watch is_credit_return to toggle cashback payments
+    is_credit_return(newVal) {
+      if (newVal) {
+        this.is_cashback = false;
+        // Clear any payment amounts
+        this.invoice_doc.payments.forEach((payment) => {
+          payment.amount = 0;
+          if (payment.base_amount !== undefined) {
+            payment.base_amount = 0;
+          }
+        });
+      } else {
+        this.is_cashback = true;
+        // Ensure default negative payment for returns
+        this.ensureReturnPaymentsAreNegative();
+      }
+    },
   },
   methods: {
     // Go back to invoice view and reset customer readonly
@@ -839,7 +865,7 @@ export default {
     },
     // Ensure all payments are negative for return invoices
     ensureReturnPaymentsAreNegative() {
-      if (!this.invoice_doc || !this.invoice_doc.is_return) {
+      if (!this.invoice_doc || !this.invoice_doc.is_return || !this.is_cashback) {
         return;
       }
       // Check if any payment amount is set
@@ -1089,6 +1115,7 @@ export default {
           vm.customer_credit_dict = [];
           vm.redeem_customer_credit = false;
           vm.is_cashback = true;
+          vm.is_credit_return = false;
           vm.sales_person = "";
           vm.eventBus.emit("set_last_invoice", vm.invoice_doc.name);
           vm.eventBus.emit("show_message", {
@@ -1590,6 +1617,7 @@ export default {
         this.is_write_off_change = false;
         if (invoice_doc.is_return) {
           this.is_return = true;
+          this.is_credit_return = false;
           // Reset all payment amounts to zero for returns
           invoice_doc.payments.forEach((payment) => {
             payment.amount = 0;
@@ -1609,6 +1637,7 @@ export default {
             invoice_doc.rounded_total || invoice_doc.grand_total,
             this.currency_precision
           );
+          this.is_credit_return = false;
         }
         this.loyalty_amount = 0;
         this.redeemed_customer_credit = 0;
@@ -1642,6 +1671,7 @@ export default {
           this.invoice_doc.is_return = 1;
           // Ensure payments are negative for returns
           this.ensureReturnPaymentsAreNegative();
+          this.is_credit_return = false;
         }
       });
       this.eventBus.on("update_customer", (customer) => {
@@ -1649,6 +1679,7 @@ export default {
           this.customer_credit_dict = [];
           this.redeem_customer_credit = false;
           this.is_cashback = true;
+          this.is_credit_return = false;
         }
       });
       this.eventBus.on("set_pos_settings", (data) => {
@@ -1664,6 +1695,7 @@ export default {
       this.eventBus.on("clear_invoice", () => {
         this.invoice_doc = "";
         this.is_return = false;
+        this.is_credit_return = false;
       });
     });
   },
