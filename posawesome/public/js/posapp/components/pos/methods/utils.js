@@ -564,7 +564,7 @@ export default {
       }
       this.calc_stock_qty(item, item.qty);
       this.$forceUpdate();
-    },
-  },
+    }
+  }
 
 };
