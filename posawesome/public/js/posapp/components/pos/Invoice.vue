@@ -2,27 +2,7 @@
   <!-- Main Invoice Wrapper -->
   <div class="pa-0">
     <!-- Cancel Sale Confirmation Dialog -->
-    <v-dialog v-model="cancel_dialog" max-width="330">
-      <v-card>
-        <v-card-title class="text-h5">
-          <span class="text-h5 text-primary">{{
-            __("Cancel Sale ?")
-          }}</span>
-        </v-card-title>
-        <v-card-text>
-          This would cancel and delete the current sale. To save it as Draft, click the "Save and Clear" instead.
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="error" @click="cancel_invoice">
-            {{ __("Yes, Cancel sale") }}
-          </v-btn>
-          <v-btn color="warning" @click="cancel_dialog = false">
-            {{ __("Back") }}
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <CancelSaleDialog v-model="cancel_dialog" @confirm="cancel_invoice" />
 
     <!-- Main Invoice Card (contains all invoice content) -->
     <v-card :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)' }"
@@ -369,6 +349,7 @@ import DeliveryCharges from "./DeliveryCharges.vue";
 import PostingDateRow from "./PostingDateRow.vue";
 import MultiCurrencyRow from "./MultiCurrencyRow.vue";
 import InvoiceActions from "./InvoiceActions.vue";
+import CancelSaleDialog from "./CancelSaleDialog.vue";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
@@ -435,6 +416,7 @@ export default {
     PostingDateRow,
     MultiCurrencyRow,
     InvoiceActions,
+    CancelSaleDialog,
   },
 
   computed: {
