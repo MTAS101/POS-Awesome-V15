@@ -58,85 +58,35 @@
         />
 
         <!-- Items Table Section (Main items list for invoice) -->
-        <div class="my-0 py-0 overflow-y-auto"
-          :style="{ height: 'calc(var(--container-height) - 80px)', maxHeight: 'calc(var(--container-height) - 80px)' }">
-          <!-- Main Items Data Table -->
-          <v-data-table :headers="items_headers" :items="items" v-model:expanded="expanded" show-expand
-            item-value="posa_row_id" class="enhanced-table-items elevation-2" :items-per-page="itemsPerPage"
-            expand-on-click density="compact" hide-default-footer :single-expand="true"
-            @update:expanded="handleExpandedUpdate" :search="itemSearch">
-            <!-- Quantity Column Template -->
-            <template v-slot:item.qty="{ item }">
-              <div class="amount-value">{{ formatFloat(item.qty) }}</div>
-            </template>
-
-            <!-- Rate Column Template with Currency Symbol -->
-            <template v-slot:item.rate="{ item }">
-              <div class="currency-display">
-                <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
-                <span class="amount-value">{{ formatCurrency(item.rate) }}</span>
-              </div>
-            </template>
-
-            <!-- Amount Column Template with Currency Symbol -->
-            <template v-slot:item.amount="{ item }">
-              <div class="currency-display">
-                <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
-                <span class="amount-value">{{ formatCurrency(item.qty * item.rate) }}</span>
-              </div>
-            </template>
-
-            <!-- Discount Amount Column Template -->
-            <template v-slot:item.discount_amount="{ item }">
-              <div class="currency-display">
-                <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
-                <span class="amount-value">{{ formatCurrency(item.discount_amount) }}</span>
-              </div>
-            </template>
-
-            <!-- Price List Rate Column Template -->
-            <template v-slot:item.price_list_rate="{ item }">
-              <div class="currency-display">
-                <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
-                <span class="amount-value">{{ formatCurrency(item.price_list_rate) }}</span>
-              </div>
-            </template>
-
-            <!-- Offer Checkbox Column Template -->
-            <template v-slot:item.posa_is_offer="{ item }">
-              <v-checkbox-btn v-model="item.posa_is_offer" class="center" @change="toggleOffer(item)"></v-checkbox-btn>
-            </template>
-
-            <!-- Expanded Row Template for Item Details -->
-            <template v-slot:expanded-row="{ columns: headers, item }">
-              <ItemDetails
-                :item="item"
-                :headers-length="headers.length"
-                :pos_profile="pos_profile"
-                :invoice_doc="invoice_doc"
-                :invoiceType="invoiceType"
-                :expanded="expanded"
-                :displayCurrency="displayCurrency"
-                :formatFloat="formatFloat"
-                :formatCurrency="formatCurrency"
-                :currencySymbol="currencySymbol"
-                :isNumber="isNumber"
-                :setFormatedQty="setFormatedQty"
-                :calcStockQty="calc_stock_qty"
-                :setFormatedCurrency="setFormatedCurrency"
-                :calcPrices="calc_prices"
-                :calcUom="calc_uom"
-                :setSerialNo="set_serial_no"
-                :setBatchQty="set_batch_qty"
-                :validateDueDate="validate_due_date"
-                :removeItem="remove_item"
-                :subtractOne="subtract_one"
-                :addOne="add_one"
-                :isReturnInvoice="isReturnInvoice"
-              />
-            </template>
-          </v-data-table>
-        </div>
+        <ItemsTable
+          :headers="items_headers"
+          :items="items"
+          :expanded="expanded"
+          :itemsPerPage="itemsPerPage"
+          :itemSearch="itemSearch"
+          :pos_profile="pos_profile"
+          :invoice_doc="invoice_doc"
+          :invoiceType="invoiceType"
+          :displayCurrency="displayCurrency"
+          :formatFloat="formatFloat"
+          :formatCurrency="formatCurrency"
+          :currencySymbol="currencySymbol"
+          :isNumber="isNumber"
+          :setFormatedQty="setFormatedQty"
+          :calcStockQty="calc_stock_qty"
+          :setFormatedCurrency="setFormatedCurrency"
+          :calcPrices="calc_prices"
+          :calcUom="calc_uom"
+          :setSerialNo="set_serial_no"
+          :setBatchQty="set_batch_qty"
+          :validateDueDate="validate_due_date"
+          :removeItem="remove_item"
+          :subtractOne="subtract_one"
+          :addOne="add_one"
+          :isReturnInvoice="isReturnInvoice"
+          :toggleOffer="toggleOffer"
+          @update:expanded="handleExpandedUpdate"
+        />
       </div>
     </v-card>
     <!-- Payment Section -->
@@ -176,7 +126,7 @@ import PostingDateRow from "./PostingDateRow.vue";
 import MultiCurrencyRow from "./MultiCurrencyRow.vue";
 import CancelSaleDialog from "./CancelSaleDialog.vue";
 import InvoiceSummary from "./InvoiceSummary.vue";
-import ItemDetails from "./ItemDetails.vue";
+import ItemsTable from "./ItemsTable.vue";
 import invoiceComputed from "./invoiceComputed";
 import invoiceWatchers from "./invoiceWatchers";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
@@ -247,7 +197,7 @@ export default {
     MultiCurrencyRow,
     InvoiceSummary,
     CancelSaleDialog,
-    ItemDetails,
+    ItemsTable,
   },
   computed: invoiceComputed,
 
@@ -4050,144 +4000,6 @@ export default {
   z-index: 1;
 }
 
-/* Enhanced Table Styling */
-.enhanced-table-items {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(0, 0, 0, 0.09);
-  margin-bottom: 16px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.enhanced-table-items :deep(.v-data-table__wrapper) {
-  border-radius: 8px;
-  height: 100%;
-  overflow-y: auto;
-}
-
-.enhanced-table-items :deep(th) {
-  background: #ffffff;
-  color: #424242;
-  font-weight: 600;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-  padding: 14px 18px;
-  /* Increased padding */
-  font-size: 0.95rem;
-}
-
-.enhanced-table-items :deep(td) {
-  padding: 14px 18px;
-  /* Increased padding */
-  height: 64px;
-  /* Slightly taller rows for better readability */
-  vertical-align: middle;
-}
-
-.enhanced-table-items :deep(tr:hover) {
-  background: rgba(25, 118, 210, 0.05);
-}
-
-.enhanced-table-items :deep(.v-data-table__expanded) {
-  padding: 20px 24px;
-  /* More padding for expanded rows */
-  background-color: #fafafa;
-}
-
-/* Improved Currency Display */
-.currency-display {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.currency-symbol {
-  font-weight: 600;
-  color: #1976d2;
-  font-size: 0.9rem;
-}
-
-.amount-value {
-  font-weight: 500;
-  color: #333;
-  font-size: 0.9rem;
-}
-
-/* Improved Action Buttons */
-.item-action-btn {
-  min-width: 44px !important;
-  height: 44px !important;
-  border-radius: 8px !important;
-  transition: all 0.3s ease;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1) !important;
-  margin: 0 3px !important;
-  position: relative;
-  overflow: hidden;
-}
-
-.item-action-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.15) !important;
-}
-
-.item-action-btn .v-icon {
-  font-size: 22px !important;
-  position: relative;
-  z-index: 2;
-}
-
-/* Delete button specific styling */
-.item-action-btn.delete-btn {
-  background: linear-gradient(145deg, #ffebee, #ffcdd2) !important;
-}
-
-.item-action-btn.delete-btn:hover {
-  background: linear-gradient(145deg, #ffcdd2, #ef9a9a) !important;
-}
-
-/* Minus button specific styling */
-.item-action-btn.minus-btn {
-  background: linear-gradient(145deg, #fff8e1, #ffecb3) !important;
-}
-
-.item-action-btn.minus-btn:hover {
-  background: linear-gradient(145deg, #ffecb3, #ffe082) !important;
-}
-
-/* Plus button specific styling */
-.item-action-btn.plus-btn {
-  background: linear-gradient(145deg, #e8f5e9, #c8e6c9) !important;
-}
-
-.item-action-btn.plus-btn:hover {
-  background: linear-gradient(145deg, #c8e6c9, #a5d6a7) !important;
-}
-
-/* Improved Form Fields Spacing */
-.item-details-form {
-  padding: 10px 5px;
-  margin-top: 5px;
-  background-color: rgba(0, 0, 0, 0.02);
-  border-radius: 8px;
-  border: 1px solid rgba(25, 118, 210, 0.08);
-}
-
-.item-details-form .v-col {
-  padding: 8px 12px;
-}
-
-/* Improved Field Icons */
-.field-with-icon {
-  position: relative;
-  margin-bottom: 10px;
-}
-
-.field-with-icon :deep(.v-icon) {
-  color: #1976d2 !important;
-  opacity: 0.8;
-}
 
 /* Media query for responsive table height */
 @media (max-height: 900px) {
