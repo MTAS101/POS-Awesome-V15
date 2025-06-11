@@ -546,6 +546,28 @@ def validate_return_items(original_invoice_name, return_items):
             }
 
     return {"valid": True}
+
+
+def populate_missing_si_details(invoice_doc):
+    """Ensure each return item links back to an original invoice row."""
+    if not (invoice_doc.is_return and invoice_doc.return_against):
+        return
+
+    original = frappe.get_doc("Sales Invoice", invoice_doc.return_against)
+
+    lookup = {}
+    for row in original.items:
+        lookup.setdefault(row.item_code, []).append(row.name)
+
+    used = {d.si_detail for d in invoice_doc.items if d.si_detail}
+    for code in lookup:
+        lookup[code] = [name for name in lookup[code] if name not in used]
+
+    for d in invoice_doc.items:
+        if not d.si_detail:
+            avail = lookup.get(d.item_code)
+            if avail:
+                d.si_detail = avail.pop(0)
     
 @frappe.whitelist()
 def update_invoice(data):
@@ -557,6 +579,12 @@ def update_invoice(data):
         invoice_doc = frappe.get_doc(data)
 
     # Set currency from data before set_missing_values
+    # Validate return items if this is a return invoice
+    if (data.get("is_return") or invoice_doc.is_return) and invoice_doc.get("return_against"):
+        populate_missing_si_details(invoice_doc)
+        validation = validate_return_items(invoice_doc.return_against, [d.as_dict() for d in invoice_doc.items])
+        if not validation.get("valid"):
+            frappe.throw(validation.get("message"))
     selected_currency = data.get("currency")
     
     # Set missing values first
