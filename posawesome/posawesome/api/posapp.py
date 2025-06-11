@@ -1576,19 +1576,31 @@ def search_invoices_for_return(invoice_name, company, customer_name=None, custom
         )
         
         if has_returns:
-            # Get all returned items
-            returned_items = []
+            # Calculate returned quantity per item_code
+            returned_qty = {}
             for ret_inv in has_returns:
                 ret_doc = frappe.get_doc("Sales Invoice", ret_inv.name)
                 for item in ret_doc.items:
-                    returned_items.append(item.item_code)
-            
-            # Filter out returned items from original invoice
+                    returned_qty[item.item_code] = (
+                        returned_qty.get(item.item_code, 0) + abs(item.qty)
+                    )
+
+            # Filter items with remaining qty
             filtered_items = []
             for item in invoice_doc.items:
-                if item.item_code not in returned_items:
-                    filtered_items.append(item)
-            
+                remaining_qty = item.qty - returned_qty.get(item.item_code, 0)
+                if remaining_qty > 0:
+                    new_item = item.as_dict().copy()
+                    new_item["qty"] = remaining_qty
+                    new_item["amount"] = remaining_qty * item.rate
+                    if item.get("stock_qty"):
+                        new_item["stock_qty"] = (
+                            item.stock_qty / item.qty * remaining_qty
+                            if item.qty
+                            else remaining_qty
+                        )
+                    filtered_items.append(frappe._dict(new_item))
+
             if filtered_items:
                 # Create a copy of invoice with filtered items
                 filtered_invoice = frappe.get_doc("Sales Invoice", invoice.name)
