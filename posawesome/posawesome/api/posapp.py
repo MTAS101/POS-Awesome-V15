@@ -1022,14 +1022,18 @@ def get_items_details(pos_profile, items_data):
         warehouse = pos_profile.get("warehouse")
         result = []
 
+        # Clear quantity cache once per request instead of each item
+        try:
+            if hasattr(frappe.local.cache, "delete_key"):
+                frappe.local.cache.delete_key('bin_qty_cache')
+            elif frappe.cache().get_value('bin_qty_cache'):
+                frappe.cache().delete_value('bin_qty_cache')
+        except Exception as e:
+            frappe.log_error(f"Error clearing bin_qty_cache: {str(e)}", "POS Awesome")
+
         if len(items_data) > 0:
             for item in items_data:
                 item_code = item.get("item_code")
-                # Force refresh stock quantity on each request using proper cache clearing
-                if hasattr(frappe.local.cache, "delete_key"):
-                    frappe.local.cache.delete_key('bin_qty_cache')
-                elif frappe.cache().get_value('bin_qty_cache'):
-                    frappe.cache().delete_value('bin_qty_cache')
                 
                 item_stock_qty = get_stock_availability(item_code, warehouse)
                 (has_batch_no, has_serial_no) = frappe.db.get_value(
@@ -1102,8 +1106,10 @@ def get_items_details(pos_profile, items_data):
 
         return result
 
-    # Skip cache to ensure fresh stock quantities on every request
-    return _get_items_details(pos_profile, items_data)
+    if _pos_profile.get("posa_use_server_cache"):
+        return __get_items_details(pos_profile, items_data)
+    else:
+        return _get_items_details(pos_profile, items_data)
 
 
 @frappe.whitelist()
