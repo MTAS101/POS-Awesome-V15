@@ -101,18 +101,6 @@
               </div>
             </v-list-item>
 
-            <v-list-item @click="toggleDark()" class="menu-item-compact neutral-action">
-              <template v-slot:prepend>
-                <div class="menu-icon-wrapper-compact neutral-icon">
-                  <v-icon color="white" size="16">mdi-theme-light-dark</v-icon>
-                </div>
-              </template>
-              <div class="menu-content-compact">
-                <v-list-item-title class="menu-item-title-compact">{{ isDark ? __('Light Mode') : __('Dark Mode') }}</v-list-item-title>
-                <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Toggle theme') }}</v-list-item-subtitle>
-              </div>
-            </v-list-item>
-
             <v-divider class="menu-section-divider-compact"></v-divider>
 
             <v-list-item @click="goAbout" class="menu-item-compact neutral-action">
@@ -272,10 +260,6 @@ import OfflineInvoicesDialog from './OfflineInvoices.vue';
 
 export default {
   name: 'NavBar', // Component name
-  props: {
-    isDark: { type: Boolean, default: false },
-    toggleDark: { type: Function, required: true }
-  },
   components: { OfflineInvoicesDialog },
   data() {
     return {

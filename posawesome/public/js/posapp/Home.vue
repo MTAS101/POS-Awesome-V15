@@ -1,11 +1,7 @@
 <template>
   <v-app class="container1">
     <v-main>
-      <Navbar
-        :isDark="isDark"
-        :toggleDark="toggleDark"
-        @changePage="setPage($event)"
-      ></Navbar>
+      <Navbar @changePage="setPage($event)"></Navbar>
       <component v-bind:is="page" class="mx-4 md-4"></component>
     </v-main>
   </v-app>
@@ -15,20 +11,8 @@
 import Navbar from './components/Navbar.vue';
 import POS from './components/pos/Pos.vue';
 import Payments from './components/payments/Pay.vue';
-import { useDark, useToggle } from '@vueuse/core';
-import { useTheme } from 'vuetify';
-import { watch } from 'vue';
 
 export default {
-  setup() {
-    const isDark = useDark();
-    const toggleDark = useToggle(isDark);
-    const theme = useTheme();
-    watch(isDark, (val) => {
-      theme.global.name.value = val ? 'dark' : 'light';
-    }, { immediate: true });
-    return { isDark, toggleDark };
-  },
   data: function () {
     return {
       page: 'POS',
