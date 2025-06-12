@@ -31,9 +31,6 @@ export default {
     toggleDarkMode() {
       this.darkMode = !this.darkMode;
       localStorage.setItem('posa_dark_mode', this.darkMode);
-      if (this.$vuetify && this.$vuetify.theme && this.$vuetify.theme.global) {
-        this.$vuetify.theme.global.name.value = this.darkMode ? 'dark' : 'light';
-      }
     },
     remove_frappe_nav() {
       this.$nextTick(function () {
@@ -44,9 +41,6 @@ export default {
   },
   mounted() {
     this.remove_frappe_nav();
-    if (this.$vuetify && this.$vuetify.theme && this.$vuetify.theme.global) {
-      this.$vuetify.theme.global.name.value = this.darkMode ? 'dark' : 'light';
-    }
   },
   updated() { },
   created: function () {
@@ -64,9 +58,5 @@ export default {
 .dark-mode {
   background-color: #000;
   color: #fff;
-}
-
-.dark-mode .text-primary {
-  color: #1976d2 !important;
 }
 </style>
