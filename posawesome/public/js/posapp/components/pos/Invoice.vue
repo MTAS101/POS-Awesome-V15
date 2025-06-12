@@ -184,6 +184,7 @@ export default {
         { title: __("QTY"), key: "qty", align: "center" },
         { title: __("UOM"), key: "uom", align: "center" },
         { title: __("Rate"), key: "rate", align: "center" },
+        { title: __("Discount"), key: "discount_value", align: "center" },
         { title: __("Amount"), key: "amount", align: "center" },
         { title: __("Offer?"), key: "posa_is_offer", align: "center" },
       ],
