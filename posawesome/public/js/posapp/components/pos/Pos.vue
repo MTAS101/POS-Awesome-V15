@@ -13,10 +13,10 @@
         <ItemsSelector :dark-mode="darkMode" />
       </v-col>
       <v-col v-show="offers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
-        <PosOffers></PosOffers>
+        <PosOffers :dark-mode="darkMode" />
       </v-col>
       <v-col v-show="coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
-        <PosCoupons></PosCoupons>
+        <PosCoupons :dark-mode="darkMode" />
       </v-col>
       <v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
         <Payments :dark-mode="darkMode" />

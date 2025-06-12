@@ -1,5 +1,5 @@
 <template>
-  <v-card class="cards mb-0 mt-3 py-2 px-3 rounded-lg bg-grey-lighten-4">
+  <v-card :class="['cards mb-0 mt-3 py-2 px-3 rounded-lg', darkMode ? 'dark-card' : 'bg-grey-lighten-4']">
     <v-row dense>
       <!-- Summary Info -->
       <v-col cols="12" md="7">
@@ -142,7 +142,8 @@ export default {
     formatCurrency: Function,
     currencySymbol: Function,
     discount_percentage_offer_name: [String, Number],
-    isNumber: Function
+    isNumber: Function,
+    darkMode: Boolean
   },
   emits: [
     'update:additional_discount',
@@ -158,3 +159,10 @@ export default {
   ]
 }
 </script>
+
+<style scoped>
+.dark-card {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+</style>

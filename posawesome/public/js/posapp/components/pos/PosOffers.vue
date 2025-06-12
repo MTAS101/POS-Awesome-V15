@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-card class="selection mx-auto bg-grey-lighten-5 mt-3" style="max-height: 80vh; height: 80vh">
+    <v-card :class="['selection mx-auto mt-3', darkMode ? 'dark-card' : 'bg-grey-lighten-5']" style="max-height: 80vh; height: 80vh">
       <v-card-title>
         <span class="text-h6 text-primary">{{ __('Offers') }}</span>
       </v-card-title>
@@ -37,7 +37,7 @@
       </div>
     </v-card>
 
-    <v-card flat style="max-height: 11vh; height: 11vh" class="cards mb-0 mt-3 py-0">
+    <v-card flat style="max-height: 11vh; height: 11vh" :class="['cards mb-0 mt-3 py-0', darkMode ? 'dark-card' : '']">
       <v-row align="start" no-gutters>
         <v-col cols="12">
           <v-btn block class="pa-1" size="large" color="warning" theme="dark" @click="back_to_invoice">{{ __('Back')
@@ -53,6 +53,9 @@
 import format from '../../format';
 export default {
   mixins: [format],
+  props: {
+    darkMode: Boolean
+  },
   data: () => ({
     loading: false,
     pos_profile: '',
@@ -253,3 +256,10 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.dark-card {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+</style>
