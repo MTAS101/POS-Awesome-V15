@@ -861,17 +861,17 @@ export default {
 }
 
 /* Style for customer balance field */
-.balance-field {
+:deep(.balance-field) {
   display: flex;
   align-items: center;
   justify-content: flex-end;
 }
 
 /* Style for balance value text */
-.balance-value {
+:deep(.balance-value) {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #d32f2f;
+  color: #0052CC;
   margin-left: 5px;
 }
 
