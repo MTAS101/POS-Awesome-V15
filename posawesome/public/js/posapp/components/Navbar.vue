@@ -47,21 +47,6 @@
         </v-tooltip>
       </v-btn>
 
-      <!-- Theme Toggle -->
-      <v-menu offset-y location="bottom" :close-on-content-click="false" class="mx-1">
-        <template #activator="{ props }">
-          <v-btn v-bind="props" icon color="primary" class="theme-toggle-btn">
-            <v-icon>{{ themeIcon }}</v-icon>
-          </v-btn>
-        </template>
-        <v-card class="theme-menu-card pa-2">
-          <v-radio-group v-model="theme" @change="applyTheme" density="compact">
-            <v-radio label="Light" value="light"></v-radio>
-            <v-radio label="Dark" value="dark"></v-radio>
-          </v-radio-group>
-        </v-card>
-      </v-menu>
-
       <v-menu offset-y :min-width="240" :close-on-content-click="false" location="bottom end" :offset="[0, 4]">
         <template #activator="{ props }">
           <v-btn v-bind="props" color="primary" variant="elevated" class="menu-btn-compact">
@@ -319,8 +304,7 @@ export default {
           align: 'center',
           sortable: true,
         }
-      ],
-      theme: localStorage.getItem('theme') || 'light'
+      ]
     };
   },
   computed: {
@@ -375,13 +359,9 @@ export default {
 
       // Online mode - show full status
       return `To Sync: ${pendingCount} | Synced: ${syncedCount} | Draft: ${draftedCount}`;
-    },
-    themeIcon() {
-      return this.theme === 'dark' ? 'mdi-weather-night' : 'mdi-white-balance-sunny';
     }
   },
   created() {
-    this.applyTheme(this.theme);
     // --- LOAD COMPANY INFO FROM FRAPPE BOOT ---
     // Attempts to get the company name from Frappe's boot data.
     const bootCompany = frappe?.boot?.user_info?.company;
@@ -800,12 +780,6 @@ export default {
     updateAfterDelete() {
       this.updatePendingInvoices();
       this.eventBus.emit('pending_invoices_changed', this.pendingInvoices);
-    },
-
-    applyTheme(theme) {
-      this.theme = theme;
-      this.$vuetify.theme.global.name.value = theme;
-      localStorage.setItem('theme', theme);
     },
     /**
      * Displays a snackbar message at the top right of the screen.
@@ -1741,16 +1715,5 @@ export default {
 .content-container-improved::-webkit-scrollbar-thumb:hover,
 .apps-grid-improved::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
-}
-
-/* Theme Toggle Styles */
-.theme-toggle-btn {
-  transition: all 0.3s ease;
-}
-.theme-toggle-btn:hover {
-  transform: scale(1.1);
-}
-.theme-menu-card {
-  border-radius: 12px;
 }
 </style>
