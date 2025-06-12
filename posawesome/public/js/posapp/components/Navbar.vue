@@ -4,7 +4,7 @@
 
     <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
 
-    <v-app-bar app flat height="56" color="white" class="navbar-enhanced elevation-2 px-2 pb-1">
+    <v-app-bar app flat height="56" :color="darkMode ? 'black' : 'white'" class="navbar-enhanced elevation-2 px-2 pb-1">
       <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary nav-icon" />
 
       <v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32" class="mx-2" />
@@ -44,6 +44,13 @@
         <v-icon v-else>mdi-file-document-multiple-outline</v-icon>
         <v-tooltip activator="parent" location="bottom">
           {{ __('Offline Invoices') }} ({{ pendingInvoices }})
+        </v-tooltip>
+      </v-btn>
+
+      <v-btn icon color="primary" class="mx-1" @click="emitToggleDarkMode">
+        <v-icon>{{ darkMode ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent' }}</v-icon>
+        <v-tooltip activator="parent" location="bottom">
+          {{ darkMode ? __('Light Mode') : __('Dark Mode') }}
         </v-tooltip>
       </v-btn>
 
@@ -261,6 +268,9 @@ import OfflineInvoicesDialog from './OfflineInvoices.vue';
 export default {
   name: 'NavBar', // Component name
   components: { OfflineInvoicesDialog },
+  props: {
+    darkMode: Boolean
+  },
   data() {
     return {
       drawer: false, // Controls the visibility of the side navigation drawer (true for open, false for closed)
@@ -453,6 +463,10 @@ export default {
     }
   },
   methods: {
+
+    emitToggleDarkMode() {
+      this.$emit('toggle-dark-mode');
+    },
 
     /**
      * Initializes a Socket.IO connection, adapting the URL based on the environment:

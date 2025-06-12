@@ -2,7 +2,7 @@
   <div fluid>
     <v-row v-show="!dialog">
       <v-col md="8" cols="12" class="pb-2 pr-0">
-        <v-card class="main mx-auto bg-grey-lighten-5 mt-3 p-3 pb-16 overflow-y-auto"
+        <v-card :class="['main mx-auto mt-3 p-3 pb-16 overflow-y-auto', darkMode ? 'dark-card' : 'bg-grey-lighten-5']"
           style="max-height: 94vh; height: 94vh">
           <Customer></Customer>
           <v-divider></v-divider>
@@ -159,7 +159,7 @@
         </v-card>
       </v-col>
       <v-col md="4" cols="12" class="pb-3">
-        <v-card class="invoices mx-auto bg-grey-lighten-5 mt-3 p-3" style="max-height: 94vh; height: 94vh">
+        <v-card :class="['invoices mx-auto mt-3 p-3', darkMode ? 'dark-card' : 'bg-grey-lighten-5']" style="max-height: 94vh; height: 94vh">
           <strong>
             <h4 class="text-primary">Totals</h4>
             <v-row>
@@ -250,6 +250,9 @@ import { getOpeningStorage, setOpeningStorage, initPromise } from "../../../offl
 
 export default {
   mixins: [format],
+  props: {
+    darkMode: Boolean
+  },
   data: function () {
     return {
       dialog: false,
@@ -957,6 +960,10 @@ export default {
 </script>
 
 <style>
+.dark-card {
+  background-color: #000 !important;
+  color: #fff !important;
+}
 input[total_of_diff] {
   text-align: right;
 }

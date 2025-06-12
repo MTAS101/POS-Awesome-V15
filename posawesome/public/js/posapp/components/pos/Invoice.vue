@@ -6,7 +6,7 @@
 
     <!-- Main Invoice Card (contains all invoice content) -->
     <v-card :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)' }"
-      :class="['cards my-0 py-0 mt-3 bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]">
+      :class="['cards my-0 py-0 mt-3', darkMode ? 'dark-card' : 'bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]">
 
       <!-- Dynamic padding wrapper -->
       <div class="dynamic-padding">
@@ -137,6 +137,9 @@ import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../
 export default {
   name: 'POSInvoice',
   mixins: [format],
+  props: {
+    darkMode: Boolean
+  },
   data() {
     return {
       // POS profile settings
@@ -844,6 +847,10 @@ export default {
 </script>
 
 <style scoped>
+.dark-card {
+  background-color: #000 !important;
+  color: #fff !important;
+}
 /* Style for selected checkbox button */
 .v-checkbox-btn.v-selected {
   background-color: #4CAF50 !important;
