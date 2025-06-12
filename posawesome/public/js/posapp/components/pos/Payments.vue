@@ -42,12 +42,12 @@
               color="primary"
               :label="frappe._('Paid Change')"
               bg-color="white"
-              v-model.number="paid_change"
+              :model-value="formatCurrency(paid_change)"
               :prefix="currencySymbol(invoice_doc.currency)"
               :rules="paid_change_rules"
               density="compact"
               readonly
-              type="number"
+              type="text"
               @click="showPaidChange"
             ></v-text-field>
           </v-col>
@@ -59,11 +59,11 @@
               color="primary"
               :label="frappe._('Credit Change')"
               bg-color="white"
-              v-model.number="credit_change"
+              :model-value="formatCurrency(credit_change)"
               :prefix="currencySymbol(invoice_doc.currency)"
               density="compact"
-              type="number"
-              @input="updateCreditChange"
+              type="text"
+              @change="setFormatedCurrency(this, 'credit_change', null, false, $event); updateCreditChange(this.credit_change)"
             ></v-text-field>
           </v-col>
         </v-row>
@@ -80,9 +80,10 @@
                 color="primary"
                 :label="frappe._(payment.mode_of_payment)"
                 bg-color="white"
-                hide-details
-                v-model.number="payment.amount"
-                :rules="[
+              hide-details
+              :model-value="formatCurrency(payment.amount)"
+              @change="setFormatedCurrency(payment, 'amount', null, false, $event)"
+              :rules="[
                   isNumber,
                   v => !payment.mode_of_payment.toLowerCase().includes('cash') || 
                        this.is_credit_sale || 
@@ -126,8 +127,9 @@
               :label="frappe._('Redeem Loyalty Points')"
               bg-color="white"
               hide-details
-              v-model.number="loyalty_amount"
-              type="number"
+              :model-value="formatCurrency(loyalty_amount)"
+              type="text"
+              @change="setFormatedCurrency(this, 'loyalty_amount', null, false, $event)"
               :prefix="currencySymbol(invoice_doc.currency)"
             ></v-text-field>
           </v-col>
@@ -156,8 +158,9 @@
               :label="frappe._('Redeemed Customer Credit')"
               bg-color="white"
               hide-details
-              v-model.number="redeemed_customer_credit"
-              type="number"
+              :model-value="formatCurrency(redeemed_customer_credit)"
+              type="text"
+              @change="setFormatedCurrency(this, 'redeemed_customer_credit', null, false, $event)"
               :prefix="currencySymbol(invoice_doc.currency)"
               readonly
             ></v-text-field>
@@ -480,8 +483,9 @@
                 :label="frappe._('Redeem Credit')"
                 bg-color="white"
                 hide-details
-                type="number"
-                v-model.number="row.credit_to_redeem"
+                type="text"
+                :model-value="formatCurrency(row.credit_to_redeem)"
+                @change="setFormatedCurrency(row, 'credit_to_redeem', null, false, $event)"
                 :prefix="currencySymbol(invoice_doc.currency)"
               ></v-text-field>
             </v-col>
@@ -1556,8 +1560,7 @@ export default {
     },
     // Format currency value
     formatCurrency(value) {
-      if (!value) return "0.00";
-      return this.flt(value, this.currency_precision).toFixed(this.currency_precision);
+      return this.$options.mixins[0].methods.formatCurrency.call(this, value, this.currency_precision);
     },
     // Get change amount for display
     get_change_amount() {

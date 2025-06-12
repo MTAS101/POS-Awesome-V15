@@ -557,38 +557,7 @@ export default {
     },
 
     formatCurrency(value) {
-      if (!value) return "0.00";
-
-      // Convert to absolute value for comparison
-      const absValue = Math.abs(value);
-
-      // Determine precision based on value size
-      let precision;
-      if (absValue >= 1) {
-        // Normal values use standard precision (2)
-        precision = 2;
-      } else if (absValue >= 0.01) {
-        // Small values between 0.01 and 1 use 4 decimal places
-        precision = 4;
-      } else {
-        // Very small values use higher precision (6)
-        precision = 6;
-      }
-
-      // Format the number with determined precision
-      const formattedValue = this.flt(value, precision).toFixed(precision);
-
-      // Remove trailing zeros after decimal point while keeping at least 2 decimals
-      const parts = formattedValue.split('.');
-      if (parts.length === 2) {
-        const decimalPart = parts[1].replace(/0+$/, '');
-        if (decimalPart.length < 2) {
-          return `${parts[0]}.${decimalPart.padEnd(2, '0')}`;
-        }
-        return `${parts[0]}.${decimalPart}`;
-      }
-
-      return formattedValue;
+      return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
     },
 
     flt(value, precision = null) {
@@ -705,9 +674,11 @@ export default {
       this.customer = data.pos_profile.customer;
       this.pos_opening_shift = data.pos_opening_shift;
       this.stock_settings = data.stock_settings;
-      // Increase precision for better handling of small amounts
-      this.float_precision = 6;  // Changed from 2 to 6
-      this.currency_precision = 6;  // Changed from 2 to 6
+      const prec = parseInt(data.pos_profile.posa_decimal_precision);
+      if (!isNaN(prec)) {
+        this.float_precision = prec;
+        this.currency_precision = prec;
+      }
       this.invoiceType = this.pos_profile.posa_default_sales_order
         ? "Order"
         : "Invoice";

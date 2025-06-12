@@ -24,8 +24,8 @@
           </v-col>
           <v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
             <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')" bg-color="white"
-              hide-details v-model.number="qty" type="number" @keydown.enter="enter_event"
-              @keydown.esc="esc_event"></v-text-field>
+              hide-details :model-value="formatFloat(qty)" type="text" @change="setFormatedFloat(this, 'qty', null, false, $event)"
+              @keydown.enter="enter_event" @keydown.esc="esc_event"></v-text-field>
           </v-col>
           <v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
             <v-checkbox v-model="new_line" color="accent" value="true" label="NLine" density="default"
@@ -897,32 +897,10 @@ export default {
       return get_currency_symbol(currency);
     },
     format_currency(value, currency, precision) {
-      if (!value) return '0';
-
-      // Convert to string for checking decimal points
-      let valueStr = value.toString();
-
-      // If value has decimal points, show 4 decimal places
-      if (valueStr.includes('.')) {
-        return flt(value, 4).toString();
-      }
-
-      // For whole numbers, return as is
-      return valueStr;
+      return this.formatCurrency(value, precision || 2);
     },
     format_number(value, precision) {
-      if (!value) return '0';
-
-      // Convert to string for checking decimal points
-      let valueStr = value.toString();
-
-      // If value has decimal points, show 4 decimal places
-      if (valueStr.includes('.')) {
-        return flt(value, 4).toString();
-      }
-
-      // For whole numbers, return as is
-      return valueStr;
+      return this.formatFloat(value, precision || 2);
     },
     hasDecimalPrecision(value) {
       // Check if the value has any decimal precision when multiplied by exchange rate

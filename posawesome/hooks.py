@@ -275,7 +275,8 @@ fixtures = [
                 "name",
                 "in",
                 [
-                    "POS Profile-posa_allow_multi_currency"
+                    "POS Profile-posa_allow_multi_currency",
+                    "POS Profile-posa_decimal_precision"
                 ]
             ]
         ]
