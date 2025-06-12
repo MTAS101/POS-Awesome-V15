@@ -1,8 +1,8 @@
 <template>
-  <v-app :class="['container1', { 'dark-mode': darkMode }]">
+  <v-app class="container1">
     <v-main>
-      <Navbar :dark-mode="darkMode" @toggle-dark-mode="toggleDarkMode" @changePage="setPage($event)" />
-      <component v-bind:is="page" :dark-mode="darkMode" class="mx-4 md-4"></component>
+      <Navbar @changePage="setPage($event)"></Navbar>
+      <component v-bind:is="page" class="mx-4 md-4"></component>
     </v-main>
   </v-app>
 </template>
@@ -16,7 +16,6 @@ export default {
   data: function () {
     return {
       page: 'POS',
-      darkMode: localStorage.getItem('posa_dark_mode') === 'true',
     };
   },
   components: {
@@ -27,10 +26,6 @@ export default {
   methods: {
     setPage(page) {
       this.page = page;
-    },
-    toggleDarkMode() {
-      this.darkMode = !this.darkMode;
-      localStorage.setItem('posa_dark_mode', this.darkMode);
     },
     remove_frappe_nav() {
       this.$nextTick(function () {
@@ -54,9 +49,5 @@ export default {
 <style scoped>
 .container1 {
   margin-top: 0px;
-}
-.dark-mode {
-  background-color: #000;
-  color: #fff;
 }
 </style>

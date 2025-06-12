@@ -1,6 +1,6 @@
 <template>
   <div class="pa-0">
-    <v-card :class="['selection mx-auto pa-1 my-0 py-0 mt-3', darkMode ? 'dark-card' : 'bg-grey-lighten-5']" style="max-height: 68vh; height: 68vh">
+    <v-card class="selection mx-auto bg-grey-lighten-5 pa-1 my-0 py-0 mt-3" style="max-height: 68vh; height: 68vh">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top" color="info"></v-progress-linear>
       <div class="overflow-y-auto px-2 pt-2" style="max-height: 67vh">
         
@@ -590,9 +590,6 @@ import generateOfflineInvoiceHTML from "../../../offline_print_template";
 export default {
   // Using format mixin for shared formatting methods
   mixins: [format],
-  props: {
-    darkMode: Boolean
-  },
   data() {
     return {
       loading: false, // UI loading state
@@ -1729,10 +1726,6 @@ export default {
 </script>
 
 <style scoped>
-.dark-card {
-  background-color: #000 !important;
-  color: #fff !important;
-}
 .v-text-field {
   cursor: text;
 }

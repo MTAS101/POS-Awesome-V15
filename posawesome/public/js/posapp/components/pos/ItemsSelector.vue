@@ -1,6 +1,6 @@
 <template>
   <div :style="responsiveStyles">
-    <v-card :class="['selection mx-auto my-0 py-0 mt-3 dynamic-card', darkMode ? 'dark-card' : 'bg-grey-lighten-5']"
+    <v-card class="selection mx-auto bg-grey-lighten-5 my-0 py-0 mt-3 dynamic-card"
       :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'] }">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
@@ -87,7 +87,7 @@
         </v-row>
       </div>
     </v-card>
-    <v-card :class="['cards mb-0 mt-3 dynamic-padding', darkMode ? 'dark-card' : 'bg-grey-lighten-5']">
+    <v-card class="cards mb-0 mt-3 dynamic-padding bg-grey-lighten-5">
       <v-row no-gutters align="center" justify="center" class="dynamic-spacing-sm">
         <v-col cols="12" class="mb-2">
           <v-select :items="items_group" :label="frappe._('Items Group')" density="compact" variant="solo" hide-details
@@ -134,9 +134,6 @@ export default {
   mixins: [format, responsiveMixin],
   components: {
     CameraScanner
-  },
-  props: {
-    darkMode: Boolean
   },
   data: () => ({
     pos_profile: "",
@@ -1164,11 +1161,6 @@ export default {
 <style scoped>
 .dynamic-card {
   transition: all 0.3s ease;
-}
-
-.dark-card {
-  background-color: #000 !important;
-  color: #fff !important;
 }
 
 .dynamic-padding {

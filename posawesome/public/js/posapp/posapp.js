@@ -27,7 +27,6 @@ frappe.PosApp.posapp = class {
                     rtl: frappe.utils.is_rtl()
                 },
                 theme: {
-                    defaultTheme: localStorage.getItem('posa_dark_mode') === 'true' ? 'dark' : 'light',
                     themes: {
                         light: {
                             background: '#FFFFFF',
@@ -43,12 +42,6 @@ frappe.PosApp.posapp = class {
                             badge: '#F5528C',
                             customPrimary: '#085294',
                         },
-                        dark: {
-                            dark: true,
-                            colors: {
-                                background: '#000000'
-                            }
-                        }
                     },
                 },
             }

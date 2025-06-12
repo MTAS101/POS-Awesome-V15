@@ -10,7 +10,7 @@
     <OpeningDialog v-if="dialog" :dialog="dialog"></OpeningDialog>
     <v-row v-show="!dialog" dense class="ma-0 dynamic-main-row">
       <v-col v-show="!payment && !offers && !coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
-        <ItemsSelector :dark-mode="darkMode" />
+        <ItemsSelector></ItemsSelector>
       </v-col>
       <v-col v-show="offers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
         <PosOffers></PosOffers>
@@ -19,11 +19,11 @@
         <PosCoupons></PosCoupons>
       </v-col>
       <v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
-        <Payments :dark-mode="darkMode" />
+        <Payments></Payments>
       </v-col>
 
       <v-col xl="7" lg="7" md="7" sm="7" cols="12" class="pos dynamic-col">
-        <Invoice :dark-mode="darkMode" />
+        <Invoice></Invoice>
       </v-col>
     </v-row>
   </div>
@@ -51,9 +51,6 @@ import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
   mixins: [responsiveMixin],
-  props: {
-    darkMode: Boolean
-  },
   data: function () {
     return {
       dialog: false,
