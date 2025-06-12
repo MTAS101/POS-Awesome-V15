@@ -103,6 +103,18 @@
 
             <v-divider class="menu-section-divider-compact"></v-divider>
 
+            <v-list-item class="menu-item-compact" @click.stop="toggleDark">
+              <template v-slot:prepend>
+                <div class="menu-icon-wrapper-compact neutral-icon">
+                  <v-icon color="white" size="16">mdi-theme-light-dark</v-icon>
+                </div>
+              </template>
+              <div class="menu-content-compact d-flex align-center justify-space-between">
+                <v-list-item-title class="menu-item-title-compact">{{ __('Dark Mode') }}</v-list-item-title>
+                <v-switch v-model="darkMode" inset hide-details></v-switch>
+              </div>
+            </v-list-item>
+
             <v-list-item @click="goAbout" class="menu-item-compact neutral-action">
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact neutral-icon">
@@ -280,6 +292,7 @@ export default {
       // --- PENDING OFFLINE INVOICES ---
       pendingInvoices: 0, // Number of invoices saved locally while offline
       syncTotals: getLastSyncTotals(),
+      darkMode: false,
       // --- SIGNAL INDICATOR STATES ---
       networkOnline: navigator.onLine, // Boolean: Reflects the browser's current network connectivity (true if online, false if offline)
       serverOnline: false,             // Boolean: Reflects the real-time server health via WebSocket (true if connected, false if disconnected)
@@ -422,6 +435,11 @@ export default {
         this.freezeTitle = '';
         this.freezeMsg = '';
       });
+
+      const savedTheme = localStorage.getItem('darkMode');
+      this.darkMode = savedTheme === 'true';
+      const themeName = this.darkMode ? 'dark' : 'light';
+      this.$vuetify.theme.global.name.value = themeName;
     });
   },
   mounted() {
@@ -780,6 +798,13 @@ export default {
     updateAfterDelete() {
       this.updatePendingInvoices();
       this.eventBus.emit('pending_invoices_changed', this.pendingInvoices);
+    },
+
+    toggleDark() {
+      this.darkMode = !this.darkMode;
+      const themeName = this.darkMode ? 'dark' : 'light';
+      this.$vuetify.theme.global.name.value = themeName;
+      localStorage.setItem('darkMode', this.darkMode);
     },
     /**
      * Displays a snackbar message at the top right of the screen.
