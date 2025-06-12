@@ -1187,8 +1187,7 @@ export default {
 .sleek-data-table {
   border-radius: calc(12px * var(--font-scale)) !important;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
-  /* Use theme surface color so table adapts to light/dark mode */
-  background-color: var(--v-theme-surface) !important;
+  background-color: #fff !important;
   overflow: hidden !important;
   margin: var(--dynamic-xs);
 }

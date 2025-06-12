@@ -269,8 +269,7 @@ export default {
 }
 
 .enhanced-table-items :deep(th) {
-  /* Use theme color so header matches light/dark mode */
-  background: var(--v-theme-surface);
+  background: #ffffff;
   color: #424242;
   font-weight: 600;
   border-bottom: 1px solid rgba(0, 0, 0, 0.12);
@@ -290,8 +289,7 @@ export default {
 
 .enhanced-table-items :deep(.v-data-table__expanded) {
   padding: 20px 24px;
-  /* Use theme surface color so expanded rows respect dark mode */
-  background-color: var(--v-theme-surface);
+  background-color: #fafafa;
 }
 
 .currency-display {
