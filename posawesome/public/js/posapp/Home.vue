@@ -1,19 +1,16 @@
 <template>
-  <interpolator :watch-system="true">
-    <v-app class="container1">
-      <v-main>
-        <Navbar @changePage="setPage($event)"></Navbar>
-        <component v-bind:is="page" class="mx-4 md-4"></component>
-      </v-main>
-    </v-app>
-  </interpolator>
+  <v-app class="container1">
+    <v-main>
+      <Navbar @changePage="setPage($event)"></Navbar>
+      <component v-bind:is="page" class="mx-4 md-4"></component>
+    </v-main>
+  </v-app>
 </template>
 
 <script>
 import Navbar from './components/Navbar.vue';
 import POS from './components/pos/Pos.vue';
 import Payments from './components/payments/Pay.vue';
-import interpolator from 'vue-apply-darkmode';
 
 export default {
   data: function () {
@@ -25,7 +22,6 @@ export default {
     Navbar,
     POS,
     Payments,
-    interpolator,
   },
   methods: {
     setPage(page) {
