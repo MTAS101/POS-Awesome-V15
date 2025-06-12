@@ -19,16 +19,20 @@ frappe.PosApp.posapp = class {
     }
     make_body() {
         this.$el = this.$parent.find('.main-section');
-        const vuetify = createVuetify(
-            {
-                components,
-                directives,
-                locale: {
-                    rtl: frappe.utils.is_rtl()
-                },
-                theme: {
-                    themes: {
-                        light: {
+        const storedTheme = localStorage.getItem('theme') || 'light';
+
+        const vuetify = createVuetify({
+            components,
+            directives,
+            locale: {
+                rtl: frappe.utils.is_rtl()
+            },
+            theme: {
+                defaultTheme: storedTheme,
+                themes: {
+                    light: {
+                        dark: false,
+                        colors: {
                             background: '#FFFFFF',
                             primary: '#0097A7',
                             secondary: '#00BCD4',
@@ -40,12 +44,29 @@ frappe.PosApp.posapp = class {
                             orange: '#E65100',
                             golden: '#A68C59',
                             badge: '#F5528C',
-                            customPrimary: '#085294',
-                        },
+                            customPrimary: '#085294'
+                        }
                     },
-                },
+                    dark: {
+                        dark: true,
+                        colors: {
+                            background: '#121212',
+                            primary: '#90CAF9',
+                            secondary: '#80CBC4',
+                            accent: '#CE93D8',
+                            success: '#81C784',
+                            info: '#64B5F6',
+                            warning: '#FFB74D',
+                            error: '#E57373',
+                            orange: '#F57C00',
+                            golden: '#A68C59',
+                            badge: '#F48FB1',
+                            customPrimary: '#2196F3'
+                        }
+                    }
+                }
             }
-        );
+        });
         const app = createApp(Home)
         app.component('VueDatePicker', VueDatePicker)
         app.use(eventBus);
