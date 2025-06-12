@@ -546,7 +546,7 @@ export default {
         return_doc.items.forEach((item) => {
           const new_item = { ...item };
           // reference original invoice row for backend validation
-          new_item.si_detail = item.name;
+          new_item.sales_invoice_item = item.name;
           delete new_item.name;
 
           // Make sure quantities are negative for returns

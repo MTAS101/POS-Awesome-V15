@@ -1003,14 +1003,14 @@ export default {
           // Link to original Sales Invoice Item when doing returns
           // Needed for backend validation that the item exists in
           // the referenced Sales Invoice
-          ...(item.si_detail && { si_detail: item.si_detail }),
+          ...(item.sales_invoice_item && { sales_invoice_item: item.sales_invoice_item }),
           discount_percentage: flt(item.discount_percentage),
           batch_no: item.batch_no,
           posa_notes: item.posa_notes,
           posa_delivery_date: this.formatDateForBackend(item.posa_delivery_date),
         };
-        if (isReturn && !new_item.si_detail && item.name) {
-          new_item.si_detail = item.name;
+        if (isReturn && !new_item.sales_invoice_item && item.name) {
+          new_item.sales_invoice_item = item.name;
         }
 
         // Handle currency conversion for rates and amounts
