@@ -1167,6 +1167,14 @@ export default {
   transition: all 0.3s ease;
 }
 
+/* Ensure card background turns black when dark theme is active */
+:deep(.dark-theme) .dynamic-card,
+:deep(.v-theme--dark) .dynamic-card,
+::v-deep(.dark-theme) .dynamic-card,
+::v-deep(.v-theme--dark) .dynamic-card {
+  background-color: #000 !important;
+}
+
 .dynamic-padding {
   padding: var(--dynamic-xs) var(--dynamic-sm) var(--dynamic-xs) var(--dynamic-sm);
 }
