@@ -353,6 +353,52 @@ export default {
   overflow: hidden;
 }
 
+/* Dark mode adjustments for invoice table */
+:deep(.dark-theme) .white-table,
+:deep(.v-theme--dark) .white-table,
+::v-deep(.dark-theme) .white-table,
+::v-deep(.v-theme--dark) .white-table {
+  background-color: #000 !important;
+}
+
+:deep(.dark-theme) .white-table :deep(th),
+:deep(.v-theme--dark) .white-table :deep(th),
+:deep(.dark-theme) .white-table :deep(td),
+:deep(.v-theme--dark) .white-table :deep(td),
+::v-deep(.dark-theme) .white-table th,
+::v-deep(.v-theme--dark) .white-table th,
+::v-deep(.dark-theme) .white-table td,
+::v-deep(.v-theme--dark) .white-table td {
+  color: #fff !important;
+  background-color: #000 !important;
+  border-color: #333 !important;
+}
+
+/* Ensure table headings are dark themed */
+:deep(.dark-theme) .white-table :deep(thead th),
+:deep(.v-theme--dark) .white-table :deep(thead th),
+::v-deep(.dark-theme) .white-table thead th,
+::v-deep(.v-theme--dark) .white-table thead th {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+/* Ensure internal header content is also dark */
+:deep(.dark-theme) .white-table :deep(.v-data-table-header__content),
+:deep(.v-theme--dark) .white-table :deep(.v-data-table-header__content),
+::v-deep(.dark-theme) .white-table .v-data-table-header__content,
+::v-deep(.v-theme--dark) .white-table .v-data-table-header__content {
+  background-color: #000 !important;
+}
+
+/* Ensure thead background is dark */
+:deep(.dark-theme) .white-table :deep(thead),
+:deep(.v-theme--dark) .white-table :deep(thead),
+::v-deep(.dark-theme) .white-table thead,
+::v-deep(.v-theme--dark) .white-table thead {
+  background-color: #000 !important;
+}
+
 :deep(.v-data-table-header) {
   background: #fafafa;
   border-bottom: 2px solid #f0f0f0;

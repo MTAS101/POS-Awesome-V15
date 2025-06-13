@@ -1272,6 +1272,31 @@ export default {
   border-color: #333 !important;
 }
 
+/* Ensure table headings are dark themed */
+:deep(.dark-theme) .sleek-data-table :deep(thead th),
+:deep(.v-theme--dark) .sleek-data-table :deep(thead th),
+::v-deep(.dark-theme) .sleek-data-table thead th,
+::v-deep(.v-theme--dark) .sleek-data-table thead th {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
+/* Ensure internal header content is also dark */
+:deep(.dark-theme) .sleek-data-table :deep(.v-data-table-header__content),
+:deep(.v-theme--dark) .sleek-data-table :deep(.v-data-table-header__content),
+::v-deep(.dark-theme) .sleek-data-table .v-data-table-header__content,
+::v-deep(.v-theme--dark) .sleek-data-table .v-data-table-header__content {
+  background-color: #000 !important;
+}
+
+/* Ensure thead background is dark */
+:deep(.dark-theme) .sleek-data-table :deep(thead),
+:deep(.v-theme--dark) .sleek-data-table :deep(thead),
+::v-deep(.dark-theme) .sleek-data-table thead,
+::v-deep(.v-theme--dark) .sleek-data-table thead {
+  background-color: #000 !important;
+}
+
 /* Dark mode card backgrounds */
 :deep(.dark-theme) .selection,
 :deep(.dark-theme) .selection .v-card__underlay,
