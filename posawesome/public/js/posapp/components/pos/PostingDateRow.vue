@@ -43,3 +43,14 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+/* Dark mode styling for date picker input */
+:deep(.dark-theme) .dp__input,
+:deep(.v-theme--dark) .dp__input,
+::v-deep(.dark-theme) .dp__input,
+::v-deep(.v-theme--dark) .dp__input {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+</style>
