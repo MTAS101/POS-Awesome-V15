@@ -1185,9 +1185,9 @@ export default {
   transform: scale(calc(1 + 0.02 * var(--font-scale)));
 }
 
-:deep(.dark-theme) .dynamic-item-card,
-::v-deep(.dark-theme) .dynamic-item-card {
-  background-color: #1e1e1e !important;
+:deep(html.dark-theme) .dynamic-item-card,
+::v-deep(html.dark-theme) .dynamic-item-card {
+  background-color: #000 !important;
 }
 
 .text-success {
@@ -1237,9 +1237,11 @@ export default {
 }
 
 /* Dark mode card backgrounds */
-:deep(.dark-theme) .selection,
-:deep(.dark-theme) .cards {
-  background-color: #1e1e1e !important;
+:deep(html.dark-theme) .selection,
+:deep(html.dark-theme) .cards,
+::v-deep(html.dark-theme) .selection,
+::v-deep(html.dark-theme) .cards {
+  background-color: #000 !important;
 }
 
 /* Consistent spacing with navbar and system */
