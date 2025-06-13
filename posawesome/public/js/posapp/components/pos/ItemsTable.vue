@@ -292,6 +292,22 @@ export default {
   background-color: #fafafa;
 }
 
+/* Dark mode adjustments */
+:deep(.dark-theme) .enhanced-table-items {
+  background-color: #000 !important;
+}
+
+:deep(.dark-theme) .enhanced-table-items :deep(th),
+:deep(.dark-theme) .enhanced-table-items :deep(td) {
+  color: #fff !important;
+  background-color: #000 !important;
+  border-color: #333 !important;
+}
+
+:deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__expanded) {
+  background-color: #111 !important;
+}
+
 .currency-display {
   display: flex;
   align-items: center;

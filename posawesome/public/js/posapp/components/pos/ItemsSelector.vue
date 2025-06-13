@@ -1200,6 +1200,18 @@ export default {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
 }
 
+/* Dark mode adjustments */
+:deep(.dark-theme) .sleek-data-table {
+  background-color: #000 !important;
+}
+
+:deep(.dark-theme) .sleek-data-table :deep(th),
+:deep(.dark-theme) .sleek-data-table :deep(td) {
+  color: #fff !important;
+  background-color: #000 !important;
+  border-color: #333 !important;
+}
+
 /* Consistent spacing with navbar and system */
 .dynamic-spacing-sm {
   padding: var(--dynamic-sm) !important;
