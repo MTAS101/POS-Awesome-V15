@@ -1178,10 +1178,16 @@ export default {
 .dynamic-item-card {
   margin: var(--dynamic-xs);
   transition: all 0.3s ease;
+  background-color: #f5f5f5;
 }
 
 .dynamic-item-card:hover {
   transform: scale(calc(1 + 0.02 * var(--font-scale)));
+}
+
+:deep(.dark-theme) .dynamic-item-card,
+::v-deep(.dark-theme) .dynamic-item-card {
+  background-color: #1e1e1e !important;
 }
 
 .text-success {
