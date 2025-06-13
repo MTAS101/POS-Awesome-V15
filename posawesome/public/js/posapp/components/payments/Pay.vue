@@ -29,7 +29,7 @@
             </v-row>
             <v-row align="center" no-gutters class="mb-1">
               <v-col md="4" cols="12">
-                <v-select density="compact" variant="outlined" hide-details clearable bg-color="white"
+                <v-select density="compact" variant="outlined" hide-details clearable :bg-color="isDarkTheme ? '#000' : 'white'"
                   v-model="pos_profile_search" :items="pos_profiles_list" item-value="name"
                   label="Select POS Profile"></v-select>
               </v-col>
@@ -133,11 +133,11 @@
             <v-row align="center" no-gutters class="mb-1">
               <v-col md="4" cols="12" class="mr-1">
                 <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Search by Name')"
-                  bg-color="white" hide-details v-model="mpesa_search_name" clearable></v-text-field>
+                  :bg-color="isDarkTheme ? '#000' : 'white'" hide-details v-model="mpesa_search_name" clearable></v-text-field>
               </v-col>
               <v-col md="4" cols="12" class="mr-1">
                 <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Search by Mobile')"
-                  bg-color="white" hide-details v-model="mpesa_search_mobile" clearable></v-text-field>
+                  :bg-color="isDarkTheme ? '#000' : 'white'" hide-details v-model="mpesa_search_mobile" clearable></v-text-field>
               </v-col>
               <v-col> </v-col>
               <v-col md="3" cols="12">
@@ -167,7 +167,7 @@
                 <span>{{ __("Total Invoices:") }}</span>
               </v-col>
               <v-col md="5">
-                <v-text-field class="p-0 m-0" density="compact" color="primary" bg-color="white" hide-details
+                <v-text-field class="p-0 m-0 dark-field" density="compact" color="primary" :bg-color="isDarkTheme ? '#000' : 'white'" hide-details
                   :model-value="formatCurrency(total_selected_invoices)" readonly flat
                   :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
                 <small v-if="selected_invoices.length" class="text-primary">{{ selected_invoices.length }} invoice(s) selected</small>
@@ -177,7 +177,7 @@
             <v-row v-if="total_selected_payments">
               <v-col md="7" class="mt-1"><span>{{ __("Total Payments:") }}</span></v-col>
               <v-col md="5">
-                <v-text-field class="p-0 m-0" density="compact" color="primary" bg-color="white" hide-details
+                <v-text-field class="p-0 m-0 dark-field" density="compact" color="primary" :bg-color="isDarkTheme ? '#000' : 'white'" hide-details
                   :model-value="formatCurrency(total_selected_payments)" readonly flat
                   :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
               </v-col>
@@ -186,7 +186,7 @@
             <v-row v-if="total_selected_mpesa_payments">
               <v-col md="7" class="mt-1"><span>{{ __("Total Mpesa:") }}</span></v-col>
               <v-col md="5">
-                <v-text-field class="p-0 m-0" density="compact" color="primary" bg-color="white" hide-details
+                <v-text-field class="p-0 m-0 dark-field" density="compact" color="primary" :bg-color="isDarkTheme ? '#000' : 'white'" hide-details
                   :model-value="formatCurrency(total_selected_mpesa_payments)" readonly flat
                   :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
               </v-col>
@@ -201,7 +201,7 @@
                 <v-col md="5">
                   <div class="d-flex align-center">
                     <div class="mr-1 text-primary">{{ currencySymbol(pos_profile.currency) }}</div>
-                    <v-text-field class="p-0 m-0" density="compact" color="primary" bg-color="white"
+                    <v-text-field class="p-0 m-0 dark-field" density="compact" color="primary" :bg-color="isDarkTheme ? '#000' : 'white'"
                       hide-details v-model="method.amount" type="number" flat 
                       @input="$forceUpdate()"></v-text-field>
                   </div>
@@ -215,7 +215,7 @@
                 <h4 class="text-primary mt-1">{{ __("Difference:") }}</h4>
               </v-col>
               <v-col md="5">
-                <v-text-field class="p-0 m-0" density="compact" color="primary" bg-color="white" hide-details
+                <v-text-field class="p-0 m-0 dark-field" density="compact" color="primary" :bg-color="isDarkTheme ? '#000' : 'white'" hide-details
                   :model-value="formatCurrency(total_of_diff)" readonly flat
                   :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
               </v-col>
@@ -917,8 +917,8 @@ export default {
     total_of_diff() {
       // Calculate difference between invoice total and payment total
       const invoiceTotal = this.total_selected_invoices || 0;
-      const paymentTotal = (this.total_selected_payments || 0) + 
-                          (this.total_selected_mpesa_payments || 0) + 
+      const paymentTotal = (this.total_selected_payments || 0) +
+                          (this.total_selected_mpesa_payments || 0) +
                           (this.total_payment_methods || 0);
       
       console.log('Difference calculation:', {
@@ -931,6 +931,9 @@ export default {
       
       return flt(invoiceTotal - paymentTotal);
     },
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
+    }
   },
 
   mounted: function () {
@@ -957,6 +960,36 @@ export default {
 </script>
 
 <style>
+/* Dark mode input styling */
+:deep(.dark-theme) .dark-field,
+:deep(.v-theme--dark) .dark-field,
+::v-deep(.dark-theme) .dark-field,
+::v-deep(.v-theme--dark) .dark-field {
+  background-color: #000 !important;
+}
+
+:deep(.dark-theme) .dark-field :deep(.v-field__input),
+:deep(.v-theme--dark) .dark-field :deep(.v-field__input),
+:deep(.dark-theme) .dark-field :deep(input),
+:deep(.v-theme--dark) .dark-field :deep(input),
+:deep(.dark-theme) .dark-field :deep(.v-label),
+:deep(.v-theme--dark) .dark-field :deep(.v-label),
+::v-deep(.dark-theme) .dark-field .v-field__input,
+::v-deep(.v-theme--dark) .dark-field .v-field__input,
+::v-deep(.dark-theme) .dark-field input,
+::v-deep(.v-theme--dark) .dark-field input,
+::v-deep(.dark-theme) .dark-field .v-label,
+::v-deep(.v-theme--dark) .dark-field .v-label {
+  color: #fff !important;
+}
+
+:deep(.dark-theme) .dark-field :deep(.v-field__overlay),
+:deep(.v-theme--dark) .dark-field :deep(.v-field__overlay),
+::v-deep(.dark-theme) .dark-field .v-field__overlay,
+::v-deep(.v-theme--dark) .dark-field .v-field__overlay {
+  background-color: #000 !important;
+}
+
 input[total_of_diff] {
   text-align: right;
 }
