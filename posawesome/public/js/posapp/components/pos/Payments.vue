@@ -294,6 +294,7 @@
               format="dd-MM-yyyy"
               :min-date="new Date()"
               auto-apply
+              :dark="isDarkTheme"
               @update:model-value="update_delivery_date()"
             />
           </v-col>
@@ -390,6 +391,7 @@
               format="dd-MM-yyyy"
               :min-date="new Date()"
               auto-apply
+              :dark="isDarkTheme"
               @update:model-value="update_po_date()"
             />
               <v-text-field
@@ -446,6 +448,7 @@
             format="dd-MM-yyyy"
             :min-date="new Date()"
             auto-apply
+            :dark="isDarkTheme"
             @update:model-value="update_credit_due_date()"
           />
           </v-col>

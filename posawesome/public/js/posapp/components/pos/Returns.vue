@@ -34,6 +34,7 @@
             format="dd-MM-yyyy"
             :enable-time-picker="false"
             auto-apply
+            :dark="isDarkTheme"
             @update:model-value="formatFromDate()"
           />
             </v-col>
@@ -44,6 +45,7 @@
             format="dd-MM-yyyy"
             :enable-time-picker="false"
             auto-apply
+            :dark="isDarkTheme"
             @update:model-value="formatToDate()"
           />
             </v-col>
@@ -265,6 +267,11 @@ export default {
       },
     ],
   }),
+  computed: {
+    isDarkTheme() {
+      return this.$theme?.current === 'dark';
+    }
+  },
   watch: {
     from_date() {
       this.formatFromDate();

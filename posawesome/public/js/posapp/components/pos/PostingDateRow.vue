@@ -6,6 +6,7 @@
         model-type="format"
         format="dd-MM-yyyy"
         auto-apply
+        :dark="isDarkTheme"
         class="dark-field"
         @update:model-value="onUpdate"
       />
@@ -31,6 +32,11 @@ export default {
     return {
       internal_posting_date_display: this.posting_date_display,
     };
+  },
+  computed: {
+    isDarkTheme() {
+      return this.$theme?.current === 'dark';
+    }
   },
   watch: {
     posting_date_display(val) {

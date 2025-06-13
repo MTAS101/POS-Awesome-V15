@@ -208,6 +208,7 @@
                 format="dd-MM-yyyy"
                 :min-date="new Date()"
                 auto-apply
+                :dark="isDarkTheme"
                 @update:model-value="validateDueDate(item)"
               />
             </v-col>
