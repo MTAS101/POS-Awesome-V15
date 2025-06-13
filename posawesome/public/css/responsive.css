@@ -7,6 +7,28 @@
   --container-height: 75vh;
   --card-height: 60vh;
   --font-scale: 1;
+
+  --cancel-start: #d32f2f;
+  --cancel-end: #c62828;
+  --submit-start: #388e3c;
+  --submit-end: #2e7d32;
+  --primary-start: #1976d2;
+  --primary-end: #1565c0;
+  --dialog-bg-start: #ffffff;
+  --dialog-bg-end: #f8f9fa;
+  --dialog-border: #e0e0e0;
+}
+
+:root.dark-theme {
+  --cancel-start: #b71c1c;
+  --cancel-end: #c62828;
+  --submit-start: #2e7d32;
+  --submit-end: #1b5e20;
+  --primary-start: #0d47a1;
+  --primary-end: #1565c0;
+  --dialog-bg-start: #424242;
+  --dialog-bg-end: #303030;
+  --dialog-border: #555555;
 }
 
 /* Base responsive utilities */
@@ -56,19 +78,19 @@
 
 /* Button Variants */
 .pos-action-btn.cancel-action-btn {
-  background: linear-gradient(135deg, #d32f2f 0%, #c62828 100%) !important;
+  background: linear-gradient(135deg, var(--cancel-start) 0%, var(--cancel-end) 100%) !important;
 }
 
 .pos-action-btn.submit-action-btn {
-  background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%) !important;
+  background: linear-gradient(135deg, var(--submit-start) 0%, var(--submit-end) 100%) !important;
 }
 
 .pos-action-btn.sync-action-btn {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important;
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%) !important;
 }
 
 .pos-action-btn.primary-action-btn {
-  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%) !important;
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%) !important;
 }
 
 /* Hover Effects */
@@ -104,8 +126,8 @@
 
 /* Dialog Actions Container */
 .dialog-actions-container {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
-  border-top: 1px solid #e0e0e0 !important;
+  background: linear-gradient(135deg, var(--dialog-bg-start) 0%, var(--dialog-bg-end) 100%) !important;
+  border-top: 1px solid var(--dialog-border) !important;
   padding: 16px 24px !important;
   gap: 12px !important;
 }

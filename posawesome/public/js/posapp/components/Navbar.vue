@@ -116,6 +116,18 @@
               </div>
             </v-list-item>
 
+            <v-list-item @click="toggleTheme" class="menu-item-compact neutral-action">
+              <template v-slot:prepend>
+                <div class="menu-icon-wrapper-compact neutral-icon">
+                  <v-icon color="white" size="16">mdi-theme-light-dark</v-icon>
+                </div>
+              </template>
+              <div class="menu-content-compact">
+                <v-list-item-title class="menu-item-title-compact">{{ isDark ? __('Light Mode') : __('Dark Mode') }}</v-list-item-title>
+                <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Toggle theme') }}</v-list-item-subtitle>
+              </div>
+            </v-list-item>
+
             <v-list-item @click="logOut" class="menu-item-compact danger-action">
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact danger-icon">
@@ -359,6 +371,9 @@ export default {
 
       // Online mode - show full status
       return `To Sync: ${pendingCount} | Synced: ${syncedCount} | Draft: ${draftedCount}`;
+    },
+    isDark() {
+      return this.$theme.current === 'dark';
     }
   },
   created() {
@@ -722,6 +737,10 @@ export default {
           this.appInfoError = true;
         }
       });
+    },
+
+    toggleTheme() {
+      this.$theme.toggle();
     },
 
 

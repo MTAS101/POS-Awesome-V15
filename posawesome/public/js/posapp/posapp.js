@@ -3,6 +3,7 @@ import { createApp } from 'vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
 import eventBus from './bus';
+import themePlugin from './plugins/theme.js';
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import Home from './Home.vue';
@@ -27,22 +28,42 @@ frappe.PosApp.posapp = class {
                     rtl: frappe.utils.is_rtl()
                 },
                 theme: {
+                    defaultTheme: 'light',
                     themes: {
                         light: {
-                            background: '#FFFFFF',
-                            primary: '#0097A7',
-                            secondary: '#00BCD4',
-                            accent: '#9575CD',
-                            success: '#66BB6A',
-                            info: '#2196F3',
-                            warning: '#FF9800',
-                            error: '#E86674',
-                            orange: '#E65100',
-                            golden: '#A68C59',
-                            badge: '#F5528C',
-                            customPrimary: '#085294',
+                            colors: {
+                                background: '#FFFFFF',
+                                primary: '#0097A7',
+                                secondary: '#00BCD4',
+                                accent: '#9575CD',
+                                success: '#66BB6A',
+                                info: '#2196F3',
+                                warning: '#FF9800',
+                                error: '#E86674',
+                                orange: '#E65100',
+                                golden: '#A68C59',
+                                badge: '#F5528C',
+                                customPrimary: '#085294'
+                            }
                         },
-                    },
+                        dark: {
+                            dark: true,
+                            colors: {
+                                background: '#121212',
+                                primary: '#0097A7',
+                                secondary: '#00BCD4',
+                                accent: '#9575CD',
+                                success: '#66BB6A',
+                                info: '#2196F3',
+                                warning: '#FF9800',
+                                error: '#E86674',
+                                orange: '#FF6F00',
+                                golden: '#A68C59',
+                                badge: '#F5528C',
+                                customPrimary: '#4FC3F7'
+                            }
+                        }
+                    }
                 },
             }
         );
@@ -50,6 +71,7 @@ frappe.PosApp.posapp = class {
         app.component('VueDatePicker', VueDatePicker)
         app.use(eventBus);
         app.use(vuetify)
+        app.use(themePlugin, { vuetify })
         app.mount(this.$el[0]);
 
         if (!document.querySelector('link[rel="manifest"]')) {
