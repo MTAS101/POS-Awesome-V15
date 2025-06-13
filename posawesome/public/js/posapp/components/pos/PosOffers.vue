@@ -2,7 +2,7 @@
   <div>
     <v-card
       :class="['selection mx-auto mt-3', isDarkTheme ? '' : 'bg-grey-lighten-5']"
-      :style="isDarkTheme ? 'background-color:#000' : ''"
+      :style="isDarkTheme ? 'background-color:#1E1E1E' : ''"
       style="max-height: 80vh; height: 80vh"
     >
       <v-card-title>

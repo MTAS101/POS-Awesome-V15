@@ -24,11 +24,23 @@
   --cancel-end: #c62828;
   --submit-start: #2e7d32;
   --submit-end: #1b5e20;
-  --primary-start: #0d47a1;
-  --primary-end: #1565c0;
-  --dialog-bg-start: #424242;
-  --dialog-bg-end: #303030;
-  --dialog-border: #555555;
+  --primary-start: #985EFF;
+  --primary-end: #BB86FC;
+  --dialog-bg-start: #1E1E1E;
+  --dialog-bg-end: #121212;
+  --dialog-border: #373737;
+
+  /* Dark mode palette tokens */
+  --background: #121212;
+  --surface: #1E1E1E;
+  --primary: #BB86FC;
+  --primary-variant: #985EFF;
+  --secondary: #03DAC6;
+  --error: #CF6679;
+  --on-background: #FFFFFF;
+  --on-surface: #FFFFFF;
+  --disabled-text: rgba(255, 255, 255, 0.38);
+  --divider: #373737;
 }
 
 /* Base responsive utilities */

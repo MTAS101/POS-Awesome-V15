@@ -1,7 +1,7 @@
 <template>
   <v-card
     :class="['cards mb-0 mt-3 py-2 px-3 rounded-lg', isDarkTheme ? '' : 'bg-grey-lighten-4']"
-    :style="isDarkTheme ? 'background-color:#000' : ''"
+    :style="isDarkTheme ? 'background-color:#1E1E1E' : ''"
   >
     <v-row dense>
       <!-- Summary Info -->
@@ -184,6 +184,6 @@ export default {
 ::v-deep(.v-theme--dark) .cards .v-card__underlay,
 ::v-deep(.cards.v-theme--dark),
 ::v-deep(.cards.v-theme--dark) .v-card__underlay {
-  background-color: #000 !important;
+  background-color: #1E1E1E !important;
 }
 </style>

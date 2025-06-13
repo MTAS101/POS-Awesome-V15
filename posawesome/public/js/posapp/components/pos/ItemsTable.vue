@@ -252,7 +252,7 @@ export default {
   computed: {
     headerProps() {
       return this.isDarkTheme
-        ? { style: 'background-color:#000;color:#fff' }
+        ? { style: 'background-color:#121212;color:#fff' }
         : {};
     },
     isDarkTheme() {
@@ -310,7 +310,7 @@ export default {
 :deep(.v-theme--dark) .enhanced-table-items,
 ::v-deep(.dark-theme) .enhanced-table-items,
 ::v-deep(.v-theme--dark) .enhanced-table-items {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 :deep(.dark-theme) .enhanced-table-items :deep(th),
@@ -322,8 +322,8 @@ export default {
 ::v-deep(.dark-theme) .enhanced-table-items td,
 ::v-deep(.v-theme--dark) .enhanced-table-items td {
   color: #fff !important;
-  background-color: #000 !important;
-  border-color: #333 !important;
+  background-color: #1E1E1E !important;
+  border-color: #373737 !important;
 }
 
 :deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__wrapper),
@@ -334,14 +334,14 @@ export default {
 ::v-deep(.v-theme--dark) .enhanced-table-items .v-data-table__wrapper,
 ::v-deep(.dark-theme) .enhanced-table-items .v-table__wrapper,
 ::v-deep(.v-theme--dark) .enhanced-table-items .v-table__wrapper {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 :deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__expanded),
 :deep(.v-theme--dark) .enhanced-table-items :deep(.v-data-table__expanded),
 ::v-deep(.dark-theme) .enhanced-table-items .v-data-table__expanded,
 ::v-deep(.v-theme--dark) .enhanced-table-items .v-data-table__expanded {
-  background-color: #111 !important;
+  background-color: #1E1E1E !important;
 }
 
 .currency-display {
@@ -375,7 +375,7 @@ export default {
 :deep(.v-theme--dark) .enhanced-table-items :deep(thead th),
 ::v-deep(.dark-theme) .enhanced-table-items thead th,
 ::v-deep(.v-theme--dark) .enhanced-table-items thead th {
-  background-color: #000 !important;
+  background-color: #121212 !important;
   color: #fff !important;
 }
 
@@ -384,7 +384,7 @@ export default {
 :deep(.v-theme--dark) .enhanced-table-items :deep(.v-data-table-header__content),
 ::v-deep(.dark-theme) .enhanced-table-items .v-data-table-header__content,
 ::v-deep(.v-theme--dark) .enhanced-table-items .v-data-table-header__content {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 /* Ensure thead background is dark */
@@ -392,7 +392,7 @@ export default {
 :deep(.v-theme--dark) .enhanced-table-items :deep(thead),
 ::v-deep(.dark-theme) .enhanced-table-items thead,
 ::v-deep(.v-theme--dark) .enhanced-table-items thead {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 /* Ensure header rows are dark themed */
@@ -400,7 +400,7 @@ export default {
 :deep(.v-theme--dark) .enhanced-table-items :deep(thead tr),
 ::v-deep(.dark-theme) .enhanced-table-items thead tr,
 ::v-deep(.v-theme--dark) .enhanced-table-items thead tr {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 .item-action-btn {

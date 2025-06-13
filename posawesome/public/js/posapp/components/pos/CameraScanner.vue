@@ -93,7 +93,7 @@
 .scanner-container {
     position: relative;
     overflow: hidden;
-    background: #000;
+    background: #121212;
 }
 
 .barcode-scanner {

@@ -358,7 +358,7 @@ export default {
 :deep(.v-theme--dark) .white-table,
 ::v-deep(.dark-theme) .white-table,
 ::v-deep(.v-theme--dark) .white-table {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 :deep(.dark-theme) .white-table :deep(th),
@@ -370,8 +370,8 @@ export default {
 ::v-deep(.dark-theme) .white-table td,
 ::v-deep(.v-theme--dark) .white-table td {
   color: #fff !important;
-  background-color: #000 !important;
-  border-color: #333 !important;
+  background-color: #1E1E1E !important;
+  border-color: #373737 !important;
 }
 
 /* Ensure table headings are dark themed */
@@ -379,7 +379,7 @@ export default {
 :deep(.v-theme--dark) .white-table :deep(thead th),
 ::v-deep(.dark-theme) .white-table thead th,
 ::v-deep(.v-theme--dark) .white-table thead th {
-  background-color: #000 !important;
+  background-color: #121212 !important;
   color: #fff !important;
 }
 
@@ -388,7 +388,7 @@ export default {
 :deep(.v-theme--dark) .white-table :deep(.v-data-table-header__content),
 ::v-deep(.dark-theme) .white-table .v-data-table-header__content,
 ::v-deep(.v-theme--dark) .white-table .v-data-table-header__content {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 /* Ensure thead background is dark */
@@ -396,7 +396,7 @@ export default {
 :deep(.v-theme--dark) .white-table :deep(thead),
 ::v-deep(.dark-theme) .white-table thead,
 ::v-deep(.v-theme--dark) .white-table thead {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 :deep(.v-data-table-header) {

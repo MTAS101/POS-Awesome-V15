@@ -6,7 +6,7 @@
 
     <!-- Main Invoice Card (contains all invoice content) -->
     <v-card
-      :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)', backgroundColor: isDarkTheme ? '#000' : '' }"
+      :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)', backgroundColor: isDarkTheme ? '#121212' : '' }"
       :class="['cards my-0 py-0 mt-3', isDarkTheme ? '' : 'bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]"
     >
 
@@ -21,7 +21,7 @@
           <!-- Invoice Type Selection (Only shown if sales orders are allowed) -->
           <v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-0">
             <v-select density="compact" hide-details variant="outlined" color="primary"
-              :bg-color="isDarkTheme ? '#000' : 'white'" class="dark-field"
+              :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field"
               :items="invoiceTypes" :label="frappe._('Type')" v-model="invoiceType"
               :disabled="invoiceType == 'Return'"></v-select>
           </v-col>
@@ -828,7 +828,7 @@ export default {
 :deep(.v-theme--dark) .dark-field,
 ::v-deep(.dark-theme) .dark-field,
 ::v-deep(.v-theme--dark) .dark-field {
-  background-color: #000 !important;
+  background-color: #1E1E1E !important;
 }
 
 :deep(.dark-theme) .dark-field :deep(.v-field__input),
@@ -850,7 +850,7 @@ export default {
 :deep(.v-theme--dark) .dark-field :deep(.v-field__overlay),
 ::v-deep(.dark-theme) .dark-field .v-field__overlay,
 ::v-deep(.v-theme--dark) .dark-field .v-field__overlay {
-  background-color: #000 !important;
+  background-color: #1E1E1E !important;
 }
 
 /* Card background adjustments */
@@ -870,7 +870,7 @@ export default {
 ::v-deep(.v-theme--dark) .cards .v-card__underlay,
 ::v-deep(.cards.v-theme--dark),
 ::v-deep(.cards.v-theme--dark) .v-card__underlay {
-  background-color: #000 !important;
+  background-color: #1E1E1E !important;
 }
 
 /* Style for selected checkbox button */

@@ -50,7 +50,7 @@ export default {
 :deep(.v-theme--dark) .dp__input,
 ::v-deep(.dark-theme) .dp__input,
 ::v-deep(.v-theme--dark) .dp__input {
-  background-color: #000 !important;
+  background-color: #1E1E1E !important;
   color: #fff !important;
 }
 </style>

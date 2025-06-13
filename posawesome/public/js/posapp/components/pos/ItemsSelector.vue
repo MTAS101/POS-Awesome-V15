@@ -2,7 +2,7 @@
   <div :style="responsiveStyles">
     <v-card
       :class="['selection mx-auto my-0 py-0 mt-3 dynamic-card', isDarkTheme ? '' : 'bg-grey-lighten-5']"
-      :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'], backgroundColor: isDarkTheme ? '#000' : '' }">
+      :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'], backgroundColor: isDarkTheme ? '#121212' : '' }">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
       <!-- Add dynamic-padding wrapper like Invoice component -->
@@ -1176,12 +1176,12 @@ export default {
 :deep(.v-theme--dark) .dynamic-card,
 ::v-deep(.dark-theme) .dynamic-card,
 ::v-deep(.v-theme--dark) .dynamic-card {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 /* Fallback for Vuetify card dark mode */
 .v-theme--dark .dynamic-card {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 .dynamic-padding {
@@ -1207,7 +1207,7 @@ export default {
 ::v-deep(.dark-theme) .dynamic-item-card,
 ::v-deep(.v-theme--dark) .dynamic-item-card {
 
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 .text-success {
@@ -1237,7 +1237,7 @@ export default {
 :deep(.v-theme--dark) .sleek-data-table,
 ::v-deep(.dark-theme) .sleek-data-table,
 ::v-deep(.v-theme--dark) .sleek-data-table {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 :deep(.dark-theme) .sleek-data-table :deep(.v-data-table),
@@ -1256,7 +1256,7 @@ export default {
 ::v-deep(.v-theme--dark) .sleek-data-table .v-table__wrapper,
 ::v-deep(.dark-theme) .sleek-data-table table,
 ::v-deep(.v-theme--dark) .sleek-data-table table {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 :deep(.dark-theme) .sleek-data-table :deep(th),
@@ -1268,7 +1268,7 @@ export default {
 ::v-deep(.dark-theme) .sleek-data-table td,
 ::v-deep(.v-theme--dark) .sleek-data-table td {
   color: #fff !important;
-  background-color: #000 !important;
+  background-color: #121212 !important;
   border-color: #333 !important;
 }
 
@@ -1277,7 +1277,7 @@ export default {
 :deep(.v-theme--dark) .sleek-data-table :deep(thead th),
 ::v-deep(.dark-theme) .sleek-data-table thead th,
 ::v-deep(.v-theme--dark) .sleek-data-table thead th {
-  background-color: #000 !important;
+  background-color: #121212 !important;
   color: #fff !important;
 }
 
@@ -1286,7 +1286,7 @@ export default {
 :deep(.v-theme--dark) .sleek-data-table :deep(.v-data-table-header__content),
 ::v-deep(.dark-theme) .sleek-data-table .v-data-table-header__content,
 ::v-deep(.v-theme--dark) .sleek-data-table .v-data-table-header__content {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 /* Ensure thead background is dark */
@@ -1294,7 +1294,7 @@ export default {
 :deep(.v-theme--dark) .sleek-data-table :deep(thead),
 ::v-deep(.dark-theme) .sleek-data-table thead,
 ::v-deep(.v-theme--dark) .sleek-data-table thead {
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 /* Dark mode card backgrounds */
@@ -1319,7 +1319,7 @@ export default {
 ::v-deep(.cards.v-theme--dark),
 ::v-deep(.cards.v-theme--dark) .v-card__underlay {
 
-  background-color: #000 !important;
+  background-color: #121212 !important;
 }
 
 /* Consistent spacing with navbar and system */

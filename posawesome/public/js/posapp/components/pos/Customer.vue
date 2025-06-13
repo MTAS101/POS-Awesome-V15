@@ -3,7 +3,7 @@
   <div class="customer-input-wrapper">
     <v-autocomplete ref="customerDropdown" class="customer-autocomplete sleek-field" density="compact" clearable
       variant="solo" color="primary" :label="frappe._('Customer')" v-model="internalCustomer" :items="customers"
-      item-title="customer_name" item-value="name" :bg-color="isDarkTheme ? '#424242' : 'white'" :no-data-text="__('Customers not found')"
+      item-title="customer_name" item-value="name" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" :no-data-text="__('Customers not found')"
       hide-details :customFilter="customFilter" :disabled="readonly || loadingCustomers"
       :menu-props="{ closeOnContentClick: false }" @update:menu="onCustomerMenuToggle"
       @update:modelValue="onCustomerChange" @keydown.enter="handleEnter">
@@ -87,8 +87,8 @@
 :deep(.v-theme--dark) .customer-autocomplete,
 ::v-deep(.dark-theme) .customer-autocomplete,
 ::v-deep(.v-theme--dark) .customer-autocomplete {
-  /* Use lighter gray for dark mode */
-  background-color: #424242 !important;
+  /* Use surface color for dark mode */
+  background-color: #1E1E1E !important;
 }
 
 :deep(.dark-theme) .customer-autocomplete :deep(.v-field__input),
@@ -110,7 +110,7 @@
 :deep(.v-theme--dark) .customer-autocomplete :deep(.v-field__overlay),
 ::v-deep(.dark-theme) .customer-autocomplete .v-field__overlay,
 ::v-deep(.v-theme--dark) .customer-autocomplete .v-field__overlay {
-  background-color: #424242 !important;
+  background-color: #1E1E1E !important;
 }
 
 .icon-button {
