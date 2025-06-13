@@ -350,6 +350,14 @@ export default {
   font-size: 0.9rem;
 }
 
+/* Ensure numeric values remain visible in dark mode */
+:deep(.dark-theme) .amount-value,
+:deep(.v-theme--dark) .amount-value,
+::v-deep(.dark-theme) .amount-value,
+::v-deep(.v-theme--dark) .amount-value {
+  color: #fff !important;
+}
+
 .item-action-btn {
   min-width: 44px !important;
   height: 44px !important;
