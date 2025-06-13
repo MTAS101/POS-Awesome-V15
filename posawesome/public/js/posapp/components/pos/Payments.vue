@@ -1818,4 +1818,15 @@ export default {
   overflow: hidden;
   margin-top: 4px;
 }
+
+.cards {
+  background-color: #f5f5f5 !important;
+}
+
+:deep(.dark-theme) .cards,
+:deep(.v-theme--dark) .cards,
+::v-deep(.dark-theme) .cards,
+::v-deep(.v-theme--dark) .cards {
+  background-color: #000 !important;
+}
 </style>
