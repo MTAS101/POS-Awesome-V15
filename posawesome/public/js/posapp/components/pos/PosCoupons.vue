@@ -1,6 +1,10 @@
 <template>
   <div>
-    <v-card class="selection mx-auto bg-grey-lighten-5 mt-3" style="max-height: 80vh; height: 80vh">
+    <v-card
+      :class="['selection mx-auto mt-3', isDarkTheme ? '' : 'bg-grey-lighten-5']"
+      :style="isDarkTheme ? 'background-color:#000' : ''"
+      style="max-height: 80vh; height: 80vh"
+    >
       <v-card-title>
         <span class="text-h6 text-primary">{{ __('Coupons') }}</span>
       </v-card-title>
@@ -79,6 +83,9 @@ export default {
     },
     appliedCouponsCount() {
       return this.posa_coupons.filter((el) => !!el.applied).length;
+    },
+    isDarkTheme() {
+      return this.$theme?.current === 'dark';
     },
   },
 

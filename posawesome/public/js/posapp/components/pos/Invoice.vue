@@ -5,8 +5,10 @@
     <CancelSaleDialog v-model="cancel_dialog" @confirm="cancel_invoice" />
 
     <!-- Main Invoice Card (contains all invoice content) -->
-    <v-card :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)' }"
-      :class="['cards my-0 py-0 mt-3 bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]">
+    <v-card
+      :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)', backgroundColor: isDarkTheme ? '#000' : '' }"
+      :class="['cards my-0 py-0 mt-3', isDarkTheme ? '' : 'bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]"
+    >
 
       <!-- Dynamic padding wrapper -->
       <div class="dynamic-padding">
