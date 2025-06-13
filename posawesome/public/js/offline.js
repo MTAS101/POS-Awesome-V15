@@ -49,6 +49,19 @@ function persist(key) {
     .catch(e => console.error(`Failed to persist ${key}`, e));
 }
 
+// Reset cached invoices and customers after syncing
+// but preserve the stock cache so offline validation
+// still has access to the last known quantities
+export function resetOfflineState() {
+  memory.offline_invoices = [];
+  memory.offline_customers = [];
+  memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
+
+  persist('offline_invoices');
+  persist('offline_customers');
+  persist('pos_last_sync_totals');
+}
+
 // Add new validation function
 export function validateStockForOfflineInvoice(items) {
   const stockCache = memory.local_stock_cache || {};
@@ -252,10 +265,9 @@ export async function syncOfflineInvoices() {
     }
   }
 
-  // Clear offline invoices and local stock cache after successful sync
+  // Reset saved invoices and totals after successful sync
   if (synced > 0) {
-    clearOfflineInvoices();
-    clearLocalStockCache(); // Clear local stock cache to get fresh data from server
+    resetOfflineState();
   }
 
   const pendingLeft = failures.length;
