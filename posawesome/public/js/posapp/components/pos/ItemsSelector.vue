@@ -1187,7 +1187,7 @@ export default {
 
 :deep(.dark-theme) .dynamic-item-card,
 ::v-deep(.dark-theme) .dynamic-item-card {
-  background-color: #1e1e1e !important;
+  background-color: #000 !important;
 }
 
 .text-success {
@@ -1238,8 +1238,10 @@ export default {
 
 /* Dark mode card backgrounds */
 :deep(.dark-theme) .selection,
-:deep(.dark-theme) .cards {
-  background-color: #1e1e1e !important;
+:deep(.dark-theme) .cards,
+::v-deep(.dark-theme) .selection,
+::v-deep(.dark-theme) .cards {
+  background-color: #000 !important;
 }
 
 /* Consistent spacing with navbar and system */
