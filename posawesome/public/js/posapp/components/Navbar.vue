@@ -4,7 +4,7 @@
 
     <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
 
-    <v-app-bar app flat height="56" color="white" class="navbar-enhanced elevation-2 px-2 pb-1">
+    <v-app-bar app flat height="56" :color="appBarColor" class="navbar-enhanced elevation-2 px-2 pb-1">
       <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary nav-icon" />
 
       <v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32" class="mx-2" />
@@ -374,6 +374,9 @@ export default {
     },
     isDark() {
       return this.$theme.current === 'dark';
+    },
+    appBarColor() {
+      return this.isDark ? '#1e1e1e' : 'white';
     }
   },
   created() {
