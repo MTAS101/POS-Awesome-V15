@@ -1185,9 +1185,9 @@ export default {
   transform: scale(calc(1 + 0.02 * var(--font-scale)));
 }
 
-:deep(html.dark-theme) .dynamic-item-card,
-::v-deep(html.dark-theme) .dynamic-item-card {
-  background-color: #000 !important;
+:deep(.dark-theme) .dynamic-item-card,
+::v-deep(.dark-theme) .dynamic-item-card {
+  background-color: #1e1e1e !important;
 }
 
 .text-success {
@@ -1213,35 +1213,33 @@ export default {
 }
 
 /* Dark mode adjustments */
-:deep(html.dark-theme) .sleek-data-table,
-::v-deep(html.dark-theme) .sleek-data-table {
+:deep(.dark-theme) .sleek-data-table,
+::v-deep(.dark-theme) .sleek-data-table {
   background-color: #000 !important;
 }
 
-:deep(html.dark-theme) .sleek-data-table :deep(.v-data-table),
-:deep(html.dark-theme) .sleek-data-table :deep(.v-data-table__wrapper),
-:deep(html.dark-theme) .sleek-data-table :deep(table),
-::v-deep(html.dark-theme) .sleek-data-table .v-data-table,
-::v-deep(html.dark-theme) .sleek-data-table .v-data-table__wrapper,
-::v-deep(html.dark-theme) .sleek-data-table table {
+:deep(.dark-theme) .sleek-data-table :deep(.v-data-table),
+:deep(.dark-theme) .sleek-data-table :deep(.v-data-table__wrapper),
+:deep(.dark-theme) .sleek-data-table :deep(table),
+::v-deep(.dark-theme) .sleek-data-table .v-data-table,
+::v-deep(.dark-theme) .sleek-data-table .v-data-table__wrapper,
+::v-deep(.dark-theme) .sleek-data-table table {
   background-color: #000 !important;
 }
 
-:deep(html.dark-theme) .sleek-data-table :deep(th),
-:deep(html.dark-theme) .sleek-data-table :deep(td),
-::v-deep(html.dark-theme) .sleek-data-table th,
-::v-deep(html.dark-theme) .sleek-data-table td {
+:deep(.dark-theme) .sleek-data-table :deep(th),
+:deep(.dark-theme) .sleek-data-table :deep(td),
+::v-deep(.dark-theme) .sleek-data-table th,
+::v-deep(.dark-theme) .sleek-data-table td {
   color: #fff !important;
   background-color: #000 !important;
   border-color: #333 !important;
 }
 
 /* Dark mode card backgrounds */
-:deep(html.dark-theme) .selection,
-:deep(html.dark-theme) .cards,
-::v-deep(html.dark-theme) .selection,
-::v-deep(html.dark-theme) .cards {
-  background-color: #000 !important;
+:deep(.dark-theme) .selection,
+:deep(.dark-theme) .cards {
+  background-color: #1e1e1e !important;
 }
 
 /* Consistent spacing with navbar and system */
