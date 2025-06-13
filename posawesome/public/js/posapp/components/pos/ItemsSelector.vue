@@ -1,6 +1,6 @@
 <template>
   <div :style="responsiveStyles">
-    <v-card class="selection mx-auto bg-grey-lighten-5 my-0 py-0 mt-3 dynamic-card"
+    <v-card class="selection mx-auto my-0 py-0 mt-3 dynamic-card"
       :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'] }">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
@@ -10,7 +10,7 @@
           <v-col class="pb-0">
             <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
               :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
-              bg-color="white" hide-details v-model="debounce_search" @keydown.esc="esc_event"
+              hide-details v-model="debounce_search" @keydown.esc="esc_event"
               @keydown.enter="search_onchange" @click:clear="clearSearch" prepend-inner-icon="mdi-magnify"
               @focus="handleItemSearchFocus" ref="debounce_search">
               <!-- Add camera scan button if enabled -->
@@ -23,7 +23,7 @@
 
           </v-col>
           <v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
-            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')" bg-color="white"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')"
               hide-details :model-value="formatFloat(qty)" type="text" @change="setFormatedFloat(this, 'qty', null, false, $event)"
               @keydown.enter="enter_event" @keydown.esc="esc_event"></v-text-field>
           </v-col>
@@ -87,7 +87,7 @@
         </v-row>
       </div>
     </v-card>
-    <v-card class="cards mb-0 mt-3 dynamic-padding bg-grey-lighten-5">
+    <v-card class="cards mb-0 mt-3 dynamic-padding">
       <v-row no-gutters align="center" justify="center" class="dynamic-spacing-sm">
         <v-col cols="12" class="mb-2">
           <v-select :items="items_group" :label="frappe._('Items Group')" density="compact" variant="solo" hide-details
@@ -1198,6 +1198,12 @@ export default {
 
 .sleek-data-table:hover {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Light mode card backgrounds */
+.selection,
+.cards {
+  background-color: #f5f5f5 !important;
 }
 
 /* Dark mode adjustments */
