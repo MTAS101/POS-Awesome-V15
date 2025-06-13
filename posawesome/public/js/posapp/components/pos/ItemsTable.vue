@@ -262,8 +262,7 @@ export default {
   flex-direction: column;
 }
 
-.enhanced-table-items :deep(.v-data-table__wrapper),
-.enhanced-table-items :deep(.v-table__wrapper) {
+.enhanced-table-items :deep(.v-data-table__wrapper) {
   border-radius: 8px;
   height: 100%;
   overflow-y: auto;
@@ -306,13 +305,6 @@ export default {
   color: #fff !important;
   background-color: #000 !important;
   border-color: #333 !important;
-}
-
-:deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__wrapper),
-:deep(.dark-theme) .enhanced-table-items :deep(.v-table__wrapper),
-::v-deep(.dark-theme) .enhanced-table-items .v-data-table__wrapper,
-::v-deep(.dark-theme) .enhanced-table-items .v-table__wrapper {
-  background-color: #000 !important;
 }
 
 :deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__expanded),

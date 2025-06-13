@@ -1220,11 +1220,9 @@ export default {
 
 :deep(.dark-theme) .sleek-data-table :deep(.v-data-table),
 :deep(.dark-theme) .sleek-data-table :deep(.v-data-table__wrapper),
-:deep(.dark-theme) .sleek-data-table :deep(.v-table__wrapper),
 :deep(.dark-theme) .sleek-data-table :deep(table),
 ::v-deep(.dark-theme) .sleek-data-table .v-data-table,
 ::v-deep(.dark-theme) .sleek-data-table .v-data-table__wrapper,
-::v-deep(.dark-theme) .sleek-data-table .v-table__wrapper,
 ::v-deep(.dark-theme) .sleek-data-table table {
   background-color: #000 !important;
 }
