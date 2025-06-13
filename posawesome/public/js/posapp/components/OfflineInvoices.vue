@@ -232,12 +232,31 @@ export default {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Dark theme adjustments for the offline invoices card */
+:deep(.dark-theme) .offline-invoices-card,
+:deep(.v-theme--dark) .offline-invoices-card,
+::v-deep(.dark-theme) .offline-invoices-card,
+::v-deep(.v-theme--dark) .offline-invoices-card {
+  background-color: #1E1E1E !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
 /* Enhanced White Header */
 .offline-header {
   background: white;
   color: #1a1a1a;
   border-bottom: 1px solid #f0f0f0;
   position: relative;
+}
+
+/* Dark theme adjustments for the header */
+:deep(.dark-theme) .offline-header,
+:deep(.v-theme--dark) .offline-header,
+::v-deep(.dark-theme) .offline-header,
+::v-deep(.v-theme--dark) .offline-header {
+  background-color: #1E1E1E !important;
+  color: #fff !important;
+  border-bottom-color: #333 !important;
 }
 
 .offline-header::before {
@@ -319,10 +338,26 @@ export default {
   background: white;
 }
 
+/* Dark theme for the card content */
+:deep(.dark-theme) .white-background,
+:deep(.v-theme--dark) .white-background,
+::v-deep(.dark-theme) .white-background,
+::v-deep(.v-theme--dark) .white-background {
+  background-color: #121212 !important;
+}
+
 /* Enhanced Empty State */
 .empty-state {
   padding: 64px 24px;
   background: white;
+}
+
+/* Dark theme for the empty state */
+:deep(.dark-theme) .empty-state,
+:deep(.v-theme--dark) .empty-state,
+::v-deep(.dark-theme) .empty-state,
+::v-deep(.v-theme--dark) .empty-state {
+  background-color: #121212 !important;
 }
 
 .empty-icon-wrapper {
@@ -341,8 +376,24 @@ export default {
   background: white;
 }
 
+/* Dark theme for table container */
+:deep(.dark-theme) .table-container,
+:deep(.v-theme--dark) .table-container,
+::v-deep(.dark-theme) .table-container,
+::v-deep(.v-theme--dark) .table-container {
+  background-color: #121212 !important;
+}
+
 .table-header {
   padding: 0 4px;
+}
+
+/* Dark theme for table header text */
+:deep(.dark-theme) .table-header,
+:deep(.v-theme--dark) .table-header,
+::v-deep(.dark-theme) .table-header,
+::v-deep(.v-theme--dark) .table-header {
+  color: #e0e0e0 !important;
 }
 
 /* Enhanced Table Styling */
@@ -484,6 +535,15 @@ export default {
   border-top: 1px solid #e0e0e0 !important;
   padding: 16px 24px !important;
   gap: 12px !important;
+}
+
+/* Dark theme for dialog footer */
+:deep(.dark-theme) .dialog-actions-container,
+:deep(.v-theme--dark) .dialog-actions-container,
+::v-deep(.dark-theme) .dialog-actions-container,
+::v-deep(.v-theme--dark) .dialog-actions-container {
+  background: #1E1E1E !important;
+  border-top-color: #333 !important;
 }
 
 .pos-action-btn {
