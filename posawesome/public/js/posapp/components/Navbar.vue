@@ -379,6 +379,13 @@ export default {
       return this.isDark ? '#1e1e1e' : 'white';
     }
   },
+  watch: {
+    // Watch for theme changes to update the app bar color immediately
+    '$theme.current'() {
+      // force Vue to re-render so computed styles update
+      this.$forceUpdate();
+    }
+  },
   created() {
     // --- LOAD COMPANY INFO FROM FRAPPE BOOT ---
     // Attempts to get the company name from Frappe's boot data.
