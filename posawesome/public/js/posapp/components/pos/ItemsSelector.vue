@@ -46,12 +46,12 @@
                     <v-card-text class="text--primary pa-1">
                       <div class="text-caption text-primary">
                         {{ currencySymbol(pos_profile.currency) || "" }}
-                        {{ format_currency(item.rate, pos_profile.currency, 4) }}
+                        {{ format_currency(item.rate, pos_profile.currency, ratePrecision(item.rate)) }}
                       </div>
                       <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                         class="text-caption text-success">
                         {{ currencySymbol(selected_currency) || "" }}
-                        {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
+                        {{ format_currency(getConvertedRate(item), selected_currency, ratePrecision(getConvertedRate(item))) }}
                       </div>
                       <div class="text-caption golden--text">
                         {{ format_number(item.actual_qty, 4) || 0 }}
@@ -70,11 +70,11 @@
                 <template v-slot:item.rate="{ item }">
                   <div>
                     <div class="text-primary">{{ currencySymbol(pos_profile.currency) }}
-                      {{ format_currency(item.rate, pos_profile.currency, 4) }}</div>
+                      {{ format_currency(item.rate, pos_profile.currency, ratePrecision(item.rate)) }}</div>
                     <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                       class="text-success">
                       {{ currencySymbol(selected_currency) }}
-                      {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
+                      {{ format_currency(getConvertedRate(item), selected_currency, ratePrecision(getConvertedRate(item))) }}
                     </div>
                   </div>
                 </template>
@@ -860,7 +860,7 @@ export default {
               <div>
                 <div class="font-weight-bold">${item.item_name}</div>
                 <div class="text-muted small">${item.item_code}</div>
-                <div class="text-primary">${this.format_currency(item.rate, this.pos_profile.currency)}</div>
+                <div class="text-primary">${this.format_currency(item.rate, this.pos_profile.currency, this.ratePrecision(item.rate))}</div>
               </div>
             </div>
           </div>
@@ -898,6 +898,9 @@ export default {
     },
     format_currency(value, currency, precision) {
       return this.formatCurrency(value, precision || 2);
+    },
+    ratePrecision(value) {
+      return Number.isInteger(value) ? 0 : 2;
     },
     format_number(value, precision) {
       return this.formatFloat(value, precision || 2);
