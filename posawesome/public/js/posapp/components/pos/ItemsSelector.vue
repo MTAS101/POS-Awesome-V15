@@ -1207,18 +1207,24 @@ export default {
 }
 
 /* Dark mode adjustments */
-:deep(.dark-theme) .sleek-data-table {
+:deep(.dark-theme) .sleek-data-table,
+::v-deep(.dark-theme) .sleek-data-table {
   background-color: #000 !important;
 }
 
 :deep(.dark-theme) .sleek-data-table :deep(.v-data-table),
 :deep(.dark-theme) .sleek-data-table :deep(.v-data-table__wrapper),
-:deep(.dark-theme) .sleek-data-table :deep(table) {
+:deep(.dark-theme) .sleek-data-table :deep(table),
+::v-deep(.dark-theme) .sleek-data-table .v-data-table,
+::v-deep(.dark-theme) .sleek-data-table .v-data-table__wrapper,
+::v-deep(.dark-theme) .sleek-data-table table {
   background-color: #000 !important;
 }
 
 :deep(.dark-theme) .sleek-data-table :deep(th),
-:deep(.dark-theme) .sleek-data-table :deep(td) {
+:deep(.dark-theme) .sleek-data-table :deep(td),
+::v-deep(.dark-theme) .sleek-data-table th,
+::v-deep(.dark-theme) .sleek-data-table td {
   color: #fff !important;
   background-color: #000 !important;
   border-color: #333 !important;

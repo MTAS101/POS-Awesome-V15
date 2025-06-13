@@ -293,18 +293,22 @@ export default {
 }
 
 /* Dark mode adjustments */
-:deep(.dark-theme) .enhanced-table-items {
+:deep(.dark-theme) .enhanced-table-items,
+::v-deep(.dark-theme) .enhanced-table-items {
   background-color: #000 !important;
 }
 
 :deep(.dark-theme) .enhanced-table-items :deep(th),
-:deep(.dark-theme) .enhanced-table-items :deep(td) {
+:deep(.dark-theme) .enhanced-table-items :deep(td),
+::v-deep(.dark-theme) .enhanced-table-items th,
+::v-deep(.dark-theme) .enhanced-table-items td {
   color: #fff !important;
   background-color: #000 !important;
   border-color: #333 !important;
 }
 
-:deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__expanded) {
+:deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__expanded),
+::v-deep(.dark-theme) .enhanced-table-items .v-data-table__expanded {
   background-color: #111 !important;
 }
 
