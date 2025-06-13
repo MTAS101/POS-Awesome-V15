@@ -1212,6 +1212,12 @@ export default {
   border-color: #333 !important;
 }
 
+/* Dark mode card backgrounds */
+:deep(.dark-theme) .selection,
+:deep(.dark-theme) .cards {
+  background-color: #1e1e1e !important;
+}
+
 /* Consistent spacing with navbar and system */
 .dynamic-spacing-sm {
   padding: var(--dynamic-sm) !important;
