@@ -898,14 +898,18 @@ export default {
       return get_currency_symbol(currency);
     },
     format_currency(value, currency, precision) {
-      return this.formatCurrency(value, precision || 2);
+      const prec =
+        typeof precision === 'number' ? precision : this.currency_precision;
+      return this.formatCurrency(value, prec);
     },
     ratePrecision(value) {
       const numericValue = typeof value === 'string' ? parseFloat(value) : value;
-      return Number.isInteger(numericValue) ? 0 : 2;
+      return Number.isInteger(numericValue) ? 0 : this.currency_precision;
     },
     format_number(value, precision) {
-      return this.formatFloat(value, precision || 2);
+      const prec =
+        typeof precision === 'number' ? precision : this.float_precision;
+      return this.formatFloat(value, prec);
     },
     hasDecimalPrecision(value) {
       // Check if the value has any decimal precision when multiplied by exchange rate

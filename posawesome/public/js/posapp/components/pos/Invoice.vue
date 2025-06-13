@@ -564,8 +564,9 @@ export default {
       this.$forceUpdate();
     },
 
-    formatCurrency(value) {
-      return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
+    formatCurrency(value, precision = null) {
+      const prec = precision != null ? precision : this.currency_precision;
+      return this.$options.mixins[0].methods.formatCurrency.call(this, value, prec);
     },
 
     flt(value, precision = null) {
