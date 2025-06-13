@@ -364,8 +364,16 @@ export default {
 :deep(.v-theme--dark) .enhanced-table-items :deep(thead th),
 ::v-deep(.dark-theme) .enhanced-table-items thead th,
 ::v-deep(.v-theme--dark) .enhanced-table-items thead th {
-  background-color: #616161 !important;
+  background-color: #000 !important;
   color: #fff !important;
+}
+
+/* Ensure internal header content is also dark */
+:deep(.dark-theme) .enhanced-table-items :deep(.v-data-table-header__content),
+:deep(.v-theme--dark) .enhanced-table-items :deep(.v-data-table-header__content),
+::v-deep(.dark-theme) .enhanced-table-items .v-data-table-header__content,
+::v-deep(.v-theme--dark) .enhanced-table-items .v-data-table-header__content {
+  background-color: #000 !important;
 }
 
 /* Ensure thead background is dark */
@@ -373,7 +381,7 @@ export default {
 :deep(.v-theme--dark) .enhanced-table-items :deep(thead),
 ::v-deep(.dark-theme) .enhanced-table-items thead,
 ::v-deep(.v-theme--dark) .enhanced-table-items thead {
-  background-color: #616161 !important;
+  background-color: #000 !important;
 }
 
 .item-action-btn {
