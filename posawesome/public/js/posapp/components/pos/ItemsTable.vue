@@ -364,7 +364,7 @@ export default {
 :deep(.v-theme--dark) .enhanced-table-items :deep(thead th),
 ::v-deep(.dark-theme) .enhanced-table-items thead th,
 ::v-deep(.v-theme--dark) .enhanced-table-items thead th {
-  background-color: #000 !important;
+  background-color: #616161 !important;
   color: #fff !important;
 }
 
@@ -373,7 +373,7 @@ export default {
 :deep(.v-theme--dark) .enhanced-table-items :deep(thead),
 ::v-deep(.dark-theme) .enhanced-table-items thead,
 ::v-deep(.v-theme--dark) .enhanced-table-items thead {
-  background-color: #000 !important;
+  background-color: #616161 !important;
 }
 
 .item-action-btn {
