@@ -1273,10 +1273,12 @@ export default {
 :deep(.v-theme--dark) .selection,
 :deep(.dark-theme) .cards,
 :deep(.v-theme--dark) .cards,
+:deep(.cards.v-theme--dark),
 ::v-deep(.dark-theme) .selection,
 ::v-deep(.v-theme--dark) .selection,
 ::v-deep(.dark-theme) .cards,
-::v-deep(.v-theme--dark) .cards {
+::v-deep(.v-theme--dark) .cards,
+::v-deep(.cards.v-theme--dark) {
 
   background-color: #000 !important;
 }
