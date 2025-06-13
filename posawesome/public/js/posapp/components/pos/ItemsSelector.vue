@@ -1175,6 +1175,11 @@ export default {
   background-color: #000 !important;
 }
 
+/* Fallback for Vuetify card dark mode */
+.v-theme--dark .dynamic-card {
+  background-color: #000 !important;
+}
+
 .dynamic-padding {
   padding: var(--dynamic-xs) var(--dynamic-sm) var(--dynamic-xs) var(--dynamic-sm);
 }
