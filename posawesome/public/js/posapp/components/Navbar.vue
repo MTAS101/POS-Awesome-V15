@@ -759,7 +759,7 @@ export default {
           color: 'warning'
         });
       }
-      const result = await syncOfflineInvoices();
+      const result = await syncOfflineInvoices(this.posProfile);
       if (result && (result.synced || result.drafted)) {
         if (result.synced) {
           this.showMessage({

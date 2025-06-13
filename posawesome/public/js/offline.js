@@ -208,7 +208,7 @@ export function getLastSyncTotals() {
 }
 
 // Add sync function to clear local cache when invoices are successfully synced
-export async function syncOfflineInvoices() {
+export async function syncOfflineInvoices(pos_profile = null) {
   // Ensure any offline customers are synced first so that invoices
   // referencing them do not fail during submission
   await syncOfflineCustomers();
@@ -256,6 +256,9 @@ export async function syncOfflineInvoices() {
   if (synced > 0) {
     clearOfflineInvoices();
     clearLocalStockCache(); // Clear local stock cache to get fresh data from server
+    if (pos_profile) {
+      await refreshStockCache(pos_profile);
+    }
   }
 
   const pendingLeft = failures.length;

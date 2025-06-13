@@ -1580,7 +1580,7 @@ export default {
         // Don't attempt to sync while offline; just update the counter
         return;
       }
-      const result = await syncOfflineInvoices();
+      const result = await syncOfflineInvoices(this.pos_profile);
       if (result && (result.synced || result.drafted)) {
         if (result.synced) {
           this.eventBus.emit("show_message", {
