@@ -1211,6 +1211,12 @@ export default {
   background-color: #000 !important;
 }
 
+:deep(.dark-theme) .sleek-data-table :deep(.v-data-table),
+:deep(.dark-theme) .sleek-data-table :deep(.v-data-table__wrapper),
+:deep(.dark-theme) .sleek-data-table :deep(table) {
+  background-color: #000 !important;
+}
+
 :deep(.dark-theme) .sleek-data-table :deep(th),
 :deep(.dark-theme) .sleek-data-table :deep(td) {
   color: #fff !important;
