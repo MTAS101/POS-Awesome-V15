@@ -262,7 +262,8 @@ export default {
   flex-direction: column;
 }
 
-.enhanced-table-items :deep(.v-data-table__wrapper) {
+.enhanced-table-items :deep(.v-data-table__wrapper),
+.enhanced-table-items :deep(.v-table__wrapper) {
   border-radius: 8px;
   height: 100%;
   overflow-y: auto;
@@ -294,21 +295,40 @@ export default {
 
 /* Dark mode adjustments */
 :deep(.dark-theme) .enhanced-table-items,
-::v-deep(.dark-theme) .enhanced-table-items {
+:deep(.v-theme--dark) .enhanced-table-items,
+::v-deep(.dark-theme) .enhanced-table-items,
+::v-deep(.v-theme--dark) .enhanced-table-items {
   background-color: #000 !important;
 }
 
 :deep(.dark-theme) .enhanced-table-items :deep(th),
+:deep(.v-theme--dark) .enhanced-table-items :deep(th),
 :deep(.dark-theme) .enhanced-table-items :deep(td),
+:deep(.v-theme--dark) .enhanced-table-items :deep(td),
 ::v-deep(.dark-theme) .enhanced-table-items th,
-::v-deep(.dark-theme) .enhanced-table-items td {
+::v-deep(.v-theme--dark) .enhanced-table-items th,
+::v-deep(.dark-theme) .enhanced-table-items td,
+::v-deep(.v-theme--dark) .enhanced-table-items td {
   color: #fff !important;
   background-color: #000 !important;
   border-color: #333 !important;
 }
 
+:deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__wrapper),
+:deep(.v-theme--dark) .enhanced-table-items :deep(.v-data-table__wrapper),
+:deep(.dark-theme) .enhanced-table-items :deep(.v-table__wrapper),
+:deep(.v-theme--dark) .enhanced-table-items :deep(.v-table__wrapper),
+::v-deep(.dark-theme) .enhanced-table-items .v-data-table__wrapper,
+::v-deep(.v-theme--dark) .enhanced-table-items .v-data-table__wrapper,
+::v-deep(.dark-theme) .enhanced-table-items .v-table__wrapper,
+::v-deep(.v-theme--dark) .enhanced-table-items .v-table__wrapper {
+  background-color: #000 !important;
+}
+
 :deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__expanded),
-::v-deep(.dark-theme) .enhanced-table-items .v-data-table__expanded {
+:deep(.v-theme--dark) .enhanced-table-items :deep(.v-data-table__expanded),
+::v-deep(.dark-theme) .enhanced-table-items .v-data-table__expanded,
+::v-deep(.v-theme--dark) .enhanced-table-items .v-data-table__expanded {
   background-color: #111 !important;
 }
 

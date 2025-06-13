@@ -1186,8 +1186,10 @@ export default {
 }
 
 :deep(.dark-theme) .dynamic-item-card,
-::v-deep(.dark-theme) .dynamic-item-card {
-  background-color: #1e1e1e !important;
+:deep(.v-theme--dark) .dynamic-item-card,
+::v-deep(.dark-theme) .dynamic-item-card,
+::v-deep(.v-theme--dark) .dynamic-item-card {
+  background-color: #000 !important;
 }
 
 .text-success {
@@ -1214,23 +1216,39 @@ export default {
 
 /* Dark mode adjustments */
 :deep(.dark-theme) .sleek-data-table,
-::v-deep(.dark-theme) .sleek-data-table {
+:deep(.v-theme--dark) .sleek-data-table,
+::v-deep(.dark-theme) .sleek-data-table,
+::v-deep(.v-theme--dark) .sleek-data-table {
   background-color: #000 !important;
 }
 
 :deep(.dark-theme) .sleek-data-table :deep(.v-data-table),
+:deep(.v-theme--dark) .sleek-data-table :deep(.v-data-table),
 :deep(.dark-theme) .sleek-data-table :deep(.v-data-table__wrapper),
+:deep(.v-theme--dark) .sleek-data-table :deep(.v-data-table__wrapper),
+:deep(.dark-theme) .sleek-data-table :deep(.v-table__wrapper),
+:deep(.v-theme--dark) .sleek-data-table :deep(.v-table__wrapper),
 :deep(.dark-theme) .sleek-data-table :deep(table),
+:deep(.v-theme--dark) .sleek-data-table :deep(table),
 ::v-deep(.dark-theme) .sleek-data-table .v-data-table,
+::v-deep(.v-theme--dark) .sleek-data-table .v-data-table,
 ::v-deep(.dark-theme) .sleek-data-table .v-data-table__wrapper,
-::v-deep(.dark-theme) .sleek-data-table table {
+::v-deep(.v-theme--dark) .sleek-data-table .v-data-table__wrapper,
+::v-deep(.dark-theme) .sleek-data-table .v-table__wrapper,
+::v-deep(.v-theme--dark) .sleek-data-table .v-table__wrapper,
+::v-deep(.dark-theme) .sleek-data-table table,
+::v-deep(.v-theme--dark) .sleek-data-table table {
   background-color: #000 !important;
 }
 
 :deep(.dark-theme) .sleek-data-table :deep(th),
+:deep(.v-theme--dark) .sleek-data-table :deep(th),
 :deep(.dark-theme) .sleek-data-table :deep(td),
+:deep(.v-theme--dark) .sleek-data-table :deep(td),
 ::v-deep(.dark-theme) .sleek-data-table th,
-::v-deep(.dark-theme) .sleek-data-table td {
+::v-deep(.v-theme--dark) .sleek-data-table th,
+::v-deep(.dark-theme) .sleek-data-table td,
+::v-deep(.v-theme--dark) .sleek-data-table td {
   color: #fff !important;
   background-color: #000 !important;
   border-color: #333 !important;
@@ -1238,8 +1256,14 @@ export default {
 
 /* Dark mode card backgrounds */
 :deep(.dark-theme) .selection,
-:deep(.dark-theme) .cards {
-  background-color: #1e1e1e !important;
+:deep(.v-theme--dark) .selection,
+:deep(.dark-theme) .cards,
+:deep(.v-theme--dark) .cards,
+::v-deep(.dark-theme) .selection,
+::v-deep(.v-theme--dark) .selection,
+::v-deep(.dark-theme) .cards,
+::v-deep(.v-theme--dark) .cards {
+  background-color: #000 !important;
 }
 
 /* Consistent spacing with navbar and system */
