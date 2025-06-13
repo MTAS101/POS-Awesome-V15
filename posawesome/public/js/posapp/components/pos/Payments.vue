@@ -1824,11 +1824,17 @@ export default {
 }
 
 :deep(.dark-theme) .cards,
+:deep(.dark-theme) .cards .v-card__underlay,
 :deep(.v-theme--dark) .cards,
+:deep(.v-theme--dark) .cards .v-card__underlay,
 :deep(.cards.v-theme--dark),
+:deep(.cards.v-theme--dark) .v-card__underlay,
 ::v-deep(.dark-theme) .cards,
+::v-deep(.dark-theme) .cards .v-card__underlay,
 ::v-deep(.v-theme--dark) .cards,
-::v-deep(.cards.v-theme--dark) {
+::v-deep(.v-theme--dark) .cards .v-card__underlay,
+::v-deep(.cards.v-theme--dark),
+::v-deep(.cards.v-theme--dark) .v-card__underlay {
   background-color: #000 !important;
 }
 </style>
