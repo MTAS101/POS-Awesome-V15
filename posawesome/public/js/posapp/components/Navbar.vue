@@ -255,7 +255,7 @@
 // Import the Socket.IO client library for real-time server status monitoring.
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
-import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals } from '../../offline.js';
+import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, refreshStockCache } from '../../offline.js';
 import OfflineInvoicesDialog from './OfflineInvoices.vue';
 
 export default {
@@ -422,6 +422,12 @@ export default {
         this.freezeTitle = '';
         this.freezeMsg = '';
       });
+      // Refresh stock cache once the server connection is restored
+      this.eventBus.on('server-online', async () => {
+        if (this.posProfile) {
+          await refreshStockCache(this.posProfile);
+        }
+      });
     });
   },
   mounted() {
@@ -442,6 +448,7 @@ export default {
     window.removeEventListener('offline', this.handleOffline);
     // Remove event bus listener for pending invoices
     this.eventBus.off('pending_invoices_changed', this.updatePendingInvoices);
+    this.eventBus.off('server-online');
     // --- CLOSE SOCKET ---
     // Disconnect and clean up Socket.IO listeners to ensure proper resource management.
     if (this.socket) {
@@ -605,12 +612,15 @@ export default {
      * When the browser regains network connectivity, it updates the `networkOnline` status
      * and attempts to reconnect to the server if not already connected.
      */
-    handleOnline() {
+    async handleOnline() {
       this.networkOnline = true; // Browser is now online
       console.log('Browser is online');
       this.offlineMessageShown = false; // allow future offline warnings
       this.eventBus.emit('network-online');
-      this.syncPendingInvoices();
+      await this.syncPendingInvoices();
+      if (this.posProfile) {
+        await refreshStockCache(this.posProfile);
+      }
       window.serverOnline = this.serverOnline;
       // If the server is not online and not currently connecting, and a socket instance exists,
       // explicitly try to connect the socket. This helps in re-establishing server connection
