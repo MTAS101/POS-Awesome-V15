@@ -900,7 +900,8 @@ export default {
       return this.formatCurrency(value, precision || 2);
     },
     ratePrecision(value) {
-      return Number.isInteger(value) ? 0 : 2;
+      const numericValue = typeof value === 'string' ? parseFloat(value) : value;
+      return Number.isInteger(numericValue) ? 0 : 2;
     },
     format_number(value, precision) {
       return this.formatFloat(value, precision || 2);
