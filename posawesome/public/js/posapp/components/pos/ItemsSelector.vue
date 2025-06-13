@@ -1189,6 +1189,7 @@ export default {
 :deep(.v-theme--dark) .dynamic-item-card,
 ::v-deep(.dark-theme) .dynamic-item-card,
 ::v-deep(.v-theme--dark) .dynamic-item-card {
+
   background-color: #000 !important;
 }
 
@@ -1263,6 +1264,7 @@ export default {
 ::v-deep(.v-theme--dark) .selection,
 ::v-deep(.dark-theme) .cards,
 ::v-deep(.v-theme--dark) .cards {
+
   background-color: #000 !important;
 }
 
