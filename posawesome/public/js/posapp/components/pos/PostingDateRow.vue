@@ -53,4 +53,13 @@ export default {
   background-color: #1E1E1E !important;
   color: #fff !important;
 }
+
+/* Dark mode styling for date picker calendar dropdown */
+:deep(.dark-theme) .dp__menu,
+:deep(.v-theme--dark) .dp__menu,
+::v-deep(.dark-theme) .dp__menu,
+::v-deep(.v-theme--dark) .dp__menu {
+  background-color: #1E1E1E !important;
+  color: #fff !important;
+}
 </style>
