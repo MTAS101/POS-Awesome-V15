@@ -1735,4 +1735,35 @@ export default {
 .apps-grid-improved::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
 }
+
+/* --- Dark Theme Adjustments --- */
+/* Navbar and Drawer styling when dark mode is active */
+:deep(.dark-theme) .navbar-enhanced,
+:deep(.v-theme--dark) .navbar-enhanced,
+::v-deep(.dark-theme) .navbar-enhanced,
+::v-deep(.v-theme--dark) .navbar-enhanced {
+  background: #1e1e1e !important;
+  border-bottom-color: #333 !important;
+}
+
+:deep(.dark-theme) .drawer-custom,
+:deep(.v-theme--dark) .drawer-custom,
+::v-deep(.dark-theme) .drawer-custom,
+::v-deep(.v-theme--dark) .drawer-custom {
+  background-color: #121212 !important;
+}
+
+:deep(.dark-theme) .drawer-item-title,
+:deep(.v-theme--dark) .drawer-item-title,
+::v-deep(.dark-theme) .drawer-item-title,
+::v-deep(.v-theme--dark) .drawer-item-title {
+  color: #e0e0e0 !important;
+}
+
+:deep(.dark-theme) .drawer-header .drawer-company,
+:deep(.v-theme--dark) .drawer-header .drawer-company,
+::v-deep(.dark-theme) .drawer-header .drawer-company,
+::v-deep(.v-theme--dark) .drawer-header .drawer-company {
+  color: #e0e0e0 !important;
+}
 </style>
