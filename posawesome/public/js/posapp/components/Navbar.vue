@@ -993,7 +993,8 @@ export default {
 
 /* Enhanced Navbar Styling */
 .navbar-enhanced {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+  background-image: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%) !important;
+  background-color: #ffffff !important;
   border-bottom: 2px solid #e3f2fd !important;
   backdrop-filter: blur(10px);
   transition: all 0.3s ease;
@@ -1759,7 +1760,8 @@ export default {
 :deep(.v-theme--dark) .navbar-enhanced,
 ::v-deep(.dark-theme) .navbar-enhanced,
 ::v-deep(.v-theme--dark) .navbar-enhanced {
-  background: #1e1e1e !important;
+  background-color: #1e1e1e !important;
+  background-image: none !important;
   border-bottom-color: #333 !important;
   color: #ffffff !important;
 }
