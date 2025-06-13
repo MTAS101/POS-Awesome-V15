@@ -358,6 +358,15 @@ export default {
   color: #fff !important;
 }
 
+/* Ensure table headings are dark themed */
+:deep(.dark-theme) .enhanced-table-items :deep(thead th),
+:deep(.v-theme--dark) .enhanced-table-items :deep(thead th),
+::v-deep(.dark-theme) .enhanced-table-items thead th,
+::v-deep(.v-theme--dark) .enhanced-table-items thead th {
+  background-color: #000 !important;
+  color: #fff !important;
+}
+
 .item-action-btn {
   min-width: 44px !important;
   height: 44px !important;
