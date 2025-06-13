@@ -156,3 +156,31 @@
     min-width: unset !important;
   }
 }
+/* Dark mode styles for date picker */
+.dark-theme .dark-field,
+.v-theme--dark .dark-field {
+  background-color: #1E1E1E !important;
+}
+.dark-theme .dark-field .v-field__input,
+.v-theme--dark .dark-field .v-field__input,
+.dark-theme .dark-field input,
+.v-theme--dark .dark-field input,
+.dark-theme .dark-field .v-label,
+.v-theme--dark .dark-field .v-label {
+  color: #fff !important;
+}
+.dark-theme .dark-field .v-field__overlay,
+.v-theme--dark .dark-field .v-field__overlay {
+  background-color: #1E1E1E !important;
+}
+.dark-theme .dp__input,
+.v-theme--dark .dp__input {
+  background-color: #1E1E1E !important;
+  color: #fff !important;
+}
+.dark-theme .dp__menu,
+.v-theme--dark .dp__menu {
+  background-color: #1E1E1E !important;
+  color: #fff !important;
+}
+
