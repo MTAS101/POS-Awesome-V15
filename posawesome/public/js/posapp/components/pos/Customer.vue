@@ -87,7 +87,8 @@
 :deep(.v-theme--dark) .customer-autocomplete,
 ::v-deep(.dark-theme) .customer-autocomplete,
 ::v-deep(.v-theme--dark) .customer-autocomplete {
-  background-color: #000 !important;
+  /* Match item selector dark mode color */
+  background-color: #1e1e1e !important;
 }
 
 :deep(.dark-theme) .customer-autocomplete :deep(.v-field__input),
@@ -109,7 +110,7 @@
 :deep(.v-theme--dark) .customer-autocomplete :deep(.v-field__overlay),
 ::v-deep(.dark-theme) .customer-autocomplete .v-field__overlay,
 ::v-deep(.v-theme--dark) .customer-autocomplete .v-field__overlay {
-  background-color: #000 !important;
+  background-color: #1e1e1e !important;
 }
 
 .icon-button {
