@@ -619,15 +619,3 @@ export function setLocalStockCache(cache) {
   memory.local_stock_cache = cache || {};
   persist('local_stock_cache');
 }
-
-// Refresh local stock cache after regaining connectivity
-export async function refreshStockCache(pos_profile) {
-  try {
-    const items = getItemsStorage();
-    if (items && items.length > 0) {
-      await initializeStockCache(items, pos_profile);
-    }
-  } catch (e) {
-    console.error('Failed to refresh stock cache after going online', e);
-  }
-}
