@@ -3,15 +3,15 @@
   <div class="customer-input-wrapper">
     <v-autocomplete ref="customerDropdown" class="customer-autocomplete sleek-field" density="compact" clearable
       variant="solo" color="primary" :label="frappe._('Customer')" v-model="internalCustomer" :items="customers"
-      item-title="customer_name" item-value="name" bg-color="white" :no-data-text="__('Customers not found')"
+      item-title="customer_name" item-value="name" :bg-color="isDarkTheme ? '#000' : 'white'" :no-data-text="__('Customers not found')"
       hide-details :customFilter="customFilter" :disabled="readonly || loadingCustomers"
       :menu-props="{ closeOnContentClick: false }" @update:menu="onCustomerMenuToggle"
       @update:modelValue="onCustomerChange" @keydown.enter="handleEnter">
       <!-- Edit icon (left) -->
       <template #prepend-inner>
         <v-tooltip text="Edit customer">
-          <template #activator="{ on, attrs }">
-            <v-icon v-bind="attrs" v-on="on" class="icon-button" @mousedown.prevent.stop @click.stop="edit_customer">
+          <template #activator="{ props }">
+            <v-icon v-bind="props" class="icon-button" @mousedown.prevent.stop @click.stop="edit_customer">
               mdi-account-edit
             </v-icon>
           </template>
@@ -21,8 +21,8 @@
       <!-- Add icon (right) -->
       <template #append-inner>
         <v-tooltip text="Add new customer">
-          <template #activator="{ on, attrs }">
-            <v-icon v-bind="attrs" v-on="on" class="icon-button" @mousedown.prevent.stop @click.stop="new_customer">
+          <template #activator="{ props }">
+            <v-icon v-bind="props" class="icon-button" @mousedown.prevent.stop @click.stop="new_customer">
               mdi-plus
             </v-icon>
           </template>
@@ -150,6 +150,12 @@ export default {
 
   components: {
     UpdateCustomer,
+  },
+
+  computed: {
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
+    }
   },
 
   methods: {
