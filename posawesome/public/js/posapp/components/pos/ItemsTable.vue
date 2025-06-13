@@ -13,6 +13,7 @@
       density="compact"
       hide-default-footer
       :single-expand="true"
+      :header-props="headerProps"
       @update:expanded="$emit('update:expanded', $event)"
       :search="itemSearch"
     >
@@ -247,6 +248,16 @@ export default {
     addOne: Function,
     isReturnInvoice: Boolean,
     toggleOffer: Function,
+  },
+  computed: {
+    headerProps() {
+      return this.isDarkTheme
+        ? { style: 'background-color:#000;color:#fff' }
+        : {};
+    },
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
+    },
   },
 };
 </script>
