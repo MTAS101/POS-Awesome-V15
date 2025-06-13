@@ -4,7 +4,14 @@
 
     <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
 
-    <v-app-bar app flat height="56" :color="appBarColor" class="navbar-enhanced elevation-2 px-2 pb-1">
+    <v-app-bar
+      app
+      flat
+      height="56"
+      :color="appBarColor"
+      :theme="isDark ? 'dark' : 'light'"
+      class="navbar-enhanced elevation-2 px-2 pb-1"
+    >
       <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary nav-icon" />
 
       <v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32" class="mx-2" />
@@ -1754,6 +1761,7 @@ export default {
 ::v-deep(.v-theme--dark) .navbar-enhanced {
   background: #1e1e1e !important;
   border-bottom-color: #333 !important;
+  color: #ffffff !important;
 }
 
 :deep(.dark-theme) .drawer-custom,
