@@ -3,6 +3,7 @@
     <v-data-table
       :headers="headers"
       :items="items"
+      :theme="$theme.current"
       :expanded="expanded"
       show-expand
       item-value="posa_row_id"
@@ -365,6 +366,14 @@ export default {
 ::v-deep(.v-theme--dark) .enhanced-table-items thead th {
   background-color: #000 !important;
   color: #fff !important;
+}
+
+/* Ensure thead background is dark */
+:deep(.dark-theme) .enhanced-table-items :deep(thead),
+:deep(.v-theme--dark) .enhanced-table-items :deep(thead),
+::v-deep(.dark-theme) .enhanced-table-items thead,
+::v-deep(.v-theme--dark) .enhanced-table-items thead {
+  background-color: #000 !important;
 }
 
 .item-action-btn {
