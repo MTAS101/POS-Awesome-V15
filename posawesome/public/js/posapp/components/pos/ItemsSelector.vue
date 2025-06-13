@@ -1099,6 +1099,18 @@ export default {
       this.customer = data;
     });
 
+    // Reset qty when invoice is cleared to avoid stale state
+    this.eventBus.on("clear_invoice", () => {
+      this.qty = 1;
+      this.search = null;
+      this.first_search = null;
+    });
+
+    // Also reset qty when going offline to start fresh
+    this.eventBus.on("network-offline", () => {
+      this.qty = 1;
+    });
+
     // Refresh item quantities when connection to server is restored
     this.eventBus.on("server-online", async () => {
       if (this.items && this.items.length > 0) {
@@ -1154,6 +1166,8 @@ export default {
 
     this.eventBus.off("update_currency");
     this.eventBus.off("server-online");
+    this.eventBus.off("clear_invoice");
+    this.eventBus.off("network-offline");
   },
 };
 </script>
