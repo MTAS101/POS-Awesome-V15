@@ -81,19 +81,19 @@
           <v-row dense class="item-details-form mb-2">
             <v-col cols="12" sm="4" class="field-with-icon">
               <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Item Code')"
-                bg-color="white" hide-details v-model="item.item_code" disabled
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details v-model="item.item_code" disabled
                 prepend-inner-icon="mdi-barcode"></v-text-field>
             </v-col>
             <v-col cols="12" sm="4" class="field-with-icon">
               <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('QTY')"
-                bg-color="white" hide-details :model-value="formatFloat(item.qty)" @change="[
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :model-value="formatFloat(item.qty)" @change="[
                   setFormatedQty(item, 'qty', null, false, $event.target.value),
                   calcStockQty(item, item.qty),
                 ]" :rules="[isNumber]" :disabled="!!item.posa_is_replace"
                 prepend-inner-icon="mdi-numeric"></v-text-field>
             </v-col>
             <v-col cols="12" sm="4" class="field-with-icon">
-              <v-select density="compact" bg-color="white" :label="frappe._('UOM')" v-model="item.uom"
+              <v-select density="compact" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" :label="frappe._('UOM')" v-model="item.uom"
                 :items="item.item_uoms" variant="outlined" item-title="uom" item-value="uom" hide-details
                 @update:model-value="calcUom(item, $event)"
                 :disabled="!!item.posa_is_replace || (isReturnInvoice && invoice_doc.return_against)"
@@ -102,7 +102,7 @@
 
             <v-col cols="12" sm="4">
               <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Rate')"
-                bg-color="white" hide-details :prefix="currencySymbol(pos_profile.currency)"
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :prefix="currencySymbol(pos_profile.currency)"
                 :model-value="formatCurrency(item.rate)" @change="[
                   setFormatedCurrency(item, 'rate', null, false, $event),
                   calcPrices(item, $event.target.value, $event),
@@ -113,7 +113,7 @@
             </v-col>
             <v-col cols="12" sm="4">
               <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Discount %')"
-                bg-color="white" hide-details :model-value="formatFloat(item.discount_percentage)" @change="[
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :model-value="formatFloat(item.discount_percentage)" @change="[
                   setFormatedCurrency(item, 'discount_percentage', null, true, $event),
                   calcPrices(item, $event.target.value, $event),
                 ]" :rules="[isNumber]" id="discount_percentage" :disabled="!!item.posa_is_replace ||
@@ -123,7 +123,7 @@
             </v-col>
             <v-col cols="12" sm="4">
               <v-text-field density="compact" variant="outlined" color="primary"
-                :label="frappe._('Discount Amount')" bg-color="white" hide-details
+                :label="frappe._('Discount Amount')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                 :model-value="formatCurrency(item.discount_amount || 0)" ref="discount"
                 @change="(event) => { if (expanded && expanded.length === 1 && expanded[0] === item.posa_row_id) { calcPrices(item, event.target.value, { target: { id: 'discount_amount' } }); } }"
                 :rules="['isNumber']" id="discount_amount"
@@ -133,27 +133,27 @@
 
             <v-col cols="12" sm="4">
               <v-text-field density="compact" variant="outlined" color="primary"
-                :label="frappe._('Price list Rate')" bg-color="white" hide-details
+                :label="frappe._('Price list Rate')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                 :model-value="formatCurrency(item.price_list_rate)" disabled
                 :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
             </v-col>
             <v-col cols="12" sm="4">
               <v-text-field density="compact" variant="outlined" color="primary"
-                :label="frappe._('Available QTY')" bg-color="white" hide-details
+                :label="frappe._('Available QTY')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                 :model-value="formatFloat(item.actual_qty)" disabled></v-text-field>
             </v-col>
             <v-col cols="12" sm="4">
               <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Group')"
-                bg-color="white" hide-details v-model="item.item_group" disabled></v-text-field>
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details v-model="item.item_group" disabled></v-text-field>
             </v-col>
 
             <v-col cols="12" sm="4">
               <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Stock QTY')"
-                bg-color="white" hide-details :model-value="formatFloat(item.stock_qty)" disabled></v-text-field>
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :model-value="formatFloat(item.stock_qty)" disabled></v-text-field>
             </v-col>
             <v-col cols="12" sm="4">
               <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Stock UOM')"
-                bg-color="white" hide-details v-model="item.stock_uom" disabled></v-text-field>
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details v-model="item.stock_uom" disabled></v-text-field>
             </v-col>
             <v-col cols="12" sm="4" v-if="item.posa_offer_applied">
               <v-checkbox density="compact" :label="frappe._('Offer Applied')" v-model="item.posa_offer_applied"
@@ -163,12 +163,12 @@
             <template v-if="item.has_serial_no == 1 || item.serial_no">
               <v-col cols="12" sm="4">
                 <v-text-field density="compact" variant="outlined" color="primary"
-                  :label="frappe._('Serial No QTY')" bg-color="white" hide-details
+                  :label="frappe._('Serial No QTY')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                   v-model="item.serial_no_selected_count" type="number" disabled></v-text-field>
               </v-col>
               <v-col cols="12">
                 <v-autocomplete v-model="item.serial_no_selected" :items="item.serial_no_data"
-                  item-title="serial_no" variant="outlined" density="compact" chips color="primary"
+                  item-title="serial_no" variant="outlined" density="compact" chips color="primary" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field"
                   :label="frappe._('Serial No')" multiple
                   @update:model-value="setSerialNo(item)"></v-autocomplete>
               </v-col>
@@ -177,17 +177,17 @@
             <template v-if="item.has_batch_no == 1 || item.batch_no">
               <v-col cols="12" sm="4">
                 <v-text-field density="compact" variant="outlined" color="primary"
-                  :label="frappe._('Batch No. Available QTY')" bg-color="white" hide-details
+                  :label="frappe._('Batch No. Available QTY')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                   :model-value="formatFloat(item.actual_batch_qty)" disabled></v-text-field>
               </v-col>
               <v-col cols="12" sm="4">
                 <v-text-field density="compact" variant="outlined" color="primary"
-                  :label="frappe._('Batch No Expiry Date')" bg-color="white" hide-details
+                  :label="frappe._('Batch No Expiry Date')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                   v-model="item.batch_no_expiry_date" disabled></v-text-field>
               </v-col>
               <v-col cols="12" sm="4">
                 <v-autocomplete v-model="item.batch_no" :items="item.batch_no_data" item-title="batch_no"
-                  variant="outlined" density="compact" color="primary" :label="frappe._('Batch No')"
+                  variant="outlined" density="compact" color="primary" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" :label="frappe._('Batch No')"
                   @update:model-value="setBatchQty(item, $event)" hide-details>
                   <template v-slot:item="{ props, item }">
                     <v-list-item v-bind="props">
@@ -456,6 +456,14 @@ export default {
   background-color: rgba(0, 0, 0, 0.02);
   border-radius: 8px;
   border: 1px solid rgba(25, 118, 210, 0.08);
+}
+
+:deep(.dark-theme) .item-details-form,
+:deep(.v-theme--dark) .item-details-form,
+::v-deep(.dark-theme) .item-details-form,
+::v-deep(.v-theme--dark) .item-details-form {
+  background-color: #1E1E1E !important;
+  border-color: #373737 !important;
 }
 
 .item-details-form .v-col {
