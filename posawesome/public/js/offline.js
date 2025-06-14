@@ -64,6 +64,12 @@ export function resetOfflineState() {
 
 // Add new validation function
 export function validateStockForOfflineInvoice(items) {
+  const allowNegativeStock =
+    memory.pos_opening_storage?.stock_settings?.allow_negative_stock;
+  if (allowNegativeStock) {
+    return { isValid: true, invalidItems: [], errorMessage: '' };
+  }
+
   const stockCache = memory.local_stock_cache || {};
   const invalidItems = [];
 

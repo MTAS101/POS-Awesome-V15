@@ -25,7 +25,7 @@ After switching branches or pulling latest changes:
     Exchange Rate is fetched automatically based on selected currency
     Invoices made with posawesome display Grand Total in both base and selected currency in erpnext.
     
-3. Supports offline mode for creating invoices and customers, saves data locally with stock validation, and syncs automatically when reconnected.
+3. Supports offline mode for creating invoices and customers, saves data locally with stock validation, and syncs automatically when reconnected. If **Allow Negative Stock** is enabled in Stock Settings, offline invoices can still be saved even when quantities are below zero.
 4. User-friendly and provides a good user experience and speed of use
 5. The cashier can either use list view or card view during sales transactions. Card view shows the images of the items
 6. Supports enqueue invoice submission after printing the receipt for faster processing
