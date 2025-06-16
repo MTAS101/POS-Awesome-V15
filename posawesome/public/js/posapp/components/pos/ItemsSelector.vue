@@ -178,13 +178,15 @@ export default {
       if (this.items_loaded && this.filtered_items && this.filtered_items.length > 0) {
         this.update_items_details(this.filtered_items);
       } else {
-        this.get_items();
+        // Force fetch from server when customer changes to ensure prices update
+        this.get_items(true);
       }
     },
     customer_price_list() {
       // Force reload of items when price list changes
       this.items_loaded = false;
-      this.get_items();
+      // Always fetch from server to get latest rates for the new price list
+      this.get_items(true);
     },
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
@@ -198,7 +200,7 @@ export default {
     show_coupons() {
       this.eventBus.emit("show_coupons", "true");
     },
-    async get_items() {
+    async get_items(force_server = false) {
       await initPromise;
       if (!this.pos_profile) {
         console.error("No POS Profile");
@@ -229,7 +231,8 @@ export default {
       if (
         vm.pos_profile.posa_local_storage &&
         getItemsStorage().length &&
-        !vm.pos_profile.pose_use_limit_search
+        !vm.pos_profile.pose_use_limit_search &&
+        !force_server
       ) {
         vm.items = getItemsStorage();
         this.eventBus.emit("set_all_items", vm.items);
