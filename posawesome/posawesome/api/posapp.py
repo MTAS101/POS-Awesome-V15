@@ -1296,6 +1296,12 @@ def create_customer(
         customer_doc.gender = gender
         customer_doc.save()
 
+        # ensure contact details are synced correctly
+        if mobile_no:
+            set_customer_info(customer_doc.name, "mobile_no", mobile_no)
+        if email_id:
+            set_customer_info(customer_doc.name, "email_id", email_id)
+
         existing_address_name = frappe.db.get_value(
             "Dynamic Link",
             {
