@@ -24,7 +24,8 @@
           </v-row>
           <v-row class="mb-3">
             <v-col cols="12" sm="6">
-              <v-text-field color="primary" :label="frappe._('Invoice ID')" bg-color="white" hide-details
+              <v-text-field color="primary" :label="frappe._('Invoice ID')"
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                 v-model="invoice_name" density="compact" clearable></v-text-field>
             </v-col>
             <v-col cols="12" sm="3">
@@ -57,7 +58,8 @@
               <v-text-field 
                 color="primary" 
                 :label="frappe._('Customer Name')" 
-                bg-color="white" 
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+                class="dark-field"
                 hide-details
                 v-model="customer_name" 
                 density="compact" 
@@ -68,7 +70,8 @@
               <v-text-field 
                 color="primary" 
                 :label="frappe._('Customer ID')" 
-                bg-color="white" 
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+                class="dark-field"
                 hide-details
                 v-model="customer_id" 
                 density="compact" 
@@ -81,7 +84,8 @@
               <v-text-field 
                 color="primary" 
                 :label="frappe._('Mobile Number')" 
-                bg-color="white" 
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+                class="dark-field"
                 hide-details
                 v-model="mobile_no" 
                 density="compact" 
@@ -92,7 +96,8 @@
               <v-text-field 
                 color="primary" 
                 :label="frappe._('Tax ID')" 
-                bg-color="white" 
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+                class="dark-field"
                 hide-details
                 v-model="tax_id" 
                 density="compact" 
@@ -107,7 +112,8 @@
               <v-text-field 
                 color="primary" 
                 :label="frappe._('Minimum Amount')" 
-                bg-color="white" 
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+                class="dark-field"
                 hide-details
                 v-model="min_amount" 
                 density="compact" 
@@ -121,7 +127,8 @@
               <v-text-field 
                 color="primary" 
                 :label="frappe._('Maximum Amount')" 
-                bg-color="white" 
+                :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+                class="dark-field"
                 hide-details
                 v-model="max_amount" 
                 density="compact" 
