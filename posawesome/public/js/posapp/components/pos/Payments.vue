@@ -452,6 +452,41 @@
             @update:model-value="update_credit_due_date()"
           />
           </v-col>
+          <v-col cols="6" v-if="is_credit_sale">
+            <v-text-field
+              density="compact"
+              variant="outlined"
+              type="number"
+              min="0"
+              max="365"
+              v-model.number="credit_due_days"
+              :label="frappe._('Days until due')"
+              hide-details
+              @change="applyDuePreset(credit_due_days)"
+            ></v-text-field>
+            <div class="mt-1">
+              <v-chip
+                v-for="d in credit_due_presets"
+                :key="d"
+                size="small"
+                class="ma-1"
+                variant="outlined"
+                color="primary"
+                @click="applyDuePreset(d)"
+              >
+                {{ d }} {{ frappe._('days') }}
+              </v-chip>
+              <v-chip
+                size="small"
+                class="ma-1"
+                variant="outlined"
+                color="primary"
+                @click="custom_days_dialog = true"
+              >
+                <v-icon small>mdi-plus</v-icon>
+              </v-chip>
+            </div>
+          </v-col>
           <v-col cols="6" v-if="!invoice_doc.is_return && pos_profile.use_customer_credit">
             <v-switch
               v-model="redeem_customer_credit"
@@ -546,6 +581,38 @@
         </v-col>
       </v-row>
     </v-card>
+    <!-- Custom Days Dialog -->
+    <v-dialog v-model="custom_days_dialog" max-width="300px">
+      <v-card>
+        <v-card-title class="text-h6">
+          {{ __("Custom Due Days") }}
+        </v-card-title>
+        <v-card-text class="pa-0">
+          <v-container>
+            <v-text-field
+              density="compact"
+              variant="outlined"
+              type="number"
+              min="0"
+              max="365"
+              v-model.number="custom_days_value"
+              :label="frappe._('Days')"
+              hide-details
+            ></v-text-field>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="error" theme="dark" @click="custom_days_dialog = false">
+            {{ __("Close") }}
+          </v-btn>
+          <v-btn color="primary" theme="dark" @click="applyCustomDays">
+            {{ __("Apply") }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
 
     <!-- Phone Payment Dialog -->
     <v-dialog v-model="phone_dialog" max-width="400px">
@@ -617,9 +684,13 @@ export default {
       customer_credit_dict: [], // List of available customer credits
       paid_change_rules: [], // Validation rules for paid change
       phone_dialog: false, // Show phone payment dialog
+      custom_days_dialog: false, // Show custom days dialog
+      custom_days_value: null, // Custom days entry
       new_delivery_date: null, // New delivery date value
       new_po_date: null, // New PO date value
       new_credit_due_date: null, // New credit due date value
+      credit_due_days: null, // Number of days until due
+      credit_due_presets: [7, 14, 30], // Preset options for due days
       customer_info: "", // Customer info
       mpesa_modes: [], // List of available M-Pesa modes
       sales_persons: [], // List of sales persons
@@ -1499,6 +1570,22 @@ export default {
     // Update credit due date after selection
     update_credit_due_date() {
       this.invoice_doc.due_date = this.formatDate(this.new_credit_due_date);
+    },
+    // Apply preset or typed number of days to set due date
+    applyDuePreset(days) {
+      if (days === null || days === '' || isNaN(days)) {
+        return;
+      }
+      const d = new Date();
+      d.setDate(d.getDate() + parseInt(days, 10));
+      this.new_credit_due_date = this.formatDateDisplay(d);
+      this.credit_due_days = parseInt(days, 10);
+      this.update_credit_due_date();
+    },
+    // Apply days entered in dialog
+    applyCustomDays() {
+      this.applyDuePreset(this.custom_days_value);
+      this.custom_days_dialog = false;
     },
     // Format date to YYYY-MM-DD
     formatDate(date) {
