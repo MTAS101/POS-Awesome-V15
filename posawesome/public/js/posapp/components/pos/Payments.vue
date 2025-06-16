@@ -442,18 +442,17 @@
             ></v-switch>
           </v-col>
           <v-col cols="6" v-if="is_credit_sale">
-          <VueDatePicker
-            v-model="new_credit_due_date"
-            model-type="format"
-            format="dd-MM-yyyy"
-            :min-date="new Date()"
-            auto-apply
-            :dark="isDarkTheme"
-            @update:model-value="update_credit_due_date()"
-          />
-          </v-col>
-          <v-col cols="6" v-if="is_credit_sale">
+            <VueDatePicker
+              v-model="new_credit_due_date"
+              model-type="format"
+              format="dd-MM-yyyy"
+              :min-date="new Date()"
+              auto-apply
+              :dark="isDarkTheme"
+              @update:model-value="update_credit_due_date()"
+            />
             <v-text-field
+              class="mt-2"
               density="compact"
               variant="outlined"
               type="number"
@@ -475,15 +474,6 @@
                 @click="applyDuePreset(d)"
               >
                 {{ d }} {{ frappe._('days') }}
-              </v-chip>
-              <v-chip
-                size="small"
-                class="ma-1"
-                variant="outlined"
-                color="primary"
-                @click="custom_days_dialog = true"
-              >
-                <v-icon small>mdi-plus</v-icon>
               </v-chip>
             </div>
           </v-col>
