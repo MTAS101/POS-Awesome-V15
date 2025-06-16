@@ -1298,8 +1298,12 @@ def create_customer(
 
         existing_address_name = frappe.db.get_value(
             "Dynamic Link",
-            {"link_doctype": "Customer", "link_name": customer_id},
-            "parent"
+            {
+                "link_doctype": "Customer",
+                "link_name": customer_id,
+                "parenttype": "Address",
+            },
+            "parent",
         )
 
         if existing_address_name:
