@@ -181,6 +181,11 @@ export default {
         this.get_items();
       }
     },
+    customer_price_list() {
+      // Force reload of items when price list changes
+      this.items_loaded = false;
+      this.get_items();
+    },
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
     },

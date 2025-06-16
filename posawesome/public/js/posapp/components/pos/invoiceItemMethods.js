@@ -1528,9 +1528,12 @@ export default {
     update_price_list() {
       let price_list = this.get_price_list();
       if (price_list == this.pos_profile.selling_price_list) {
-        price_list = null;
+        this.selected_price_list = this.pos_profile.selling_price_list;
+        this.eventBus.emit("update_customer_price_list", null);
+      } else {
+        this.selected_price_list = price_list;
+        this.eventBus.emit("update_customer_price_list", price_list);
       }
-      this.eventBus.emit("update_customer_price_list", price_list);
     },
 
     // Update additional discount amount based on percentage
