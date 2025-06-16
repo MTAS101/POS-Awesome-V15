@@ -307,7 +307,18 @@ export default {
       });
 
       this.eventBus.on('add_customer_to_list', (customer) => {
-        this.customers.push(customer);
+        const index = this.customers.findIndex(
+          (c) => c.name === customer.name
+        );
+        if (index !== -1) {
+          // Replace existing entry to avoid duplicates after update
+          this.customers.splice(index, 1, customer);
+        } else {
+          this.customers.push(customer);
+        }
+        if (this.pos_profile.posa_local_storage) {
+          setCustomerStorage(this.customers);
+        }
         this.customer = customer.name;
         this.internalCustomer = customer.name;
         this.eventBus.emit('update_customer', customer.name);
