@@ -1,14 +1,12 @@
 <template>
   <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_change_posting_date">
     <v-col cols="4" class="pb-2">
-      <div class="text-caption font-weight-medium mb-1">
-        {{ __('Posting Date') }}
-      </div>
       <VueDatePicker
         v-model="internal_posting_date_display"
         model-type="format"
         format="dd-MM-yyyy"
         auto-apply
+        :placeholder="frappe._('Posting Date')"
         :dark="isDarkTheme"
         class="dark-field"
         @update:model-value="onUpdate"
