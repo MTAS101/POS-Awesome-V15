@@ -70,27 +70,18 @@
                   :height="'300px'"
                   fixed-header
                 >
-                  <template v-slot:item.amount="props">
-                    <v-confirm-edit v-model:return-value="props.item.amount" class="amount-editor">
-                      <div class="amount-display-compact">
-                        <span class="currency-symbol">{{ currencySymbol(props.item.currency) }}</span>
-                        <span class="amount-value">{{ formatCurrency(props.item.amount) }}</span>
-                      </div>
-                      <template v-slot:input>
-                        <v-text-field
-                          v-model="props.item.amount"
-                          :rules="[max25chars]"
-                          :label="frappe._('Edit')"
-                          type="number"
-                          density="compact"
-                          variant="outlined"
-                          color="primary"
-                          hide-details
-                          :prefix="currencySymbol(props.item.currency)"
-                          class="amount-input"
-                        />
-                      </template>
-                    </v-confirm-edit>
+                  <template v-slot:item.amount="{ item }">
+                    <v-text-field
+                      v-model="item.amount"
+                      :rules="[max25chars]"
+                      type="number"
+                      density="compact"
+                      variant="outlined"
+                      color="primary"
+                      hide-details
+                      :prefix="currencySymbol(item.currency)"
+                      class="amount-input"
+                    />
                   </template>
                 </v-data-table>
               </v-col>
