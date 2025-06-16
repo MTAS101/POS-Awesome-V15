@@ -45,11 +45,8 @@
           :pos_profile="pos_profile"
           :posting_date_display="posting_date_display"
           :customer_balance="customer_balance"
-          :price-list="selected_price_list"
-          :price-lists="price_lists"
           :formatCurrency="formatCurrency"
           @update:posting_date_display="(val) => { posting_date_display = val; }"
-          @update:priceList="(val) => { selected_price_list = val; }"
         />
 
         <!-- Multi-Currency Section (Only if enabled in POS profile) -->
@@ -197,8 +194,6 @@ export default {
       selected_currency: "", // Currently selected currency
       exchange_rate: 1, // Current exchange rate
       available_currencies: [], // List of available currencies
-      price_lists: [], // Available selling price lists
-      selected_price_list: "", // Currently selected price list
     };
   },
 
@@ -366,29 +361,8 @@ export default {
           value: defaultCurrency,
           title: defaultCurrency
         }];
-      this.selected_currency = defaultCurrency;
-      return this.available_currencies;
-    }
-  },
-
-    async fetch_price_lists() {
-      try {
-        const r = await frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_selling_price_lists"
-        });
-        if (r.message) {
-          this.price_lists = r.message.map(pl => pl.name);
-          if (!this.selected_price_list) {
-            this.selected_price_list = this.pos_profile.selling_price_list;
-          }
-          return this.price_lists;
-        }
-        return [];
-      } catch (error) {
-        console.error("Error fetching price lists:", error);
-        this.price_lists = [this.pos_profile.selling_price_list];
-        this.selected_price_list = this.pos_profile.selling_price_list;
-        return this.price_lists;
+        this.selected_currency = defaultCurrency;
+        return this.available_currencies;
       }
     },
 
@@ -732,9 +706,6 @@ export default {
           });
         });
       }
-
-      this.fetch_price_lists();
-      this.update_price_list();
     });
     this.eventBus.on("add_item", this.add_item);
     this.eventBus.on("update_customer", (customer) => {

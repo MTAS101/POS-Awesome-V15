@@ -2288,19 +2288,8 @@ def validate_return_items(return_against, items):
 @frappe.whitelist()
 def get_available_currencies():
     """Get list of available currencies from ERPNext"""
-    return frappe.get_all("Currency", fields=["name", "currency_name"],
+    return frappe.get_all("Currency", fields=["name", "currency_name"], 
                          filters={"enabled": 1}, order_by="currency_name")
-
-
-@frappe.whitelist()
-def get_selling_price_lists():
-    """Return all selling price lists"""
-    return frappe.get_all(
-        "Price List",
-        filters={"selling": 1},
-        fields=["name"],
-        order_by="name",
-    )
 
 
 
