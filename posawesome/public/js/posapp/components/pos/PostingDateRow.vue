@@ -1,6 +1,6 @@
 <template>
   <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_change_posting_date">
-    <v-col cols="6" class="pb-2">
+    <v-col cols="4" class="pb-2">
       <VueDatePicker
         v-model="internal_posting_date_display"
         model-type="format"
@@ -11,7 +11,19 @@
         @update:model-value="onUpdate"
       />
     </v-col>
-    <v-col v-if="pos_profile.posa_show_customer_balance" cols="6" class="pb-2 d-flex align-center">
+    <v-col v-if="pos_profile.posa_enable_price_list_dropdown" cols="4" class="pb-2">
+      <v-select
+        density="compact"
+        variant="outlined"
+        color="primary"
+        :items="priceLists"
+        :label="frappe._('Price List')"
+        v-model="internal_price_list"
+        hide-details
+        @update:model-value="onPriceListUpdate"
+      />
+    </v-col>
+    <v-col v-if="pos_profile.posa_show_customer_balance" cols="4" class="pb-2 d-flex align-center justify-end text-right">
       <div class="balance-field">
         <strong>Balance:</strong>
         <span class="balance-value">{{ formatCurrency(customer_balance) }}</span>
@@ -27,10 +39,13 @@ export default {
     posting_date_display: String,
     customer_balance: Number,
     formatCurrency: Function,
+    priceList: String,
+    priceLists: Array,
   },
   data() {
     return {
       internal_posting_date_display: this.posting_date_display,
+      internal_price_list: this.priceList,
     };
   },
   computed: {
@@ -42,11 +57,17 @@ export default {
     posting_date_display(val) {
       this.internal_posting_date_display = val;
     },
+    priceList(val) {
+      this.internal_price_list = val;
+    },
   },
   methods: {
     onUpdate(val) {
       this.$emit('update:posting_date_display', val);
     },
+    onPriceListUpdate(val) {
+      this.$emit('update:priceList', val);
+    }
   },
 };
 </script>

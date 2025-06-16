@@ -181,6 +181,9 @@ export default {
         this.get_items();
       }
     },
+    customer_price_list() {
+      this.get_items();
+    },
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
     },
