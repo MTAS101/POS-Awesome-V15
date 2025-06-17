@@ -168,29 +168,27 @@ export default {
   }),
 
   watch: {
-    filtered_items(new_value, old_value) {
-      if (!this.pos_profile.pose_use_limit_search) {
-        if (new_value.length != old_value.length) {
-          this.update_items_details(new_value);
-        }
-      }
-    },
     customer() {
-      if (this.items_loaded && this.filtered_items && this.filtered_items.length > 0) {
-        this.update_items_details(this.filtered_items);
-      } else {
-        // Force fetch from server when customer changes to ensure prices update
-        this.get_items(true);
-      }
+      // Always fetch new items from server when customer changes
+      this.items_loaded = false;
+      this.get_items(true);
     },
     customer_price_list() {
-      // Force reload of items when price list changes
+      // Always fetch new items when price list changes
       this.items_loaded = false;
-      // Always fetch from server to get latest rates for the new price list
       this.get_items(true);
     },
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
+    },
+    filtered_items(new_value, old_value) {
+      // Update item details if items changed
+      if (
+        !this.pos_profile.pose_use_limit_search &&
+        new_value.length !== old_value.length
+      ) {
+        this.update_items_details(new_value);
+      }
     },
   },
 
@@ -208,27 +206,33 @@ export default {
         return;
       }
 
-      // If items are already loaded and it's not a specific search or customer change, don't reload
-      if (this.items_loaded && !this.first_search && !this.pos_profile.pose_use_limit_search) {
-        console.info("Items already loaded, skipping reload");
-        // Still update quantities for displayed items
-        if (this.filtered_items && this.filtered_items.length > 0) {
-          this.update_items_details(this.filtered_items);
-        }
-        return;
+      if (force_server && this.pos_profile.posa_local_storage) {
+        localStorage.setItem("items_storage", "");
       }
 
       const vm = this;
       this.loading = true;
+
       let search = this.get_search(this.first_search);
-      let gr = "";
-      let sr = "";
-      if (search) {
-        sr = search;
+      let gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
+      let sr = search || "";
+
+      // Skip reload if items already loaded, not forcing, not searching and limit search disabled
+      if (
+        this.items_loaded &&
+        !force_server &&
+        !this.first_search &&
+        !this.pos_profile.pose_use_limit_search
+      ) {
+        console.info("Items already loaded, skipping reload");
+        if (this.filtered_items && this.filtered_items.length > 0) {
+          this.update_items_details(this.filtered_items);
+        }
+        this.loading = false;
+        return;
       }
-      if (vm.item_group != "ALL") {
-        gr = vm.item_group.toLowerCase();
-      }
+
+      // Load from localStorage when available and not forcing
       if (
         vm.pos_profile.posa_local_storage &&
         getItemsStorage().length &&
@@ -240,13 +244,13 @@ export default {
         vm.loading = false;
         vm.items_loaded = true;
 
-        // Pre-populate stock cache when loading from localStorage
         setTimeout(async () => {
           if (vm.items && vm.items.length > 0) {
             await vm.prePopulateStockCache(vm.items);
             vm.update_items_details(vm.items);
           }
         }, 300);
+        return;
       }
       frappe.call({
         method: "posawesome.posawesome.api.posapp.get_items",

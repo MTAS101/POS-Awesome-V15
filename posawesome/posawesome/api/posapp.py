@@ -198,7 +198,12 @@ def get_items(
                 condition += " AND item_group like '%{item_group}%'".format(
                     item_group=item_group
                 )
-            limit = " LIMIT {search_limit}".format(search_limit=search_limit)
+
+            # Use limit only when no explicit search value is provided
+            if not search_value:
+                limit = " LIMIT {search_limit}".format(search_limit=search_limit)
+            else:
+                limit = ""
 
         if not posa_show_template_items:
             condition += " AND has_variants = 0"
