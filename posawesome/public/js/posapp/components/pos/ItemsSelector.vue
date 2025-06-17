@@ -25,8 +25,9 @@
           </v-col>
           <v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
             <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')"
-              hide-details :model-value="formatFloat(qty)" type="text" @change="setFormatedFloat(this, 'qty', null, false, $event)"
-              @keydown.enter="enter_event" @keydown.esc="esc_event"></v-text-field>
+              hide-details v-model="debounce_qty" type="text"
+              @keydown.enter="enter_event" @keydown.esc="esc_event"
+              @focus="clearQty"></v-text-field>
           </v-col>
           <v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
             <v-checkbox v-model="new_line" color="accent" value="true" label="NLine" density="default"
@@ -389,7 +390,8 @@ export default {
         }
 
         if (!item.qty || item.qty === 1) {
-          item.qty = Math.abs(this.qty);
+          const qtyVal = this.qty != null ? this.qty : 1;
+          item.qty = Math.abs(qtyVal);
         }
         this.eventBus.emit("add_item", item);
         this.qty = 1;
@@ -472,7 +474,8 @@ export default {
       }
     }, 300),
     get_item_qty(first_search) {
-      let scal_qty = Math.abs(this.qty);
+      const qtyVal = this.qty != null ? this.qty : 1;
+      let scal_qty = Math.abs(qtyVal);
       if (first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
         let pesokg1 = first_search.substr(7, 5);
         let pesokg;
@@ -742,7 +745,11 @@ export default {
       this.first_search = "";
       this.search = "";
       // Optionally, you might want to also clear search_backup if the behaviour should be a full reset on focus
-      // this.search_backup = ""; 
+      // this.search_backup = "";
+    },
+
+    clearQty() {
+      this.qty = null;
     },
 
     startCameraScanning() {
@@ -1083,6 +1090,18 @@ export default {
       },
       set: _.debounce(function (newValue) {
         this.first_search = newValue;
+      }, 200),
+    },
+    debounce_qty: {
+      get() {
+        return this.qty === null || this.qty === '' ? '' : this.formatFloat(this.qty);
+      },
+      set: _.debounce(function (value) {
+        let parsed = parseFloat(String(value).replace(/,/g, ''));
+        if (isNaN(parsed)) {
+          parsed = null;
+        }
+        this.qty = parsed;
       }, 200),
     },
     isDarkTheme() {
