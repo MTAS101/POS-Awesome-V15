@@ -271,9 +271,9 @@
           </template>
           
           <!-- OEM Part Number Column Template -->
-          <template v-slot:item.oem_part_number="{ item }">
+          <!-- <template v-slot:item.oem_part_number="{ item }">
             <span class="text-orange">{{ item.oem_part_number || '-' }}</span>
-          </template>
+          </template> -->
           
           <!-- Offer Checkbox Column Template -->
           <template v-slot:item.posa_is_offer="{ item }">
@@ -687,13 +687,13 @@ export default {
       }
 
       // Add OEM part number column if enabled in POS profile
-      if (this.pos_profile?.custom_show_oem_part_number) {
-        headers.splice(-1, 0, { 
-          title: __("OEM Part"), 
-          key: "oem_part_number", 
-          align: "center" 
-        });
-      }
+      // if (this.pos_profile?.custom_show_oem_part_number) {
+      //   headers.splice(-1, 0, { 
+      //     title: __("OEM Part"), 
+      //     key: "oem_part_number", 
+      //     align: "center" 
+      //   });
+      // }
 
       // Always add the Offer column at the end
       headers.push({ title: __("Offer?"), key: "posa_is_offer", align: "center" });

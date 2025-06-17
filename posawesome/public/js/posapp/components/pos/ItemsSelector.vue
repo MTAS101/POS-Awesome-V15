@@ -41,9 +41,9 @@
                       {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
                     </div>
                     <!-- Current Incoming Rate Display -->
-                    <div v-if="pos_profile.custom_show_incoming_rate && item.incoming_rate" class="text-caption text-info">
+                    <!-- <div v-if="pos_profile.custom_show_incoming_rate && item.incoming_rate" class="text-caption text-info">
                       Inc: {{ format_currency(item.incoming_rate, pos_profile.currency, 4) }}
-                    </div>
+                    </div> -->
                     <!-- Last Incoming Rate Display -->
                     <div v-if="pos_profile.custom_show_last_incoming_rate && item.last_incoming_rate" class="text-caption text-purple">
                       Last Inc: {{ format_currency(item.last_incoming_rate, pos_profile.currency, 4) }}
@@ -337,9 +337,6 @@ export default {
   ];
   items_headers.push({ title: __("Available QTY"), key: "actual_qty", align: "start" });
   // Add current incoming rate column if enabled
-  if (this.pos_profile.custom_show_incoming_rate) {
-    items_headers.push({ title: __("Inc.Rate"), key: "incoming_rate", align: "start" });
-  }
 
   // Add last incoming rate column if enabled
   if (this.pos_profile.custom_show_last_incoming_rate) {
@@ -347,10 +344,6 @@ export default {
   }
 
 
-  // Add logical rack column if enabled
-  if (this.pos_profile.custom_show_logical_rack) {
-    items_headers.push({ title: __("Rack"), key: "logical_rack", align: "start" });
-  }
   items_headers.push({ title: __("Rate"), key: "rate", align: "start" });
   items_headers.push({ title: __("UOM"), key: "stock_uom", align: "start" });
 
