@@ -6,7 +6,7 @@
       <v-row class="items px-2 py-1">
         <v-col class="pb-0 mb-2">
           <v-text-field density="compact" clearable autofocus variant="outlined" color="primary"
-            :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
+            :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no, barcode, OEM part number or logical rack"
             bg-color="white" hide-details v-model="debounce_search" @keydown.esc="esc_event"
             @keydown.enter="search_onchange" @click:clear="clearSearch"
             @focus="handleItemSearchFocus" ref="debounce_search"></v-text-field>
@@ -25,7 +25,7 @@
             <v-row density="default" class="overflow-y-auto" style="max-height: 67vh">
               <v-col v-for="(item, idx) in filtered_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
                 min-height="50">
-                <v-card hover="hover" @click="add_item(item)">
+                <v-card hover="hover" @click="add_item(item)" class="item-card">
                   <v-img :src="item.image ||
                     '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
                     " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
@@ -40,9 +40,28 @@
                       {{ currencySymbol(selected_currency) || "" }}
                       {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
                     </div>
+                    <!-- Current Incoming Rate Display -->
+                    <div v-if="pos_profile.custom_show_incoming_rate && item.incoming_rate" class="text-caption text-info">
+                      Inc: {{ format_currency(item.incoming_rate, pos_profile.currency, 4) }}
+                    </div>
+                    <!-- Last Incoming Rate Display -->
+                    <div v-if="pos_profile.custom_show_last_incoming_rate && item.last_incoming_rate" class="text-caption text-purple">
+                      Last Inc: {{ format_currency(item.last_incoming_rate, pos_profile.currency, 4) }}
+                      <!-- <span v-if="item.last_incoming_date" class="text-grey text-xs">
+                        ({{ formatDate(item.last_incoming_date) }})
+                      </span> -->
+                    </div>
                     <div class="text-caption golden--text">
                       {{ format_number(item.actual_qty, 4) || 0 }}
                       {{ item.stock_uom || "" }}
+                    </div>
+                    <!-- Logical Rack Display -->
+                    <div v-if="pos_profile.custom_show_logical_rack && item.logical_rack" class="text-caption text-secondary">
+                      Rack: {{ item.logical_rack }}
+                    </div>
+                    <!-- OEM Part Number Display -->
+                    <div v-if="pos_profile.custom_show_oem_part_number && item.oem_part_number" class="text-caption text-orange">
+                      OEM: {{ item.oem_part_number }}
                     </div>
                   </v-card-text>
                 </v-card>
@@ -65,6 +84,28 @@
                 </template>
                 <template v-slot:item.actual_qty="{ item }">
                   <span class="golden--text">{{ format_number(item.actual_qty, 4) }}</span>
+                </template>
+                <!-- Current Incoming Rate Column Template -->
+                <template v-slot:item.incoming_rate="{ item }">
+                  <span class="text-info">{{ item.incoming_rate ? format_currency(item.incoming_rate, pos_profile.currency, 4) : '-' }}</span>
+                </template>
+                <!-- Last Incoming Rate Column Template -->
+                <template v-slot:item.last_incoming_rate="{ item }">
+                  <div v-if="item.last_incoming_rate">
+                    <span class="text-purple">{{ format_currency(item.last_incoming_rate, pos_profile.currency, 4) }}</span>
+                    <div v-if="item.last_incoming_date" class="text-grey text-xs">
+                      {{ formatDate(item.last_incoming_date) }}
+                    </div>
+                  </div>
+                  <span v-else class="text-grey">-</span>
+                </template>
+                <!-- Logical Rack Column Template -->
+                <template v-slot:item.logical_rack="{ item }">
+                  <span class="text-secondary">{{ item.logical_rack || '-' }}</span>
+                </template>
+                <!-- OEM Part Number Column Template -->
+                <template v-slot:item.oem_part_number="{ item }">
+                  <span class="text-orange">{{ item.oem_part_number || '-' }}</span>
                 </template>
               </v-data-table>
             </div>
@@ -280,29 +321,54 @@ export default {
       }
     },
     getItemsHeaders() {
-      const items_headers = [
-        {
-          title: __("Name"),
-          align: "start",
-          sortable: true,
-          key: "item_name",
-        },
-        {
-          title: __("Code"),
-          align: "start",
-          sortable: true,
-          key: "item_code",
-        },
-        { title: __("Rate"), key: "rate", align: "start" },
-        { title: __("Available QTY"), key: "actual_qty", align: "start" },
-        { title: __("UOM"), key: "stock_uom", align: "start" },
-      ];
-      if (!this.pos_profile.posa_display_item_code) {
-        items_headers.splice(1, 1);
-      }
-
-      return items_headers;
+  const items_headers = [
+    {
+      title: __("Name"),
+      align: "start",
+      sortable: true,
+      key: "item_name",
     },
+    {
+      title: __("Code"),
+      align: "start",
+      sortable: true,
+      key: "item_code",
+    },
+  ];
+  items_headers.push({ title: __("Available QTY"), key: "actual_qty", align: "start" });
+  // Add current incoming rate column if enabled
+  if (this.pos_profile.custom_show_incoming_rate) {
+    items_headers.push({ title: __("Inc.Rate"), key: "incoming_rate", align: "start" });
+  }
+
+  // Add last incoming rate column if enabled
+  if (this.pos_profile.custom_show_last_incoming_rate) {
+    items_headers.push({ title: __("Last Inc.Rate"), key: "last_incoming_rate", align: "start" });
+  }
+
+
+  // Add logical rack column if enabled
+  if (this.pos_profile.custom_show_logical_rack) {
+    items_headers.push({ title: __("Rack"), key: "logical_rack", align: "start" });
+  }
+  items_headers.push({ title: __("Rate"), key: "rate", align: "start" });
+  items_headers.push({ title: __("UOM"), key: "stock_uom", align: "start" });
+
+  // Add OEM part number column if enabled
+  if (this.pos_profile.custom_show_oem_part_number) {
+    items_headers.push({ title: __("OEM Part"), key: "oem_part_number", align: "start" });
+  }
+
+  // Remove item code column if disabled in profile
+  if (!this.pos_profile.posa_display_item_code) {
+    const codeIndex = items_headers.findIndex(h => h.key === "item_code");
+    if (codeIndex > -1) {
+      items_headers.splice(codeIndex, 1);
+    }
+  }
+
+  return items_headers;
+},
     click_item_row(event, { item }) {
       this.add_item(item)
     },
@@ -398,6 +464,21 @@ export default {
       if (this.flags.batch_no) {
         new_item.to_set_batch_no = this.flags.batch_no;
       }
+
+      // Search by OEM Part Number
+      if (!match && this.pos_profile.custom_show_oem_part_number) {
+        if (new_item.oem_part_number && new_item.oem_part_number.toLowerCase() === this.search.toLowerCase()) {
+          match = true;
+        }
+      }
+
+      // Search by Logical Rack
+      if (!match && this.pos_profile.custom_show_logical_rack) {
+        if (new_item.logical_rack && new_item.logical_rack.toLowerCase() === this.search.toLowerCase()) {
+          match = true;
+        }
+      }
+
       if (match) {
         this.add_item(new_item);
         this.flags.serial_no = null;
@@ -405,14 +486,13 @@ export default {
         this.qty = 1;
         this.$refs.debounce_search.focus();
 
+        // ✅ Clear the search inputs
+        this.search = "";
+        this.first_search = "";
+        this.search_backup = "";
 
-         // ✅ Clear the search inputs
-    this.search = "";
-    this.first_search = "";
-    this.search_backup = "";
-
-    // ✅ Refocus the search input
-    this.$refs.debounce_search?.focus();
+        // ✅ Refocus the search input
+        this.$refs.debounce_search?.focus();
       }
     },
     search_onchange: _.debounce(function(newSearchTerm) {
@@ -513,6 +593,31 @@ export default {
                 item.serial_no_data = updated_item.serial_no_data;
                 item.batch_no_data = updated_item.batch_no_data;
                 
+                // Update current incoming rate
+                if (updated_item.incoming_rate !== undefined) {
+                  item.incoming_rate = updated_item.incoming_rate;
+                }
+
+                // Update last incoming rate
+                if (updated_item.last_incoming_rate !== undefined) {
+                  item.last_incoming_rate = updated_item.last_incoming_rate;
+                }
+
+                // Update last incoming date
+                if (updated_item.last_incoming_date !== undefined) {
+                  item.last_incoming_date = updated_item.last_incoming_date;
+                }
+
+                // Update logical rack
+                if (updated_item.logical_rack !== undefined) {
+                  item.logical_rack = updated_item.logical_rack;
+                }
+
+                // Update OEM part number
+                if (updated_item.oem_part_number !== undefined) {
+                  item.oem_part_number = updated_item.oem_part_number;
+                }
+                
                 // Properly handle UOMs data
                 if (updated_item.item_uoms && updated_item.item_uoms.length > 0) {
                   item.item_uoms = updated_item.item_uoms;
@@ -599,7 +704,6 @@ export default {
       }
     },
 
-
     generateWordCombinations(inputString) {
       const words = inputString.split(" ");
       const wordCount = words.length;
@@ -683,6 +787,19 @@ export default {
       // For whole numbers, return as is
       return valueStr;
     },
+    formatDate(dateString) {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+          year: '2-digit',
+          month: 'short',
+          day: 'numeric'
+        });
+      } catch (error) {
+        return dateString;
+      }
+    },
     hasDecimalPrecision(value) {
       // Check if the value has any decimal precision when multiplied by exchange rate
       if (this.exchange_rate && this.exchange_rate !== 1) {
@@ -694,6 +811,61 @@ export default {
   },
 
   computed: {
+    dynamic_items_headers() {
+    const headers = [
+      {
+        title: __("Name"),
+        align: "start",
+        sortable: true,
+        key: "item_name",
+      },
+      { title: __("QTY"), key: "qty", align: "center" },
+      { title: __("UOM"), key: "uom", align: "center" },
+      { title: __("Rate"), key: "rate", align: "center" },
+      { title: __("Amount"), key: "amount", align: "center" },
+    ];
+
+    // Add incoming rate column if enabled in POS profile
+    if (this.pos_profile?.custom_show_incoming_rate) {
+      headers.splice(-1, 0, { 
+        title: __("Inc.Rate"), 
+        key: "incoming_rate", 
+        align: "center" 
+      });
+    }
+
+    // Add last incoming rate column if enabled in POS profile
+    if (this.pos_profile?.custom_show_last_incoming_rate) {
+      headers.splice(-1, 0, { 
+        title: __("Last Inc.Rate"), 
+        key: "last_incoming_rate", 
+        align: "center" 
+      });
+    }
+
+    // Add logical rack column if enabled in POS profile
+    if (this.pos_profile?.custom_show_logical_rack) {
+      headers.splice(-1, 0, { 
+        title: __("Rack"), 
+        key: "logical_rack", 
+        align: "center" 
+      });
+    }
+
+    // Add OEM part number column if enabled in POS profile
+    if (this.pos_profile?.custom_show_oem_part_number) {
+      headers.splice(-1, 0, { 
+        title: __("OEM Part"), 
+        key: "oem_part_number", 
+        align: "center" 
+      });
+    }
+
+    // Always add the Offer column at the end
+    headers.push({ title: __("Offer?"), key: "posa_is_offer", align: "center" });
+
+    return headers;
+  },
     filtered_items() {
       this.search = this.get_search(this.first_search);
       if (!this.pos_profile.pose_use_limit_search) {
@@ -730,6 +902,7 @@ export default {
           
           return filtered;
         } else if (this.search) {
+          // Search by barcode first
           filtred_list = filtred_group_list.filter((item) => {
             let found = false;
             for (let element of item.item_barcode) {
@@ -740,63 +913,87 @@ export default {
             }
             return found;
           });
+
+          // Search by item code if no barcode match
           if (filtred_list.length == 0) {
             filtred_list = filtred_group_list.filter((item) =>
               item.item_code.toLowerCase().includes(this.search.toLowerCase())
             );
-            if (filtred_list.length == 0) {
-              const search_combinations = this.generateWordCombinations(
-                this.search
-              );
-              filtred_list = filtred_group_list.filter((item) => {
-                let found = false;
-                for (let element of search_combinations) {
-                  element = element.toLowerCase().trim();
-                  let element_regex = new RegExp(
-                    `.*${element.split("").join(".*")}.*`
-                  );
-                  if (element_regex.test(item.item_name.toLowerCase())) {
-                    found = true;
-                    break;
-                  }
+          }
+
+          // Search by item name combinations if no item code match
+          if (filtred_list.length == 0) {
+            const search_combinations = this.generateWordCombinations(
+              this.search
+            );
+            filtred_list = filtred_group_list.filter((item) => {
+              let found = false;
+              for (let element of search_combinations) {
+                element = element.toLowerCase().trim();
+                let element_regex = new RegExp(
+                  `.*${element.split("").join(".*")}.*`
+                );
+                if (element_regex.test(item.item_name.toLowerCase())) {
+                  found = true;
+                  break;
                 }
-                return found;
-              });
-            }
-            if (
-              filtred_list.length == 0 &&
-              this.pos_profile.posa_search_serial_no
-            ) {
-              filtred_list = filtred_group_list.filter((item) => {
-                let found = false;
-                for (let element of item.serial_no_data) {
-                  if (element.serial_no == this.search) {
-                    found = true;
-                    this.flags.serial_no = null;
-                    this.flags.serial_no = this.search;
-                    break;
-                  }
+              }
+              return found;
+            });
+          }
+
+          // Search by OEM Part Number if enabled and no previous match
+          if (filtred_list.length == 0 && this.pos_profile.custom_show_oem_part_number) {
+            filtred_list = filtred_group_list.filter((item) => {
+              return item.oem_part_number && 
+                     item.oem_part_number.toLowerCase().includes(this.search.toLowerCase());
+            });
+          }
+
+          // Search by Logical Rack if enabled and no previous match
+          if (filtred_list.length == 0 && this.pos_profile.custom_show_logical_rack) {
+            filtred_list = filtred_group_list.filter((item) => {
+              return item.logical_rack && 
+                     item.logical_rack.toLowerCase().includes(this.search.toLowerCase());
+            });
+          }
+
+          // Search by serial number if enabled and no previous match
+          if (
+            filtred_list.length == 0 &&
+            this.pos_profile.posa_search_serial_no
+          ) {
+            filtred_list = filtred_group_list.filter((item) => {
+              let found = false;
+              for (let element of item.serial_no_data) {
+                if (element.serial_no == this.search) {
+                  found = true;
+                  this.flags.serial_no = null;
+                  this.flags.serial_no = this.search;
+                  break;
                 }
-                return found;
-              });
-            }
-            if (
-              filtred_list.length == 0 &&
-              this.pos_profile.posa_search_batch_no
-            ) {
-              filtred_list = filtred_group_list.filter((item) => {
-                let found = false;
-                for (let element of item.batch_no_data) {
-                  if (element.batch_no == this.search) {
-                    found = true;
-                    this.flags.batch_no = null;
-                    this.flags.batch_no = this.search;
-                    break;
-                  }
+              }
+              return found;
+            });
+          }
+
+          // Search by batch number if enabled and no previous match
+          if (
+            filtred_list.length == 0 &&
+            this.pos_profile.posa_search_batch_no
+          ) {
+            filtred_list = filtred_group_list.filter((item) => {
+              let found = false;
+              for (let element of item.batch_no_data) {
+                if (element.batch_no == this.search) {
+                  found = true;
+                  this.flags.batch_no = null;
+                  this.flags.batch_no = this.search;
+                  break;
                 }
-                return found;
-              });
-            }
+              }
+              return found;
+            });
           }
         }
         
@@ -923,5 +1120,42 @@ export default {
 <style scoped>
 .text-success {
   color: #4CAF50 !important;
+}
+
+.text-info {
+  color: #2196F3 !important;
+}
+
+.text-purple {
+  color: #9C27B0 !important;
+}
+
+.text-secondary {
+  color: #757575 !important;
+}
+
+.text-orange {
+  color: #FF9800 !important;
+}
+
+.text-grey {
+  color: #9E9E9E !important;
+}
+
+.text-xs {
+  font-size: 0.75rem !important;
+}
+
+.item-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.golden--text {
+  color: #FFD700 !important;
 }
 </style>

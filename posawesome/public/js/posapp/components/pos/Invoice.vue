@@ -24,6 +24,76 @@
       </v-card>
     </v-dialog>
 
+    <v-dialog v-model="reference_dialog" max-width="500" persistent>
+      <v-card>
+        <v-card-title class="text-h5 bg-primary white--text">
+          <v-icon left color="white">mdi-file-document-edit</v-icon>
+          {{ __("Enter Reference Details") }}
+        </v-card-title>
+        
+        <v-card-text class="pt-6 pb-2">
+          <v-container>
+            <v-row>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="reference_no"
+                  :label="__('Reference Number')"
+                  variant="outlined"
+                  density="compact"
+                  color="primary"
+                  prepend-inner-icon="mdi-numeric"
+                  :rules="[v => !!v || __('Reference Number is required')]"
+                  required
+                  hide-details="auto"
+                  autocomplete="off" 
+                  class="mb-3"
+                ></v-text-field>
+              </v-col>
+              
+              <v-col cols="12">
+                <v-text-field
+                  v-model="reference_name"
+                  :label="__('Reference Name')"
+                  variant="outlined"
+                  density="compact"
+                  color="primary"
+                  prepend-inner-icon="mdi-account"
+                  :rules="[v => !!v || __('Reference Name is required')]"
+                  required
+                  hide-details="auto"
+                  autocomplete="off" 
+                ></v-text-field>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+
+        <v-card-actions class="px-6 pb-4">
+          <v-spacer></v-spacer>
+          
+          <v-btn
+            color="grey"
+            variant="outlined"
+            @click="cancel_reference_dialog"
+            prepend-icon="mdi-close"
+          >
+            {{ __("Cancel") }}
+          </v-btn>
+          
+          <v-btn
+            color="primary"
+            variant="elevated"
+            @click="confirm_reference_and_proceed"
+            prepend-icon="mdi-credit-card"
+            :disabled="!reference_no || !reference_name"
+            class="ml-3"
+          >
+            {{ __("Proceed to Payment") }}
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <!-- Main Invoice Card (contains all invoice content) -->
     <v-card style="max-height: 70vh; height: 70vh"
       :class="['cards my-0 py-0 mt-3 bg-grey-lighten-5', { 'return-mode': invoiceType === 'Return' }]">
@@ -130,10 +200,12 @@
           hide-default-footer
           :single-expand="true"
           @update:expanded="handleExpandedUpdate">
+          
           <!-- Quantity Column Template -->
           <template v-slot:item.qty="{ item }">{{
             formatFloat(item.qty)
           }}</template>
+          
           <!-- Rate Column Template with Currency Symbol -->
           <template v-slot:item.rate="{ item }">
             <div class="d-flex align-center">
@@ -141,6 +213,7 @@
               <span>{{ formatCurrency(item.rate) }}</span>
             </div>
           </template>
+          
           <!-- Amount Column Template with Currency Symbol -->
           <template v-slot:item.amount="{ item }">
             <div class="d-flex align-center">
@@ -148,6 +221,7 @@
               <span>{{ formatCurrency(item.qty * item.rate) }}</span>
             </div>
           </template>
+          
           <!-- Discount Amount Column Template -->
           <template v-slot:item.discount_amount="{ item }">
             <div class="d-flex align-center">
@@ -155,6 +229,7 @@
               <span>{{ formatCurrency(item.discount_amount) }}</span>
             </div>
           </template>
+          
           <!-- Price List Rate Column Template -->
           <template v-slot:item.price_list_rate="{ item }">
             <div class="d-flex align-center">
@@ -162,6 +237,44 @@
               <span>{{ formatCurrency(item.price_list_rate) }}</span>
             </div>
           </template>
+          
+          <!-- Current Incoming Rate Column Template -->
+          <template v-slot:item.incoming_rate="{ item }">
+            <div class="d-flex align-center">
+              <span v-if="item.incoming_rate" class="text-info">
+                {{ currencySymbol(pos_profile.currency) }}
+                {{ formatCurrency(item.incoming_rate) }}
+              </span>
+              <span v-else class="text-grey">-</span>
+            </div>
+          </template>
+          
+          <!-- Last Incoming Rate Column Template -->
+          <template v-slot:item.last_incoming_rate="{ item }">
+            <div class="d-flex flex-column">
+              <div v-if="item.last_incoming_rate" class="d-flex align-center">
+                <span class="text-purple">
+                  {{ currencySymbol(pos_profile.currency) }}
+                  {{ formatCurrency(item.last_incoming_rate) }}
+                </span>
+              </div>
+              <div v-if="item.last_incoming_date" class="text-grey text-xs">
+                {{ formatDate(item.last_incoming_date) }}
+              </div>
+              <span v-if="!item.last_incoming_rate" class="text-grey">-</span>
+            </div>
+          </template>
+          
+          <!-- Logical Rack Column Template -->
+          <template v-slot:item.logical_rack="{ item }">
+            <span class="text-secondary">{{ item.logical_rack || '-' }}</span>
+          </template>
+          
+          <!-- OEM Part Number Column Template -->
+          <template v-slot:item.oem_part_number="{ item }">
+            <span class="text-orange">{{ item.oem_part_number || '-' }}</span>
+          </template>
+          
           <!-- Offer Checkbox Column Template -->
           <template v-slot:item.posa_is_offer="{ item }">
             <v-checkbox-btn v-model="item.posa_is_offer" class="center" @change="toggleOffer(item)"></v-checkbox-btn>
@@ -273,6 +386,47 @@
                   <v-checkbox density="compact" :label="frappe._('Offer Applied')" v-model="item.posa_offer_applied"
                     readonly hide-details class="mt-1"></v-checkbox>
                 </v-col>
+
+                <!-- Additional Information Row (New fields) -->
+                <template v-if="pos_profile.custom_show_incoming_rate || pos_profile.custom_show_last_incoming_rate || pos_profile.custom_show_logical_rack || pos_profile.custom_show_oem_part_number">
+                  <!-- Current Incoming Rate -->
+                  <v-col cols="12" sm="3" v-if="pos_profile.custom_show_incoming_rate">
+                    <v-text-field density="compact" variant="outlined" color="primary" 
+                      :label="frappe._('Current Inc. Rate')"
+                      bg-color="white" hide-details 
+                      :model-value="item.incoming_rate ? formatCurrency(item.incoming_rate) : '-'" 
+                      disabled
+                      :prefix="item.incoming_rate ? currencySymbol(pos_profile.currency) : ''"></v-text-field>
+                  </v-col>
+
+                  <!-- Last Incoming Rate -->
+                  <v-col cols="12" sm="3" v-if="pos_profile.custom_show_last_incoming_rate">
+                    <v-text-field density="compact" variant="outlined" color="primary" 
+                      :label="frappe._('Last Inc. Rate')"
+                      bg-color="white" hide-details 
+                      :model-value="item.last_incoming_rate ? formatCurrency(item.last_incoming_rate) : '-'" 
+                      disabled
+                      :prefix="item.last_incoming_rate ? currencySymbol(pos_profile.currency) : ''"></v-text-field>
+                  </v-col>
+
+                  <!-- Logical Rack -->
+                  <v-col cols="12" sm="3" v-if="pos_profile.custom_show_logical_rack">
+                    <v-text-field density="compact" variant="outlined" color="primary" 
+                      :label="frappe._('Logical Rack')"
+                      bg-color="white" hide-details 
+                      :model-value="item.logical_rack || '-'" 
+                      disabled></v-text-field>
+                  </v-col>
+
+                  <!-- OEM Part Number -->
+                  <v-col cols="12" sm="3" v-if="pos_profile.custom_show_oem_part_number">
+                    <v-text-field density="compact" variant="outlined" color="primary" 
+                      :label="frappe._('OEM Part Number')"
+                      bg-color="white" hide-details 
+                      :model-value="item.oem_part_number || '-'" 
+                      disabled></v-text-field>
+                  </v-col>
+                </template>
 
                 <!-- Serial Number Fields (if enabled) -->
                 <template v-if="item.has_serial_no == 1 || item.serial_no">
@@ -448,6 +602,9 @@ export default {
       pos_opening_shift: "",
       stock_settings: "",
       invoice_doc: "",
+      reference_dialog: false,
+      reference_no: '',
+      reference_name: '',
       return_doc: "",
       customer: "",
       customer_info: "",
@@ -477,20 +634,6 @@ export default {
       invoice_posting_date: false, // Posting date dialog
       posting_date: frappe.datetime.nowdate(), // Invoice posting date
       posting_date_menu: false, // Posting date menu visibility
-      items_headers: [
-        // Table headers for items
-        {
-          title: __("Name"),
-          align: "start",
-          sortable: true,
-          key: "item_name",
-        },
-        { title: __("QTY"), key: "qty", align: "center" },
-        { title: __("UOM"), key: "uom", align: "center" },
-        { title: __("Rate"), key: "rate", align: "center" },
-        { title: __("Amount"), key: "amount", align: "center" },
-        { title: __("Offer?"), key: "posa_is_offer", align: "center" },
-      ],
       selected_currency: "", // Currently selected currency
       exchange_rate: 1, // Current exchange rate
       available_currencies: [], // List of available currencies
@@ -502,6 +645,61 @@ export default {
   },
 
   computed: {
+    items_headers() {
+      const headers = [
+        {
+          title: __("Name"),
+          align: "start",
+          sortable: true,
+          key: "item_name",
+        },
+        { title: __("QTY"), key: "qty", align: "center" },
+        { title: __("UOM"), key: "uom", align: "center" },
+        { title: __("Rate"), key: "rate", align: "center" },
+        { title: __("Amount"), key: "amount", align: "center" },
+      ];
+
+      // Add current incoming rate column if enabled in POS profile
+      if (this.pos_profile?.custom_show_incoming_rate) {
+        headers.splice(-1, 0, { 
+          title: __("Inc.Rate"), 
+          key: "incoming_rate", 
+          align: "center" 
+        });
+      }
+
+      // Add last incoming rate column if enabled in POS profile
+      if (this.pos_profile?.custom_show_last_incoming_rate) {
+        headers.splice(-1, 0, { 
+          title: __("Last Inc.Rate"), 
+          key: "last_incoming_rate", 
+          align: "center" 
+        });
+      }
+
+      // Add logical rack column if enabled in POS profile
+      if (this.pos_profile?.custom_show_logical_rack) {
+        headers.splice(-1, 0, { 
+          title: __("Rack"), 
+          key: "logical_rack", 
+          align: "center" 
+        });
+      }
+
+      // Add OEM part number column if enabled in POS profile
+      if (this.pos_profile?.custom_show_oem_part_number) {
+        headers.splice(-1, 0, { 
+          title: __("OEM Part"), 
+          key: "oem_part_number", 
+          align: "center" 
+        });
+      }
+
+      // Always add the Offer column at the end
+      headers.push({ title: __("Offer?"), key: "posa_is_offer", align: "center" });
+
+      return headers;
+    },
     // Calculate total quantity of all items
     total_qty() {
       this.close_payments();
@@ -1042,6 +1240,12 @@ add_free_item(item) {
       new_item.posa_delivery_date = "";
       new_item.posa_row_id = this.makeid(20);
       // Expand row if batch/serial required
+
+      if (item.is_bundle_item) {
+    new_item.is_bundle_item = item.is_bundle_item;
+    new_item.parent_bundle = item.parent_bundle;
+    new_item.custom_bundle_id = item.custom_bundle_id;
+  }
       if (
         (!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) ||
         new_item.has_serial_no
@@ -1546,6 +1750,9 @@ add_free_item(item) {
           batch_no: item.batch_no,
           posa_notes: item.posa_notes,
           posa_delivery_date: item.posa_delivery_date,
+          is_bundle_item: item.is_bundle_item || 0,
+          parent_bundle: item.parent_bundle || "",
+          custom_bundle_id: item.custom_bundle_id || ""
         };
 
         // Handle currency conversion for rates and amounts
@@ -1821,6 +2028,22 @@ add_free_item(item) {
           return;
         }
 
+          // Check if reference details are required
+      if (this.pos_profile.custom_add_reference_details) {
+        console.log('Reference details required - showing dialog');
+        this.reference_no = '';
+      this.reference_name = '';
+        this.reference_dialog = true;
+        
+        return;
+      }
+  
+
+      // If no reference required, proceed directly to payment
+      await this.process_payment();
+
+
+
         // Update invoice_doc with current currency info
         invoice_doc.currency = this.selected_currency || this.pos_profile.currency;
         invoice_doc.conversion_rate = this.exchange_rate || 1;
@@ -1890,7 +2113,138 @@ add_free_item(item) {
         });
       }
     },
+    
 
+
+// Add this new method to handle the payment processing
+async process_payment() {
+  try {
+    let invoice_doc;
+    if (this.invoice_doc.doctype == "Sales Order") {
+      console.log('Processing Sales Order payment');
+      invoice_doc = await this.process_invoice_from_order();
+    } else {
+      console.log('Processing regular invoice');
+      invoice_doc = this.process_invoice();
+    }
+
+    if (!invoice_doc) {
+      console.log('Failed to process invoice');
+      return;
+    }
+
+    // Add reference details to invoice if provided
+    if (this.reference_no || this.reference_name) {
+      invoice_doc.custom_reference_no = this.reference_no;
+      invoice_doc.custom_reference_name = this.reference_name;
+    }
+
+    // Update invoice_doc with current currency info
+    invoice_doc.currency = this.selected_currency || this.pos_profile.currency;
+    invoice_doc.conversion_rate = this.exchange_rate || 1;
+    
+    // Update totals in invoice_doc to match current calculations
+    invoice_doc.total = this.Total;
+    invoice_doc.grand_total = this.subtotal;
+    
+    // Apply rounding to get rounded total
+    invoice_doc.rounded_total = this.roundAmount(this.subtotal);
+    invoice_doc.base_total = this.Total * (1 / this.exchange_rate || 1);
+    invoice_doc.base_grand_total = this.subtotal * (1 / this.exchange_rate || 1);
+    invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
+    
+    // Check if this is a return invoice
+    if (this.invoiceType === 'Return' || invoice_doc.is_return) {
+      console.log('Preparing RETURN invoice for payment with:', {
+        is_return: invoice_doc.is_return,
+        invoiceType: this.invoiceType,
+        return_against: invoice_doc.return_against,
+        items: invoice_doc.items.length,
+        grand_total: invoice_doc.grand_total
+      });
+      
+      // For return invoices, explicitly ensure all amounts are negative
+      invoice_doc.is_return = 1;
+      if (invoice_doc.grand_total > 0) invoice_doc.grand_total = -Math.abs(invoice_doc.grand_total);
+      if (invoice_doc.rounded_total > 0) invoice_doc.rounded_total = -Math.abs(invoice_doc.rounded_total);
+      if (invoice_doc.total > 0) invoice_doc.total = -Math.abs(invoice_doc.total);
+      if (invoice_doc.base_grand_total > 0) invoice_doc.base_grand_total = -Math.abs(invoice_doc.base_grand_total);
+      if (invoice_doc.base_rounded_total > 0) invoice_doc.base_rounded_total = -Math.abs(invoice_doc.base_rounded_total);
+      if (invoice_doc.base_total > 0) invoice_doc.base_total = -Math.abs(invoice_doc.base_total);
+      
+      // Ensure all items have negative quantity and amount
+      if (invoice_doc.items && invoice_doc.items.length) {
+        invoice_doc.items.forEach(item => {
+          if (item.qty > 0) item.qty = -Math.abs(item.qty);
+          if (item.stock_qty > 0) item.stock_qty = -Math.abs(item.stock_qty);
+          if (item.amount > 0) item.amount = -Math.abs(item.amount);
+        });
+      }
+    }
+    
+    // Get payments with correct sign (positive/negative)
+    invoice_doc.payments = this.get_payments();
+    console.log('Final payment data:', invoice_doc.payments);
+
+    // Double-check return invoice payments are negative
+    if ((this.invoiceType === 'Return' || invoice_doc.is_return) && invoice_doc.payments.length) {
+      invoice_doc.payments.forEach(payment => {
+        if (payment.amount > 0) payment.amount = -Math.abs(payment.amount);
+        if (payment.base_amount > 0) payment.base_amount = -Math.abs(payment.base_amount);
+      });
+      console.log('Ensured negative payment amounts for return:', invoice_doc.payments);
+    }
+
+    console.log('Showing payment dialog with currency:', invoice_doc.currency);
+    this.eventBus.emit("show_payment", "true");
+    this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
+
+  } catch (error) {
+    console.error('Error in process_payment:', error);
+    this.eventBus.emit("show_message", {
+      title: __("Error processing payment"),
+      color: "error",
+      message: error.message
+    });
+  }
+},
+
+// Add this new method to handle reference dialog confirmation
+async confirm_reference_and_proceed() {
+  try {
+    // Validate reference fields if required
+    if (this.pos_profile.custom_add_reference_details) {
+      if (!this.reference_no || !this.reference_name) {
+        this.eventBus.emit("show_message", {
+          title: __("Please fill in both reference number and reference name"),
+          color: "error"
+        });
+        return;
+      }
+    }
+
+    // Close the reference dialog
+    this.reference_dialog = false;
+
+    // Proceed with payment processing
+    await this.process_payment();
+
+  } catch (error) {
+    console.error('Error in confirm_reference_and_proceed:', error);
+    this.eventBus.emit("show_message", {
+      title: __("Error processing reference details"),
+      color: "error",
+      message: error.message
+    });
+  }
+},
+
+// Add this method to handle reference dialog cancellation
+cancel_reference_dialog() {
+  this.reference_dialog = false;
+  this.reference_no = '';
+  this.reference_name = '';
+},
     // Validate invoice before payment/submit (return logic, quantity, rates, etc)
     async validate() {
       console.log('Starting return validation');
@@ -2162,6 +2516,28 @@ add_free_item(item) {
         callback: function (r) {
           if (r.message) {
             const data = r.message;
+            if (data.incoming_rate !== undefined) {
+              item.incoming_rate = data.incoming_rate;
+            }
+
+            // Update last incoming rate fields
+            if (data.last_incoming_rate !== undefined) {
+              item.last_incoming_rate = data.last_incoming_rate;
+            }
+
+            if (data.last_incoming_date !== undefined) {
+              item.last_incoming_date = data.last_incoming_date;
+            }
+
+            // Update logical rack
+            if (data.logical_rack !== undefined) {
+              item.logical_rack = data.logical_rack;
+            }
+
+            // Update OEM part number
+            if (data.oem_part_number !== undefined) {
+              item.oem_part_number = data.oem_part_number;
+            }
             if (data.batch_no_data) {
               item.batch_no_data = data.batch_no_data;
             }
@@ -2475,31 +2851,68 @@ add_free_item(item) {
       this.$forceUpdate();
     },
 
-    // Update UOM (unit of measure) for an item and recalculate prices
-    calc_uom(item, value) {
-      const new_uom = item.item_uoms.find((element) => element.uom == value);
-      if (!new_uom) {
-        this.eventBus.emit("show_message", {
-          title: __("UOM not found"),
-          color: "error",
-        });
-        return;
-      }
+    // Update UOM (unit of measure) for an item and fetch rate from Item Price
+async calc_uom(item, value) {
+  const new_uom = item.item_uoms.find((element) => element.uom == value);
+  if (!new_uom) {
+    this.eventBus.emit("show_message", {
+      title: __("UOM not found"),
+      color: "error",
+    });
+    return;
+  }
 
-      // Store old conversion factor for ratio calculation
-      const old_conversion_factor = item.conversion_factor || 1;
+  // Store old conversion factor for ratio calculation
+  const old_conversion_factor = item.conversion_factor || 1;
+  
+  // Update conversion factor
+  item.conversion_factor = new_uom.conversion_factor;
+
+  // Reset discount if not offer
+  if (!item.posa_offer_applied) {
+    item.discount_amount = 0;
+    item.discount_percentage = 0;
+  }
+
+  try {
+    // Fetch item price for the specific UOM
+    const response = await frappe.call({
+      method: "posawesome.posawesome.api.invoice.get_item_price_for_uom",
+      args: {
+        item_code: item.item_code,
+        price_list: this.get_price_list(),
+        uom: value,
+        customer: this.customer,
+        company: this.pos_profile.company,
+        currency: this.pos_profile.currency,
+        conversion_factor: item.conversion_factor
+      }
+    });
+
+    if (response && response.message && response.message.price_list_rate) {
+      // Use the fetched price from Item Price
+      const fetched_rate = response.message.price_list_rate;
       
-      // Update conversion factor
-      item.conversion_factor = new_uom.conversion_factor;
-
-      // Calculate the ratio of new to old conversion factor
-      const conversion_ratio = item.conversion_factor / old_conversion_factor;
-
-      // Reset discount if not offer
-      if (!item.posa_offer_applied) {
-        item.discount_amount = 0;
-        item.discount_percentage = 0;
+      // Set base rates (always in base currency)
+      item.base_rate = fetched_rate;
+      item.base_price_list_rate = fetched_rate;
+      
+      // Convert to selected currency if needed
+      if (this.selected_currency !== this.pos_profile.currency) {
+        // If exchange rate is 300 PKR = 1 USD
+        // To convert PKR to USD: divide by exchange rate
+        item.rate = this.flt(fetched_rate / this.exchange_rate, this.currency_precision);
+        item.price_list_rate = item.rate;
+      } else {
+        item.rate = fetched_rate;
+        item.price_list_rate = fetched_rate;
       }
+
+      console.log(`Found Item Price for ${item.item_code} with UOM ${value}: ${fetched_rate}`);
+      
+    } else {
+      // Fallback to conversion factor calculation if no Item Price found
+      console.log(`No Item Price found for ${item.item_code} with UOM ${value}, using conversion factor`);
       
       // Store original base rates if not already stored
       if (!item.original_base_rate && !item.posa_offer_applied) {
@@ -2525,9 +2938,6 @@ add_free_item(item) {
           
           // Convert to selected currency
           if (this.selected_currency !== this.pos_profile.currency) {
-            // If exchange rate is 300 PKR = 1 USD
-            // To convert PKR to USD: divide by exchange rate
-            // Example: 3000 PKR / 300 = 10 USD
             item.rate = this.flt(converted_rate / this.exchange_rate, this.currency_precision);
             item.price_list_rate = item.rate;
           } else {
@@ -2547,9 +2957,6 @@ add_free_item(item) {
         
         // Convert to selected currency
         if (this.selected_currency !== this.pos_profile.currency) {
-          // If exchange rate is 300 PKR = 1 USD
-          // To convert PKR to USD: divide by exchange rate
-          // Example: 3000 PKR / 300 = 10 USD
           item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
           item.price_list_rate = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
         } else {
@@ -2557,11 +2964,44 @@ add_free_item(item) {
           item.price_list_rate = item.base_price_list_rate;
         }
       }
+    }
 
-      // Update item details
-      this.calc_stock_qty(item, item.qty);
-      this.$forceUpdate();
-    },
+  } catch (error) {
+    console.error("Error fetching item price for UOM:", error);
+    
+    // Fallback to conversion factor calculation on error
+    if (!item.original_base_rate && !item.posa_offer_applied) {
+      item.original_base_rate = item.base_rate / old_conversion_factor;
+      item.original_base_price_list_rate = item.base_price_list_rate / old_conversion_factor;
+    }
+
+    if (item.batch_price) {
+      item.base_rate = item.batch_price * item.conversion_factor;
+      item.base_price_list_rate = item.base_rate;
+    } else if (item.original_base_rate) {
+      item.base_rate = item.original_base_rate * item.conversion_factor;
+      item.base_price_list_rate = item.original_base_price_list_rate * item.conversion_factor;
+    }
+    
+    // Convert to selected currency
+    if (this.selected_currency !== this.pos_profile.currency) {
+      item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
+      item.price_list_rate = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
+    } else {
+      item.rate = item.base_rate;
+      item.price_list_rate = item.base_price_list_rate;
+    }
+
+    this.eventBus.emit("show_message", {
+      title: __("Could not fetch item price for UOM, using conversion factor"),
+      color: "warning",
+    });
+  }
+
+  // Update item details and force UI update
+  this.calc_stock_qty(item, item.qty);
+  this.$forceUpdate();
+},
 
     // Calculate stock quantity for an item
     calc_stock_qty(item, value) {
@@ -4873,5 +5313,32 @@ ApplyBuyGetFreeOffer(offer) {
   font-weight: bold;
   border-bottom-left-radius: 8px;
   z-index: 1;
+}
+.text-success {
+  color: #4CAF50 !important;
+}
+
+.text-info {
+  color: #2196F3 !important;
+}
+
+.text-purple {
+  color: #9C27B0 !important;
+}
+
+.text-secondary {
+  color: #757575 !important;
+}
+
+.text-orange {
+  color: #FF9800 !important;
+}
+
+.text-grey {
+  color: #9E9E9E !important;
+}
+
+.text-xs {
+  font-size: 0.75rem !important;
 }
 </style>

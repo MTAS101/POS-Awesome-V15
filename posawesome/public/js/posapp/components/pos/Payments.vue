@@ -627,7 +627,7 @@ export default {
       paid_change_rules: [], // Validation rules for paid change
       phone_dialog: false, // Show phone payment dialog
       order_delivery_date: false, // Delivery date menu state
-      new_delivery_date: null, // New delivery date value
+      new_delivery_date: new Date(), // Set today's date as default
       po_date_menu: false, // PO date menu state
       new_po_date: null, // New PO date value
       date_menu: false, // Due date menu state
@@ -1446,8 +1446,20 @@ export default {
     },
     // Update delivery date after selection
     update_delivery_date() {
-      this.invoice_doc.posa_delivery_date = this.formatDate(this.new_delivery_date);
-    },
+  if (this.new_delivery_date) {
+    this.invoice_doc.posa_delivery_date = this.formatDate(this.new_delivery_date);
+  } else {
+    // If no date selected, set today's date
+    this.invoice_doc.posa_delivery_date = frappe.datetime.now_date();
+    this.new_delivery_date = new Date();
+  }
+},
+setTodayAsDeliveryDate() {
+  const today = new Date();
+  this.new_delivery_date = today;
+  this.invoice_doc.posa_delivery_date = this.formatDate(today);
+},
+
     // Update purchase order date after selection
     update_po_date() {
       this.invoice_doc.po_date = this.formatDate(this.new_po_date);
@@ -1517,6 +1529,12 @@ export default {
       // Listen to various event bus events for POS actions
       this.eventBus.on("send_invoice_doc_payment", (invoice_doc) => {
         this.invoice_doc = invoice_doc;
+        if (this.pos_profile.posa_allow_sales_order && this.invoiceType === 'Order') {
+  if (!this.invoice_doc.posa_delivery_date) {
+    this.invoice_doc.posa_delivery_date = frappe.datetime.now_date();
+    this.new_delivery_date = new Date();
+  }
+}
         const default_payment = this.invoice_doc.payments.find(
           (payment) => payment.default === 1
         );
