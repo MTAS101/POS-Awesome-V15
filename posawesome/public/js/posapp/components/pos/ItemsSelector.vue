@@ -240,6 +240,17 @@ export default {
         !force_server
       ) {
         vm.items = getItemsStorage();
+        // Fallback to cached UOMs when loading from storage
+        vm.items.forEach((it) => {
+          if (!it.item_uoms || it.item_uoms.length === 0) {
+            const cached = getItemUOMs(it.item_code);
+            if (cached.length > 0) {
+              it.item_uoms = cached;
+            } else if (it.stock_uom) {
+              it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+            }
+          }
+        });
         this.eventBus.emit("set_all_items", vm.items);
         vm.loading = false;
         vm.items_loaded = true;
@@ -264,6 +275,19 @@ export default {
         callback: async function (r) {
           if (r.message) {
             vm.items = r.message;
+            // Ensure UOMs are available for each item
+            vm.items.forEach((it) => {
+              if (it.item_uoms && it.item_uoms.length > 0) {
+                saveItemUOMs(it.item_code, it.item_uoms);
+              } else {
+                const cached = getItemUOMs(it.item_code);
+                if (cached.length > 0) {
+                  it.item_uoms = cached;
+                } else if (it.stock_uom) {
+                  it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+                }
+              }
+            });
             vm.eventBus.emit("set_all_items", vm.items);
             vm.loading = false;
             vm.items_loaded = true;
@@ -289,6 +313,11 @@ export default {
             ) {
               try {
                 setItemsStorage(r.message);
+                r.message.forEach((it) => {
+                  if (it.item_uoms && it.item_uoms.length > 0) {
+                    saveItemUOMs(it.item_code, it.item_uoms);
+                  }
+                });
               } catch (e) {
                 console.error(e);
               }

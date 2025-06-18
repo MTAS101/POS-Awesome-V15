@@ -315,6 +315,15 @@ def get_items(
                         },
                         fields=["name as serial_no"],
                     )
+                # Fetch UOM conversion details for the item
+                uoms = frappe.get_all(
+                    "UOM Conversion Detail",
+                    filters={"parent": item_code},
+                    fields=["uom", "conversion_factor"],
+                )
+                stock_uom = item.stock_uom
+                if stock_uom and not any(u.get("uom") == stock_uom for u in uoms):
+                    uoms.append({"uom": stock_uom, "conversion_factor": 1.0})
                 item_stock_qty = 0
                 if pos_profile.get("posa_display_items_in_stock") or use_limit_search:
                     item_stock_qty = get_stock_availability(
@@ -348,6 +357,7 @@ def get_items(
                             "batch_no_data": batch_no_data or [],
                             "attributes": attributes or "",
                             "item_attributes": item_attributes or "",
+                            "item_uoms": uoms or [],
                         }
                     )
                     result.append(row)
