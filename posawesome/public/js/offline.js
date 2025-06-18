@@ -339,7 +339,10 @@ export async function syncOfflineCustomers() {
 export function saveItemUOMs(itemCode, uoms) {
   try {
     const cache = memory.uom_cache;
-    cache[itemCode] = uoms;
+    // Clone to avoid persisting reactive objects which cause
+    // DataCloneError when stored in IndexedDB
+    const cleanUoms = JSON.parse(JSON.stringify(uoms));
+    cache[itemCode] = cleanUoms;
     memory.uom_cache = cache;
     persist('uom_cache');
   } catch (e) {
