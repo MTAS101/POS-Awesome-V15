@@ -1098,7 +1098,8 @@ export default {
     },
     debounce_qty: {
       get() {
-        return this.qty === null || this.qty === '' ? '' : this.formatFloat(this.qty);
+        // Display the raw quantity while typing to avoid forced decimal format
+        return this.qty === null || this.qty === '' ? '' : this.qty;
       },
       set: _.debounce(function (value) {
         let parsed = parseFloat(String(value).replace(/,/g, ''));
