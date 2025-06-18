@@ -6,7 +6,8 @@
       item-title="customer_name" item-value="name" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" :no-data-text="__('Customers not found')"
       hide-details :customFilter="customFilter" :disabled="readonly || loadingCustomers"
       :menu-props="{ closeOnContentClick: false }" @update:menu="onCustomerMenuToggle"
-      @update:modelValue="onCustomerChange" @keydown.enter="handleEnter">
+      @update:modelValue="onCustomerChange" @keydown.enter="handleEnter"
+      @update:search="onSearchChange">
       <!-- Edit icon (left) -->
       <template #prepend-inner>
         <v-tooltip text="Edit customer">
@@ -218,14 +219,26 @@ export default {
 
         event.target.blur();
       }
+
+    },
+
+    onSearchChange(search) {
+      if (this.pos_profile.pose_use_customer_limit_search) {
+        this.get_customer_names(search);
+      }
     },
 
     // Fetch customers list
-    get_customer_names() {
+    get_customer_names(search = '') {
       var vm = this;
-      if (this.customers.length > 0) return;
+      if (!search && this.customers.length > 0) return;
 
-      if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
+      if (
+        !search &&
+        vm.pos_profile.posa_local_storage &&
+        !vm.pos_profile.pose_use_customer_limit_search &&
+        getCustomerStorage().length
+      ) {
         try {
           vm.customers = getCustomerStorage();
         } catch (e) {
@@ -239,12 +252,16 @@ export default {
         method: 'posawesome.posawesome.api.posapp.get_customer_names',
         args: {
           pos_profile: this.pos_profile.pos_profile,
+          search_value: search,
         },
         callback: function (r) {
           if (r.message) {
             vm.customers = r.message;
 
-            if (vm.pos_profile.posa_local_storage) {
+            if (
+              vm.pos_profile.posa_local_storage &&
+              !vm.pos_profile.pose_use_customer_limit_search
+            ) {
               setCustomerStorage(r.message);
             }
           }

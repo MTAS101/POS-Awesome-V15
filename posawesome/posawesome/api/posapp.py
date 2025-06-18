@@ -432,37 +432,50 @@ def get_customer_group_condition(pos_profile):
 
 
 @frappe.whitelist()
-def get_customer_names(pos_profile):
+def get_customer_names(pos_profile, search_value=""):
     _pos_profile = json.loads(pos_profile)
     ttl = _pos_profile.get("posa_server_cache_duration")
     if ttl:
         ttl = int(ttl) * 60
 
     @redis_cache(ttl=ttl or 1800)
-    def __get_customer_names(pos_profile):
-        return _get_customer_names(pos_profile)
+    def __get_customer_names(pos_profile, search_value=""):
+        return _get_customer_names(pos_profile, search_value)
 
-    def _get_customer_names(pos_profile):
+    def _get_customer_names(pos_profile, search_value=""):
         pos_profile = json.loads(pos_profile)
         condition = ""
         condition += get_customer_group_condition(pos_profile)
-        customers = frappe.db.sql(
-            """
+
+        use_limit_search = pos_profile.get("pose_use_customer_limit_search")
+        search_limit = pos_profile.get("posa_customer_search_limit") or 500
+        limit_clause = ""
+        search_clause = ""
+
+        if search_value:
+            search_clause = (
+                " AND (customer_name LIKE %(s)s OR name LIKE %(s)s"
+                " OR mobile_no LIKE %(s)s OR email_id LIKE %(s)s)"
+            )
+        elif use_limit_search:
+            limit_clause = f" LIMIT {search_limit}"
+
+        query = (
+            f"""
             SELECT name, mobile_no, email_id, tax_id, customer_name, primary_address
             FROM `tabCustomer`
-            WHERE {0}
-            ORDER by name
-            """.format(
-                condition
-            ),
-            as_dict=1,
+            WHERE {condition}{search_clause}
+            ORDER by name{limit_clause}
+            """
         )
-        return customers
+
+        params = {"s": f"%{search_value}%"}
+        return frappe.db.sql(query, params, as_dict=1)
 
     if _pos_profile.get("posa_use_server_cache"):
-        return __get_customer_names(pos_profile)
+        return __get_customer_names(pos_profile, search_value)
     else:
-        return _get_customer_names(pos_profile)
+        return _get_customer_names(pos_profile, search_value)
 
 
 @frappe.whitelist()
