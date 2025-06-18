@@ -234,8 +234,10 @@ export async function syncOfflineInvoices() {
 
   const invoices = getOfflineInvoices();
   if (!invoices.length) {
-    // No invoices to sync; keep previously stored totals
-    return getLastSyncTotals();
+    // No invoices to sync; clear last totals to avoid repeated messages
+    const totals = { pending: 0, synced: 0, drafted: 0 };
+    setLastSyncTotals(totals);
+    return totals;
   }
   if (isOffline()) {
     // When offline just return the pending count without attempting a sync
@@ -286,7 +288,13 @@ export async function syncOfflineInvoices() {
   }
 
   const totals = { pending: pendingLeft, synced, drafted };
-  setLastSyncTotals(totals);
+  if (pendingLeft || drafted) {
+    // Persist totals only if there are invoices still pending or drafted
+    setLastSyncTotals(totals);
+  } else {
+    // Clear totals so success message only shows once
+    setLastSyncTotals({ pending: 0, synced: 0, drafted: 0 });
+  }
   return totals;
 }
 
