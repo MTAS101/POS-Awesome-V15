@@ -297,7 +297,9 @@ export default {
             await vm.prePopulateStockCache(vm.items);
 
             vm.$nextTick(() => {
-              if (vm.search) vm.search_onchange();
+              if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+                vm.search_onchange();
+              }
             });
 
             // Always refresh quantities after items are loaded
