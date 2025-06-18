@@ -132,9 +132,11 @@
 <script>
 import UpdateCustomer from './UpdateCustomer.vue';
 import { getCustomerStorage, setCustomerStorage } from '../../../offline.js';
-import _ from 'lodash';
+
 export default {
-  name: 'PosCustomer',
+  props: {
+    pos_profile: Object
+  },
 
   data: () => ({
     pos_profile: '',
@@ -222,13 +224,9 @@ export default {
 
     onSearchChange(search) {
       if (this.pos_profile.pose_use_customer_limit_search) {
-        this.debouncedCustomerSearch(search);
+        this.get_customer_names(search);
       }
     },
-
-    debouncedCustomerSearch: _.debounce(function (search) {
-      this.get_customer_names(search);
-    }, 300),
 
     // Fetch customers list
     get_customer_names(search = '') {
