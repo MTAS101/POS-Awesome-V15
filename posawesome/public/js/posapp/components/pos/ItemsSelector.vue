@@ -170,12 +170,34 @@ export default {
 
   watch: {
     customer: _.debounce(function () {
-      // Reload items when customer changes, using cache when available
-      this.items_loaded = false;
-      this.get_items();
+      // When the customer changes, avoid reloading all items.
+      // Simply refresh quantities if items are already loaded.
+      if (this.items_loaded && this.filtered_items && this.filtered_items.length > 0) {
+        this.update_items_details(this.filtered_items);
+      } else {
+        this.get_items();
+      }
     }, 300),
     customer_price_list: _.debounce(function () {
-      // Reload items when price list changes, using cache when available
+      // When price list changes try to update rates from cache
+      if (this.items_loaded && this.items && this.items.length > 0) {
+        const cached = getCachedPriceListItems(this.customer_price_list);
+        if (cached && cached.length) {
+          const map = {};
+          cached.forEach(ci => { map[ci.item_code] = ci; });
+          this.items.forEach(it => {
+            const ci = map[it.item_code];
+            if (ci) {
+              it.rate = ci.rate;
+              it.price_list_rate = ci.price_list_rate || ci.rate;
+            }
+          });
+          this.eventBus.emit("set_all_items", this.items);
+          this.update_items_details(this.items);
+          return;
+        }
+      }
+      // Fallback to reload items if cache missing
       this.items_loaded = false;
       this.get_items();
     }, 300),
@@ -601,25 +623,31 @@ export default {
         vm.itemDetailsRetryTimeout = null;
       }
 
-      // If offline, use cached local stock quantities and UOMs
-      if (isOffline()) {
-        vm.itemDetailsRetryCount = 0;
-        items.forEach((item) => {
-          const localQty = getLocalStock(item.item_code);
-          if (localQty !== null) {
-            item.actual_qty = localQty;
-          }
+      // Use cached quantities and UOMs whenever available
+      let allCached = true;
+      items.forEach((item) => {
+        const localQty = getLocalStock(item.item_code);
+        if (localQty !== null) {
+          item.actual_qty = localQty;
+        } else {
+          allCached = false;
+        }
 
-          // Retrieve cached UOMs to populate dropdowns when offline
-          if (!item.item_uoms || item.item_uoms.length === 0) {
-            const cachedUoms = getItemUOMs(item.item_code);
-            if (cachedUoms.length > 0) {
-              item.item_uoms = cachedUoms;
-            } else {
-              item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
-            }
+        if (!item.item_uoms || item.item_uoms.length === 0) {
+          const cachedUoms = getItemUOMs(item.item_code);
+          if (cachedUoms.length > 0) {
+            item.item_uoms = cachedUoms;
+          } else if (isOffline()) {
+            item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
+          } else {
+            allCached = false;
           }
-        });
+        }
+      });
+
+      // When offline or everything is cached, skip server call
+      if (isOffline() || allCached) {
+        vm.itemDetailsRetryCount = 0;
         return;
       }
 

@@ -66,5 +66,7 @@ export default {
     selected_price_list(newVal) {
       const price_list = newVal === this.pos_profile.selling_price_list ? null : newVal;
       this.eventBus.emit("update_customer_price_list", price_list);
+      const applied = newVal || this.pos_profile.selling_price_list;
+      this.apply_cached_price_list(applied);
     },
 };

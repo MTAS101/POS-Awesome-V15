@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline.js";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems } from "../../../offline.js";
 
 export default {
 
@@ -1499,7 +1499,8 @@ export default {
               ...message,
             };
           }
-          vm.update_price_list();
+          // Do not automatically change the price list when customer changes
+          // Users can still manually select a different price list
         } catch (error) {
           console.error("Failed to fetch customer details", error);
         }
@@ -1526,16 +1527,56 @@ export default {
     },
 
     // Update price list for customer
-    update_price_list() {
-      let price_list = this.get_price_list();
-      if (price_list == this.pos_profile.selling_price_list) {
-        this.selected_price_list = this.pos_profile.selling_price_list;
-        this.eventBus.emit("update_customer_price_list", null);
-      } else {
-        this.selected_price_list = price_list;
-        this.eventBus.emit("update_customer_price_list", price_list);
-      }
-    },
+      update_price_list() {
+        let price_list = this.get_price_list();
+        if (price_list == this.pos_profile.selling_price_list) {
+          this.selected_price_list = this.pos_profile.selling_price_list;
+          this.eventBus.emit("update_customer_price_list", null);
+        } else {
+          this.selected_price_list = price_list;
+          this.eventBus.emit("update_customer_price_list", price_list);
+        }
+      },
+
+      // Apply cached price list rates to existing invoice items
+      apply_cached_price_list(price_list) {
+        const cached = getCachedPriceListItems(price_list);
+        if (!cached) {
+          return;
+        }
+
+        const map = {};
+        cached.forEach(ci => { map[ci.item_code] = ci; });
+
+        this.items.forEach(item => {
+          const ci = map[item.item_code];
+          if (!ci) return;
+
+          item.base_price_list_rate = ci.rate || ci.price_list_rate;
+          if (!item._manual_rate_set) {
+            item.base_rate = ci.rate || ci.price_list_rate;
+          }
+
+          if (this.selected_currency !== this.pos_profile.currency) {
+            const conv = this.exchange_rate || 1;
+            item.price_list_rate = this.flt((ci.rate || ci.price_list_rate) / conv, this.currency_precision);
+            if (!item._manual_rate_set) {
+              item.rate = this.flt((ci.rate || ci.price_list_rate) / conv, this.currency_precision);
+            }
+          } else {
+            item.price_list_rate = ci.rate || ci.price_list_rate;
+            if (!item._manual_rate_set) {
+              item.rate = ci.rate || ci.price_list_rate;
+            }
+          }
+
+          // Recalculate final amounts
+          item.amount = this.flt(item.qty * item.rate, this.currency_precision);
+          item.base_amount = this.flt(item.qty * item.base_rate, this.currency_precision);
+        });
+
+        this.$forceUpdate();
+      },
 
     // Update additional discount amount based on percentage
     update_discount_umount() {
