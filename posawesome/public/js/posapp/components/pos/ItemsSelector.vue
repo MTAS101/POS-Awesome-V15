@@ -170,6 +170,12 @@ export default {
 
   watch: {
     customer: _.debounce(function () {
+      if (this.pos_profile.posa_force_reload_items) {
+        // Always fetch new items from server when option enabled
+        this.items_loaded = false;
+        this.get_items(true);
+        return;
+      }
       // When the customer changes, avoid reloading all items.
       // Simply refresh quantities if items are already loaded.
       if (this.items_loaded && this.filtered_items && this.filtered_items.length > 0) {
@@ -179,6 +185,12 @@ export default {
       }
     }, 300),
     customer_price_list: _.debounce(function () {
+      if (this.pos_profile.posa_force_reload_items) {
+        // Always fetch new items when price list changes
+        this.items_loaded = false;
+        this.get_items(true);
+        return;
+      }
       // Apply cached rates if available for immediate update
       if (this.items_loaded && this.items && this.items.length > 0) {
         const cached = getCachedPriceListItems(this.customer_price_list);
@@ -296,8 +308,7 @@ export default {
         vm.pos_profile.posa_local_storage &&
         getItemsStorage().length &&
         !vm.pos_profile.pose_use_limit_search &&
-        !force_server &&
-        vm.customer_price_list === vm.pos_profile.selling_price_list
+        !force_server
       ) {
         vm.items = getItemsStorage();
         // Fallback to cached UOMs when loading from storage
@@ -315,9 +326,9 @@ export default {
         vm.loading = false;
         vm.items_loaded = true;
 
-        setTimeout(() => {
+        setTimeout(async () => {
           if (vm.items && vm.items.length > 0) {
-            vm.prePopulateStockCache(vm.items);
+            await vm.prePopulateStockCache(vm.items);
             vm.update_items_details(vm.items);
           }
         }, 300);

@@ -199,8 +199,8 @@ def get_items(
                     item_group=item_group
                 )
 
-            # Use limit only when no explicit search value is provided
-            if not search_value:
+            # Use limit when searching to avoid heavy queries
+            if search_value:
                 limit = " LIMIT {search_limit}".format(search_limit=search_limit)
             else:
                 limit = ""
