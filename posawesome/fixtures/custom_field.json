@@ -5441,5 +5441,16 @@
     "options": "0\n1\n2\n3\n4\n5",
     "default": "2",
     "name": "POS Profile-posa_decimal_precision"
+  },
+  {
+    "doctype": "Custom Field",
+    "dt": "POS Settings",
+    "fieldname": "posa_enable_offline_mode",
+    "fieldtype": "Check",
+    "insert_after": "pos_search_fields",
+    "label": "Enable Offline Mode",
+    "description": "Works only when site is accessed via HTTPS",
+    "default": "0",
+    "name": "POS Settings-posa_enable_offline_mode"
   }
 ]

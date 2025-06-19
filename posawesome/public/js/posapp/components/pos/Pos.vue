@@ -44,9 +44,7 @@ import NewAddress from './NewAddress.vue';
 import Variants from './Variants.vue';
 import Returns from './Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
-import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, clearOpeningStorage, initPromise } from '../../../offline.js';
-// Import the cache cleanup function
-import { clearExpiredCustomerBalances } from "../../../offline.js";
+import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, clearOpeningStorage, initPromise, setOfflineMode, clearExpiredCustomerBalances } from '../../../offline.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
@@ -218,6 +216,7 @@ export default {
     },
     get_pos_setting() {
       frappe.db.get_doc('POS Settings', undefined).then((doc) => {
+        setOfflineMode(Boolean(doc.posa_enable_offline_mode));
         this.eventBus.emit('set_pos_settings', doc);
       });
     },

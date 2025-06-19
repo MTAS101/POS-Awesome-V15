@@ -260,6 +260,7 @@ fixtures = [
                     "POS Profile-posa_allow_mpesa_reconcile_payments",
                     "POS Profile-posa_enable_camera_scanning",
                     "POS Profile-posa_camera_scan_type",
+                    "POS Settings-posa_enable_offline_mode",
                 ),
             ]
         ],
