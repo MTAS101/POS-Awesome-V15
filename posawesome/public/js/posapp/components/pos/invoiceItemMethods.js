@@ -898,49 +898,47 @@ export default {
     },
 
     // Update invoice in backend
-    update_invoice(doc) {
-      var vm = this;
+    async update_invoice(doc) {
+      const vm = this;
       if (isOffline()) {
         // When offline, simply merge the passed doc with the current invoice_doc
         // to allow offline invoice creation without server calls
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
         return vm.invoice_doc;
       }
-      frappe.call({
-        method: "posawesome.posawesome.api.posapp.update_invoice",
-        args: {
-          data: doc,
-        },
-        async: false,
-        callback: function (r) {
-          if (r.message) {
-            vm.invoice_doc = r.message;
-          }
-        },
-      });
+      try {
+        const r = await frappe.call({
+          method: "posawesome.posawesome.api.posapp.update_invoice",
+          args: { data: doc }
+        });
+        if (r.message) {
+          vm.invoice_doc = r.message;
+        }
+      } catch (err) {
+        console.error("Error updating invoice", err);
+      }
       return this.invoice_doc;
     },
 
     // Update invoice from order in backend
-    update_invoice_from_order(doc) {
-      var vm = this;
+    async update_invoice_from_order(doc) {
+      const vm = this;
       if (isOffline()) {
         // Offline mode - merge doc locally without server update
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
         return vm.invoice_doc;
       }
-      frappe.call({
-        method: "posawesome.posawesome.api.posapp.update_invoice_from_order",
-        args: {
-          data: doc,
-        },
-        async: false,
-        callback: function (r) {
-          if (r.message) {
-            vm.invoice_doc = r.message;
-          }
-        },
-      });
+      try {
+        const r = await frappe.call({
+          method: "posawesome.posawesome.api.posapp.update_invoice_from_order",
+          args: { data: doc }
+        });
+        if (r.message) {
+          vm.invoice_doc = r.message;
+        }
+      } catch (err) {
+        console.error("Error updating invoice from order", err);
+      }
       return this.invoice_doc;
     },
 
@@ -1240,38 +1238,40 @@ export default {
     },
 
     // Get draft invoices from backend
-    get_draft_invoices() {
-      var vm = this;
-      frappe.call({
-        method: "posawesome.posawesome.api.posapp.get_draft_invoices",
-        args: {
-          pos_opening_shift: this.pos_opening_shift.name,
-        },
-        async: false,
-        callback: function (r) {
-          if (r.message) {
-            vm.eventBus.emit("open_drafts", r.message);
-          }
-        },
-      });
+    async get_draft_invoices() {
+      const vm = this;
+      try {
+        const r = await frappe.call({
+          method: "posawesome.posawesome.api.posapp.get_draft_invoices",
+          args: {
+            pos_opening_shift: this.pos_opening_shift.name,
+          },
+        });
+        if (r.message) {
+          vm.eventBus.emit("open_drafts", r.message);
+        }
+      } catch (err) {
+        console.error("Failed to load draft invoices", err);
+      }
     },
 
     // Get draft orders from backend
-    get_draft_orders() {
-      var vm = this;
-      frappe.call({
-        method: "posawesome.posawesome.api.posapp.search_orders",
-        args: {
-          company: this.pos_profile.company,
-          currency: this.pos_profile.currency,
-        },
-        async: false,
-        callback: function (r) {
-          if (r.message) {
-            vm.eventBus.emit("open_orders", r.message);
-          }
-        },
-      });
+    async get_draft_orders() {
+      const vm = this;
+      try {
+        const r = await frappe.call({
+          method: "posawesome.posawesome.api.posapp.search_orders",
+          args: {
+            company: this.pos_profile.company,
+            currency: this.pos_profile.currency,
+          },
+        });
+        if (r.message) {
+          vm.eventBus.emit("open_orders", r.message);
+        }
+      } catch (err) {
+        console.error("Failed to load draft orders", err);
+      }
     },
 
     // Open returns dialog
@@ -1483,25 +1483,22 @@ export default {
     },
 
     // Fetch customer details (info, price list, etc)
-    fetch_customer_details() {
-      var vm = this;
+    async fetch_customer_details() {
+      const vm = this;
       if (this.customer) {
-        frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_customer_info",
-          args: {
-            customer: vm.customer,
-          },
-          async: false,
-          callback: (r) => {
-            const message = r.message;
-            if (!r.exc) {
-              vm.customer_info = {
-                ...message,
-              };
-            }
-            vm.update_price_list();
-          },
-        });
+        try {
+          const r = await frappe.call({
+            method: "posawesome.posawesome.api.posapp.get_customer_info",
+            args: { customer: vm.customer },
+          });
+          const message = r.message;
+          if (!r.exc) {
+            vm.customer_info = { ...message };
+          }
+          vm.update_price_list();
+        } catch (err) {
+          console.error("Failed to fetch customer details", err);
+        }
       }
     },
 

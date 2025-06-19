@@ -89,42 +89,46 @@ export default {
         this.search();
       }
     },
-    search() {
+    async search() {
       const vm = this;
-      frappe.call({
-        method: 'posawesome.posawesome.api.m_pesa.get_mpesa_draft_payments',
-        args: {
-          company: this.company,
-          mode_of_payment: this.mode_of_payment,
-          mobile_no: this.mobile_no,
-          full_name: this.full_name,
-        },
-        async: false,
-        callback: function (r) {
-          if (!r.exc) {
-            vm.dialog_data = r.message;
-          }
-        },
-      });
+      try {
+        const r = await frappe.call({
+          method: 'posawesome.posawesome.api.m_pesa.get_mpesa_draft_payments',
+          args: {
+            company: this.company,
+            mode_of_payment: this.mode_of_payment,
+            mobile_no: this.mobile_no,
+            full_name: this.full_name,
+          },
+        });
+        if (!r.exc) {
+          vm.dialog_data = r.message;
+        }
+      } catch (err) {
+        console.error('Failed to search mpesa payments', err);
+      }
     },
     submit_dialog() {
       var vm = this;
       if (this.selected.length > 0) {
         const selected_payment = this.selected[0].name;
-        frappe.call({
-          method: 'posawesome.posawesome.api.m_pesa.submit_mpesa_payment',
-          args: {
-            mpesa_payment: selected_payment,
-            customer: this.customer,
-          },
-          async: false,
-          callback: function (r) {
+        frappe
+          .call({
+            method: 'posawesome.posawesome.api.m_pesa.submit_mpesa_payment',
+            args: {
+              mpesa_payment: selected_payment,
+              customer: this.customer,
+            },
+          })
+          .then(r => {
             if (!r.exc) {
               vm.eventBus.emit('set_mpesa_payment', r.message);
               vm.dialog = false;
             }
-          },
-        });
+          })
+          .catch(err => {
+            console.error('Failed to submit mpesa payment', err);
+          });
       }
     },
     formatCurrency(value) {

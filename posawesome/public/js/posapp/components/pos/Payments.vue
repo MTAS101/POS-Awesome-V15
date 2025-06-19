@@ -1446,21 +1446,22 @@ export default {
       formData["redeemed_customer_credit"] = this.redeemed_customer_credit;
       formData["customer_credit_dict"] = this.customer_credit_dict;
       formData["is_cashback"] = this.is_cashback;
-      frappe.call({
-        method: "posawesome.posawesome.api.posapp.update_invoice",
-        args: { data: formData },
-        async: false,
-        callback: function (r) {
+      frappe
+        .call({
+          method: "posawesome.posawesome.api.posapp.update_invoice",
+          args: { data: formData },
+        })
+        .then((r) => {
           if (r.message) {
             vm.invoice_doc = r.message;
           }
-        },
-      }).then(() => {
-        frappe.call({
-          method: "posawesome.posawesome.api.posapp.create_payment_request",
-          args: { doc: vm.invoice_doc },
         })
-        .fail(() => {
+        .then(() => {
+          frappe.call({
+            method: "posawesome.posawesome.api.posapp.create_payment_request",
+            args: { doc: vm.invoice_doc },
+          })
+          .fail(() => {
           vm.eventBus.emit("unfreeze");
           vm.eventBus.emit("show_message", {
             title: __("Payment request failed"),

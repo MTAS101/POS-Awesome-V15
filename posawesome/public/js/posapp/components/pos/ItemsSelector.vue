@@ -62,6 +62,9 @@
                     </v-card-text>
                   </v-card>
                 </v-col>
+                <v-col v-if="loading && !items_loaded" v-for="n in 6" :key="'skeleton-' + n" xl="2" lg="3" md="6" sm="6" cols="6">
+                  <v-skeleton-loader type="image, card-heading" />
+                </v-col>
               </v-row>
             </div>
             <div v-else>
