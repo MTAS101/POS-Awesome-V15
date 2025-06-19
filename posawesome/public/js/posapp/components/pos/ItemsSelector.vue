@@ -37,7 +37,7 @@
             <div fluid class="items" v-if="items_view == 'card'">
               <v-row density="default" class="overflow-y-auto dynamic-scroll"
                 :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
-                <v-col v-for="(item, idx) in filtered_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
+                <v-col v-for="(item, idx) in paginated_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
                   min-height="50">
                   <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
                     <v-img :src="item.image ||
@@ -65,7 +65,7 @@
               </v-row>
             </div>
             <div v-else>
-              <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table overflow-y-auto"
+              <v-data-table-virtual :headers="headers" :items="paginated_items" class="sleek-data-table overflow-y-auto"
                 :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }" item-key="item_code"
                 @click:row="click_item_row">
 
@@ -115,6 +115,14 @@
             : {{ appliedOffersCount }}
             {{ __("Applied") }}</v-btn>
         </v-col>
+        <v-col cols="12" class="mt-2">
+          <v-pagination
+            v-model="currentPage"
+            :length="totalPages"
+            density="compact"
+            color="primary"
+          ></v-pagination>
+        </v-col>
       </v-row>
     </v-card>
 
@@ -148,7 +156,8 @@ export default {
     search: "",
     first_search: "",
     search_backup: "",
-    itemsPerPage: 1000,
+    itemsPerPage: 50,
+    currentPage: 1,
     offersCount: 0,
     appliedOffersCount: 0,
     couponsCount: 0,
@@ -181,14 +190,19 @@ export default {
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
     },
-    filtered_items(new_value, old_value) {
-      // Update item details if items changed
+    filtered_items() {
+      this.currentPage = 1;
+    },
+    paginated_items(newVal, oldVal) {
       if (
         !this.pos_profile.pose_use_limit_search &&
-        new_value.length !== old_value.length
+        newVal.length !== oldVal.length
       ) {
-        this.update_items_details(new_value);
+        this.update_items_details(newVal);
       }
+    },
+    currentPage() {
+      this.update_items_details(this.paginated_items);
     },
     // Auto-trigger search when limit search is enabled and the query changes
     first_search: _.debounce(function (val) {
@@ -231,8 +245,8 @@ export default {
         !this.pos_profile.pose_use_limit_search
       ) {
         console.info("Items already loaded, skipping reload");
-        if (this.filtered_items && this.filtered_items.length > 0) {
-          this.update_items_details(this.filtered_items);
+        if (this.paginated_items && this.paginated_items.length > 0) {
+          this.update_items_details(this.paginated_items);
         }
         this.loading = false;
         return;
@@ -264,7 +278,7 @@ export default {
         setTimeout(async () => {
           if (vm.items && vm.items.length > 0) {
             await vm.prePopulateStockCache(vm.items);
-            vm.update_items_details(vm.items);
+            vm.update_items_details(vm.paginated_items);
           }
         }, 300);
         return;
@@ -311,7 +325,7 @@ export default {
             // Always refresh quantities after items are loaded
             setTimeout(() => {
               if (vm.items && vm.items.length > 0) {
-                vm.update_items_details(vm.items);
+                vm.update_items_details(vm.paginated_items);
               }
             }, 300);
 
@@ -440,11 +454,11 @@ export default {
     },
     enter_event() {
       let match = false;
-      if (!this.filtered_items.length || !this.first_search) {
+      if (!this.paginated_items.length || !this.first_search) {
         return;
       }
       const qty = this.get_item_qty(this.first_search);
-      const new_item = { ...this.filtered_items[0] };
+      const new_item = { ...this.paginated_items[0] };
       new_item.qty = flt(qty);
       new_item.item_barcode.forEach((element) => {
         if (this.search == element.barcode) {
@@ -501,15 +515,15 @@ export default {
         vm.get_items();
       } else {
         // Save the current filtered items before search to maintain quantity data
-        const current_items = [...vm.filtered_items];
+        const current_items = [...vm.paginated_items];
         if (vm.search && vm.search.length >= 3) {
           vm.enter_event();
         }
 
         // After search, update quantities for newly filtered items
-        if (vm.filtered_items && vm.filtered_items.length > 0) {
+        if (vm.paginated_items && vm.paginated_items.length > 0) {
           setTimeout(() => {
-            vm.update_items_details(vm.filtered_items);
+            vm.update_items_details(vm.paginated_items);
           }, 300);
         }
       }
@@ -691,8 +705,8 @@ export default {
       };
     },
     update_cur_items_details() {
-      if (this.filtered_items && this.filtered_items.length > 0) {
-        this.update_items_details(this.filtered_items);
+      if (this.paginated_items && this.paginated_items.length > 0) {
+        this.update_items_details(this.paginated_items);
       }
     },
     async prePopulateStockCache(items) {
@@ -737,7 +751,7 @@ export default {
       }
     },
     trigger_onscan(sCode) {
-      if (this.filtered_items.length == 0) {
+      if (this.paginated_items.length == 0) {
         this.eventBus.emit("show_message", {
           title: `No Item has this barcode "${sCode}"`,
           color: "error",
@@ -1002,11 +1016,9 @@ export default {
             this.pos_profile.posa_show_template_items &&
             this.pos_profile.posa_hide_variants_items
           ) {
-            filtered = filtred_group_list
-              .filter((item) => !item.variant_of)
-              .slice(0, 50);
+            filtered = filtred_group_list.filter((item) => !item.variant_of);
           } else {
-            filtered = filtred_group_list.slice(0, 50);
+            filtered = filtred_group_list;
           }
 
           // Ensure quantities are defined
@@ -1093,9 +1105,9 @@ export default {
           this.pos_profile.posa_show_template_items &&
           this.pos_profile.posa_hide_variants_items
         ) {
-          final_filtered_list = filtred_list.filter((item) => !item.variant_of).slice(0, 50);
+          final_filtered_list = filtred_list.filter((item) => !item.variant_of);
         } else {
-          final_filtered_list = filtred_list.slice(0, 50);
+          final_filtered_list = filtred_list;
         }
 
         // Ensure quantities are defined for each item
@@ -1105,16 +1117,9 @@ export default {
           }
         });
 
-        // Force request quantity update for filtered items
-        if (final_filtered_list.length > 0) {
-          setTimeout(() => {
-            this.update_items_details(final_filtered_list);
-          }, 100);
-        }
-
         return final_filtered_list;
       } else {
-        const items_list = this.items.slice(0, 50);
+        const items_list = this.items;
 
         // Ensure quantities are defined
         items_list.forEach(item => {
@@ -1125,6 +1130,14 @@ export default {
 
         return items_list;
       }
+    },
+    paginated_items() {
+      const start = (this.currentPage - 1) * this.itemsPerPage;
+      const end = start + this.itemsPerPage;
+      return this.filtered_items.slice(start, end);
+    },
+    totalPages() {
+      return Math.ceil(this.filtered_items.length / this.itemsPerPage) || 1;
     },
     debounce_search: {
       get() {
@@ -1183,8 +1196,8 @@ export default {
 
     // Refresh item quantities when connection to server is restored
     this.eventBus.on("server-online", async () => {
-      if (this.items && this.items.length > 0) {
-        await this.update_items_details(this.items);
+      if (this.paginated_items && this.paginated_items.length > 0) {
+        await this.update_items_details(this.paginated_items);
       }
     });
 
@@ -1192,7 +1205,7 @@ export default {
     // Trigger an immediate refresh once items are available
     this.update_cur_items_details();
     this.refresh_interval = setInterval(() => {
-      if (this.filtered_items && this.filtered_items.length > 0) {
+      if (this.paginated_items && this.paginated_items.length > 0) {
         this.update_cur_items_details();
       }
     }, 30000); // Refresh every 30 seconds after the initial fetch
