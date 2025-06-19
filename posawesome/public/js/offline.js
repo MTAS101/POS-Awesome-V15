@@ -16,9 +16,8 @@ const memory = {
   customer_storage: [],
   pos_opening_storage: null,
   opening_dialog_storage: null,
-  sales_persons_storage: [],
-  offline_mode: false,
-  price_list_cache: {}
+  sales_persons_storage: []
+  ,price_list_cache: {}
 };
 
 export const initPromise = new Promise(resolve => {
@@ -145,9 +144,6 @@ export function saveOfflineInvoice(entry) {
 }
 
 export function isOffline() {
-  if (!memory.offline_mode) {
-    return false;
-  }
   if (typeof window !== 'undefined') {
     // Disable offline mode entirely when not using HTTPS
     if (window.location.protocol !== 'https:') {
@@ -705,13 +701,4 @@ export function getLocalStockCache() {
 export function setLocalStockCache(cache) {
   memory.local_stock_cache = cache || {};
   persist('local_stock_cache');
-}
-
-export function setOfflineMode(flag) {
-  memory.offline_mode = !!flag;
-  persist('offline_mode');
-}
-
-export function getOfflineMode() {
-  return memory.offline_mode;
 }
