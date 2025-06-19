@@ -512,26 +512,27 @@ export default {
     create_opening_voucher() {
       this.dialog = true;
     },
-    fetch_customer_details() {
+    async fetch_customer_details() {
       var vm = this;
       if (this.customer_name) {
-        frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_customer_info",
-          args: {
-            customer: vm.customer_name,
-          },
-          async: false,
-          callback: (r) => {
-            const message = r.message;
-            if (!r.exc) {
-              vm.customer_info = {
-                ...message,
-              };
-              vm.set_mpesa_search_params();
-              vm.eventBus.emit("set_customer_info_to_edit", vm.customer_info);
-            }
-          },
-        });
+        try {
+          const r = await frappe.call({
+            method: "posawesome.posawesome.api.posapp.get_customer_info",
+            args: {
+              customer: vm.customer_name,
+            },
+          });
+          const message = r.message;
+          if (!r.exc) {
+            vm.customer_info = {
+              ...message,
+            };
+            vm.set_mpesa_search_params();
+            vm.eventBus.emit("set_customer_info_to_edit", vm.customer_info);
+          }
+        } catch (error) {
+          console.error("Failed to fetch customer details", error);
+        }
       }
     },
     onInvoiceSelected(event) {

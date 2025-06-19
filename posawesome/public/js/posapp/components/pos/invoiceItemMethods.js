@@ -1483,25 +1483,26 @@ export default {
     },
 
     // Fetch customer details (info, price list, etc)
-    fetch_customer_details() {
+    async fetch_customer_details() {
       var vm = this;
       if (this.customer) {
-        frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_customer_info",
-          args: {
-            customer: vm.customer,
-          },
-          async: false,
-          callback: (r) => {
-            const message = r.message;
-            if (!r.exc) {
-              vm.customer_info = {
-                ...message,
-              };
-            }
-            vm.update_price_list();
-          },
-        });
+        try {
+          const r = await frappe.call({
+            method: "posawesome.posawesome.api.posapp.get_customer_info",
+            args: {
+              customer: vm.customer,
+            },
+          });
+          const message = r.message;
+          if (!r.exc) {
+            vm.customer_info = {
+              ...message,
+            };
+          }
+          vm.update_price_list();
+        } catch (error) {
+          console.error("Failed to fetch customer details", error);
+        }
       }
     },
 

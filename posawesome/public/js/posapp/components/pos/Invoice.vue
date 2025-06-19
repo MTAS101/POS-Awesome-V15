@@ -255,7 +255,7 @@ export default {
         },
       ]);
     },
-    set_delivery_charges() {
+    async set_delivery_charges() {
       var vm = this;
       if (
         !this.pos_profile ||
@@ -269,24 +269,23 @@ export default {
       }
       this.delivery_charges_rate = 0;
       this.selected_delivery_charge = "";
-      frappe.call({
-        method:
-          "posawesome.posawesome.api.posapp.get_applicable_delivery_charges",
-        args: {
-          company: this.pos_profile.company,
-          pos_profile: this.pos_profile.name,
-          customer: this.customer,
-        },
-        async: false,
-        callback: function (r) {
-          if (r.message) {
-            if (r.message?.length) {
-              console.log(r.message)
-              vm.delivery_charges = r.message;
-            }
-          }
-        },
-      });
+      try {
+        const r = await frappe.call({
+          method:
+            "posawesome.posawesome.api.posapp.get_applicable_delivery_charges",
+          args: {
+            company: this.pos_profile.company,
+            pos_profile: this.pos_profile.name,
+            customer: this.customer,
+          },
+        });
+        if (r.message && r.message.length) {
+          console.log(r.message);
+          vm.delivery_charges = r.message;
+        }
+      } catch (error) {
+        console.error("Failed to fetch delivery charges", error);
+      }
     },
     deliveryChargesFilter(itemText, queryText, itemRow) {
       const item = itemRow.raw;
