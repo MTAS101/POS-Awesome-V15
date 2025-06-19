@@ -179,7 +179,7 @@ export default {
       }
     }, 300),
     customer_price_list: _.debounce(function () {
-      // When price list changes try to update rates from cache
+      // Apply cached rates if available for immediate update
       if (this.items_loaded && this.items && this.items.length > 0) {
         const cached = getCachedPriceListItems(this.customer_price_list);
         if (cached && cached.length) {
@@ -197,9 +197,7 @@ export default {
           return;
         }
       }
-      // Fallback to reload items if cache missing
-      this.items_loaded = false;
-      this.get_items();
+      // No cache found; keep existing items without reloading from server
     }, 300),
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
