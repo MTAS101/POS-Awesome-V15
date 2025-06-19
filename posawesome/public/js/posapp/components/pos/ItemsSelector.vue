@@ -604,7 +604,8 @@ export default {
           pos_profile: vm.pos_profile,
           items_data: items,
         },
-        freeze: true,
+        // Avoid freezing the UI while item details are fetched
+        freeze: false,
         signal: vm.abortController.signal,
         callback: function (r) {
           if (r.message) {
