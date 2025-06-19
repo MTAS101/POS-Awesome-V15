@@ -199,11 +199,22 @@ def get_items(
                     item_group=item_group
                 )
 
-            # Use limit when searching to avoid heavy queries
-            if search_value:
-                limit = " LIMIT {search_limit}".format(search_limit=search_limit)
+            # Respect force reload setting when applying search limits
+            if pos_profile.get("posa_force_reload_items"):
+                # When force reload is enabled, apply limit only on the initial
+                # load (no explicit search value) to avoid heavy queries while
+                # still returning full results when the user searches.
+                if not search_value:
+                    limit = " LIMIT {search_limit}".format(search_limit=search_limit)
+                else:
+                    limit = ""
             else:
-                limit = ""
+                # Default behaviour: limit results during a search to reduce
+                # payload when not forcing a reload of all items.
+                if search_value:
+                    limit = " LIMIT {search_limit}".format(search_limit=search_limit)
+                else:
+                    limit = ""
 
         if not posa_show_template_items:
             condition += " AND has_variants = 0"
