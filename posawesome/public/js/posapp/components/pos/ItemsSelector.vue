@@ -1238,7 +1238,11 @@ export default {
     this.eventBus.on("register_pos_profile", async (data) => {
       await initPromise;
       this.pos_profile = data.pos_profile;
-      await this.get_items();
+      if (this.pos_profile.posa_force_reload_items) {
+        await this.get_items(true);
+      } else {
+        await this.get_items();
+      }
       this.get_items_groups();
       this.items_view = this.pos_profile.posa_default_card_view
         ? "card"
