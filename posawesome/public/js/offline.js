@@ -143,8 +143,14 @@ export function saveOfflineInvoice(entry) {
 }
 
 export function isOffline() {
-  if (typeof window !== 'undefined' && typeof window.serverOnline === 'boolean') {
-    return !navigator.onLine || !window.serverOnline;
+  if (typeof window !== 'undefined') {
+    // Disable offline mode entirely when not using HTTPS
+    if (window.location.protocol !== 'https:') {
+      return false;
+    }
+    if (typeof window.serverOnline === 'boolean') {
+      return !navigator.onLine || !window.serverOnline;
+    }
   }
   return !navigator.onLine;
 }
