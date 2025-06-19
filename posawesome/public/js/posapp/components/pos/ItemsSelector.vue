@@ -43,8 +43,7 @@
                     <v-img :src="item.image ||
                       '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
                       " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
-                      <!-- eslint-disable-next-line vue/no-v-text-v-html-on-component -->
-                      <v-card-text class="text-caption px-1 pb-0">{{ item.item_name }}</v-card-text>
+                      <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
                     </v-img>
                     <v-card-text class="text--primary pa-1">
                       <div class="text-caption text-primary">
@@ -741,14 +740,27 @@ export default {
         this.enter_event();
       }
     },
-    matchWordsInItemName(inputString, itemName) {
-      const words = inputString
-        .toLowerCase()
-        .split(/\s+/)
-        .filter(Boolean);
-      const lowerName = itemName.toLowerCase();
+    generateWordCombinations(inputString) {
+      const words = inputString.split(" ");
+      const wordCount = words.length;
+      const combinations = [];
 
-      return words.every((word) => lowerName.includes(word));
+      // Helper function to generate all permutations
+      function permute(arr, m = []) {
+        if (arr.length === 0) {
+          combinations.push(m.join(" "));
+        } else {
+          for (let i = 0; i < arr.length; i++) {
+            const current = arr.slice();
+            const next = current.splice(i, 1);
+            permute(current.slice(), m.concat(next));
+          }
+        }
+      }
+
+      permute(words);
+
+      return combinations;
     },
     clearSearch() {
       this.search_backup = this.first_search;
@@ -964,7 +976,6 @@ export default {
       return this.getItemsHeaders();
     },
     filtered_items() {
-      // eslint-disable-next-line vue/no-side-effects-in-computed-properties
       this.search = this.get_search(this.first_search);
       if (!this.pos_profile.pose_use_limit_search) {
         let filtred_list = [];
@@ -1015,9 +1026,23 @@ export default {
               item.item_code.toLowerCase().includes(this.search.toLowerCase())
             );
             if (filtred_list.length == 0) {
-            filtred_list = filtred_group_list.filter((item) =>
-              this.matchWordsInItemName(this.search, item.item_name)
-            );
+              const search_combinations = this.generateWordCombinations(
+                this.search
+              );
+              filtred_list = filtred_group_list.filter((item) => {
+                let found = false;
+                for (let element of search_combinations) {
+                  element = element.toLowerCase().trim();
+                  let element_regex = new RegExp(
+                    `.*${element.split("").join(".*")}.*`
+                  );
+                  if (element_regex.test(item.item_name.toLowerCase())) {
+                    found = true;
+                    break;
+                  }
+                }
+                return found;
+              });
             }
             if (
               filtred_list.length == 0 &&
@@ -1075,7 +1100,6 @@ export default {
 
         // Force request quantity update for filtered items
         if (final_filtered_list.length > 0) {
-          // eslint-disable-next-line vue/no-async-in-computed-properties
           setTimeout(() => {
             this.update_items_details(final_filtered_list);
           }, 100);
