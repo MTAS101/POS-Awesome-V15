@@ -371,24 +371,13 @@ export default {
   },
 
     async fetch_price_lists() {
-      try {
-        const r = await frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_selling_price_lists"
-        });
-        if (r.message) {
-          this.price_lists = r.message.map(pl => pl.name);
-          if (!this.selected_price_list) {
-            this.selected_price_list = this.pos_profile.selling_price_list;
-          }
-          return this.price_lists;
-        }
-        return [];
-      } catch (error) {
-        console.error("Error fetching price lists:", error);
-        this.price_lists = [this.pos_profile.selling_price_list];
+      // POS Awesome now only uses the price list defined in the POS Profile.
+      // Avoid unnecessary server calls and set the list directly.
+      this.price_lists = [this.pos_profile.selling_price_list];
+      if (!this.selected_price_list) {
         this.selected_price_list = this.pos_profile.selling_price_list;
-        return this.price_lists;
       }
+      return this.price_lists;
     },
 
     async update_currency(currency) {

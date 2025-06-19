@@ -1509,32 +1509,19 @@ export default {
 
     // Get price list for current customer
     get_price_list() {
-      let price_list = this.pos_profile.selling_price_list;
-      if (this.customer_info && this.pos_profile) {
-        const { customer_price_list, customer_group_price_list } =
-          this.customer_info;
-        const pos_price_list = this.pos_profile.selling_price_list;
-        if (customer_price_list && customer_price_list != pos_price_list) {
-          price_list = customer_price_list;
-        } else if (
-          customer_group_price_list &&
-          customer_group_price_list != pos_price_list
-        ) {
-          price_list = customer_group_price_list;
-        }
-      }
-      return price_list;
+      // Always use the price list defined in the POS Profile
+      // This prevents automatic switching based on the customer
+      return this.pos_profile.selling_price_list;
     },
 
     // Update price list for customer
       update_price_list() {
-        let price_list = this.get_price_list();
-        if (price_list == this.pos_profile.selling_price_list) {
-          this.selected_price_list = this.pos_profile.selling_price_list;
-          this.eventBus.emit("update_customer_price_list", null);
-        } else {
+        // Only set the POS Profile price list if it has changed
+        const price_list = this.pos_profile.selling_price_list;
+        if (this.selected_price_list !== price_list) {
           this.selected_price_list = price_list;
-          this.eventBus.emit("update_customer_price_list", price_list);
+          // Clear any customer specific price list to avoid reloading items
+          this.eventBus.emit("update_customer_price_list", null);
         }
       },
 
