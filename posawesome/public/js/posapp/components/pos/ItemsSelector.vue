@@ -190,6 +190,12 @@ export default {
         this.update_items_details(new_value);
       }
     },
+    // Auto-trigger search when limit search is enabled and the query changes
+    first_search: _.debounce(function (val) {
+      if (this.pos_profile && this.pos_profile.pose_use_limit_search) {
+        this.search_onchange(val);
+      }
+    }, 300),
   },
 
   methods: {
