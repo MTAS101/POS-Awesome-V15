@@ -129,7 +129,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems } from '../../../offline.js';
+import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache } from '../../../offline.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
@@ -709,6 +709,9 @@ export default {
                 }
               }
             });
+
+            // Update local stock cache with latest quantities
+            updateLocalStockCache(r.message);
 
             // Force update if any item's quantity changed significantly
             if (qtyChanged) {

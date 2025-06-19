@@ -525,6 +525,29 @@ export function getLocalStock(itemCode) {
   }
 }
 
+// Update the local stock cache with latest quantities
+export function updateLocalStockCache(items) {
+  try {
+    const stockCache = memory.local_stock_cache || {};
+
+    items.forEach(item => {
+      if (!item || !item.item_code) return;
+
+      if (item.actual_qty !== undefined) {
+        stockCache[item.item_code] = {
+          actual_qty: item.actual_qty,
+          last_updated: new Date().toISOString()
+        };
+      }
+    });
+
+    memory.local_stock_cache = stockCache;
+    persist('local_stock_cache');
+  } catch (e) {
+    console.error('Failed to refresh local stock cache', e);
+  }
+}
+
 export function clearLocalStockCache() {
   memory.local_stock_cache = {};
   persist('local_stock_cache');
