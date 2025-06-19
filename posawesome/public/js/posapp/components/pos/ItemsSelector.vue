@@ -200,7 +200,6 @@ export default {
       this.eventBus.emit("show_coupons", "true");
     },
     async get_items(force_server = false) {
-      await initPromise;
       if (!this.pos_profile) {
         console.error("No POS Profile");
         return;
@@ -1147,14 +1146,16 @@ export default {
 
   created: function () {
     this.$nextTick(function () { });
-    this.eventBus.on("register_pos_profile", async (data) => {
-      await initPromise;
+    this.eventBus.on("register_pos_profile", (data) => {
       this.pos_profile = data.pos_profile;
-      await this.get_items();
-      this.get_items_groups();
       this.items_view = this.pos_profile.posa_default_card_view
         ? "card"
         : "list";
+
+      initPromise.then(async () => {
+        await this.get_items();
+        this.get_items_groups();
+      });
     });
     this.eventBus.on("update_cur_items_details", () => {
       this.update_cur_items_details();
