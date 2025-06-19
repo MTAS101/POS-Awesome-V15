@@ -20,7 +20,7 @@
             </v-row>
             <v-row no-gutters>
               <v-col cols="12" class="pa-1">
-                <v-data-table-virtual :headers="headers" :items="dialog_data" item-key="name" class="elevation-1" show-select
+                <v-data-table :headers="headers" :items="dialog_data" item-key="name" class="elevation-1" show-select
                   v-model="selected" return-object select-strategy="single">
                   <!-- <template v-slot:item.posting_time="{ item }">
                           {{ item.posting_time.split(".")[0] }}
@@ -29,7 +29,7 @@
                     {{ currencySymbol(item.currency) }}
                     {{ formatCurrency(item.grand_total) }}
                   </template>
-                </v-data-table-virtual>
+                </v-data-table>
               </v-col>
             </v-row>
           </v-container>

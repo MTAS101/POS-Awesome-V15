@@ -1,6 +1,6 @@
 <template>
   <div class="my-0 py-0 overflow-y-auto" :style="{ height: 'calc(var(--container-height) - 80px)', maxHeight: 'calc(var(--container-height) - 80px)' }">
-    <v-data-table-virtual
+    <v-data-table
       :headers="headers"
       :items="items"
       :theme="$theme.current"
@@ -215,7 +215,7 @@
           </v-row>
         </td>
       </template>
-    </v-data-table-virtual>
+    </v-data-table>
   </div>
 </template>
 

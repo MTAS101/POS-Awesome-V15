@@ -59,7 +59,7 @@
                   </h6>
                 </div>
 
-                <v-data-table-virtual
+                <v-data-table
                   :headers="payments_methods_headers"
                   :items="payments_methods"
                   item-key="mode_of_payment"
@@ -83,7 +83,7 @@
                       class="amount-input"
                     />
                   </template>
-                </v-data-table-virtual>
+                </v-data-table>
               </v-col>
             </v-row>
           </v-container>

@@ -165,11 +165,11 @@
           <!-- Results -->
           <v-row>
             <v-col cols="12" class="pa-0 mt-1" v-if="dialog_data && dialog_data.length > 0">
-              <v-data-table-virtual
-                :headers="headers"
-                :items="dialog_data"
-                item-key="name"
-                class="elevation-1"
+              <v-data-table 
+                :headers="headers" 
+                :items="dialog_data" 
+                item-key="name" 
+                class="elevation-1" 
                 show-select
                 v-model="selected" 
                 select-strategy="single" 
@@ -187,7 +187,7 @@
                   {{ currencySymbol(item.currency) }}
                   {{ formatCurrency(item.grand_total) }}
                 </template>
-              </v-data-table-virtual>
+              </v-data-table>
 
               <!-- Load More button at the bottom of results -->
               <div class="text-center mt-3" v-if="has_more_invoices">

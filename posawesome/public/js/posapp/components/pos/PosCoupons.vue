@@ -37,13 +37,13 @@
       </v-row>
       
       <div class="my-0 py-0 overflow-y-auto" style="max-height: 75vh" @mouseover="style = 'cursor: pointer'">
-        <v-data-table-virtual :headers="items_headers" :items="posa_coupons" :single-expand="singleExpand"
+        <v-data-table :headers="items_headers" :items="posa_coupons" :single-expand="singleExpand"
           v-model:expanded="expanded" item-key="coupon" class="elevation-1" :items-per-page="itemsPerPage"
           hide-default-footer>
           <template v-slot:item.applied="{ item }">
             <v-checkbox-btn v-model="item.applied" disabled></v-checkbox-btn>
           </template>
-        </v-data-table-virtual>
+        </v-data-table>
       </div>
     </v-card>
 

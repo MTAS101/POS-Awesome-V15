@@ -26,7 +26,7 @@
                   <p class="text-body-2 text-grey">{{ __('Verify closing amounts for each payment method') }}</p>
                 </div>
 
-                <v-data-table-virtual :headers="headers" :items="dialog_data.payment_reconciliation" item-key="mode_of_payment"
+                <v-data-table :headers="headers" :items="dialog_data.payment_reconciliation" item-key="mode_of_payment"
                   class="elevation-0 rounded-lg white-table" :items-per-page="itemsPerPage" hide-default-footer
                   density="compact">
                   <template v-slot:item.closing_amount="props">
@@ -47,7 +47,7 @@
                   <template v-slot:item.expected_amount="{ item }">
                     {{ currencySymbol(pos_profile.currency) }}
                     {{ formatCurrency(item.expected_amount) }}</template>
-                </v-data-table-virtual>
+                </v-data-table>
               </v-col>
             </v-row>
           </v-container>

@@ -9,7 +9,7 @@
         <span class="text-h6 text-primary">{{ __('Offers') }}</span>
       </v-card-title>
       <div class="my-0 py-0 overflow-y-auto" style="max-height: 75vh" @mouseover="style = 'cursor: pointer'">
-        <v-data-table-virtual :headers="items_headers" :items="pos_offers" :single-expand="singleExpand"
+        <v-data-table :headers="items_headers" :items="pos_offers" :single-expand="singleExpand"
           v-model:expanded="expanded" show-expand item-key="row_id" class="elevation-1" :items-per-page="itemsPerPage"
           hide-default-footer>
           <template v-slot:item.offer_applied="{ item }">
@@ -37,7 +37,7 @@
               </v-row>
             </td>
           </template>
-        </v-data-table-virtual>
+        </v-data-table>
       </div>
     </v-card>
 
