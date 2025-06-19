@@ -328,12 +328,23 @@ export default {
   },
   computed: {
     /**
+     * Detects whether the current host is an IPv4 address. When using an IP
+     * address with HTTPS the WebSocket connection may fail, so we treat the
+     * server as online as long as the browser itself is online.
+     */
+    isIpHost() {
+      return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(window.location.hostname);
+    },
+    /**
      * Determines the color of the status icon based on current network and server connectivity.
      * @returns {string} A Vuetify color string ('green', 'red').
      */
     statusColor() {
-      // Simplified: Green when connected to server, Red when offline
-      if (this.networkOnline && this.serverOnline) return 'green'; // Green when connected to server
+      // When running on an IP host we ignore the WebSocket status and rely on
+      // the browser's network status instead.
+      if (this.networkOnline && (this.serverOnline || this.isIpHost)) {
+        return 'green'; // Green when connected or IP host
+      }
       return 'red'; // Red for any offline state (no internet or server offline)
     },
     /**
@@ -342,8 +353,12 @@ export default {
      */
     statusIcon() {
       // Note: 'mdi-loading' is conceptually here, but `v-progress-circular` handles the visual loading state.
-      if (this.networkOnline && this.serverOnline) return 'mdi-wifi'; // Wi-Fi icon when connected to server
-      if (this.networkOnline && !this.serverOnline) return 'mdi-wifi-strength-alert-outline'; // Wi-Fi with alert for server offline
+      if (this.networkOnline && (this.serverOnline || this.isIpHost)) {
+        return 'mdi-wifi'; // Wi-Fi icon when connected to server or IP host
+      }
+      if (this.networkOnline && !this.serverOnline && !this.isIpHost) {
+        return 'mdi-wifi-strength-alert-outline'; // Wi-Fi with alert for server offline
+      }
       return 'mdi-wifi-off'; // Wi-Fi off icon when no internet connection
     },
     /**
@@ -354,6 +369,7 @@ export default {
     statusText() {
       if (this.serverConnecting) return this.__('Connecting to server...'); // Message when connecting
       if (!this.networkOnline) return this.__('No Internet Connection'); // Message when no internet
+      if (this.isIpHost) return this.__('Connected');
       return this.serverOnline ? this.__('Connected to Server') : this.__('Server Offline'); // Messages for server status
     },
     /**

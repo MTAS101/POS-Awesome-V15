@@ -149,6 +149,14 @@ export function isOffline() {
     if (window.location.protocol !== 'https:') {
       return false;
     }
+    // When running directly via an IP address with HTTPS, the WebSocket
+    // connection may fail due to certificate issues. In this case we
+    // ignore the serverOnline flag and only rely on the browser's
+    // network status.
+    const isIp = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(window.location.hostname);
+    if (isIp) {
+      return !navigator.onLine;
+    }
     if (typeof window.serverOnline === 'boolean') {
       return !navigator.onLine || !window.serverOnline;
     }
