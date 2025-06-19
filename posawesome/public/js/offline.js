@@ -531,28 +531,36 @@ export function clearLocalStockCache() {
 }
 
 // Add this new function to fetch stock quantities
-export async function fetchItemStockQuantities(items, pos_profile) {
+export async function fetchItemStockQuantities(items, pos_profile, chunkSize = 100) {
+  const allItems = [];
   try {
-    const response = await new Promise((resolve, reject) => {
-      frappe.call({
-        method: "posawesome.posawesome.api.posapp.get_items_details",
-        args: {
-          pos_profile: pos_profile,
-          items_data: items,
-        },
-        callback: function (r) {
-          if (r.message) {
-            resolve(r.message);
-          } else {
-            reject(new Error('No response from server'));
+    for (let i = 0; i < items.length; i += chunkSize) {
+      const chunk = items.slice(i, i + chunkSize);
+      const response = await new Promise((resolve, reject) => {
+        frappe.call({
+          method: "posawesome.posawesome.api.posapp.get_items_details",
+          args: {
+            pos_profile: pos_profile,
+            items_data: chunk,
+          },
+          freeze: false,
+          callback: function (r) {
+            if (r.message) {
+              resolve(r.message);
+            } else {
+              reject(new Error('No response from server'));
+            }
+          },
+          error: function (err) {
+            reject(err);
           }
-        },
-        error: function (err) {
-          reject(err);
-        }
+        });
       });
-    });
-    return response;
+      if (response) {
+        allItems.push(...response);
+      }
+    }
+    return allItems;
   } catch (error) {
     console.error('Failed to fetch item stock quantities:', error);
     return null;

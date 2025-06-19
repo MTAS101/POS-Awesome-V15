@@ -165,6 +165,7 @@ export default {
     items_loaded: false,
     selected_currency: "",
     exchange_rate: 1,
+    prePopulateInProgress: false,
   }),
 
   watch: {
@@ -260,12 +261,12 @@ export default {
           vm.loading = false;
           vm.items_loaded = true;
 
-          setTimeout(async () => {
-            if (vm.items && vm.items.length > 0) {
-              await vm.prePopulateStockCache(vm.items);
-              vm.update_items_details(vm.items);
-            }
-          }, 300);
+      setTimeout(() => {
+        if (vm.items && vm.items.length > 0) {
+          vm.prePopulateStockCache(vm.items);
+          vm.update_items_details(vm.items);
+        }
+      }, 300);
           return;
         }
       }
@@ -294,9 +295,9 @@ export default {
         vm.loading = false;
         vm.items_loaded = true;
 
-        setTimeout(async () => {
+        setTimeout(() => {
           if (vm.items && vm.items.length > 0) {
-            await vm.prePopulateStockCache(vm.items);
+            vm.prePopulateStockCache(vm.items);
             vm.update_items_details(vm.items);
           }
         }, 300);
@@ -334,7 +335,7 @@ export default {
             console.info("Items Loaded");
 
             // Pre-populate stock cache when items are freshly loaded
-            await vm.prePopulateStockCache(vm.items);
+            vm.prePopulateStockCache(vm.items);
 
             vm.$nextTick(() => {
               if (vm.search && !vm.pos_profile.pose_use_limit_search) {
@@ -730,6 +731,10 @@ export default {
       }
     },
     async prePopulateStockCache(items) {
+      if (this.prePopulateInProgress) {
+        return;
+      }
+      this.prePopulateInProgress = true;
       try {
         const cache = getLocalStockCache();
         if (cache && Object.keys(cache).length > 0) {
@@ -741,6 +746,8 @@ export default {
         await initializeStockCache(items, this.pos_profile);
       } catch (error) {
         console.error('Failed to pre-populate stock cache:', error);
+      } finally {
+        this.prePopulateInProgress = false;
       }
     },
     scan_barcoud() {
