@@ -168,16 +168,16 @@ export default {
   }),
 
   watch: {
-    customer() {
+    customer: _.debounce(function () {
       // Always fetch new items from server when customer changes
       this.items_loaded = false;
       this.get_items(true);
-    },
-    customer_price_list() {
+    }, 300),
+    customer_price_list: _.debounce(function () {
       // Always fetch new items when price list changes
       this.items_loaded = false;
       this.get_items(true);
-    },
+    }, 300),
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
     },
