@@ -415,13 +415,12 @@ export default {
   methods: {
     async check_opening_entry() {
       var vm = this;
-      const offlineReady = initPromise.catch(() => {});
+      await initPromise;
       return frappe
         .call("posawesome.posawesome.api.posapp.check_opening_shift", {
           user: frappe.session.user,
         })
-        .then(async (r) => {
-          await offlineReady;
+        .then((r) => {
           if (r.message) {
             this.pos_profile = r.message.pos_profile;
             this.pos_opening_shift = r.message.pos_opening_shift;
@@ -473,8 +472,7 @@ export default {
             this.create_opening_voucher();
           }
         })
-        .catch(async () => {
-          await offlineReady;
+        .catch(() => {
           const data = getOpeningStorage();
           if (data) {
               this.pos_profile = data.pos_profile;
