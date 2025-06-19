@@ -95,6 +95,11 @@
           <v-select :items="items_group" :label="frappe._('Items Group')" density="compact" variant="solo" hide-details
             v-model="item_group"></v-select>
         </v-col>
+        <v-col cols="12" class="mb-2" v-if="pos_profile.posa_enable_price_list_dropdown">
+          <v-text-field density="compact" variant="solo" color="primary"
+            :label="frappe._('Price List')" hide-details
+            :model-value="active_price_list" readonly></v-text-field>
+        </v-col>
         <v-col cols="3" class="dynamic-margin-xs">
           <v-btn-toggle v-model="items_view" color="primary" group density="compact" rounded>
             <v-btn size="small" value="list">{{ __("List") }}</v-btn>
@@ -1230,6 +1235,9 @@ export default {
     },
     isDarkTheme() {
       return this.$theme.current === 'dark';
+    },
+    active_price_list() {
+      return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
     }
   },
 

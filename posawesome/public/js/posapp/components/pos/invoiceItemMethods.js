@@ -1340,7 +1340,7 @@ export default {
         args: {
           warehouse: this.pos_profile.warehouse,
           doc: this.get_invoice_doc(),
-          price_list: this.pos_profile.price_list,
+          price_list: this.selected_price_list || this.pos_profile.selling_price_list,
           item: {
             item_code: item.item_code,
             customer: this.customer,
@@ -1499,8 +1499,14 @@ export default {
               ...message,
             };
           }
-          // Do not automatically change the price list when customer changes
-          // Users can still manually select a different price list
+          // When force reload is enabled, automatically switch to the
+          // customer's default price list so that item rates are fetched
+          // correctly from the server.
+          if (vm.pos_profile.posa_force_reload_items && message.customer_price_list) {
+            vm.selected_price_list = message.customer_price_list;
+            vm.eventBus.emit("update_customer_price_list", message.customer_price_list);
+            vm.apply_cached_price_list(message.customer_price_list);
+          }
         } catch (error) {
           console.error("Failed to fetch customer details", error);
         }
@@ -1509,9 +1515,9 @@ export default {
 
     // Get price list for current customer
     get_price_list() {
-      // Always use the price list defined in the POS Profile
-      // This prevents automatic switching based on the customer
-      return this.pos_profile.selling_price_list;
+      // Use the currently selected price list if available,
+      // otherwise fall back to the POS Profile selling price list
+      return this.selected_price_list || this.pos_profile.selling_price_list;
     },
 
     // Update price list for customer
