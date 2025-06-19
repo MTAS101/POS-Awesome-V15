@@ -35,34 +35,39 @@
           </v-col>
           <v-col cols="12" class="pt-0 mt-0">
             <div fluid class="items" v-if="items_view == 'card'">
-              <v-row density="default" class="overflow-y-auto dynamic-scroll"
+              <RecycleScroller
+                class="overflow-y-auto dynamic-scroll"
+                :items="filtered_items"
+                :item-size="180"
+                key-field="item_code"
                 :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
-                <v-col v-for="(item, idx) in filtered_items" :key="idx" xl="2" lg="3" md="6" sm="6" cols="6"
-                  min-height="50">
-                  <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
-                    <v-img :src="item.image ||
-                      '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
-                      " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
-                      <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
-                    </v-img>
-                    <v-card-text class="text--primary pa-1">
-                      <div class="text-caption text-primary">
-                        {{ currencySymbol(pos_profile.currency) || "" }}
-                        {{ format_currency(item.rate, pos_profile.currency, ratePrecision(item.rate)) }}
-                      </div>
-                      <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
-                        class="text-caption text-success">
-                        {{ currencySymbol(selected_currency) || "" }}
-                        {{ format_currency(getConvertedRate(item), selected_currency, ratePrecision(getConvertedRate(item))) }}
-                      </div>
-                      <div class="text-caption golden--text">
-                        {{ format_number(item.actual_qty, 4) || 0 }}
-                        {{ item.stock_uom || "" }}
-                      </div>
-                    </v-card-text>
-                  </v-card>
-                </v-col>
-              </v-row>
+                <template v-slot="{ item }">
+                  <v-col xl="2" lg="3" md="6" sm="6" cols="6" min-height="50">
+                    <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
+                      <v-img :src="item.image ||
+                        '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
+                        " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
+                        <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
+                      </v-img>
+                      <v-card-text class="text--primary pa-1">
+                        <div class="text-caption text-primary">
+                          {{ currencySymbol(pos_profile.currency) || "" }}
+                          {{ format_currency(item.rate, pos_profile.currency, ratePrecision(item.rate)) }}
+                        </div>
+                        <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                          class="text-caption text-success">
+                          {{ currencySymbol(selected_currency) || "" }}
+                          {{ format_currency(getConvertedRate(item), selected_currency, ratePrecision(getConvertedRate(item))) }}
+                        </div>
+                        <div class="text-caption golden--text">
+                          {{ format_number(item.actual_qty, 4) || 0 }}
+                          {{ item.stock_uom || "" }}
+                        </div>
+                      </v-card-text>
+                    </v-card>
+                  </v-col>
+                </template>
+              </RecycleScroller>
             </div>
             <div v-else>
               <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table overflow-y-auto"
@@ -129,13 +134,16 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
+import { RecycleScroller } from 'vue3-virtual-scroller';
+import 'vue3-virtual-scroller/dist/vue3-virtual-scroller.css';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise } from '../../../offline.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
   mixins: [format, responsiveMixin],
   components: {
-    CameraScanner
+    CameraScanner,
+    RecycleScroller
   },
   data: () => ({
     pos_profile: "",

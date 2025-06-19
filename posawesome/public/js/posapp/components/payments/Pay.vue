@@ -44,7 +44,7 @@
                 <v-btn v-if="selected_invoices.length" block color="error" theme="dark" @click="selected_invoices = []; $forceUpdate()">{{ __("Clear") }}</v-btn>
               </v-col>
             </v-row>
-            <v-data-table :headers="invoices_headers" :items="outstanding_invoices" item-key="voucher_no"
+            <v-data-table-virtual :headers="invoices_headers" :items="outstanding_invoices" item-key="voucher_no"
               class="elevation-1 mt-0" :loading="invoices_loading" @click:row="selectSingleInvoice"
               :item-class="isSelected">
               <template v-slot:item.actions="{ item }">
@@ -62,7 +62,7 @@
                 <span class="text-primary">{{ currencySymbol(item?.currency || pos_profile.currency) }}
                   {{ formatCurrency(item?.outstanding_amount || 0) }}</span>
               </template>
-            </v-data-table>
+            </v-data-table-virtual>
             <v-divider></v-divider>
           </div>
           <div v-if="
@@ -90,11 +90,11 @@
                 </p>
               </v-col>
             </v-row>
-            <v-data-table 
-              :headers="unallocated_payments_headers" 
-              :items="unallocated_payments" 
+            <v-data-table-virtual
+              :headers="unallocated_payments_headers"
+              :items="unallocated_payments"
               item-key="name"
-              class="elevation-1 mt-0" 
+              class="elevation-1 mt-0"
               :loading="unallocated_payments_loading">
               <template v-slot:item.select="{ item }">
                 <v-checkbox
@@ -113,7 +113,7 @@
                 <span class="text-primary">{{ currencySymbol(item.currency) }}
                   {{ formatCurrency(item.unallocated_amount) }}</span>
               </template>
-            </v-data-table>
+            </v-data-table-virtual>
             <v-divider></v-divider>
           </div>
           <div v-if="pos_profile.posa_allow_mpesa_reconcile_payments">
@@ -148,7 +148,7 @@
                   }}</v-btn>
               </v-col>
             </v-row>
-            <v-data-table :headers="mpesa_payment_headers" :items="mpesa_payments" item-key="name"
+            <v-data-table-virtual :headers="mpesa_payment_headers" :items="mpesa_payments" item-key="name"
               class="elevation-1 mt-0" :single-select="singleSelect" show-select v-model="selected_mpesa_payments"
               :loading="mpesa_payments_loading" checkbox-color="primary">
               <template v-slot:item.amount="{ item }">
@@ -157,7 +157,7 @@
                   {{ formatCurrency(item.amount) }}
                 </span>
               </template>
-            </v-data-table>
+            </v-data-table-virtual>
           </div>
         </v-card>
       </v-col>

@@ -2,6 +2,8 @@ import { createVuetify } from 'vuetify';
 import { createApp } from 'vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 import '@vuepic/vue-datepicker/dist/main.css';
+import VueVirtualScroller from 'vue3-virtual-scroller';
+import 'vue3-virtual-scroller/dist/vue3-virtual-scroller.css';
 import eventBus from './bus';
 import themePlugin from './plugins/theme.js';
 import * as components from 'vuetify/components'
@@ -76,6 +78,7 @@ frappe.PosApp.posapp = class {
         app.component('VueDatePicker', VueDatePicker)
         app.use(eventBus);
         app.use(vuetify)
+        app.use(VueVirtualScroller)
         app.use(themePlugin, { vuetify })
         app.mount(this.$el[0]);
 
