@@ -40,17 +40,7 @@
                       {{ currencySymbol(selected_currency) || "" }}
                       {{ format_currency(getConvertedRate(item), selected_currency, 4) }}
                     </div>
-                    <!-- Current Incoming Rate Display -->
-                    <!-- <div v-if="pos_profile.custom_show_incoming_rate && item.incoming_rate" class="text-caption text-info">
-                      Inc: {{ format_currency(item.incoming_rate, pos_profile.currency, 4) }}
-                    </div> -->
-                    <!-- Last Incoming Rate Display -->
-                    <div v-if="pos_profile.custom_show_last_incoming_rate && item.last_incoming_rate" class="text-caption text-purple">
-                      Last Inc: {{ format_currency(item.last_incoming_rate, pos_profile.currency, 4) }}
-                      <!-- <span v-if="item.last_incoming_date" class="text-grey text-xs">
-                        ({{ formatDate(item.last_incoming_date) }})
-                      </span> -->
-                    </div>
+                    
                     <div class="text-caption golden--text">
                       {{ format_number(item.actual_qty, 4) || 0 }}
                       {{ item.stock_uom || "" }}
@@ -90,15 +80,7 @@
                   <span class="text-info">{{ item.incoming_rate ? format_currency(item.incoming_rate, pos_profile.currency, 4) : '-' }}</span>
                 </template>
                 <!-- Last Incoming Rate Column Template -->
-                <template v-slot:item.last_incoming_rate="{ item }">
-                  <div v-if="item.last_incoming_rate">
-                    <span class="text-purple">{{ format_currency(item.last_incoming_rate, pos_profile.currency, 4) }}</span>
-                    <div v-if="item.last_incoming_date" class="text-grey text-xs">
-                      {{ formatDate(item.last_incoming_date) }}
-                    </div>
-                  </div>
-                  <span v-else class="text-grey">-</span>
-                </template>
+               
                 <!-- Logical Rack Column Template -->
                 <template v-slot:item.logical_rack="{ item }">
                   <span class="text-secondary">{{ item.logical_rack || '-' }}</span>
@@ -338,12 +320,7 @@ export default {
   items_headers.push({ title: __("Available QTY"), key: "actual_qty", align: "start" });
   // Add current incoming rate column if enabled
 
-  // Add last incoming rate column if enabled
-  if (this.pos_profile.custom_show_last_incoming_rate) {
-    items_headers.push({ title: __("Last Inc.Rate"), key: "last_incoming_rate", align: "start" });
-  }
-
-
+  
   items_headers.push({ title: __("Rate"), key: "rate", align: "start" });
   items_headers.push({ title: __("UOM"), key: "stock_uom", align: "start" });
 

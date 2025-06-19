@@ -259,7 +259,6 @@ def get_items(
                 has_serial_no,
                 max_discount,
                 brand,
-                custom_rak_location,
                 custom_oem_part_number
             FROM
                 `tabItem`
@@ -362,6 +361,19 @@ def get_items(
                     item_stock_qty = stock_data["actual_qty"]
                     incoming_rate = stock_data["incoming_rate"]
                     last_incoming_rate = stock_data["last_incoming_rate"]
+                rack_info = {}
+                custom_show_logical_rack = pos_profile.get("custom_show_logical_rack")  # Add this field to POS Profile
+                if custom_show_logical_rack:
+                    rack = frappe.db.sql(""" 
+                        SELECT * FROM `tabLogical Rack` 
+                        WHERE item=%s and pos_profile=%s 
+                    """, (item.item_code, pos_profile.get("name")), as_dict=1)
+                    
+                    if len(rack) > 0:
+                        rack_info = {
+                            'rack': rack[0].rack_id,
+                            'custom_logical_rack': rack[0].rack_id
+                        }
                 
                 attributes = ""
                 if pos_profile.get("posa_show_template_items") and item.has_variants:
@@ -394,10 +406,11 @@ def get_items(
                             # Enhanced fields including last incoming rate
                             "incoming_rate": incoming_rate or 0,
                             "last_incoming_rate": last_incoming_rate or 0,
-                            "logical_rack": item.custom_rak_location or "",
                             "oem_part_number": item.custom_oem_part_number or "",
                         }
                     )
+                    if rack_info:
+                        row.update(rack_info)
                     result.append(row)
         return result
 
@@ -1052,6 +1065,7 @@ def get_items_details(pos_profile, items_data):
         pos_profile = json.loads(pos_profile)
         items_data = json.loads(items_data)
         warehouse = pos_profile.get("warehouse")
+        custom_show_logical_rack = pos_profile.get("custom_show_logical_rack")
         result = []
 
         if len(items_data) > 0:
@@ -1070,7 +1084,7 @@ def get_items_details(pos_profile, items_data):
                 item_details = frappe.db.get_value(
                     "Item", 
                     item_code, 
-                    ["has_batch_no", "has_serial_no", "custom_rak_location", "custom_oem_part_number"],
+                    ["has_batch_no", "has_serial_no", "custom_oem_part_number"],
                     as_dict=True
                 )
                 
@@ -1127,6 +1141,20 @@ def get_items_details(pos_profile, items_data):
                                     }
                                 )
 
+                # Get logical rack information from Logical Rack doctype
+                rack_info = {}
+                if custom_show_logical_rack:
+                    rack = frappe.db.sql(""" 
+                        SELECT * FROM `tabLogical Rack` 
+                        WHERE item=%s and pos_profile=%s 
+                    """, (item_code, pos_profile.get("name")), as_dict=1)
+                    
+                    if len(rack) > 0:
+                        rack_info = {
+                            'rack': rack[0].rack_id,
+                            'custom_logical_rack': rack[0].rack_id
+                        }
+
                 row = {}
                 row.update(item)
                 row.update(
@@ -1140,10 +1168,13 @@ def get_items_details(pos_profile, items_data):
                         # Enhanced fields including last incoming rate
                         "incoming_rate": stock_data["incoming_rate"],
                         "last_incoming_rate": stock_data["last_incoming_rate"],
-                        "logical_rack": item_details.custom_rak_location if item_details else "",
                         "oem_part_number": item_details.custom_oem_part_number if item_details else "",
                     }
                 )
+
+                # Add logical rack data if available
+                if rack_info:
+                    row.update(rack_info)
 
                 result.append(row)
 
@@ -1159,6 +1190,7 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
     today = nowdate()
     item_code = item.get("item_code")
     batch_no_data = []
+    
     if warehouse and item.get("has_batch_no"):
         batch_list = get_batch_qty(warehouse=warehouse, item_code=item_code)
         if batch_list:
@@ -1199,16 +1231,43 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
     item_details = frappe.db.get_value(
         "Item",
         item_code,
-        ["custom_rak_location", "custom_oem_part_number"],
+        ["custom_oem_part_number"],
         as_dict=True
     )
 
     if item_details:
-        res["logical_rack"] = item_details.custom_rak_location or ""
         res["oem_part_number"] = item_details.custom_oem_part_number or ""
+        # Use item's custom_rak_location as fallback
+        res["logical_rack"] = item_details.custom_rak_location or ""
     else:
-        res["logical_rack"] = ""
         res["oem_part_number"] = ""
+        res["logical_rack"] = ""
+    
+    # FIXED: Get logical rack information from Logical Rack doctype
+    if doc:  # doc should contain pos_profile information
+        doc_dict = json.loads(doc) if isinstance(doc, str) else doc
+        pos_profile_name = doc_dict.get("pos_profile") if doc_dict else None
+        
+        if pos_profile_name:
+            pos_profile_doc = frappe.get_doc("POS Profile", pos_profile_name)
+            custom_show_logical_rack = pos_profile_doc.get("custom_show_logical_rack")
+            
+            if custom_show_logical_rack:
+                # Query the Logical Rack doctype
+                rack = frappe.db.sql(""" 
+                    SELECT rack_id FROM `tabLogical Rack` 
+                    WHERE item=%s AND pos_profile=%s 
+                    LIMIT 1
+                """, (item_code, pos_profile_name), as_dict=1)
+                
+                if rack and len(rack) > 0:
+                    rack_id = rack[0].rack_id
+                    res["rack"] = rack_id
+                    res["custom_logical_rack"] = rack_id
+                    res["logical_rack"] = rack_id  # Override the fallback value
+                    print(f"Found logical rack for {item_code}: {rack_id}")  # Debug log
+                else:
+                    print(f"No logical rack found for {item_code} in POS Profile {pos_profile_name}")  # Debug log
     
     res["max_discount"] = max_discount
     res["batch_no_data"] = batch_no_data
@@ -2258,16 +2317,7 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
     if oem_data:
         return {"item_code": oem_data.item_code, "oem_part_number": oem_data.custom_oem_part_number}
     
-    # Search by logical rack
-    rack_data = frappe.db.get_value(
-        "Item",
-        {"custom_rak_location": search_value, "disabled": 0},
-        ["name as item_code", "custom_rak_location"],
-        as_dict=True
-    )
-    if rack_data:
-        return {"item_code": rack_data.item_code, "logical_rack": rack_data.custom_rak_location}
-    
+
     # search serial no
     if search_serial_no:
         serial_no_data = frappe.db.get_value(
