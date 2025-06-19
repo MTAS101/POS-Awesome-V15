@@ -17,6 +17,7 @@ const memory = {
   pos_opening_storage: null,
   opening_dialog_storage: null,
   sales_persons_storage: []
+  ,price_list_cache: {}
 };
 
 export const initPromise = new Promise(resolve => {
@@ -432,6 +433,45 @@ export function clearExpiredCustomerBalances() {
     persist('customer_balance_cache');
   } catch (e) {
     console.error('Failed to clear expired customer balances', e);
+  }
+}
+
+// Price list items caching functions
+export function savePriceListItems(priceList, items) {
+  try {
+    const cache = memory.price_list_cache || {};
+    cache[priceList] = {
+      items: JSON.parse(JSON.stringify(items)),
+      timestamp: Date.now()
+    };
+    memory.price_list_cache = cache;
+    persist('price_list_cache');
+  } catch (e) {
+    console.error('Failed to cache price list items', e);
+  }
+}
+
+export function getCachedPriceListItems(priceList) {
+  try {
+    const cache = memory.price_list_cache || {};
+    const cachedData = cache[priceList];
+    if (cachedData) {
+      const isValid = (Date.now() - cachedData.timestamp) < (24 * 60 * 60 * 1000);
+      return isValid ? cachedData.items : null;
+    }
+    return null;
+  } catch (e) {
+    console.error('Failed to get cached price list items', e);
+    return null;
+  }
+}
+
+export function clearPriceListCache() {
+  try {
+    memory.price_list_cache = {};
+    persist('price_list_cache');
+  } catch (e) {
+    console.error('Failed to clear price list cache', e);
   }
 }
 

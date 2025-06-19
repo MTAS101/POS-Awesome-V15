@@ -129,7 +129,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise } from '../../../offline.js';
+import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems } from '../../../offline.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
@@ -169,14 +169,14 @@ export default {
 
   watch: {
     customer: _.debounce(function () {
-      // Always fetch new items from server when customer changes
+      // Reload items when customer changes, using cache when available
       this.items_loaded = false;
-      this.get_items(true);
+      this.get_items();
     }, 300),
     customer_price_list: _.debounce(function () {
-      // Always fetch new items when price list changes
+      // Reload items when price list changes, using cache when available
       this.items_loaded = false;
-      this.get_items(true);
+      this.get_items();
     }, 300),
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
@@ -238,12 +238,45 @@ export default {
         return;
       }
 
+      // Attempt to load cached items for the current price list
+      if (
+        !force_server &&
+        !this.pos_profile.pose_use_limit_search
+      ) {
+        const cached = getCachedPriceListItems(vm.customer_price_list);
+        if (cached && cached.length) {
+          vm.items = cached;
+          vm.items.forEach((it) => {
+            if (!it.item_uoms || it.item_uoms.length === 0) {
+              const cachedUoms = getItemUOMs(it.item_code);
+              if (cachedUoms.length > 0) {
+                it.item_uoms = cachedUoms;
+              } else if (it.stock_uom) {
+                it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+              }
+            }
+          });
+          this.eventBus.emit("set_all_items", vm.items);
+          vm.loading = false;
+          vm.items_loaded = true;
+
+          setTimeout(async () => {
+            if (vm.items && vm.items.length > 0) {
+              await vm.prePopulateStockCache(vm.items);
+              vm.update_items_details(vm.items);
+            }
+          }, 300);
+          return;
+        }
+      }
+
       // Load from localStorage when available and not forcing
       if (
         vm.pos_profile.posa_local_storage &&
         getItemsStorage().length &&
         !vm.pos_profile.pose_use_limit_search &&
-        !force_server
+        !force_server &&
+        vm.customer_price_list === vm.pos_profile.selling_price_list
       ) {
         vm.items = getItemsStorage();
         // Fallback to cached UOMs when loading from storage
@@ -297,6 +330,7 @@ export default {
             vm.eventBus.emit("set_all_items", vm.items);
             vm.loading = false;
             vm.items_loaded = true;
+            savePriceListItems(vm.customer_price_list, vm.items);
             console.info("Items Loaded");
 
             // Pre-populate stock cache when items are freshly loaded
