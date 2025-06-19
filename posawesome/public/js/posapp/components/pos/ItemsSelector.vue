@@ -34,16 +34,7 @@
               hide-details></v-checkbox>
           </v-col>
           <v-col cols="12" class="pt-0 mt-0">
-            <div v-if="loading && !items_loaded" class="pa-4">
-              <v-skeleton-loader
-                v-for="n in 6"
-                :key="`skl-` + n"
-                type="list-item-two-line"
-                class="mb-2"
-              />
-            </div>
-            <div v-else>
-              <div fluid class="items" v-if="items_view == 'card'">
+            <div fluid class="items" v-if="items_view == 'card'">
               <RecycleScroller
                 class="overflow-y-auto dynamic-scroll"
                 :items="filtered_items"
@@ -98,7 +89,6 @@
                   <span class="golden--text">{{ format_number(item.actual_qty, 4) }}</span>
                 </template>
               </v-data-table-virtual>
-            </div>
             </div>
           </v-col>
         </v-row>
@@ -1170,13 +1160,9 @@ export default {
         ? "card"
         : "list";
 
-      initPromise.then(() => {
-        this.$nextTick(() => {
-          setTimeout(async () => {
-            await this.get_items();
-            this.get_items_groups();
-          }, 0);
-        });
+      initPromise.then(async () => {
+        await this.get_items();
+        this.get_items_groups();
       });
     });
     this.eventBus.on("update_cur_items_details", () => {
