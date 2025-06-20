@@ -179,21 +179,7 @@ export default {
       invoice_posting_date: false, // Posting date dialog
       posting_date: frappe.datetime.nowdate(), // Invoice posting date
       posting_date_display: '', // Display value for date picker
-      items_headers: [
-        // Table headers for items
-        {
-          title: __("Name"),
-          align: "start",
-          sortable: true,
-          key: "item_name",
-        },
-        { title: __("QTY"), key: "qty", align: "center" },
-        { title: __("UOM"), key: "uom", align: "center" },
-        { title: __("Rate"), key: "rate", align: "center" },
-        { title: __("Discount %"), key: "discount_value", align: "center" },
-        { title: __("Amount"), key: "amount", align: "center" },
-        { title: __("Offer?"), key: "posa_is_offer", align: "center" },
-      ],
+      items_headers: [],
       selected_currency: "", // Currently selected currency
       exchange_rate: 1, // Current exchange rate
       available_currencies: [], // List of available currencies
@@ -223,6 +209,22 @@ export default {
     ...shortcutMethods,
     ...itemMethods,
     ...offerMethods,
+    initializeItemsHeaders() {
+      this.items_headers = [
+        { title: __("Name"), align: "start", sortable: true, key: "item_name" },
+        { title: __("QTY"), key: "qty", align: "center" },
+        { title: __("UOM"), key: "uom", align: "center" },
+        { title: __("Rate"), key: "rate", align: "center" },
+      ];
+      if (this.pos_profile.posa_display_discount_percentage) {
+        this.items_headers.push({ title: __("Discount %"), key: "discount_value", align: "center" });
+      }
+      if (this.pos_profile.posa_display_discount_amount) {
+        this.items_headers.push({ title: __("Discount Amount"), key: "discount_amount", align: "center" });
+      }
+      this.items_headers.push({ title: __("Amount"), key: "amount", align: "center" });
+      this.items_headers.push({ title: __("Offer?"), key: "posa_is_offer", align: "center" });
+    },
     makeid(length) {
       let result = "";
       const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -705,6 +707,7 @@ export default {
       this.invoiceType = this.pos_profile.posa_default_sales_order
         ? "Order"
         : "Invoice";
+      this.initializeItemsHeaders();
 
       // Add this block to handle currency initialization
       if (this.pos_profile.posa_allow_multi_currency) {

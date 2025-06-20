@@ -5484,6 +5484,26 @@
     "sort_options": 0,
     "translatable": 0,
     "unique": 0,
-    "width": null
+  "width": null
+  }
+  ,{
+    "doctype": "Custom Field",
+    "dt": "POS Profile",
+    "fieldname": "posa_display_discount_percentage",
+    "fieldtype": "Check",
+    "insert_after": "hide_expected_amount",
+    "label": "Display Discount %",
+    "default": "1",
+    "name": "POS Profile-posa_display_discount_percentage"
+  }
+  ,{
+    "doctype": "Custom Field",
+    "dt": "POS Profile",
+    "fieldname": "posa_display_discount_amount",
+    "fieldtype": "Check",
+    "insert_after": "posa_display_discount_percentage",
+    "label": "Display Discount Amount",
+    "default": "1",
+    "name": "POS Profile-posa_display_discount_amount"
   }
 ]

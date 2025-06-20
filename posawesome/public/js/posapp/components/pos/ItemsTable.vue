@@ -41,6 +41,13 @@
         </div>
       </template>
 
+      <template v-slot:item.discount_amount="{ item }">
+        <div class="currency-display">
+          <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
+          <span class="amount-value">{{ formatCurrency(item.discount_amount || 0) }}</span>
+        </div>
+      </template>
+
       <template v-slot:item.price_list_rate="{ item }">
         <div class="currency-display">
           <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
