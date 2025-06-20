@@ -163,6 +163,7 @@ export default {
     filteredCustomers() {
       const search = this.customerSearch.toLowerCase();
       let results = this.customers;
+
       if (search) {
         results = results.filter(cust => {
           return (
@@ -174,7 +175,20 @@ export default {
           );
         });
       }
-      return results.slice(0, this.customerLimit);
+
+      results = results.slice(0, this.customerLimit);
+
+      if (this.customer) {
+        const exists = results.some(cust => cust.name === this.customer);
+        if (!exists) {
+          const selected = this.customers.find(cust => cust.name === this.customer);
+          if (selected) {
+            results = [selected, ...results];
+          }
+        }
+      }
+
+      return results;
     }
   },
 
