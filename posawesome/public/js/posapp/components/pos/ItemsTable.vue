@@ -36,12 +36,8 @@
       </template>
 
       <template v-slot:item.discount_value="{ item }">
-        <div v-if="item.discount_percentage" class="amount-value">
-          {{ formatFloat(item.discount_percentage) }}%
-        </div>
-        <div v-else class="currency-display">
-          <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
-          <span class="amount-value">{{ formatCurrency(item.discount_amount) }}</span>
+        <div class="amount-value">
+          {{ formatFloat(item.discount_percentage || (item.price_list_rate ? (item.discount_amount / item.price_list_rate) * 100 : 0)) }}%
         </div>
       </template>
 
