@@ -251,9 +251,6 @@ export default {
       if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
         try {
           vm.customers = getCustomerStorage();
-          if (vm.customer) {
-            vm.internalCustomer = vm.customer;
-          }
         } catch (e) {
           console.error('Failed to parse customer cache:', e);
           vm.customers = [];
@@ -269,10 +266,6 @@ export default {
         callback: function (r) {
           if (r.message) {
             vm.customers = r.message;
-
-            if (vm.customer) {
-              vm.internalCustomer = vm.customer;
-            }
 
             if (vm.pos_profile.posa_local_storage) {
               setCustomerStorage(r.message);
