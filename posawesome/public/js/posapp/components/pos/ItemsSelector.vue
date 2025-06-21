@@ -1335,20 +1335,7 @@ export default {
 
 <style scoped>
 .dynamic-card {
-  transition: all 0.3s ease;
-}
-
-/* Ensure card background turns black when dark theme is active */
-:deep(.dark-theme) .dynamic-card,
-:deep(.v-theme--dark) .dynamic-card,
-::v-deep(.dark-theme) .dynamic-card,
-::v-deep(.v-theme--dark) .dynamic-card {
-  background-color: #121212 !important;
-}
-
-/* Fallback for Vuetify card dark mode */
-.v-theme--dark .dynamic-card {
-  background-color: #121212 !important;
+  composes: pos-card;
 }
 
 .dynamic-padding {
@@ -1356,25 +1343,17 @@ export default {
 }
 
 .dynamic-scroll {
-  transition: max-height 0.3s ease;
+  transition: max-height var(--transition-normal);
 }
 
 .dynamic-item-card {
   margin: var(--dynamic-xs);
-  transition: all 0.3s ease;
-  background-color: #f5f5f5;
+  transition: var(--transition-normal);
+  background-color: var(--surface-secondary);
 }
 
 .dynamic-item-card:hover {
   transform: scale(calc(1 + 0.02 * var(--font-scale)));
-}
-
-:deep(.dark-theme) .dynamic-item-card,
-:deep(.v-theme--dark) .dynamic-item-card,
-::v-deep(.dark-theme) .dynamic-item-card,
-::v-deep(.v-theme--dark) .dynamic-item-card {
-
-  background-color: #121212 !important;
 }
 
 .text-success {
@@ -1382,111 +1361,18 @@ export default {
 }
 
 .sleek-data-table {
-  border-radius: calc(12px * var(--font-scale)) !important;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05) !important;
-  background-color: #fff !important;
-  overflow: hidden !important;
+  composes: pos-table;
   margin: var(--dynamic-xs);
 }
 
 .sleek-data-table:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: var(--shadow-md) !important;
 }
 
 /* Light mode card backgrounds */
 .selection,
 .cards {
-  background-color: #f5f5f5 !important;
-}
-
-/* Dark mode adjustments */
-:deep(.dark-theme) .sleek-data-table,
-:deep(.v-theme--dark) .sleek-data-table,
-::v-deep(.dark-theme) .sleek-data-table,
-::v-deep(.v-theme--dark) .sleek-data-table {
-  background-color: #121212 !important;
-}
-
-:deep(.dark-theme) .sleek-data-table :deep(.v-data-table),
-:deep(.v-theme--dark) .sleek-data-table :deep(.v-data-table),
-:deep(.dark-theme) .sleek-data-table :deep(.v-data-table__wrapper),
-:deep(.v-theme--dark) .sleek-data-table :deep(.v-data-table__wrapper),
-:deep(.dark-theme) .sleek-data-table :deep(.v-table__wrapper),
-:deep(.v-theme--dark) .sleek-data-table :deep(.v-table__wrapper),
-:deep(.dark-theme) .sleek-data-table :deep(table),
-:deep(.v-theme--dark) .sleek-data-table :deep(table),
-::v-deep(.dark-theme) .sleek-data-table .v-data-table,
-::v-deep(.v-theme--dark) .sleek-data-table .v-data-table,
-::v-deep(.dark-theme) .sleek-data-table .v-data-table__wrapper,
-::v-deep(.v-theme--dark) .sleek-data-table .v-data-table__wrapper,
-::v-deep(.dark-theme) .sleek-data-table .v-table__wrapper,
-::v-deep(.v-theme--dark) .sleek-data-table .v-table__wrapper,
-::v-deep(.dark-theme) .sleek-data-table table,
-::v-deep(.v-theme--dark) .sleek-data-table table {
-  background-color: #121212 !important;
-}
-
-:deep(.dark-theme) .sleek-data-table :deep(th),
-:deep(.v-theme--dark) .sleek-data-table :deep(th),
-:deep(.dark-theme) .sleek-data-table :deep(td),
-:deep(.v-theme--dark) .sleek-data-table :deep(td),
-::v-deep(.dark-theme) .sleek-data-table th,
-::v-deep(.v-theme--dark) .sleek-data-table th,
-::v-deep(.dark-theme) .sleek-data-table td,
-::v-deep(.v-theme--dark) .sleek-data-table td {
-  color: #fff !important;
-  background-color: #121212 !important;
-  border-color: #333 !important;
-}
-
-/* Ensure table headings are dark themed */
-:deep(.dark-theme) .sleek-data-table :deep(thead th),
-:deep(.v-theme--dark) .sleek-data-table :deep(thead th),
-::v-deep(.dark-theme) .sleek-data-table thead th,
-::v-deep(.v-theme--dark) .sleek-data-table thead th {
-  background-color: #121212 !important;
-  color: #fff !important;
-}
-
-/* Ensure internal header content is also dark */
-:deep(.dark-theme) .sleek-data-table :deep(.v-data-table-header__content),
-:deep(.v-theme--dark) .sleek-data-table :deep(.v-data-table-header__content),
-::v-deep(.dark-theme) .sleek-data-table .v-data-table-header__content,
-::v-deep(.v-theme--dark) .sleek-data-table .v-data-table-header__content {
-  background-color: #121212 !important;
-}
-
-/* Ensure thead background is dark */
-:deep(.dark-theme) .sleek-data-table :deep(thead),
-:deep(.v-theme--dark) .sleek-data-table :deep(thead),
-::v-deep(.dark-theme) .sleek-data-table thead,
-::v-deep(.v-theme--dark) .sleek-data-table thead {
-  background-color: #121212 !important;
-}
-
-/* Dark mode card backgrounds */
-:deep(.dark-theme) .selection,
-:deep(.dark-theme) .selection .v-card__underlay,
-:deep(.v-theme--dark) .selection,
-:deep(.v-theme--dark) .selection .v-card__underlay,
-:deep(.dark-theme) .cards,
-:deep(.dark-theme) .cards .v-card__underlay,
-:deep(.v-theme--dark) .cards,
-:deep(.v-theme--dark) .cards .v-card__underlay,
-:deep(.cards.v-theme--dark),
-:deep(.cards.v-theme--dark) .v-card__underlay,
-::v-deep(.dark-theme) .selection,
-::v-deep(.dark-theme) .selection .v-card__underlay,
-::v-deep(.v-theme--dark) .selection,
-::v-deep(.v-theme--dark) .selection .v-card__underlay,
-::v-deep(.dark-theme) .cards,
-::v-deep(.dark-theme) .cards .v-card__underlay,
-::v-deep(.v-theme--dark) .cards,
-::v-deep(.v-theme--dark) .cards .v-card__underlay,
-::v-deep(.cards.v-theme--dark),
-::v-deep(.cards.v-theme--dark) .v-card__underlay {
-
-  background-color: #121212 !important;
+  background-color: var(--surface-secondary) !important;
 }
 
 /* Consistent spacing with navbar and system */
@@ -1497,7 +1383,7 @@ export default {
 .action-btn-consistent {
   margin-top: var(--dynamic-xs) !important;
   padding: var(--dynamic-xs) var(--dynamic-sm) !important;
-  transition: all 0.3s ease !important;
+  transition: var(--transition-normal) !important;
 }
 
 .action-btn-consistent:hover {

@@ -19,7 +19,7 @@
             <Customer />
           </v-col>
           <!-- Invoice Type Selection (Only shown if sales orders are allowed) -->
-          <v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-0">
+          <v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-4">
             <v-select density="compact" hide-details variant="outlined" color="primary"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field"
               :items="invoiceTypes" :label="frappe._('Type')" v-model="invoiceType"
@@ -64,6 +64,54 @@
         />
 
         <!-- Items Table Section (Main items list for invoice) -->
+        <!-- Add this right before the ItemsTable component -->
+        <div class="column-selector-container">
+          <v-btn
+            density="compact"
+            variant="text"
+            color="primary"
+            prepend-icon="mdi-cog-outline"
+            @click="toggleColumnSelection"
+            class="column-selector-btn"
+          >
+            {{ __('Columns') }}
+          </v-btn>
+          
+          <v-dialog v-model="show_column_selector" max-width="500px">
+            <v-card>
+              <v-card-title class="text-h6 pa-4 d-flex align-center">
+                <span>{{ __('Select Columns to Display') }}</span>
+                <v-spacer></v-spacer>
+                <v-btn icon="mdi-close" variant="text" density="compact" @click="show_column_selector = false"></v-btn>
+              </v-card-title>
+              <v-divider></v-divider>
+              <v-card-text class="pa-4">
+                <v-row dense>
+                  <v-col cols="12" v-for="column in available_columns.filter(col => !col.required)" :key="column.key">
+                    <v-switch
+                      v-model="temp_selected_columns"
+                      :label="column.title"
+                      :value="column.key"
+                      hide-details
+                      density="compact"
+                      color="primary"
+                      class="column-switch mb-1"
+                      :disabled="column.required"
+                    ></v-switch>
+                  </v-col>
+                </v-row>
+                <div class="text-caption mt-2">{{ __('Required columns cannot be hidden') }}</div>
+              </v-card-text>
+              <v-card-actions class="pa-4 pt-0">
+                <v-btn color="error" variant="text" @click="cancelColumnSelection">{{ __('Cancel') }}</v-btn>
+                <v-spacer></v-spacer>
+                <v-btn color="primary" variant="tonal" @click="updateSelectedColumns">{{ __('Apply') }}</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+        </div>
+        
+        <!-- ItemsTable component remains the same -->
         <ItemsTable
           :headers="items_headers"
           :items="items"
@@ -83,15 +131,10 @@
           :setFormatedCurrency="setFormatedCurrency"
           :calcPrices="calc_prices"
           :calcUom="calc_uom"
-          :setSerialNo="set_serial_no"
-          :setBatchQty="set_batch_qty"
-          :validateDueDate="validate_due_date"
           :removeItem="remove_item"
           :subtractOne="subtract_one"
           :addOne="add_one"
-          :isReturnInvoice="isReturnInvoice"
-          :toggleOffer="toggleOffer"
-          @update:expanded="handleExpandedUpdate"
+          @update:expanded="expanded = $event"
         />
       </div>
     </v-card>
@@ -185,6 +228,10 @@ export default {
       available_currencies: [], // List of available currencies
       price_lists: [], // Available selling price lists
       selected_price_list: "", // Currently selected price list
+      selected_columns: [], // Selected columns for items table
+      temp_selected_columns: [], // Temporary array for column selection
+      available_columns: [], // All available columns
+      show_column_selector: false // Column selector dialog visibility
     };
   },
 
@@ -210,20 +257,95 @@ export default {
     ...itemMethods,
     ...offerMethods,
     initializeItemsHeaders() {
-      this.items_headers = [
-        { title: __("Name"), align: "start", sortable: true, key: "item_name" },
-        { title: __("QTY"), key: "qty", align: "center" },
-        { title: __("UOM"), key: "uom", align: "center" },
-        { title: __("Rate"), key: "rate", align: "center" },
+      // Define all available columns
+      this.available_columns = [
+        { title: __('Name'), align: 'start', sortable: true, key: 'item_name', required: true },
+        { title: __('QTY'), key: 'qty', align: 'center', required: true },
+        { title: __('UOM'), key: 'uom', align: 'center', required: false },
+        { title: __('Rate'), key: 'rate', align: 'center', required: true },
+        { title: __('Discount %'), key: 'discount_value', align: 'center', required: false },
+        { title: __('Discount Amount'), key: 'discount_amount', align: 'center', required: false },
+        { title: __('Amount'), key: 'amount', align: 'center', required: true },
+        { title: __('Offer?'), key: 'posa_is_offer', align: 'center', required: false },
       ];
-      if (this.pos_profile.posa_display_discount_percentage) {
-        this.items_headers.push({ title: __("Discount %"), key: "discount_value", align: "center" });
+      
+      // Initialize selected columns if empty
+      if (!this.selected_columns || this.selected_columns.length === 0) {
+        // By default, select all required columns and those enabled in POS profile
+        this.selected_columns = this.available_columns
+          .filter(col => {
+            if (col.required) return true;
+            if (col.key === 'discount_value' && this.pos_profile.posa_display_discount_percentage) return true;
+            if (col.key === 'discount_amount' && this.pos_profile.posa_display_discount_amount) return true;
+            return false;
+          })
+          .map(col => col.key);
       }
-      if (this.pos_profile.posa_display_discount_amount) {
-        this.items_headers.push({ title: __("Discount Amount"), key: "discount_amount", align: "center" });
+      
+      // Generate headers based on selected columns
+      this.updateHeadersFromSelection();
+    },
+    
+    toggleColumnSelection() {
+      // Create a copy of selected columns for temporary editing
+      this.temp_selected_columns = [...this.selected_columns];
+      this.show_column_selector = true;
+    },
+    
+    cancelColumnSelection() {
+      // Discard changes
+      this.show_column_selector = false;
+    },
+    
+    updateHeadersFromSelection() {
+      // Generate headers based on selected columns (without closing dialog)
+      this.items_headers = this.available_columns.filter(col => 
+        this.selected_columns.includes(col.key) || col.required
+      );
+    },
+    
+    updateSelectedColumns() {
+      // Apply the temporary selection
+      this.selected_columns = [...this.temp_selected_columns];
+      
+      // Add required columns if they're not already included
+      const requiredKeys = this.available_columns
+        .filter(col => col.required)
+        .map(col => col.key);
+        
+      requiredKeys.forEach(key => {
+        if (!this.selected_columns.includes(key)) {
+          this.selected_columns.push(key);
+        }
+      });
+      
+      // Update headers
+      this.updateHeadersFromSelection();
+      
+      // Save preferences
+      this.saveColumnPreferences();
+      
+      // Close dialog
+      this.show_column_selector = false;
+    },
+    
+    saveColumnPreferences() {
+      try {
+        localStorage.setItem('posawesome_selected_columns', JSON.stringify(this.selected_columns));
+      } catch (e) {
+        console.error('Failed to save column preferences:', e);
       }
-      this.items_headers.push({ title: __("Amount"), key: "amount", align: "center" });
-      this.items_headers.push({ title: __("Offer?"), key: "posa_is_offer", align: "center" });
+    },
+    
+    loadColumnPreferences() {
+      try {
+        const saved = localStorage.getItem('posawesome_selected_columns');
+        if (saved) {
+          this.selected_columns = JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error('Failed to load column preferences:', e);
+      }
     },
     makeid(length) {
       let result = "";
@@ -693,6 +815,9 @@ export default {
   },
 
   mounted() {
+    // Load saved column preferences
+    this.loadColumnPreferences();
+    
     // Register event listeners for POS profile, items, customer, offers, etc.
     this.eventBus.on("register_pos_profile", (data) => {
       this.pos_profile = data.pos_profile;
@@ -844,65 +969,20 @@ export default {
 </script>
 
 <style scoped>
-/* Dark mode input styling */
-:deep(.dark-theme) .dark-field,
-:deep(.v-theme--dark) .dark-field,
-::v-deep(.dark-theme) .dark-field,
-::v-deep(.v-theme--dark) .dark-field {
-  background-color: #1E1E1E !important;
-}
-
-:deep(.dark-theme) .dark-field :deep(.v-field__input),
-:deep(.v-theme--dark) .dark-field :deep(.v-field__input),
-:deep(.dark-theme) .dark-field :deep(input),
-:deep(.v-theme--dark) .dark-field :deep(input),
-:deep(.dark-theme) .dark-field :deep(.v-label),
-:deep(.v-theme--dark) .dark-field :deep(.v-label),
-::v-deep(.dark-theme) .dark-field .v-field__input,
-::v-deep(.v-theme--dark) .dark-field .v-field__input,
-::v-deep(.dark-theme) .dark-field input,
-::v-deep(.v-theme--dark) .dark-field input,
-::v-deep(.dark-theme) .dark-field .v-label,
-::v-deep(.v-theme--dark) .dark-field .v-label {
-  color: #fff !important;
-}
-
-:deep(.dark-theme) .dark-field :deep(.v-field__overlay),
-:deep(.v-theme--dark) .dark-field :deep(.v-field__overlay),
-::v-deep(.dark-theme) .dark-field .v-field__overlay,
-::v-deep(.v-theme--dark) .dark-field .v-field__overlay {
-  background-color: #1E1E1E !important;
-}
-
 /* Card background adjustments */
 .cards {
-  background-color: #f5f5f5 !important;
-}
-
-:deep(.dark-theme) .cards,
-:deep(.dark-theme) .cards .v-card__underlay,
-:deep(.v-theme--dark) .cards,
-:deep(.v-theme--dark) .cards .v-card__underlay,
-:deep(.cards.v-theme--dark),
-:deep(.cards.v-theme--dark) .v-card__underlay,
-::v-deep(.dark-theme) .cards,
-::v-deep(.dark-theme) .cards .v-card__underlay,
-::v-deep(.v-theme--dark) .cards,
-::v-deep(.v-theme--dark) .cards .v-card__underlay,
-::v-deep(.cards.v-theme--dark),
-::v-deep(.cards.v-theme--dark) .v-card__underlay {
-  background-color: #1E1E1E !important;
+  background-color: var(--surface-secondary) !important;
 }
 
 /* Style for selected checkbox button */
 .v-checkbox-btn.v-selected {
-  background-color: #4CAF50 !important;
+  background-color: var(--submit-start) !important;
   color: white;
 }
 
 /* Bottom border for elements */
 .border_line_bottom {
-  border-bottom: 1px solid lightgray;
+  border-bottom: 1px solid var(--field-border);
 }
 
 /* Disable pointer events for elements */
@@ -921,56 +1001,13 @@ export default {
 :deep(.balance-value) {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #0052CC;
-  margin-left: 5px;
-}
-
-/* Styles for date picker buttons */
-.v-date-picker .v-btn {
-  min-width: 80px !important;
-  margin: 0 4px !important;
-  text-transform: none !important;
-  font-weight: 500 !important;
-}
-
-/* Style for text variant date picker button */
-.v-date-picker .v-btn--variant-text {
-  padding: 0 12px !important;
-}
-
-/* Spacer inside date picker */
-.v-date-picker .v-spacer {
-  flex: 1 1 auto !important;
-}
-
-/* Updated style for date picker action buttons */
-.date-action-btn {
-  min-width: 64px !important;
-  height: 36px !important;
-  margin: 4px !important;
-  padding: 0 16px !important;
-  text-transform: none !important;
-  font-weight: 500 !important;
-  font-size: 14px !important;
-  letter-spacing: 0.25px !important;
-}
-
-/* Card style for date picker */
-.v-date-picker {
-  border-radius: 4px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Actions section in date picker card */
-.v-date-picker .v-card-actions {
-  padding: 8px !important;
-  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  color: var(--primary-start);
+  margin-left: var(--dynamic-xs);
 }
 
 /* Red border and label for return mode card */
 .return-mode {
-  border: 2px solid #ff5252 !important;
+  border: 2px solid var(--error) !important;
   position: relative;
 }
 
@@ -980,26 +1017,12 @@ export default {
   position: absolute;
   top: 0;
   right: 0;
-  background-color: #ff5252;
+  background-color: var(--error);
   color: white;
   padding: 4px 12px;
   font-weight: bold;
   border-bottom-left-radius: 8px;
   z-index: 1;
-}
-
-
-/* Media query for responsive table height */
-@media (max-height: 900px) {
-  .my-2.py-0.overflow-y-auto {
-    height: calc(100vh - 240px);
-  }
-}
-
-@media (max-height: 700px) {
-  .my-2.py-0.overflow-y-auto {
-    height: calc(100vh - 220px);
-  }
 }
 
 /* Dynamic padding for responsive layout */
@@ -1034,5 +1057,41 @@ export default {
   .dynamic-padding .v-col {
     padding: 1px 2px;
   }
+}
+
+.column-selector-container {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 16px;
+  background-color: var(--surface-secondary);
+  border-radius: 8px 8px 0 0;
+}
+
+:deep(.dark-theme) .column-selector-container,
+:deep(.v-theme--dark) .column-selector-container {
+  background-color: #1E1E1E;
+}
+
+.column-selector-btn {
+  font-size: 0.875rem;
+}
+
+/* New styles for improved column switches */
+:deep(.column-switch) {
+  margin: 0;
+  padding: 0;
+}
+
+:deep(.column-switch .v-switch__track) {
+  opacity: 0.7;
+}
+
+:deep(.column-switch .v-switch__thumb) {
+  transform: scale(0.8);
+}
+
+:deep(.column-switch .v-label) {
+  opacity: 0.9;
+  font-size: 0.95rem;
 }
 </style>

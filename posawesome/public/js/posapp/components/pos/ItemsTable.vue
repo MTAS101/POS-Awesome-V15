@@ -37,7 +37,7 @@
 
       <template v-slot:item.discount_value="{ item }">
         <div class="amount-value">
-          {{ formatFloat(item.discount_percentage || (item.price_list_rate ? (item.discount_amount / item.price_list_rate) * 100 : 0)) }}%
+          {{ formatFloat(item.discount_percentage || (item.price_list_rate ? (item.discount_percentage / item.price_list_rate) * 100 : 0)) }}%
         </div>
       </template>
 
@@ -61,7 +61,7 @@
 
       <template v-slot:expanded-row="{ columns: headers, item }">
         <td :colspan="headers.length" class="ma-0 pa-2">
-          <v-row class="mb-3" dense>
+          <v-row class="mb-3 action-buttons-container" dense>
             <v-col cols="auto">
               <v-btn :disabled="!!item.posa_is_replace" icon="mdi-trash-can-outline" size="large" color="error"
                 variant="tonal" class="item-action-btn delete-btn mr-2" @click.stop="removeItem(item)">
@@ -69,8 +69,8 @@
               </v-btn>
             </v-col>
             <v-spacer></v-spacer>
-            <v-col cols="auto">
-              <v-btn :disabled="!!item.posa_is_replace" size="large" color="error" variant="tonal"
+            <v-col cols="auto" class="action-group">
+              <v-btn :disabled="!!item.posa_is_replace" size="large" color="warning" variant="tonal"
                 class="item-action-btn minus-btn mr-2" @click.stop="subtractOne(item)">
                 <v-icon size="large">mdi-minus-circle-outline</v-icon>
               </v-btn>
@@ -266,156 +266,78 @@ export default {
 };
 </script>
 
-<style scoped>
+<style>
+/* Replace custom table styling with standardized pos-table class */
 .enhanced-table-items {
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(0, 0, 0, 0.09);
-  margin-bottom: 16px;
+  composes: pos-table;
+  /* Any additional specific styling can remain */
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
+/* Simplify deep selectors using standardized variables */
 .enhanced-table-items :deep(.v-data-table__wrapper),
 .enhanced-table-items :deep(.v-table__wrapper) {
-  border-radius: 8px;
+  border-radius: var(--border-radius-sm);
   height: 100%;
   overflow-y: auto;
 }
 
-.enhanced-table-items :deep(th) {
-  background: #ffffff;
-  color: #424242;
-  font-weight: 600;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-  padding: 14px 18px;
-  font-size: 0.95rem;
-}
+/* Remove redundant styling that's covered by pos-table */
+/* Remove all the redundant th styling */
+/* Remove all the redundant dark theme overrides */
 
-.enhanced-table-items :deep(td) {
-  padding: 14px 18px;
-  height: 64px;
-  vertical-align: middle;
-}
-
-.enhanced-table-items :deep(tr:hover) {
-  background: rgba(25, 118, 210, 0.05);
-}
-
+/* Keep only specific customizations not covered by pos-table */
 .enhanced-table-items :deep(.v-data-table__expanded) {
-  padding: 20px 24px;
-  background-color: #fafafa;
+  padding: var(--dynamic-md) var(--dynamic-lg);
+  background-color: var(--surface-secondary);
 }
 
-/* Dark mode adjustments */
-:deep(.dark-theme) .enhanced-table-items,
-:deep(.v-theme--dark) .enhanced-table-items,
-::v-deep(.dark-theme) .enhanced-table-items,
-::v-deep(.v-theme--dark) .enhanced-table-items {
-  background-color: #121212 !important;
+.action-buttons-container {
+  padding: 8px 4px;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
-:deep(.dark-theme) .enhanced-table-items :deep(th),
-:deep(.v-theme--dark) .enhanced-table-items :deep(th),
-:deep(.dark-theme) .enhanced-table-items :deep(td),
-:deep(.v-theme--dark) .enhanced-table-items :deep(td),
-::v-deep(.dark-theme) .enhanced-table-items th,
-::v-deep(.v-theme--dark) .enhanced-table-items th,
-::v-deep(.dark-theme) .enhanced-table-items td,
-::v-deep(.v-theme--dark) .enhanced-table-items td {
-  color: #fff !important;
-  background-color: #1E1E1E !important;
-  border-color: #373737 !important;
+:deep(.dark-theme) .action-buttons-container,
+:deep(.v-theme--dark) .action-buttons-container {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
-:deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__wrapper),
-:deep(.v-theme--dark) .enhanced-table-items :deep(.v-data-table__wrapper),
-:deep(.dark-theme) .enhanced-table-items :deep(.v-table__wrapper),
-:deep(.v-theme--dark) .enhanced-table-items :deep(.v-table__wrapper),
-::v-deep(.dark-theme) .enhanced-table-items .v-data-table__wrapper,
-::v-deep(.v-theme--dark) .enhanced-table-items .v-data-table__wrapper,
-::v-deep(.dark-theme) .enhanced-table-items .v-table__wrapper,
-::v-deep(.v-theme--dark) .enhanced-table-items .v-table__wrapper {
-  background-color: #121212 !important;
-}
-
-:deep(.dark-theme) .enhanced-table-items :deep(.v-data-table__expanded),
-:deep(.v-theme--dark) .enhanced-table-items :deep(.v-data-table__expanded),
-::v-deep(.dark-theme) .enhanced-table-items .v-data-table__expanded,
-::v-deep(.v-theme--dark) .enhanced-table-items .v-data-table__expanded {
-  background-color: #1E1E1E !important;
-}
-
-.currency-display {
+.action-group {
   display: flex;
   align-items: center;
-  gap: 4px;
-}
-
-.currency-symbol {
-  font-weight: 600;
-  color: #1976d2;
-  font-size: 0.9rem;
-}
-
-.amount-value {
-  font-weight: 500;
-  color: #333;
-  font-size: 0.9rem;
-}
-
-/* Ensure numeric values remain visible in dark mode */
-:deep(.dark-theme) .amount-value,
-:deep(.v-theme--dark) .amount-value,
-::v-deep(.dark-theme) .amount-value,
-::v-deep(.v-theme--dark) .amount-value {
-  color: #fff !important;
-}
-
-/* Ensure table headings are dark themed */
-:deep(.dark-theme) .enhanced-table-items :deep(thead th),
-:deep(.v-theme--dark) .enhanced-table-items :deep(thead th),
-::v-deep(.dark-theme) .enhanced-table-items thead th,
-::v-deep(.v-theme--dark) .enhanced-table-items thead th {
-  background-color: #121212 !important;
-  color: #fff !important;
-}
-
-/* Ensure internal header content is also dark */
-:deep(.dark-theme) .enhanced-table-items :deep(.v-data-table-header__content),
-:deep(.v-theme--dark) .enhanced-table-items :deep(.v-data-table-header__content),
-::v-deep(.dark-theme) .enhanced-table-items .v-data-table-header__content,
-::v-deep(.v-theme--dark) .enhanced-table-items .v-data-table-header__content {
-  background-color: #121212 !important;
-}
-
-/* Ensure thead background is dark */
-:deep(.dark-theme) .enhanced-table-items :deep(thead),
-:deep(.v-theme--dark) .enhanced-table-items :deep(thead),
-::v-deep(.dark-theme) .enhanced-table-items thead,
-::v-deep(.v-theme--dark) .enhanced-table-items thead {
-  background-color: #121212 !important;
-}
-
-/* Ensure header rows are dark themed */
-:deep(.dark-theme) .enhanced-table-items :deep(thead tr),
-:deep(.v-theme--dark) .enhanced-table-items :deep(thead tr),
-::v-deep(.dark-theme) .enhanced-table-items thead tr,
-::v-deep(.v-theme--dark) .enhanced-table-items thead tr {
-  background-color: #121212 !important;
 }
 
 .item-action-btn {
   min-width: 44px !important;
   height: 44px !important;
-  border-radius: 8px !important;
+  border-radius: 12px !important;
   transition: all 0.3s ease;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1) !important;
   margin: 0 3px !important;
   position: relative;
   overflow: hidden;
+  display: flex;
+  align-items: center;
+  padding: 0 16px !important;
+}
+
+.item-action-btn .action-label {
+  margin-left: 8px;
+  font-weight: 500;
+  display: none;
+}
+
+@media (min-width: 600px) {
+  .item-action-btn .action-label {
+    display: inline-block;
+  }
+  
+  .item-action-btn {
+    min-width: 120px !important;
+  }
 }
 
 .item-action-btn:hover {
@@ -429,6 +351,7 @@ export default {
   z-index: 2;
 }
 
+/* Light theme button styles */
 .item-action-btn.delete-btn {
   background: linear-gradient(145deg, #ffebee, #ffcdd2) !important;
 }
@@ -453,34 +376,42 @@ export default {
   background: linear-gradient(145deg, #c8e6c9, #a5d6a7) !important;
 }
 
-.item-details-form {
-  padding: 10px 5px;
-  margin-top: 5px;
-  background-color: rgba(0, 0, 0, 0.02);
-  border-radius: 8px;
-  border: 1px solid rgba(25, 118, 210, 0.08);
+/* Dark theme button styles */
+:deep(.dark-theme) .item-action-btn.delete-btn,
+:deep(.v-theme--dark) .item-action-btn.delete-btn {
+  background: linear-gradient(145deg, #4a1515, #3a1010) !important;
+  color: #ff8a80 !important;
 }
 
-:deep(.dark-theme) .item-details-form,
-:deep(.v-theme--dark) .item-details-form,
-::v-deep(.dark-theme) .item-details-form,
-::v-deep(.v-theme--dark) .item-details-form {
-  background-color: #1E1E1E !important;
-  border-color: #373737 !important;
+:deep(.dark-theme) .item-action-btn.delete-btn:hover,
+:deep(.v-theme--dark) .item-action-btn.delete-btn:hover {
+  background: linear-gradient(145deg, #5a1a1a, #4a1515) !important;
 }
 
-.item-details-form .v-col {
-  padding: 8px 12px;
+:deep(.dark-theme) .item-action-btn.minus-btn,
+:deep(.v-theme--dark) .item-action-btn.minus-btn {
+  background: linear-gradient(145deg, #4a3c10, #3a2e0c) !important;
+  color: #ffe082 !important;
 }
 
-.field-with-icon {
-  position: relative;
-  margin-bottom: 10px;
+:deep(.dark-theme) .item-action-btn.minus-btn:hover,
+:deep(.v-theme--dark) .item-action-btn.minus-btn:hover {
+  background: linear-gradient(145deg, #5a4a14, #4a3c10) !important;
 }
 
-.field-with-icon :deep(.v-icon) {
-  color: #1976d2 !important;
-  opacity: 0.8;
+:deep(.dark-theme) .item-action-btn.plus-btn,
+:deep(.v-theme--dark) .item-action-btn.plus-btn {
+  background: linear-gradient(145deg, #1b4620, #133419) !important;
+  color: #a5d6a7 !important;
+}
+
+:deep(.dark-theme) .item-action-btn.plus-btn:hover,
+:deep(.v-theme--dark) .item-action-btn.plus-btn:hover {
+  background: linear-gradient(145deg, #235828, #1b4620) !important;
+}
+
+:deep(.dark-theme) .item-action-btn .v-icon,
+:deep(.v-theme--dark) .item-action-btn .v-icon {
+  opacity: 0.9;
 }
 </style>
-

@@ -1,25 +1,31 @@
+import { useDark, useToggle } from '@vueuse/core'
+
 export default {
     install(app, { vuetify }) {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const stored = localStorage.getItem('posawesome-theme');
-        const current = stored || (prefersDark ? 'dark' : 'light');
-
-        // apply initial theme
+        const isDark = useDark({
+            selector: 'html',
+            attribute: 'class',
+            valueDark: 'dark-theme',
+            valueLight: '',
+            storageKey: 'posawesome-theme',
+            onChanged: (dark) => {
+                // Update Vuetify theme when dark mode changes
+                vuetify.theme.global.name.value = dark ? 'dark' : 'light';
+            },
+        });
+        
+        const toggleDark = useToggle(isDark);
+        
+        // Initialize theme based on stored preference
+        const current = isDark.value ? 'dark' : 'light';
         vuetify.theme.global.name.value = current;
-        document.documentElement.classList.toggle('dark-theme', current === 'dark');
-
-        const toggle = () => {
-            const newTheme = vuetify.theme.global.name.value === 'dark' ? 'light' : 'dark';
-            vuetify.theme.global.name.value = newTheme;
-            document.documentElement.classList.toggle('dark-theme', newTheme === 'dark');
-            localStorage.setItem('posawesome-theme', newTheme);
-        };
-
+        
         app.config.globalProperties.$theme = {
             get current() {
                 return vuetify.theme.global.name.value;
             },
-            toggle,
+            toggle: () => toggleDark(),
+            isDark,
         };
     }
 };

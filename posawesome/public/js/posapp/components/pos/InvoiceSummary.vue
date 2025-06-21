@@ -65,6 +65,7 @@
               theme="dark"
               prepend-icon="mdi-file-document"
               @click="$emit('load-drafts')"
+              class="white-text-btn"
             >
               {{ __('Load Drafts') }}
             </v-btn>
@@ -185,5 +186,13 @@ export default {
 ::v-deep(.cards.v-theme--dark),
 ::v-deep(.cards.v-theme--dark) .v-card__underlay {
   background-color: #1E1E1E !important;
+}
+
+.white-text-btn {
+  color: white !important;
+}
+
+.white-text-btn :deep(.v-btn__content) {
+  color: white !important;
 }
 </style>

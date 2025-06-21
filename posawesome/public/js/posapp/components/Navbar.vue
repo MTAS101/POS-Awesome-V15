@@ -123,15 +123,17 @@
               </div>
             </v-list-item>
 
-            <v-list-item @click="toggleTheme" class="menu-item-compact neutral-action">
+            <!-- Theme toggle menu item -->
+            <v-list-item @click="toggleTheme" class="menu-item-compact info-action">
               <template v-slot:prepend>
-                <div class="menu-icon-wrapper-compact neutral-icon">
-                  <v-icon color="white" size="16">mdi-theme-light-dark</v-icon>
+                <div class="menu-icon-wrapper-compact info-icon">
+                  <v-icon color="white" size="16">{{ isDark ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent' }}</v-icon>
                 </div>
               </template>
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ isDark ? __('Light Mode') : __('Dark Mode') }}</v-list-item-title>
-                <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Toggle theme') }}</v-list-item-subtitle>
+                <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Switch theme appearance')
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -399,7 +401,8 @@ export default {
       return this.$theme.current === 'dark';
     },
     appBarColor() {
-      return this.isDark ? '#1e1e1e' : 'white';
+      // Use theme colors directly
+      return this.isDark ? this.$vuetify.theme.themes.dark.colors.surface : 'white';
     }
   },
   watch: {
@@ -773,7 +776,25 @@ export default {
     },
 
     toggleTheme() {
+      // Toggle the theme using the theme plugin
       this.$theme.toggle();
+      
+      // Force re-render of components that might not react to theme change
+      this.$forceUpdate();
+      
+      // Add dark-theme class to document root for global CSS targeting
+      document.documentElement.classList.toggle('dark-theme', this.$theme.current === 'dark');
+      
+      // Add a smooth transition class to the body for theme changes
+      document.body.classList.add('theme-transition');
+      
+      // Remove the transition class after the transition completes
+      setTimeout(() => {
+        document.body.classList.remove('theme-transition');
+      }, 1000);
+      
+      // Emit an event that other components can listen to
+      this.eventBus.emit('theme-changed', this.$theme.current);
     },
 
 
@@ -873,8 +894,8 @@ export default {
 
 /* Custom styling for the navigation drawer, including background and transition effects. */
 .drawer-custom {
-  background-color: #fafafa;
-  transition: all 0.3s ease-out;
+  background-color: var(--surface-secondary);
+  transition: var(--transition-normal);
 }
 
 /* Styling for the header section of the expanded navigation drawer. */
@@ -882,7 +903,7 @@ export default {
   display: flex;
   align-items: center;
   height: 64px;
-  padding: 0 16px;
+  padding: 0 var(--dynamic-md);
 }
 
 /* Styling for the header section of the mini (collapsed) navigation drawer. */
@@ -895,34 +916,34 @@ export default {
 
 /* Styling for the company name text within the drawer header. */
 .drawer-company {
-  margin-left: 12px;
+  margin-left: var(--dynamic-sm);
   flex: 1;
   font-weight: 500;
   font-size: 1rem;
-  color: #424242;
+  color: var(--text-primary);
 }
 
 /* Styling for icons within the navigation drawer list items. */
 .drawer-icon {
   font-size: 24px;
-  color: #1976d2;
+  color: var(--primary-start);
 }
 
 /* Styling for the title text of navigation drawer list items. */
 .drawer-item-title {
-  margin-left: 8px;
+  margin-left: var(--dynamic-xs);
   font-weight: 500;
-  color: #424242;
+  color: var(--text-primary);
 }
 
 /* Hover effect for all list items in the navigation drawer. */
 .v-list-item:hover {
-  background-color: rgba(25, 118, 210, 0.1) !important;
+  background-color: var(--table-row-hover) !important;
 }
 
 /* Styling for the actively selected list item in the navigation drawer. */
 .active-item {
-  background-color: rgba(25, 118, 210, 0.2) !important;
+  background-color: rgba(var(--primary-start), 0.2) !important;
 }
 
 /* --- User Menu Styling --- */
@@ -931,25 +952,25 @@ export default {
 /* Styling for the main "Menu" button that activates the dropdown. */
 .user-menu-btn {
   text-transform: none;
-  padding: 4px 12px;
+  padding: var(--dynamic-xs) var(--dynamic-sm);
   font-weight: 500;
 }
 
 /* Styling for the card that contains the dropdown menu list. */
 .user-menu-card {
-  border-radius: 8px;
+  border-radius: var(--border-radius-md);
   overflow: hidden;
 }
 
 /* Padding for the list within the user menu card. */
 .user-menu-list {
-  padding-top: 8px;
-  padding-bottom: 8px;
+  padding-top: var(--dynamic-xs);
+  padding-bottom: var(--dynamic-xs);
 }
 
 /* Padding for individual list items within the user menu. */
 .user-menu-item {
-  padding: 10px 16px;
+  padding: calc(var(--dynamic-xs) + 2px) var(--dynamic-md);
 }
 
 /* Minimum width for icons within user menu list items to ensure alignment. */
@@ -1770,36 +1791,181 @@ export default {
   background: #a8a8a8;
 }
 
+/* Modern Theme Toggle Switch - Enhanced Size and Visibility */
+.modern-theme-toggle {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  touch-action: pan-x;
+  -webkit-tap-highlight-color: transparent;
+  margin: 0 12px;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-track {
+  width: 64px; /* Increased from 50px */
+  height: 32px; /* Increased from 24px */
+  padding: 0;
+  border-radius: 30px;
+  background-color: #4D4D4D;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  position: relative;
+  border: 2px solid rgba(255, 255, 255, 0.1); /* Added border for better visibility */
+}
+
+.toggle-track.dark-active {
+  background-color: #BB86FC;
+  border-color: rgba(255, 255, 255, 0.2); /* Lighter border in dark mode */
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 28px; /* Increased from 20px */
+  height: 28px; /* Increased from 20px */
+  border-radius: 50%;
+  background-color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Enhanced shadow */
+  transition: all 0.25s ease;
+  z-index: 1;
+}
+
+.toggle-thumb.dark-active {
+  transform: translateX(32px); /* Adjusted for new width */
+}
+
+.toggle-moon, .toggle-sun {
+  width: 24px; /* Increased from 16px */
+  height: 24px; /* Increased from 16px */
+  position: absolute;
+  top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.25s ease;
+}
+
+.toggle-moon {
+  right: 8px; /* Adjusted position */
+  opacity: 0;
+  color: #fff;
+}
+
+.toggle-sun {
+  left: 8px; /* Adjusted position */
+  opacity: 1;
+  color: #fff;
+}
+
+.toggle-track.dark-active .toggle-moon {
+  opacity: 1;
+}
+
+.toggle-track.dark-active .toggle-sun {
+  opacity: 0;
+}
+
+/* Add hover and focus effects */
+.modern-theme-toggle:hover .toggle-track {
+  background-color: #555;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2); /* Added glow effect on hover */
+}
+
+.modern-theme-toggle:hover .toggle-track.dark-active {
+  background-color: #9D6FE7;
+  box-shadow: 0 0 8px rgba(187, 134, 252, 0.4); /* Purple glow in dark mode */
+}
+
+.modern-theme-toggle:focus-visible {
+  outline: 2px solid #BB86FC;
+  outline-offset: 2px;
+  border-radius: 30px;
+}
+
+/* Animation for the icons */
+.toggle-moon svg, .toggle-sun svg {
+  width: 20px; /* Increased from default */
+  height: 20px; /* Increased from default */
+  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.modern-theme-toggle:hover .toggle-moon svg,
+.modern-theme-toggle:hover .toggle-sun svg {
+  transform: rotate(12deg) scale(1.1);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .modern-theme-toggle {
+    width: 46px;
+    height: 24px;
+  }
+  
+  .toggle-track {
+    width: 40px;
+    height: 20px;
+  }
+  
+  .toggle-thumb {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .toggle-thumb.dark-active {
+    transform: translateX(18px);
+  }
+  
+  .toggle-sun, .toggle-moon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
 /* --- Dark Theme Adjustments --- */
 /* Navbar and Drawer styling when dark mode is active */
 :deep(.dark-theme) .navbar-enhanced,
 :deep(.v-theme--dark) .navbar-enhanced,
 ::v-deep(.dark-theme) .navbar-enhanced,
 ::v-deep(.v-theme--dark) .navbar-enhanced {
-  background-color: #1e1e1e !important;
+  background-color: var(--surface-primary) !important;
   background-image: none !important;
-  border-bottom-color: #333 !important;
-  color: #ffffff !important;
+  border-bottom-color: var(--divider) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.dark-theme) .v-app-bar,
+:deep(.v-theme--dark) .v-app-bar {
+  background-color: var(--surface-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+:deep(.dark-theme) .v-app-bar .v-btn,
+:deep(.v-theme--dark) .v-app-bar .v-btn {
+  color: var(--text-primary) !important;
 }
 
 :deep(.dark-theme) .drawer-custom,
 :deep(.v-theme--dark) .drawer-custom,
 ::v-deep(.dark-theme) .drawer-custom,
 ::v-deep(.v-theme--dark) .drawer-custom {
-  background-color: #121212 !important;
+  background-color: var(--background) !important;
 }
 
 :deep(.dark-theme) .drawer-item-title,
 :deep(.v-theme--dark) .drawer-item-title,
 ::v-deep(.dark-theme) .drawer-item-title,
 ::v-deep(.v-theme--dark) .drawer-item-title {
-  color: #e0e0e0 !important;
+  color: var(--text-secondary) !important;
 }
 
 :deep(.dark-theme) .drawer-header .drawer-company,
 :deep(.v-theme--dark) .drawer-header .drawer-company,
 ::v-deep(.dark-theme) .drawer-header .drawer-company,
 ::v-deep(.v-theme--dark) .drawer-header .drawer-company {
-  color: #e0e0e0 !important;
+  color: var(--text-secondary) !important;
 }
 </style>

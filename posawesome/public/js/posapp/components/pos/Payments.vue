@@ -1813,42 +1813,8 @@ export default {
 </script>
 
 <style scoped>
-/* Dark mode input styling */
-:deep(.dark-theme) .dark-field,
-:deep(.v-theme--dark) .dark-field,
-::v-deep(.dark-theme) .dark-field,
-::v-deep(.v-theme--dark) .dark-field {
-  background-color: #1E1E1E !important;
-}
-
-:deep(.dark-theme) .dark-field :deep(.v-field__input),
-:deep(.v-theme--dark) .dark-field :deep(.v-field__input),
-:deep(.dark-theme) .dark-field :deep(input),
-:deep(.v-theme--dark) .dark-field :deep(input),
-:deep(.dark-theme) .dark-field :deep(.v-label),
-:deep(.v-theme--dark) .dark-field :deep(.v-label),
-::v-deep(.dark-theme) .dark-field .v-field__input,
-::v-deep(.v-theme--dark) .dark-field .v-field__input,
-::v-deep(.dark-theme) .dark-field input,
-::v-deep(.v-theme--dark) .dark-field input,
-::v-deep(.dark-theme) .dark-field .v-label,
-::v-deep(.v-theme--dark) .dark-field .v-label {
-  color: #fff !important;
-}
-
-:deep(.dark-theme) .dark-field :deep(.v-field__overlay),
-:deep(.v-theme--dark) .dark-field :deep(.v-field__overlay),
-::v-deep(.dark-theme) .dark-field .v-field__overlay,
-::v-deep(.v-theme--dark) .dark-field .v-field__overlay {
-  background-color: #1E1E1E !important;
-}
-
 .v-text-field {
-  cursor: text;
-}
-
-.v-text-field:hover {
-  background-color: rgba(var(--v-theme-primary), 0.05);
+  composes: pos-form-field;
 }
 
 /* Remove readonly styling */
@@ -1860,61 +1826,7 @@ export default {
   background-color: transparent;
 }
 
-/* Custom date picker styling */
-.custom-date-picker {
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  max-width: 320px;
-  background-color: white;
-  border: 1px solid #e0e0e0;
-}
-
-.custom-date-picker .v-date-picker-header {
-  padding: 12px;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.custom-date-picker .v-date-picker-month {
-  padding: 8px;
-}
-
-.custom-date-picker .v-btn {
-  margin: 2px;
-  min-width: 36px !important;
-  height: 36px !important;
-  border-radius: 50%;
-}
-
-.custom-date-picker .v-btn--active {
-  background-color: var(--v-theme-primary) !important;
-  color: white !important;
-}
-
-/* Position the menu below the field */
-.v-menu__content {
-  border-radius: 8px;
-  overflow: hidden;
-  margin-top: 4px;
-}
-
 .cards {
-  background-color: #f5f5f5 !important;
-}
-
-:deep(.dark-theme) .cards,
-:deep(.dark-theme) .cards .v-card__underlay,
-:deep(.v-theme--dark) .cards,
-:deep(.v-theme--dark) .cards .v-card__underlay,
-:deep(.cards.v-theme--dark),
-:deep(.cards.v-theme--dark) .v-card__underlay,
-::v-deep(.dark-theme) .cards,
-::v-deep(.dark-theme) .cards .v-card__underlay,
-::v-deep(.v-theme--dark) .cards,
-::v-deep(.v-theme--dark) .cards .v-card__underlay,
-::v-deep(.cards.v-theme--dark),
-::v-deep(.cards.v-theme--dark) .v-card__underlay {
-  background-color: #1E1E1E !important;
+  background-color: var(--surface-secondary) !important;
 }
 </style>

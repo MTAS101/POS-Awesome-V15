@@ -223,7 +223,94 @@ export default {
 };
 </script>
 
-<style scoped>
+<style>
+/* Replace with standardized pos-card class */
+.offline-invoices-card {
+  composes: pos-card;
+  border-radius: var(--border-radius-xl) !important;
+}
+
+/* Remove redundant dark theme overrides */
+
+/* Keep specific header styling */
+.offline-header {
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--field-border);
+  position: relative;
+}
+
+/* Remove redundant dark theme overrides for header */
+
+.offline-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-start) 0%, var(--primary-end) 100%);
+}
+
+/* Keep specific layout styles */
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: var(--dynamic-md);
+}
+
+.header-icon-wrapper {
+  background: linear-gradient(135deg, var(--primary-start) 0%, var(--primary-end) 100%);
+  border-radius: var(--border-radius-md);
+  padding: var(--dynamic-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+}
+
+.header-icon {
+  color: white;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.header-title {
+  margin: 0 0 var(--dynamic-xs) 0;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+}
+
+.header-subtitle {
+  margin: 0 0 var(--dynamic-sm) 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.header-stats {
+  display: flex;
+  gap: var(--dynamic-xs);
+}
+
+.status-chip {
+  font-weight: 600;
+  border-radius: var(--border-radius-md);
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--dynamic-sm);
+}
+
+.sync-btn {
+  border-radius: var(--border-radius-md);
+}
+</style>
+
 /* Enhanced White Background Styling */
 .offline-invoices-card {
   border-radius: 20px !important;
