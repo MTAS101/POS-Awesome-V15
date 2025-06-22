@@ -37,7 +37,7 @@
 
       <template v-slot:item.discount_value="{ item }">
         <div class="amount-value">
-          {{ formatFloat(item.discount_percentage || (item.price_list_rate ? (item.discount_percentage / item.price_list_rate) * 100 : 0)) }}%
+          {{ formatFloat(item.discount_percentage || (item.price_list_rate ? (item.discount_amount / item.price_list_rate) * 100 : 0)) }}%
         </div>
       </template>
 
