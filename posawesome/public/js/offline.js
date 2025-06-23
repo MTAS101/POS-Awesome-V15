@@ -645,6 +645,36 @@ export async function fetchItemStockQuantities(items, pos_profile, chunkSize = 1
   }
 }
 
+// Add this function to initialize stock cache for all items
+export async function initializeStockCache(items, pos_profile) {
+  try {
+    console.info('Initializing stock cache for', items.length, 'items');
+
+    const updatedItems = await fetchItemStockQuantities(items, pos_profile);
+
+    if (updatedItems && updatedItems.length > 0) {
+      const stockCache = {};
+
+      updatedItems.forEach(item => {
+        if (item.actual_qty !== undefined) {
+          stockCache[item.item_code] = {
+            actual_qty: item.actual_qty,
+            last_updated: new Date().toISOString()
+          };
+        }
+      });
+
+      memory.local_stock_cache = stockCache;
+      persist('local_stock_cache');
+      console.info('Stock cache initialized with', Object.keys(stockCache).length, 'items');
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Failed to initialize stock cache:', error);
+    return false;
+  }
+}
 
 // New function to update local stock with actual quantities
 export function updateLocalStockWithActualQuantities(invoiceItems, serverItems) {
