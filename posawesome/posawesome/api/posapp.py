@@ -2331,8 +2331,13 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
 
 
 def get_seearch_items_conditions(item_code, serial_no, batch_no, barcode):
+    """Build item search conditions safely."""
+    # Gracefully handle missing item_code values to avoid TypeErrors
+    item_code = item_code or ""
+
     if serial_no or batch_no or barcode:
         return " and name = {0}".format(frappe.db.escape(item_code))
+
     return """ and (name like {item_code} or item_name like {item_code})""".format(
         item_code=frappe.db.escape("%" + item_code + "%")
     )
