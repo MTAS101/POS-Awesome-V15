@@ -7,7 +7,8 @@ db.version(1).stores({ keyval: '&key' });
 let persistWorker = null;
 if (typeof Worker !== 'undefined') {
   try {
-    persistWorker = new Worker(new URL('./posapp/workers/itemWorker.js', import.meta.url), { type: 'module' });
+    const workerUrl = '/assets/posawesome/js/posapp/workers/itemWorker.js';
+    persistWorker = new Worker(workerUrl, { type: 'module' });
   } catch (e) {
     console.error('Failed to init persist worker', e);
     persistWorker = null;

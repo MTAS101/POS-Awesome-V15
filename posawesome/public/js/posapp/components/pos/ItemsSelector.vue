@@ -1480,7 +1480,8 @@ export default {
   created: function () {
     if (typeof Worker !== 'undefined') {
       try {
-        this.itemWorker = new Worker(new URL('../workers/itemWorker.js', import.meta.url), { type: 'module' });
+        const workerUrl = '/assets/posawesome/js/posapp/workers/itemWorker.js';
+        this.itemWorker = new Worker(workerUrl, { type: 'module' });
       } catch (e) {
         console.error('Failed to start item worker', e);
         this.itemWorker = null;
