@@ -70,7 +70,7 @@
             density="compact"
             variant="text"
             color="primary"
-            prepend-icon="mdi-cog-outline"
+            prepend-name="cog-outline"
             @click="toggleColumnSelection"
             class="column-selector-btn"
           >
@@ -82,7 +82,7 @@
               <v-card-title class="text-h6 pa-4 d-flex align-center">
                 <span>{{ __('Select Columns to Display') }}</span>
                 <v-spacer></v-spacer>
-                <v-btn icon="mdi-close" variant="text" density="compact" @click="show_column_selector = false"></v-btn>
+                <v-btn name="close" variant="text" density="compact" @click="show_column_selector = false"></v-btn>
               </v-card-title>
               <v-divider></v-divider>
               <v-card-text class="pa-4">

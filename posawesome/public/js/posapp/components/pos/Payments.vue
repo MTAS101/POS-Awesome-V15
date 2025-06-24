@@ -315,7 +315,7 @@
               no-data-text="Address not found"
               hide-details
               :customFilter="addressFilter"
-              append-icon="mdi-plus"
+              append-name="plus"
               @click:append="new_address"
             >
               <template v-slot:item="{ item }">

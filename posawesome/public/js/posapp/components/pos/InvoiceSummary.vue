@@ -10,13 +10,13 @@
           <!-- Total Qty -->
           <v-col cols="6">
             <v-text-field :model-value="formatFloat(total_qty)" :label="frappe._('Total Qty')"
-              prepend-inner-icon="mdi-format-list-numbered" variant="solo" density="compact" readonly
+              prepend-inner-name="format-list-numbered" variant="solo" density="compact" readonly
               color="accent" />
           </v-col>
           <!-- Additional Discount (Amount or Percentage) -->
           <v-col cols="6" v-if="!pos_profile.posa_use_percentage_discount">
             <v-text-field :model-value="additional_discount" @update:model-value="$emit('update:additional_discount', $event)"
-              :label="frappe._('Additional Discount')" prepend-inner-icon="mdi-cash-minus" variant="solo"
+              :label="frappe._('Additional Discount')" prepend-inner-name="cash-minus" variant="solo"
               density="compact" color="warning" :prefix="currencySymbol(pos_profile.currency)"
               :disabled="!pos_profile.posa_allow_user_to_edit_additional_discount" />
           </v-col>
@@ -24,7 +24,7 @@
           <v-col cols="6" v-else>
             <v-text-field :model-value="additional_discount_percentage" @update:model-value="$emit('update:additional_discount_percentage', $event)" @change="$emit('update_discount_umount')"
               :rules="[isNumber]" :label="frappe._('Additional Discount %')" suffix="%"
-              prepend-inner-icon="mdi-percent" variant="solo" density="compact" color="warning"
+              prepend-inner-name="percent" variant="solo" density="compact" color="warning"
               :disabled="!pos_profile.posa_allow_user_to_edit_additional_discount || !!discount_percentage_offer_name" />
           </v-col>
 
@@ -32,13 +32,13 @@
           <v-col cols="6">
             <v-text-field :model-value="formatCurrency(total_items_discount_amount)"
               :prefix="currencySymbol(displayCurrency)" :label="frappe._('Items Discounts')"
-              prepend-inner-icon="mdi-tag-minus" variant="solo" density="compact" color="warning" readonly />
+              prepend-inner-name="tag-minus" variant="solo" density="compact" color="warning" readonly />
           </v-col>
 
           <!-- Total (moved to maintain row alignment) -->
           <v-col cols="6">
             <v-text-field :model-value="formatCurrency(subtotal)" :prefix="currencySymbol(displayCurrency)"
-              :label="frappe._('Total')" prepend-inner-icon="mdi-cash" variant="solo" density="compact" readonly
+              :label="frappe._('Total')" prepend-inner-name="cash" variant="solo" density="compact" readonly
               color="success" />
           </v-col>
         </v-row>
@@ -52,7 +52,7 @@
               block
               color="accent"
               theme="dark"
-              prepend-icon="mdi-content-save"
+              prepend-name="content-save"
               @click="$emit('save-and-clear')"
             >
               {{ __('Save & Clear') }}
@@ -63,7 +63,7 @@
               block
               color="warning"
               theme="dark"
-              prepend-icon="mdi-file-document"
+              prepend-name="file-document"
               @click="$emit('load-drafts')"
               class="white-text-btn"
             >
@@ -75,7 +75,7 @@
               block
               color="info"
               theme="dark"
-              prepend-icon="mdi-book-search"
+              prepend-name="book-search"
               @click="$emit('select-order')"
             >
               {{ __('Select S.O') }}
@@ -86,7 +86,7 @@
               block
               color="error"
               theme="dark"
-              prepend-icon="mdi-close-circle"
+              prepend-name="close-circle"
               @click="$emit('cancel-sale')"
             >
               {{ __('Cancel Sale') }}
@@ -97,7 +97,7 @@
               block
               color="secondary"
               theme="dark"
-              prepend-icon="mdi-backup-restore"
+              prepend-name="backup-restore"
               @click="$emit('open-returns')"
             >
               {{ __('Sales Return') }}
@@ -108,7 +108,7 @@
               block
               color="primary"
               theme="dark"
-              prepend-icon="mdi-printer"
+              prepend-name="printer"
               @click="$emit('print-draft')"
             >
               {{ __('Print Draft') }}
@@ -120,7 +120,7 @@
               color="success"
               theme="dark"
               size="large"
-              prepend-icon="mdi-credit-card"
+              prepend-name="credit-card"
               @click="$emit('show-payment')"
             >
               {{ __('PAY') }}

@@ -12,11 +12,11 @@
             <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
               :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
               hide-details v-model="debounce_search" @keydown.esc="esc_event"
-              @keydown.enter="search_onchange" @click:clear="clearSearch" prepend-inner-icon="mdi-magnify"
+              @keydown.enter="search_onchange" @click:clear="clearSearch" prepend-inner-name="magnify"
               @focus="handleItemSearchFocus" ref="debounce_search">
               <!-- Add camera scan button if enabled -->
               <template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
-                <v-btn icon="mdi-camera" size="small" color="primary" variant="text" @click="startCameraScanning"
+                <v-btn name="camera" size="small" color="primary" variant="text" @click="startCameraScanning"
                   :title="__('Scan with Camera')">
                 </v-btn>
               </template>

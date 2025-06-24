@@ -150,11 +150,11 @@
           <v-row class="mt-2 mb-2">
             <v-spacer></v-spacer>
             <v-btn variant="text" class="ml-2" color="primary" theme="dark" @click="search_invoices">
-              <v-icon left>mdi-magnify</v-icon>
+              <Icon name="magnify" />
               {{ __('Search') }}
             </v-btn>
             <v-btn variant="text" class="ml-2" color="warning" theme="dark" @click="clear_search">
-              <v-icon left>mdi-refresh</v-icon>
+              <Icon name="refresh" />
               {{ __('Clear') }}
             </v-btn>
             <v-btn v-if="pos_profile.posa_allow_return_without_invoice == 1" variant="text" class="ml-2" color="secondary" theme="dark" @click="return_without_invoice">

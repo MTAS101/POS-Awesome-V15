@@ -38,7 +38,7 @@
 
       <div class="profile-section mx-1">
         <v-chip color="primary" variant="outlined" class="profile-chip">
-          <v-icon start>mdi-account-circle</v-icon>
+          <Icon name="account-circle" />
           {{ posProfile.name }}
         </v-chip>
       </div>
@@ -46,9 +46,9 @@
       <v-btn icon color="primary" class="mx-1 offline-invoices-btn" @click="showOfflineInvoices = true"
         :class="{ 'has-pending': pendingInvoices > 0 }">
         <v-badge v-if="pendingInvoices > 0" :content="pendingInvoices" color="error" overlap>
-          <v-icon>mdi-file-document-multiple-outline</v-icon>
+          <Icon name="file-document-multiple-outline" />
         </v-badge>
-        <v-icon v-else>mdi-file-document-multiple-outline</v-icon>
+        <Icon name="file-document-multiple-outline" />
         <v-tooltip activator="parent" location="bottom">
           {{ __('Offline Invoices') }} ({{ pendingInvoices }})
         </v-tooltip>
@@ -58,12 +58,12 @@
         <template #activator="{ props }">
           <v-btn v-bind="props" color="primary" variant="elevated" class="menu-btn-compact">
             {{ __('Menu') }}
-            <v-icon right size="16" class="ml-1">mdi-menu-down</v-icon>
+            <Icon name="menu-down" />
           </v-btn>
         </template>
         <v-card class="menu-card-compact" elevation="12">
           <div class="menu-header-compact">
-            <v-icon color="primary" size="20">mdi-menu</v-icon>
+            <Icon name="menu" />
             <span class="menu-header-text-compact">{{ __('Actions') }}</span>
           </div>
           <v-list density="compact" class="menu-list-compact">
@@ -71,7 +71,7 @@
               class="menu-item-compact primary-action">
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact primary-icon">
-                  <v-icon color="white" size="16">mdi-content-save-move-outline</v-icon>
+                  <Icon name="content-save-move-outline" />
                 </div>
               </template>
               <div class="menu-content-compact">
@@ -85,7 +85,7 @@
               class="menu-item-compact secondary-action">
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact secondary-icon">
-                  <v-icon color="white" size="16">mdi-printer</v-icon>
+                  <Icon name="printer" />
                 </div>
               </template>
               <div class="menu-content-compact">
@@ -98,7 +98,7 @@
             <v-list-item @click="syncPendingInvoices" class="menu-item-compact info-action">
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact info-icon">
-                  <v-icon color="white" size="16">mdi-sync</v-icon>
+                  <Icon name="sync" />
                 </div>
               </template>
               <div class="menu-content-compact">
@@ -113,7 +113,7 @@
             <v-list-item @click="goAbout" class="menu-item-compact neutral-action">
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact neutral-icon">
-                  <v-icon color="white" size="16">mdi-information-outline</v-icon>
+                  <Icon name="information-outline" />
                 </div>
               </template>
               <div class="menu-content-compact">
@@ -127,7 +127,7 @@
             <v-list-item @click="toggleTheme" class="menu-item-compact info-action">
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact info-icon">
-                  <v-icon color="white" size="16">{{ isDark ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent' }}</v-icon>
+                  <Icon :name="isDark ? 'white-balance-sunny' : 'moon-waning-crescent'" />
                 </div>
               </template>
               <div class="menu-content-compact">
@@ -140,7 +140,7 @@
             <v-list-item @click="logOut" class="menu-item-compact danger-action">
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact danger-icon">
-                  <v-icon color="white" size="16">mdi-logout</v-icon>
+                  <Icon name="logout" />
                 </div>
               </template>
               <div class="menu-content-compact">
@@ -161,7 +161,7 @@
       <div v-if="!mini" class="drawer-header">
         <v-avatar size="40"><v-img :src="companyImg" alt="Company logo" /></v-avatar>
         <span class="drawer-company">{{ company }}</span>
-        <v-btn icon @click.stop="mini = true"><v-icon>mdi-chevron-left</v-icon></v-btn>
+        <v-btn icon @click.stop="mini = true"><Icon name="chevron-left" /></v-btn>
       </div>
       <div v-else class="drawer-header-mini">
         <v-avatar size="40"><v-img :src="companyImg" alt="Company logo" /></v-avatar>
@@ -172,7 +172,7 @@
       <v-list dense nav>
         <v-list-item-group v-model="item" active-class="active-item">
           <v-list-item v-for="i in items" :key="i.text" @click="changePage(i.text)" class="drawer-item">
-            <v-list-item-icon><v-icon class="drawer-icon">{{ i.icon }}</v-icon></v-list-item-icon>
+            <v-list-item-icon><Icon :name="i.icon.replace('mdi-', '')" class="drawer-icon" /></v-list-item-icon>
             <v-list-item-content v-if="!mini">
               <v-list-item-title class="drawer-item-title">{{ i.text }}</v-list-item-title>
             </v-list-item-content>
@@ -200,7 +200,7 @@
         <v-card-title class="about-header-improved pa-5">
           <div class="header-content-improved">
             <div class="header-icon-wrapper-improved">
-              <v-icon size="22" class="header-icon">mdi-information-outline</v-icon>
+              <Icon name="information-outline" />
             </div>
             <div class="header-text-improved">
               <h3 class="header-title-improved">{{ __('About') }}</h3>
@@ -208,12 +208,12 @@
             </div>
             <div class="header-stats-improved" v-if="!loadingAppInfo && !appInfoError">
               <v-chip size="small" color="primary" variant="tonal" class="status-chip-improved">
-                <v-icon start size="14">mdi-application-outline</v-icon>
+                <Icon name="application-outline" />
                 {{ appInfo.length }} {{ __('Apps') }}
               </v-chip>
             </div>
           </div>
-          <v-btn icon="mdi-close" variant="text" size="default" @click="showAboutDialog = false" class="close-btn-improved"></v-btn>
+          <v-btn name="close" variant="text" size="default" @click="showAboutDialog = false" class="close-btn-improved"></v-btn>
         </v-card-title>
 
         <v-card-text class="pa-0 white-background">
@@ -226,10 +226,10 @@
             
             <!-- Error State -->
             <div v-else-if="appInfoError" class="empty-state-improved text-center">
-              <v-icon size="50" color="error" class="mb-3">mdi-alert-circle-outline</v-icon>
+              <Icon name="alert-circle-outline" />
               <p class="text-body-2 mb-3">{{ __('Error Loading Data') }}</p>
               <v-btn color="primary" variant="outlined" size="default" @click="loadAppInfo">
-                <v-icon start size="18">mdi-refresh</v-icon>
+                <Icon name="refresh" />
                 {{ __('Retry') }}
               </v-btn>
             </div>
@@ -243,7 +243,7 @@
               <div class="apps-grid-improved">
                 <div v-for="app in appInfo" :key="app.app_name" class="app-item-improved">
                   <div class="app-icon-improved">
-                    <v-icon size="18" color="white">mdi-application-outline</v-icon>
+                    <Icon name="application-outline" />
                   </div>
                   <div class="app-details-improved">
                     <div class="app-name-improved">{{ app.app_name }}</div>
@@ -258,7 +258,7 @@
         <v-card-actions class="dialog-actions-improved pa-4">
           <div class="footer-info-improved">
             <span class="footer-text-improved">
-              <v-icon start size="16" color="error">mdi-heart</v-icon>
+              <Icon name="heart" />
               {{ __('Built with Frappe') }}
             </span>
           </div>
@@ -287,7 +287,7 @@ export default {
       drawer: false, // Controls the visibility of the side navigation drawer (true for open, false for closed)
       mini: true, // Controls the mini-variant (collapsed) state of the drawer (true for collapsed, false for expanded)
       item: 0, // Index of the currently selected item in the drawer list, used for active styling
-      items: [{ text: 'POS', icon: 'mdi-network-pos' }], // Array of navigation items for the drawer. Each item has text and a Material Design Icon.
+      items: [{ text: 'POS', icon: 'network-pos' }], // Array of navigation items for the drawer. Each item has text and a Material Design Icon.
       company: 'POS Awesome', // Default company name, used if not fetched from Frappe boot data
       companyImg: '/assets/erpnext/images/erpnext-logo.svg', // Default path to the company logo image
       posProfile: {}, // Object to store the current POS profile data, fetched from the backend
@@ -455,8 +455,9 @@ export default {
         this.companyImg = data.company_logo || this.companyImg;
       });
       this.eventBus.on('register_pos_profile', data => { // Listens for the POS profile data
+
         this.posProfile = data.pos_profile;
-        const paymentsItem = { text: 'Payments', icon: 'mdi-cash-register' };
+        const paymentsItem = { text: 'Payments', icon: 'cash-register' };
         // Conditionally adds a 'Payments' navigation item if allowed by the POS profile and not already present
         if (this.posProfile.posa_use_pos_awesome_payments && !this.items.some(i => i.text === 'Payments')) {
           this.items.push(paymentsItem);

@@ -6,7 +6,7 @@
         <v-card-title class="closing-header pa-6">
           <div class="header-content">
             <div class="header-icon-wrapper">
-              <v-icon class="header-icon" size="40">mdi-store-clock-outline</v-icon>
+              <Icon name="store-clock-outline" />
             </div>
             <div class="header-text">
               <h3 class="header-title">{{ __('Closing POS Shift') }}</h3>
@@ -57,12 +57,12 @@
         <v-card-actions class="dialog-actions-container">
           <v-btn theme="dark" @click="submit_dialog" class="pos-action-btn submit-action-btn" size="large"
             elevation="2">
-            <v-icon start>mdi-check-circle-outline</v-icon>
+            <Icon name="check-circle-outline" />
             <span>{{ __('Submit') }}</span>
           </v-btn>
           <v-spacer></v-spacer>
           <v-btn theme="dark" @click="close_dialog" class="pos-action-btn cancel-action-btn" size="large" elevation="2">
-            <v-icon start>mdi-close-circle-outline</v-icon>
+            <Icon name="close-circle-outline" />
             <span>{{ __('Close') }}</span>
           </v-btn>
         </v-card-actions>

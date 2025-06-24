@@ -6,7 +6,7 @@
         <v-card-title class="offline-header pa-6">
           <div class="header-content">
             <div class="header-icon-wrapper">
-              <v-icon class="header-icon" size="40">mdi-file-document-multiple</v-icon>
+              <Icon name="file-document-multiple" />
             </div>
             <div class="header-text">
               <h3 class="header-title">{{ __('Offline Invoices') }}</h3>
@@ -19,7 +19,7 @@
                   size="small"
                   class="status-chip mr-2"
                 >
-                  <v-icon start size="14">mdi-clock-outline</v-icon>
+                  <Icon name="clock-outline" />
                   {{ invoices.length }} {{ __('Pending') }}
                 </v-chip>
                 <v-chip 
@@ -29,7 +29,7 @@
                   size="small"
                   class="status-chip"
                 >
-                  <v-icon start size="14">mdi-check-circle</v-icon>
+                  <Icon name="check-circle" />
                   {{ __('All Synced') }}
                 </v-chip>
               </div>
@@ -46,7 +46,7 @@
             <!-- Enhanced Empty State -->
             <div v-if="!invoices.length" class="empty-state text-center py-12">
               <div class="empty-icon-wrapper mb-4">
-                <v-icon size="80" color="success" class="empty-icon">mdi-check-circle-outline</v-icon>
+                <Icon name="check-circle-outline" />
               </div>
               <h3 class="text-h5 mb-3 text-grey-darken-2 font-weight-medium">{{ __('All Caught Up!') }}</h3>
               <p class="text-body-1 text-grey-darken-1 mb-0">{{ __('No offline invoices pending synchronization') }}</p>
@@ -69,7 +69,7 @@
                 <template #item.customer="{ item }">
                   <div class="customer-cell">
                     <v-avatar size="32" color="primary" class="mr-3">
-                      <v-icon size="18" color="white">mdi-account</v-icon>
+                      <Icon name="account" />
                     </v-avatar>
                     <div>
                       <div class="font-weight-medium text-grey-darken-2">{{ item.invoice.customer_name || item.invoice.customer }}</div>
@@ -80,7 +80,7 @@
                 
                 <template #item.posting_date="{ item }">
                   <v-chip size="small" color="info" variant="tonal" class="date-chip">
-                    <v-icon start size="14">mdi-calendar</v-icon>
+                    <Icon name="calendar" />
                     {{ item.invoice.posting_date }}
                   </v-chip>
                 </template>
@@ -105,7 +105,7 @@
                     @click="removeInvoice(index)"
                     class="delete-btn"
                   >
-                    <v-icon size="18">mdi-delete-outline</v-icon>
+                    <Icon name="delete-outline" />
                     <v-tooltip activator="parent" location="top">
                       {{ __('Delete Invoice') }}
                     </v-tooltip>
@@ -123,7 +123,7 @@
             v-if="invoices.length > 0" 
             theme="dark"
             variant="elevated" 
-            prepend-icon="mdi-sync"
+            prepend-name="sync"
             @click="$emit('sync-all')"
             class="pos-action-btn sync-action-btn"
             size="large"
@@ -139,7 +139,7 @@
             size="large"
             elevation="2"
           >
-            <v-icon start>mdi-close-circle-outline</v-icon>
+            <Icon name="close-circle-outline" />
             <span>{{ __('Close') }}</span>
           </v-btn>
         </v-card-actions>

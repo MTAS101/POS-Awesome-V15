@@ -2,13 +2,13 @@
     <v-dialog v-model="scannerDialog" max-width="600px" persistent="false">
         <v-card>
             <v-card-title class="text-h5 text-primary d-flex align-center">
-                <v-icon class="mr-2" size="large">mdi-camera</v-icon>
+                <Icon name="camera" />
                 {{ __('Scan QR Code/Barcode') }}
                 <v-chip class="ml-2" size="small" color="primary">
                     {{ scanType === 'Both' ? 'Auto Detect' : scanType }}
                 </v-chip>
                 <v-spacer></v-spacer>
-                <v-btn icon="mdi-close" @click.stop="stopScanning" color="error" variant="text" size="large"
+                <v-btn name="close" @click.stop="stopScanning" color="error" variant="text" size="large"
                     :title="__('Close Scanner')"></v-btn>
             </v-card-title>
 
@@ -36,7 +36,7 @@
                     <!-- Status messages -->
                     <div class="status-messages pa-3">
                         <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-2">
-                            <v-icon>mdi-alert-circle</v-icon>
+                            <Icon name="alert-circle" />
                             {{ errorMessage }}
                         </v-alert>
 
@@ -55,7 +55,7 @@
 
                 <!-- Camera permission denied message -->
                 <div v-else class="pa-4 text-center">
-                    <v-icon size="64" color="error">mdi-camera-off</v-icon>
+                    <Icon name="camera-off" />
                     <h3 class="mt-2">{{ __('Camera Access Required') }}</h3>
                     <p class="mt-2">{{ __('Please allow camera access to scan codes') }}</p>
                     <!-- Requesting permission is handled by the browser when QrcodeStream tries to access camera -->
@@ -68,14 +68,14 @@
                     <!-- Flashlight toggle -->
                     <v-btn v-if="isScanning && cameras.length > 0" @click="toggleTorch"
                         :color="torchActive ? 'warning' : 'default'" variant="outlined" size="small">
-                        <v-icon>{{ torchActive ? 'mdi-flashlight' : 'mdi-flashlight-off' }}</v-icon>
+                        <Icon :name="torchActive ? 'flashlight' : 'flashlight-off'" />
                         {{ torchActive ? __('Flash On') : __('Flash Off') }}
                     </v-btn>
 
                     <!-- Camera switch -->
                     <v-btn v-if="isScanning && cameras.length > 1" @click="switchCamera" color="default"
                         variant="outlined" size="small">
-                        <v-icon>mdi-camera-switch</v-icon>
+                        <Icon name="camera-switch" />
                         {{ __('Switch Camera') }}
                     </v-btn>
                 </div>
