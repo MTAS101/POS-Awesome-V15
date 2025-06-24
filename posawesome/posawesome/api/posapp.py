@@ -145,6 +145,8 @@ def get_items(
     item_group="",
     search_value="",
     customer=None,
+    limit=None,
+    offset=None,
 ):
     _pos_profile = json.loads(pos_profile)
     use_price_list = _pos_profile.get("posa_use_server_cache")
@@ -156,6 +158,8 @@ def get_items(
         item_group,
         search_value,
         customer=None,
+        limit=None,
+        offset=None,
     ):
         return _get_items(
             pos_profile,
@@ -163,6 +167,8 @@ def get_items(
             item_group,
             search_value,
             customer,
+            limit,
+            offset,
         )
 
     def _get_items(
@@ -171,6 +177,8 @@ def get_items(
         item_group,
         search_value,
         customer=None,
+        limit=None,
+        offset=None,
     ):
         pos_profile = json.loads(pos_profile)
         condition = ""
@@ -196,11 +204,16 @@ def get_items(
         if not price_list:
             price_list = pos_profile.get("selling_price_list")
 
-        limit = ""
+        limit_clause = ""
+
+        if limit is not None:
+            limit_clause = f" LIMIT {int(limit)}"
+            if offset:
+                limit_clause += f" OFFSET {int(offset)}"
 
         condition += get_item_group_condition(pos_profile.get("name"))
 
-        if use_limit_search:
+        if use_limit_search and limit is None:
             search_limit = pos_profile.get("posa_search_limit") or 500
             data = {}
             if search_value:
@@ -229,16 +242,16 @@ def get_items(
                 # load (no explicit search value) to avoid heavy queries while
                 # still returning full results when the user searches.
                 if not search_value:
-                    limit = " LIMIT {search_limit}".format(search_limit=search_limit)
+                    limit_clause = " LIMIT {search_limit}".format(search_limit=search_limit)
                 else:
-                    limit = ""
+                    limit_clause = ""
             else:
                 # Default behaviour: limit results during a search to reduce
                 # payload when not forcing a reload of all items.
                 if search_value:
-                    limit = " LIMIT {search_limit}".format(search_limit=search_limit)
+                    limit_clause = " LIMIT {search_limit}".format(search_limit=search_limit)
                 else:
-                    limit = ""
+                    limit_clause = ""
 
         if not posa_show_template_items:
             condition += " AND has_variants = 0"
@@ -274,7 +287,7 @@ def get_items(
             {limit}
                 """.format(
                 condition=condition,
-                limit=limit
+                limit=limit_clause
             ),
             as_dict=1,
         )
@@ -406,6 +419,8 @@ def get_items(
             item_group,
             search_value,
             customer,
+            limit,
+            offset,
         )
     else:
         return _get_items(
@@ -414,6 +429,8 @@ def get_items(
             item_group,
             search_value,
             customer,
+            limit,
+            offset,
         )
 
 
