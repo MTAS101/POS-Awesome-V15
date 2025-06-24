@@ -537,6 +537,9 @@ export default {
               if (vm.pos_profile.pose_use_limit_search) {
                 vm.enter_event();
               }
+            } else if (ev.data.type === "error") {
+              console.error('Item worker parse error:', ev.data.error);
+              vm.loading = false;
             }
           };
           this.itemWorker.postMessage({ type: 'parse_and_cache', json: text, priceList: vm.customer_price_list });
