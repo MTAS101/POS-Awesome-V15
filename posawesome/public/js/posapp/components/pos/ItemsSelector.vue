@@ -608,8 +608,8 @@ export default {
               vm.enter_event();
             }
           }
-        }
-      });
+        });
+      }
     },
     get_items_groups() {
       if (!this.pos_profile) {

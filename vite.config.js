@@ -5,6 +5,7 @@ import { resolve } from 'path'
 export default defineConfig({
     plugins: [vue()],
     build: {
+        target: 'esnext',
         lib: {
             entry: resolve(__dirname, 'posawesome/public/js/posawesome.bundle.js'),
             name: 'PosAwesome',
