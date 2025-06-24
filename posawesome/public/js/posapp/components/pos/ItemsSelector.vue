@@ -610,6 +610,7 @@ export default {
           }
         }
       });
+      }
     },
     get_items_groups() {
       if (!this.pos_profile) {

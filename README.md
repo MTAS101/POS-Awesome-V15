@@ -16,6 +16,8 @@ After switching branches or pulling latest changes:
 4. cd ../..
 5. bench build --app posawesome
 6. bench --site your.site migrate
+   - If the build exits with code 143, verify that your system has enough RAM or swap space.
+   - You can also try building the app in smaller parts to reduce memory usage.
 
 ### Main Features
 
