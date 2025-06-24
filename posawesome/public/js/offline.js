@@ -4,16 +4,6 @@ import Dexie from 'dexie';
 const db = new Dexie('posawesome_offline');
 db.version(1).stores({ keyval: '&key' });
 
-let persistWorker = null;
-if (typeof Worker !== 'undefined') {
-  try {
-    persistWorker = new Worker(new URL('./posapp/workers/itemWorker.js', import.meta.url), { type: 'module' });
-  } catch (e) {
-    console.error('Failed to init persist worker', e);
-    persistWorker = null;
-  }
-}
-
 // Add stock_cache_ready flag to memory object
 const memory = {
   offline_invoices: [],
@@ -29,8 +19,7 @@ const memory = {
   pos_opening_storage: null,
   opening_dialog_storage: null,
   sales_persons_storage: [],
-  price_list_cache: {},
-  item_details_cache: {}
+  price_list_cache: {}
 };
 
 // Modify initializeStockCache function to set the flag
@@ -90,18 +79,6 @@ export const initPromise = new Promise(resolve => {
         const stored = await db.table('keyval').get(key);
         if (stored && stored.value !== undefined) {
           memory[key] = stored.value;
-          continue;
-        }
-        if (typeof localStorage !== 'undefined') {
-          const ls = localStorage.getItem(`posa_${key}`);
-          if (ls) {
-            try {
-              memory[key] = JSON.parse(ls);
-              continue;
-            } catch (err) {
-              console.error('Failed to parse localStorage for', key, err);
-            }
-          }
         }
       }
     } catch (e) {
@@ -119,21 +96,9 @@ export const initPromise = new Promise(resolve => {
 });
 
 function persist(key) {
-  if (persistWorker) {
-    persistWorker.postMessage({ type: 'persist', key, value: memory[key] });
-    return;
-  }
   db.table('keyval')
     .put({ key, value: memory[key] })
     .catch(e => console.error(`Failed to persist ${key}`, e));
-
-  if (typeof localStorage !== 'undefined') {
-    try {
-      localStorage.setItem(`posa_${key}`, JSON.stringify(memory[key]));
-    } catch (err) {
-      console.error('Failed to persist', key, 'to localStorage', err);
-    }
-  }
 }
 
 // Reset cached invoices and customers after syncing
@@ -545,7 +510,7 @@ export function savePriceListItems(priceList, items) {
   try {
     const cache = memory.price_list_cache || {};
     cache[priceList] = {
-      items,
+      items: JSON.parse(JSON.stringify(items)),
       timestamp: Date.now()
     };
     memory.price_list_cache = cache;
@@ -576,49 +541,6 @@ export function clearPriceListCache() {
     persist('price_list_cache');
   } catch (e) {
     console.error('Failed to clear price list cache', e);
-  }
-}
-
-// Item details caching functions
-export function saveItemDetailsCache(profileName, priceList, items) {
-  try {
-    const cache = memory.item_details_cache || {};
-    const profileCache = cache[profileName] || {};
-    const priceCache = profileCache[priceList] || {};
-    items.forEach(item => {
-      priceCache[item.item_code] = {
-        data: item,
-        timestamp: Date.now()
-      };
-    });
-    profileCache[priceList] = priceCache;
-    cache[profileName] = profileCache;
-    memory.item_details_cache = cache;
-    persist('item_details_cache');
-  } catch (e) {
-    console.error('Failed to cache item details', e);
-  }
-}
-
-export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15 * 60 * 1000) {
-  try {
-    const cache = memory.item_details_cache || {};
-    const priceCache = cache[profileName]?.[priceList] || {};
-    const now = Date.now();
-    const cached = [];
-    const missing = [];
-    itemCodes.forEach(code => {
-      const entry = priceCache[code];
-      if (entry && now - entry.timestamp < ttl) {
-        cached.push(entry.data);
-      } else {
-        missing.push(code);
-      }
-    });
-    return { cached, missing };
-  } catch (e) {
-    console.error('Failed to get cached item details', e);
-    return { cached: [], missing: itemCodes };
   }
 }
 
