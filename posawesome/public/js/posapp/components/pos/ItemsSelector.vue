@@ -189,6 +189,7 @@ export default {
     exchange_rate: 1,
     prePopulateInProgress: false,
     itemWorker: null,
+    items_request_token: 0,
   }),
 
   watch: {
@@ -369,6 +370,7 @@ export default {
     },
     async get_items(force_server = false) {
       await initPromise;
+      const request_token = ++this.items_request_token;
       if (!this.pos_profile) {
         console.error("No POS Profile");
         return;
@@ -478,6 +480,7 @@ export default {
           });
           const text = await res.text();
           this.itemWorker.onmessage = async (ev) => {
+            if (this.items_request_token !== request_token) return;
             if (ev.data.type === "parsed") {
               vm.items = ev.data.items;
               savePriceListItems(vm.customer_price_list, vm.items);
@@ -552,6 +555,7 @@ export default {
             customer: vm.customer,
           },
           callback: async function (r) {
+            if (vm.items_request_token !== request_token) return;
             if (r.message) {
               vm.items = r.message;
               // Ensure UOMs are available for each item
