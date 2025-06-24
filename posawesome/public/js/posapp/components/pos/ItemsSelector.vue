@@ -467,17 +467,24 @@ export default {
       }
       if (this.itemWorker) {
         try {
-          const res = await fetch("/api/method/posawesome.posawesome.api.posapp.get_items", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              pos_profile: vm.pos_profile,
-              price_list: vm.customer_price_list,
-              item_group: gr,
-              search_value: sr,
-              customer: vm.customer,
-            }),
-          });
+          const res = await fetch(
+            "/api/method/posawesome.posawesome.api.posapp.get_items",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Frappe-CSRF-Token": frappe.csrf_token,
+              },
+              credentials: "same-origin",
+              body: JSON.stringify({
+                pos_profile: vm.pos_profile,
+                price_list: vm.customer_price_list,
+                item_group: gr,
+                search_value: sr,
+                customer: vm.customer,
+              }),
+            }
+          );
           const text = await res.text();
           this.itemWorker.onmessage = async (ev) => {
             if (this.items_request_token !== request_token) return;
