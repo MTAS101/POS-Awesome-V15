@@ -230,8 +230,10 @@ def get_items(
                 item_code, serial_no, batch_no, barcode
             )
             if item_group:
-                condition += " AND item_group like '%{item_group}%'".format(
-                    item_group=item_group
+                # Escape item_group to avoid SQL errors with special characters
+                safe_item_group = frappe.db.escape("%" + item_group + "%")
+                condition += " AND item_group like {item_group}".format(
+                    item_group=safe_item_group
                 )
 
             # Respect force reload setting when applying search limits
