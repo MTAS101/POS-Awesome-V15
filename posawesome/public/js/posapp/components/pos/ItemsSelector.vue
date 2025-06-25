@@ -317,8 +317,8 @@ export default {
       frappe.call({
         method: "posawesome.posawesome.api.posapp.get_items_details",
         args: {
-          pos_profile: vm.pos_profile,
-          items_data: itemsToFetch,
+          pos_profile: JSON.stringify(vm.pos_profile),
+          items_data: JSON.stringify(itemsToFetch),
           price_list: vm.active_price_list,
         },
         freeze: false,
@@ -476,13 +476,13 @@ export default {
                 "X-Frappe-CSRF-Token": frappe.csrf_token,
               },
               credentials: "same-origin",
-              body: JSON.stringify({
-                pos_profile: vm.pos_profile,
-                price_list: vm.customer_price_list,
-                item_group: gr,
-                search_value: sr,
-                customer: vm.customer,
-              }),
+          body: JSON.stringify({
+            pos_profile: JSON.stringify(vm.pos_profile),
+            price_list: vm.customer_price_list,
+            item_group: gr,
+            search_value: sr,
+            customer: vm.customer,
+          }),
             }
           );
           const text = await res.text();
@@ -558,7 +558,7 @@ export default {
         frappe.call({
           method: "posawesome.posawesome.api.posapp.get_items",
           args: {
-            pos_profile: vm.pos_profile,
+            pos_profile: JSON.stringify(vm.pos_profile),
             price_list: vm.customer_price_list,
             item_group: gr,
             search_value: sr,
@@ -918,8 +918,8 @@ export default {
       vm.currentRequest = frappe.call({
         method: "posawesome.posawesome.api.posapp.get_items_details",
         args: {
-          pos_profile: vm.pos_profile,
-          items_data: itemsToFetch,
+          pos_profile: JSON.stringify(vm.pos_profile),
+          items_data: JSON.stringify(itemsToFetch),
           price_list: vm.active_price_list,
         },
         // Avoid freezing the UI while item details are fetched

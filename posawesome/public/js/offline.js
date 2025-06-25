@@ -697,8 +697,8 @@ export async function fetchItemStockQuantities(items, pos_profile, chunkSize = 1
         frappe.call({
           method: "posawesome.posawesome.api.posapp.get_items_details",
           args: {
-            pos_profile: pos_profile,
-            items_data: chunk,
+            pos_profile: JSON.stringify(pos_profile),
+            items_data: JSON.stringify(chunk),
           },
           freeze: false,
           callback: function (r) {
