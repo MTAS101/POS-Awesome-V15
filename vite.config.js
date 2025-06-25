@@ -23,6 +23,7 @@ export default defineConfig({
         })
     ],
     build: {
+        target: 'esnext',
         lib: {
             entry: resolve(__dirname, 'posawesome/public/js/posawesome.bundle.js'),
             name: 'PosAwesome',
@@ -45,3 +46,4 @@ export default defineConfig({
         }
     }
 })
+

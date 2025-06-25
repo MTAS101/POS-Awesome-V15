@@ -5489,6 +5489,16 @@
   ,{
     "doctype": "Custom Field",
     "dt": "POS Profile",
+    "fieldname": "posa_smart_reload_mode",
+    "fieldtype": "Check",
+    "insert_after": "posa_force_reload_items",
+    "label": "Smart Reload Mode",
+    "default": "1",
+    "name": "POS Profile-posa_smart_reload_mode"
+  }
+  ,{
+    "doctype": "Custom Field",
+    "dt": "POS Profile",
     "fieldname": "posa_display_discount_percentage",
     "fieldtype": "Check",
     "insert_after": "hide_expected_amount",
