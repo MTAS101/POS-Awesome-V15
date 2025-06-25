@@ -206,10 +206,21 @@ def get_items(
 
         limit_clause = ""
 
+        def _to_positive_int(value):
+            """Convert the input to a non-negative integer if possible."""
+            try:
+                ivalue = int(value)
+                return ivalue if ivalue >= 0 else None
+            except (TypeError, ValueError):
+                return None
+
+        limit = _to_positive_int(limit)
+        offset = _to_positive_int(offset)
+
         if limit is not None:
-            limit_clause = f" LIMIT {int(limit)}"
+            limit_clause = f" LIMIT {limit}"
             if offset:
-                limit_clause += f" OFFSET {int(offset)}"
+                limit_clause += f" OFFSET {offset}"
 
         condition += get_item_group_condition(pos_profile.get("name"))
 
