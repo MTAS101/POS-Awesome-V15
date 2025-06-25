@@ -13,11 +13,11 @@ After switching branches or pulling latest changes:
 1. cd apps/posawesome
 2. git pull
 3. yarn install
-4. cd ../..
-5. bench build --app posawesome
-6. bench --site your.site migrate
-   - If the build exits with code 143, verify that your system has enough RAM or swap space.
-   - You can also try building the app in smaller parts to reduce memory usage.
+4. yarn build-icons
+5. cd ../.. 
+6. bench build --app posawesome
+7. bench --site your.site migrate
+
 
 ### Main Features
 

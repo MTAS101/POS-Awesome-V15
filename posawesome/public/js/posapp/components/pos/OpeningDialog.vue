@@ -6,7 +6,7 @@
         <v-card-title class="opening-dialog-header">
           <div class="header-content">
             <div class="header-icon-wrapper">
-              <v-icon class="header-icon">mdi-cash-plus</v-icon>
+              <Icon name="cash-plus" />
             </div>
             <div class="header-text">
               <h5 class="header-title">{{ __('Create POS Opening Shift') }}</h5>
@@ -29,7 +29,7 @@
                   variant="outlined"
                   color="primary"
                   density="compact"
-                  prepend-inner-icon="mdi-domain"
+                  prepend-inner-name="domain"
                   class="enhanced-field"
                   :class="{ 'field-focused': company }"
                 />
@@ -44,7 +44,7 @@
                   variant="outlined"
                   color="primary"
                   density="compact"
-                  prepend-inner-icon="mdi-point-of-sale"
+                  prepend-inner-name="point-of-sale"
                   class="enhanced-field"
                   :class="{ 'field-focused': pos_profile }"
                 />
@@ -54,7 +54,7 @@
               <v-col cols="12">
                 <div class="section-header-compact">
                   <h6 class="section-title-compact">
-                    <v-icon class="section-icon">mdi-credit-card-multiple</v-icon>
+                    <Icon name="credit-card-multiple" />
                     {{ __('Payment Methods') }}
                   </h6>
                 </div>
@@ -98,7 +98,7 @@
             size="large"
             elevation="2"
           >
-            <v-icon start>mdi-close-circle-outline</v-icon>
+            <Icon name="close-circle-outline" />
             <span>{{ __('Cancel') }}</span>
           </v-btn>
           <v-spacer />
@@ -111,7 +111,7 @@
             size="large"
             elevation="2"
           >
-            <v-icon start>mdi-check-circle-outline</v-icon>
+            <Icon name="check-circle-outline" />
             <span>{{ __('Submit') }}</span>
           </v-btn>
         </v-card-actions>

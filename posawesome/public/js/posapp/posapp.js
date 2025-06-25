@@ -7,6 +7,7 @@ import themePlugin from './plugins/theme.js';
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import Home from './Home.vue';
+import Icon from './components/Icon.vue';
 
 frappe.provide('frappe.PosApp');
 
@@ -72,11 +73,13 @@ frappe.PosApp.posapp = class {
                 },
             }
         );
-        const app = createApp(Home)
-        app.component('VueDatePicker', VueDatePicker)
+        // Inside your class where you initialize the app:
+        const app = createApp(Home);
+        app.component('VueDatePicker', VueDatePicker);
+        app.component('Icon', Icon); // Register the Icon component globally
         app.use(eventBus);
-        app.use(vuetify)
-        app.use(themePlugin, { vuetify })
+        app.use(vuetify);
+        app.use(themePlugin, { vuetify });
         app.mount(this.$el[0]);
 
         if (!document.querySelector('link[rel="manifest"]')) {
