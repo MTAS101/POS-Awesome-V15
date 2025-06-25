@@ -206,17 +206,10 @@ def get_items(
 
         limit_clause = ""
 
-        if limit not in [None, "", 0, "0"]:
-            try:
-                limit_val = int(limit)
-                limit_clause = f" LIMIT {limit_val}"
-                if offset not in [None, "", 0, "0"]:
-                    limit_clause += f" OFFSET {int(offset)}"
-            except (ValueError, TypeError):
-                frappe.log_error(
-                    f"Invalid limit/offset values: limit={limit}, offset={offset}",
-                    "POS Awesome",
-                )
+        if limit is not None:
+            limit_clause = f" LIMIT {int(limit)}"
+            if offset:
+                limit_clause += f" OFFSET {int(offset)}"
 
         condition += get_item_group_condition(pos_profile.get("name"))
 
