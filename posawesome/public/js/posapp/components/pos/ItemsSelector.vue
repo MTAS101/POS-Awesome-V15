@@ -1,15 +1,9 @@
 <template>
   <div :style="responsiveStyles">
-    <v-card
-      :class="['selection mx-auto my-0 py-0 mt-3 dynamic-card', isDarkTheme ? '' : 'bg-grey-lighten-5']"
+    <v-card :class="['selection mx-auto my-0 py-0 mt-3 dynamic-card', isDarkTheme ? '' : 'bg-grey-lighten-5']"
       :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'], backgroundColor: isDarkTheme ? '#121212' : '' }">
-      <v-progress-linear
-        :active="loading"
-        :indeterminate="loading"
-        absolute
-        location="top"
-        color="info"
-      ></v-progress-linear>
+      <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
+        color="info"></v-progress-linear>
       <v-overlay :model-value="loading" class="align-center justify-center" absolute>
         <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
       </v-overlay>
@@ -19,9 +13,9 @@
           <v-col class="pb-0">
             <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
               :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
-              hide-details v-model="debounce_search" @keydown.esc="esc_event"
-              @keydown.enter="search_onchange" @click:clear="clearSearch" prepend-inner-icon="mdi-magnify"
-              @focus="handleItemSearchFocus" ref="debounce_search">
+              hide-details v-model="debounce_search" @keydown.esc="esc_event" @keydown.enter="search_onchange"
+              @click:clear="clearSearch" prepend-inner-icon="mdi-magnify" @focus="handleItemSearchFocus"
+              ref="debounce_search">
               <!-- Add camera scan button if enabled -->
               <template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
                 <v-btn icon="mdi-camera" size="small" color="primary" variant="text" @click="startCameraScanning"
@@ -32,9 +26,8 @@
 
           </v-col>
           <v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
-            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')"
-              hide-details v-model="debounce_qty" type="text"
-              @keydown.enter="enter_event" @keydown.esc="esc_event"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')" hide-details
+              v-model="debounce_qty" type="text" @keydown.enter="enter_event" @keydown.esc="esc_event"
               @focus="clearQty"></v-text-field>
           </v-col>
           <v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
@@ -43,19 +36,16 @@
           </v-col>
           <v-col cols="12" class="pt-0 mt-0">
             <div fluid class="items" v-if="items_view == 'card'">
-              <RecycleScroller
-                :items="filtered_items"
-                :item-size="220"
-                key-field="item_code"
+              <RecycleScroller :items="filtered_items" :item-size="220" key-field="item_code"
                 class="overflow-y-auto dynamic-scroll"
-                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }"
-              >
+                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
                 <template #default="{ item }">
                   <v-col xl="2" lg="3" md="6" sm="6" cols="6" min-height="50">
                     <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
                       <v-img :src="item.image ||
                         '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
-                        " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
+                        " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
+                        height="100px">
                         <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
                       </v-img>
                       <v-card-text class="text--primary pa-1">
@@ -66,7 +56,8 @@
                         <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                           class="text-caption text-success">
                           {{ currencySymbol(selected_currency) || "" }}
-                          {{ format_currency(getConvertedRate(item), selected_currency, ratePrecision(getConvertedRate(item))) }}
+                          {{ format_currency(getConvertedRate(item), selected_currency,
+                            ratePrecision(getConvertedRate(item))) }}
                         </div>
                         <div class="text-caption golden--text">
                           {{ format_number(item.actual_qty, 4) || 0 }}
@@ -80,8 +71,8 @@
             </div>
             <div v-else>
               <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table overflow-y-auto"
-                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }" item-key="item_code"
-                @click:row="click_item_row">
+                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }"
+                item-key="item_code" @click:row="click_item_row">
 
                 <template v-slot:item.rate="{ item }">
                   <div>
@@ -90,7 +81,8 @@
                     <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                       class="text-success">
                       {{ currencySymbol(selected_currency) }}
-                      {{ format_currency(getConvertedRate(item), selected_currency, ratePrecision(getConvertedRate(item))) }}
+                      {{ format_currency(getConvertedRate(item), selected_currency,
+                        ratePrecision(getConvertedRate(item))) }}
                     </div>
                   </div>
                 </template>
@@ -110,8 +102,7 @@
             v-model="item_group"></v-select>
         </v-col>
         <v-col cols="12" class="mb-2" v-if="pos_profile.posa_enable_price_list_dropdown">
-          <v-text-field density="compact" variant="solo" color="primary"
-            :label="frappe._('Price List')" hide-details
+          <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Price List')" hide-details
             :model-value="active_price_list" readonly></v-text-field>
         </v-col>
         <v-col cols="3" class="dynamic-margin-xs">
@@ -143,11 +134,13 @@
   </div>
 </template>
 
-<script>
+<script type="module">
 
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
+
+
 import { RecycleScroller } from 'vue-virtual-scroller';
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline.js';
@@ -375,7 +368,7 @@ export default {
         }
       });
     },
-    
+
     show_offers() {
       this.eventBus.emit("show_offers", "true");
     },
@@ -397,6 +390,7 @@ export default {
       const vm = this;
       this.loading = true;
 
+      console.log("trying to load items")
       let search = this.get_search(this.first_search);
       let gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
       let sr = search || "";
@@ -415,6 +409,7 @@ export default {
         this.loading = false;
         return;
       }
+      console.log("trying to load items2")
 
       // Attempt to load cached items for the current price list
       if (
@@ -438,10 +433,10 @@ export default {
           vm.loading = false;
           vm.items_loaded = true;
 
-      if (vm.items && vm.items.length > 0) {
-        vm.prePopulateStockCache(vm.items);
-        vm.update_items_details(vm.items);
-      }
+          if (vm.items && vm.items.length > 0) {
+            vm.prePopulateStockCache(vm.items);
+            vm.update_items_details(vm.items);
+          }
           return;
         }
       }
@@ -475,7 +470,10 @@ export default {
         }
         return;
       }
+      console.log("trying to load items3")
+
       if (this.itemWorker) {
+
         try {
           const res = await fetch(
             "/api/method/posawesome.posawesome.api.posapp.get_items",
@@ -486,17 +484,22 @@ export default {
                 "X-Frappe-CSRF-Token": frappe.csrf_token,
               },
               credentials: "same-origin",
-          body: JSON.stringify({
-            pos_profile: JSON.stringify(vm.pos_profile),
-            price_list: vm.customer_price_list,
-            item_group: gr,
-            search_value: sr,
-            customer: vm.customer,
-          }),
+              body: JSON.stringify({
+                pos_profile: JSON.stringify(vm.pos_profile),
+                price_list: vm.customer_price_list,
+                item_group: gr,
+                search_value: sr,
+                customer: vm.customer,
+              }),
             }
           );
+
+
+
           const text = await res.text();
+          // console.log(text)
           this.itemWorker.onmessage = async (ev) => {
+            console.log("trying to load items6")
             if (this.items_request_token !== request_token) return;
             if (ev.data.type === "parsed") {
               const parsed = ev.data.items;
@@ -559,6 +562,8 @@ export default {
             }
           };
           this.itemWorker.postMessage({ type: 'parse_and_cache', json: text, priceList: vm.customer_price_list });
+
+
         } catch (err) {
           console.error('Failed to fetch items', err);
           vm.loading = false;
@@ -596,41 +601,41 @@ export default {
               savePriceListItems(vm.customer_price_list, vm.items);
               console.info("Items Loaded");
 
-            // Pre-populate stock cache when items are freshly loaded
-            vm.prePopulateStockCache(vm.items);
+              // Pre-populate stock cache when items are freshly loaded
+              vm.prePopulateStockCache(vm.items);
 
-            vm.$nextTick(() => {
-              if (vm.search && !vm.pos_profile.pose_use_limit_search) {
-                vm.search_onchange();
+              vm.$nextTick(() => {
+                if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+                  vm.search_onchange();
+                }
+              });
+
+              // Always refresh quantities after items are loaded
+              if (vm.items && vm.items.length > 0) {
+                vm.update_items_details(vm.items);
               }
-            });
 
-            // Always refresh quantities after items are loaded
-            if (vm.items && vm.items.length > 0) {
-              vm.update_items_details(vm.items);
-            }
-
-            if (
-              vm.pos_profile.posa_local_storage &&
-              !vm.pos_profile.pose_use_limit_search
-            ) {
-              try {
-                setItemsStorage(r.message);
-                r.message.forEach((it) => {
-                  if (it.item_uoms && it.item_uoms.length > 0) {
-                    saveItemUOMs(it.item_code, it.item_uoms);
-                  }
-                });
-              } catch (e) {
-                console.error(e);
+              if (
+                vm.pos_profile.posa_local_storage &&
+                !vm.pos_profile.pose_use_limit_search
+              ) {
+                try {
+                  setItemsStorage(r.message);
+                  r.message.forEach((it) => {
+                    if (it.item_uoms && it.item_uoms.length > 0) {
+                      saveItemUOMs(it.item_code, it.item_uoms);
+                    }
+                  });
+                } catch (e) {
+                  console.error(e);
+                }
               }
-            }
-            if (vm.pos_profile.pose_use_limit_search) {
-              vm.enter_event();
+              if (vm.pos_profile.pose_use_limit_search) {
+                vm.enter_event();
+              }
             }
           }
-        }
-      });
+        });
       }
     },
     get_items_groups() {
@@ -957,7 +962,7 @@ export default {
                       batch_no_data: updated_item.batch_no_data,
                       has_batch_no: updated_item.has_batch_no,
                       has_serial_no: updated_item.has_serial_no,
-                      item_uoms: updated_item.item_uoms && updated_item.item_uoms.length > 0 ? 
+                      item_uoms: updated_item.item_uoms && updated_item.item_uoms.length > 0 ?
                         updated_item.item_uoms : item.item_uoms
                     }
                   });
@@ -975,7 +980,7 @@ export default {
               });
 
               // Apply all updates in one batch
-              updatedItems.forEach(({item, updates}) => {
+              updatedItems.forEach(({ item, updates }) => {
                 Object.assign(item, updates);
               });
 
@@ -1501,8 +1506,16 @@ export default {
   created: function () {
     if (typeof Worker !== 'undefined') {
       try {
-        const workerUrl = '/assets/posawesome/js/posapp/workers/itemWorker.js';
-        this.itemWorker = new Worker(workerUrl, { type: 'module' });
+        const workerUrl = '/assets/posawesome/js/posapp/workers/itemWorker.js?worker';
+        this.itemWorker = new Worker(workerUrl, { type: 'classic' });
+
+        this.itemWorker.onerror = function (event) {
+          console.error('Worker error:', event);
+          console.error('Message:', event.message);
+          console.error('Filename:', event.filename);
+          console.error('Line number:', event.lineno);
+        };
+        console.log("Created worker nowwwwww")
       } catch (e) {
         console.error('Failed to start item worker', e);
         this.itemWorker = null;
