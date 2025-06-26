@@ -86,7 +86,11 @@ frappe.PosApp.posapp = class {
             document.head.appendChild(link);
         }
 
-        if ('serviceWorker' in navigator && window.location.protocol === 'https:') {
+        if ('serviceWorker' in navigator && (
+            window.location.protocol === 'https:' ||
+            window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1'
+        )) {
             navigator.serviceWorker.register('/sw.js')
                 .catch(err => console.error('SW registration failed', err));
         }
