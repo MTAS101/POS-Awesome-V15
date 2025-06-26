@@ -1520,21 +1520,11 @@ export default {
     this.eventBus.on("register_pos_profile", async (data) => {
       await initPromise;
       this.pos_profile = data.pos_profile;
-
-      if (this.pos_profile.pose_use_limit_search) {
-        // When limit search is enabled avoid loading items on startup
-        this.items = [];
-        this.items_loaded = false;
-        this.loading = false;
-      } else if (
-        this.pos_profile.posa_force_reload_items &&
-        !this.pos_profile.posa_smart_reload_mode
-      ) {
+      if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
         await this.get_items(true);
       } else {
         await this.get_items();
       }
-
       this.get_items_groups();
       this.items_view = this.pos_profile.posa_default_card_view
         ? "card"
