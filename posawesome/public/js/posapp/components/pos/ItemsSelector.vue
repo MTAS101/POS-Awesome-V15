@@ -1534,9 +1534,6 @@ export default {
     this.eventBus.on("register_pos_profile", async (data) => {
       await initPromise;
       this.pos_profile = data.pos_profile;
-      // Initialize customer_price_list with the POS Profile default price list
-      // so that cached items and price refresh use the correct key
-      this.customer_price_list = this.pos_profile.selling_price_list;
       if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
         await this.get_items(true);
       } else {
