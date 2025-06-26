@@ -636,6 +636,11 @@ export default {
             if (vm.pos_profile.pose_use_limit_search) {
               vm.enter_event();
             }
+          } else {
+            // Ensure loading state always resolves
+            vm.loading = false;
+            vm.items = [];
+            console.error('Failed to fetch items');
           }
         }
       });
