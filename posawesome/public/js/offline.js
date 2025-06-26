@@ -44,7 +44,7 @@ export async function initializeStockCache(items, pos_profile) {
       console.debug('Stock cache already initialized, skipping');
       return true;
     }
-    
+
     console.info('Initializing stock cache for', items.length, 'items');
 
     const updatedItems = await fetchItemStockQuantities(items, pos_profile);
@@ -169,7 +169,7 @@ export function validateStockForOfflineInvoice(items) {
     const itemCode = item.item_code;
     const requestedQty = Math.abs(item.qty || 0);
     const currentStock = stockCache[itemCode]?.actual_qty || 0;
-    
+
     if (currentStock - requestedQty < 0) {
       invalidItems.push({
         item_code: itemCode,
@@ -186,8 +186,8 @@ export function validateStockForOfflineInvoice(items) {
     const item = invalidItems[0];
     errorMessage = `Not enough stock for ${item.item_name}. You need ${item.requested_qty} but only ${item.available_qty} available.`;
   } else if (invalidItems.length > 1) {
-    errorMessage = "Insufficient stock for multiple items:\n" + 
-      invalidItems.map(item => 
+    errorMessage = "Insufficient stock for multiple items:\n" +
+      invalidItems.map(item =>
         `• ${item.item_name}: Need ${item.requested_qty}, Have ${item.available_qty}`
       ).join('\n');
   }
@@ -248,7 +248,7 @@ export function isOffline() {
 
   const isIpAddress = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname);
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  const isDnsName   = !isIpAddress && !isLocalhost;
+  const isDnsName = !isIpAddress && !isLocalhost;
 
   if (memory.manual_offline) {
     return true;
@@ -403,7 +403,7 @@ export async function syncOfflineInvoices() {
   for (const inv of invoices) {
     try {
       await frappe.call({
-        method: 'posawesome.posawesome.api.posapp.submit_invoice',
+        method: 'posawesome.posawesome.api.invoices.submit_invoice',
         args: {
           invoice: inv.invoice,
           data: inv.data,
@@ -414,7 +414,7 @@ export async function syncOfflineInvoices() {
       console.error('Failed to submit invoice, saving as draft', error);
       try {
         await frappe.call({
-          method: 'posawesome.posawesome.api.posapp.update_invoice',
+          method: 'posawesome.posawesome.api.invoices.update_invoice',
           args: { data: inv.invoice }
         });
         drafted += 1;
@@ -465,12 +465,12 @@ export async function syncOfflineCustomers() {
   for (const cust of customers) {
     try {
       const result = await frappe.call({
-        method: 'posawesome.posawesome.api.posapp.create_customer',
+        method: 'posawesome.posawesome.api.customers.create_customer',
         args: cust.args
       });
       synced++;
       if (result && result.message && result.message.name &&
-          result.message.name !== cust.args.customer_name) {
+        result.message.name !== cust.args.customer_name) {
         updateOfflineInvoicesCustomer(cust.args.customer_name, result.message.name);
       }
     } catch (error) {
@@ -778,7 +778,7 @@ export async function fetchItemStockQuantities(items, pos_profile, chunkSize = 1
       const chunk = items.slice(i, i + chunkSize);
       const response = await new Promise((resolve, reject) => {
         frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_items_details",
+          method: "posawesome.posawesome.api.items.get_items_details",
           args: {
             pos_profile: JSON.stringify(pos_profile),
             items_data: JSON.stringify(chunk),
