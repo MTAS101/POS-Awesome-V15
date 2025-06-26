@@ -22,7 +22,8 @@ self.onmessage = async (event) => {
   const data = event.data || {};
   if (data.type === 'parse_and_cache') {
     try {
-      const items = JSON.parse(data.json);
+      const parsed = JSON.parse(data.json);
+      const items = parsed.message || parsed;
       let cache = {};
       try {
         const stored = await db.table('keyval').get('price_list_cache');

@@ -489,7 +489,8 @@ export default {
           this.itemWorker.onmessage = async (ev) => {
             if (this.items_request_token !== request_token) return;
             if (ev.data.type === "parsed") {
-              vm.items = ev.data.items;
+              const parsed = ev.data.items;
+              vm.items = parsed.message || parsed;
               savePriceListItems(vm.customer_price_list, vm.items);
               // Ensure UOMs are available for each item
               vm.items.forEach((it) => {
@@ -530,8 +531,8 @@ export default {
                 !vm.pos_profile.pose_use_limit_search
               ) {
                 try {
-                  setItemsStorage(ev.data.items);
-                  ev.data.items.forEach((it) => {
+                  setItemsStorage(vm.items);
+                  vm.items.forEach((it) => {
                     if (it.item_uoms && it.item_uoms.length > 0) {
                       saveItemUOMs(it.item_code, it.item_uoms);
                     }
