@@ -708,7 +708,7 @@ export default {
     click_item_row(event, { item }) {
       this.add_item(item)
     },
-    async add_item(item) {
+    add_item(item) {
       item = { ...item };
       if (item.has_variants) {
         this.eventBus.emit("open_variants_model", item, this.items);
@@ -733,11 +733,6 @@ export default {
           }
         }
 
-        // Fetch rate from the server when not yet loaded
-        if (!item.rate || item.rate === 0) {
-          await this.fetch_item_detail(item);
-        }
-
         // Convert rate if multi-currency is enabled
         if (this.pos_profile.posa_allow_multi_currency &&
           this.selected_currency !== this.pos_profile.currency) {
@@ -760,52 +755,6 @@ export default {
         this.eventBus.emit("add_item", item);
         this.qty = 1;
       }
-    },
-
-    fetch_item_detail(item) {
-      const vm = this;
-      return new Promise(resolve => {
-        frappe.call({
-          method: "posawesome.posawesome.api.items.get_item_detail",
-          args: {
-            warehouse: vm.pos_profile.warehouse,
-            price_list: vm.active_price_list,
-            item: {
-              item_code: item.item_code,
-              customer: vm.customer,
-              doctype: "Sales Invoice",
-              name: "New Sales Invoice 1",
-              company: vm.pos_profile.company,
-              conversion_rate: 1,
-              currency: vm.pos_profile.currency,
-              qty: item.qty || 1,
-              price_list_rate: item.price_list_rate || item.rate,
-              child_docname: "New Sales Invoice Item 1",
-              cost_center: vm.pos_profile.cost_center,
-              pos_profile: vm.pos_profile.name,
-              uom: item.uom || item.stock_uom,
-              tax_category: "",
-              transaction_type: "selling",
-              update_stock: vm.pos_profile.update_stock,
-              price_list: vm.active_price_list,
-              has_batch_no: item.has_batch_no,
-              serial_no: item.serial_no,
-              batch_no: item.batch_no,
-              is_stock_item: item.is_stock_item,
-            },
-          },
-          callback: function (r) {
-            if (r.message) {
-              item.rate = r.message.price_list_rate || r.message.rate || item.rate;
-              item.price_list_rate = r.message.price_list_rate || item.price_list_rate || item.rate;
-            }
-            resolve();
-          },
-          error: function () {
-            resolve();
-          },
-        });
-      });
     },
     enter_event() {
       let match = false;
