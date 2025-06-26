@@ -215,7 +215,7 @@ export default {
       }
 
       frappe.call({
-        method: 'posawesome.posawesome.api.shifts.get_opening_dialog_data',
+        method: 'posawesome.posawesome.api.posapp.get_opening_dialog_data',
         args: {},
         callback: function (r) {
           if (r.message) {
@@ -242,7 +242,7 @@ export default {
       const vm = this;
 
       return frappe
-        .call('posawesome.posawesome.api.shifts.create_opening_voucher', {
+        .call('posawesome.posawesome.api.posapp.create_opening_voucher', {
           pos_profile: this.pos_profile,
           company: this.company,
           balance_details: this.payments_methods,

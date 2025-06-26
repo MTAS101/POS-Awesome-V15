@@ -1141,7 +1141,7 @@ export default {
         }
       }
       frappe.call({
-        method: "posawesome.posawesome.api.invoices.submit_invoice",
+        method: "posawesome.posawesome.api.posapp.submit_invoice",
         args: {
           data: data,
           invoice: this.invoice_doc,
@@ -1328,7 +1328,7 @@ export default {
     get_available_credit(use_credit) {
       this.clear_all_amounts();
       if (use_credit) {
-        frappe.call("posawesome.posawesome.api.payments.get_available_credit", {
+        frappe.call("posawesome.posawesome.api.posapp.get_available_credit", {
           customer: this.invoice_doc.customer,
           company: this.pos_profile.company,
         }).then((r) => {
@@ -1366,7 +1366,7 @@ export default {
         return;
       }
       frappe.call({
-        method: "posawesome.posawesome.api.customers.get_customer_addresses",
+        method: "posawesome.posawesome.api.posapp.get_customer_addresses",
         args: { customer: vm.invoice_doc.customer },
         async: true,
         callback: function (r) {
@@ -1409,7 +1409,7 @@ export default {
         } catch(e) {}
       }
       frappe.call({
-        method: "posawesome.posawesome.api.utilities.get_sales_person_names",
+        method: "posawesome.posawesome.api.posapp.get_sales_person_names",
         callback: function (r) {
           if (r.message && r.message.length > 0) {
             vm.sales_persons = r.message.map(sp => ({
@@ -1452,17 +1452,17 @@ export default {
       formData["customer_credit_dict"] = this.customer_credit_dict;
       formData["is_cashback"] = this.is_cashback;
       frappe.call({
-          method: "posawesome.posawesome.api.invoices.update_invoice",
-          args: { data: formData },
-          async: false,
-          callback: function (r) {
-            if (r.message) {
-              vm.invoice_doc = r.message;
-            }
-          },
-        }).then(() => {
+        method: "posawesome.posawesome.api.posapp.update_invoice",
+        args: { data: formData },
+        async: false,
+        callback: function (r) {
+          if (r.message) {
+            vm.invoice_doc = r.message;
+          }
+        },
+      }).then(() => {
         frappe.call({
-          method: "posawesome.posawesome.api.payments.create_payment_request",
+          method: "posawesome.posawesome.api.posapp.create_payment_request",
           args: { doc: vm.invoice_doc },
         })
         .fail(() => {

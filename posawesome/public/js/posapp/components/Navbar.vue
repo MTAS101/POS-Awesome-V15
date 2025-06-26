@@ -4,8 +4,14 @@
 
     <!-- Top App Bar: application header with nav toggle, logo, title, and actions -->
 
-    <v-app-bar app flat height="56" :color="appBarColor" :theme="isDark ? 'dark' : 'light'"
-      class="navbar-enhanced elevation-2 px-2 pb-1">
+    <v-app-bar
+      app
+      flat
+      height="56"
+      :color="appBarColor"
+      :theme="isDark ? 'dark' : 'light'"
+      class="navbar-enhanced elevation-2 px-2 pb-1"
+    >
       <v-app-bar-nav-icon ref="navIcon" @click="handleNavClick" class="text-secondary nav-icon" />
 
       <v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32" class="mx-2" />
@@ -25,7 +31,7 @@
         <div class="status-info-always-visible">
           <div class="status-title-inline"
             :class="{ 'status-connected': statusColor === 'green', 'status-offline': statusColor === 'red' }">{{
-              statusText }}</div>
+            statusText }}</div>
           <div class="status-detail-inline">{{ syncInfoText }}</div>
         </div>
       </div>
@@ -71,7 +77,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('Close Shift') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('End current session')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -85,7 +91,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('Print Last Invoice') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Reprint previous transaction')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -98,7 +104,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('Sync Offline Invoices') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Upload pending transactions')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -109,8 +115,7 @@
                 </div>
               </template>
               <div class="menu-content-compact">
-                <v-list-item-title class="menu-item-title-compact">{{ manualOffline ? __('Go Online') : __('Go Offline')
-                  }}</v-list-item-title>
+                <v-list-item-title class="menu-item-title-compact">{{ manualOffline ? __('Go Online') : __('Go Offline') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">
                   {{ manualOffline ? __('Disable offline mode') : __('Work without server connection') }}
                 </v-list-item-subtitle>
@@ -128,7 +133,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('About') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('App information')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -136,15 +141,13 @@
             <v-list-item @click="toggleTheme" class="menu-item-compact info-action">
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact info-icon">
-                  <v-icon color="white" size="16">{{ isDark ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent'
-                    }}</v-icon>
+                  <v-icon color="white" size="16">{{ isDark ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent' }}</v-icon>
                 </div>
               </template>
               <div class="menu-content-compact">
-                <v-list-item-title class="menu-item-title-compact">{{ isDark ? __('Light Mode') : __('Dark Mode')
-                  }}</v-list-item-title>
+                <v-list-item-title class="menu-item-title-compact">{{ isDark ? __('Light Mode') : __('Dark Mode') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Switch theme appearance')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -157,7 +160,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('Logout') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Sign out of session')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
           </v-list>
@@ -224,8 +227,7 @@
               </v-chip>
             </div>
           </div>
-          <v-btn icon="mdi-close" variant="text" size="default" @click="showAboutDialog = false"
-            class="close-btn-improved"></v-btn>
+          <v-btn icon="mdi-close" variant="text" size="default" @click="showAboutDialog = false" class="close-btn-improved"></v-btn>
         </v-card-title>
 
         <v-card-text class="pa-0 white-background">
@@ -235,7 +237,7 @@
               <v-progress-circular indeterminate color="primary" size="50"></v-progress-circular>
               <p class="text-body-2 mt-3 mb-0">{{ __('Loading...') }}</p>
             </div>
-
+            
             <!-- Error State -->
             <div v-else-if="appInfoError" class="empty-state-improved text-center">
               <v-icon size="50" color="error" class="mb-3">mdi-alert-circle-outline</v-icon>
@@ -245,13 +247,13 @@
                 {{ __('Retry') }}
               </v-btn>
             </div>
-
+            
             <!-- Applications List - Improved -->
             <div v-else class="apps-list-improved">
               <div class="apps-header-improved">
                 <h4 class="text-h6 mb-2">{{ __('Installed Applications') }}</h4>
               </div>
-
+              
               <div class="apps-grid-improved">
                 <div v-for="app in appInfo" :key="app.app_name" class="app-item-improved">
                   <div class="app-icon-improved">
@@ -266,7 +268,7 @@
             </div>
           </div>
         </v-card-text>
-
+        
         <v-card-actions class="dialog-actions-improved pa-4">
           <div class="footer-info-improved">
             <span class="footer-text-improved">
@@ -806,7 +808,7 @@ export default {
       this.appInfoError = false;
 
       frappe.call({
-        method: 'posawesome.posawesome.api.utilities.get_app_info',
+        method: 'posawesome.posawesome.api.posapp.get_app_info',
         callback: r => {
           this.loadingAppInfo = false;
           if (Array.isArray(r.message.apps)) {
@@ -825,21 +827,21 @@ export default {
     toggleTheme() {
       // Toggle the theme using the theme plugin
       this.$theme.toggle();
-
+      
       // Force re-render of components that might not react to theme change
       this.$forceUpdate();
-
+      
       // Add dark-theme class to document root for global CSS targeting
       document.documentElement.classList.toggle('dark-theme', this.$theme.current === 'dark');
-
+      
       // Add a smooth transition class to the body for theme changes
       document.body.classList.add('theme-transition');
-
+      
       // Remove the transition class after the transition completes
       setTimeout(() => {
         document.body.classList.remove('theme-transition');
       }, 1000);
-
+      
       // Emit an event that other components can listen to
       this.eventBus.emit('theme-changed', this.$theme.current);
     },
@@ -1637,8 +1639,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding-right: 60px;
-  /* Space for close button */
+  padding-right: 60px; /* Space for close button */
 }
 
 .header-icon-wrapper-improved {
@@ -1813,17 +1814,17 @@ export default {
     margin: 16px;
     max-height: 85vh;
   }
-
+  
   .apps-grid-improved {
     grid-template-columns: 1fr;
     max-height: 300px;
   }
-
+  
   .header-content-improved {
     gap: 12px;
     padding-right: 50px;
   }
-
+  
   .content-container-improved {
     padding: 16px;
     max-height: 50vh;
@@ -1866,10 +1867,8 @@ export default {
 }
 
 .toggle-track {
-  width: 64px;
-  /* Increased from 50px */
-  height: 32px;
-  /* Increased from 24px */
+  width: 64px; /* Increased from 50px */
+  height: 32px; /* Increased from 24px */
   padding: 0;
   border-radius: 30px;
   background-color: #4D4D4D;
@@ -1877,43 +1876,34 @@ export default {
   display: flex;
   align-items: center;
   position: relative;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  /* Added border for better visibility */
+  border: 2px solid rgba(255, 255, 255, 0.1); /* Added border for better visibility */
 }
 
 .toggle-track.dark-active {
   background-color: #BB86FC;
-  border-color: rgba(255, 255, 255, 0.2);
-  /* Lighter border in dark mode */
+  border-color: rgba(255, 255, 255, 0.2); /* Lighter border in dark mode */
 }
 
 .toggle-thumb {
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 28px;
-  /* Increased from 20px */
-  height: 28px;
-  /* Increased from 20px */
+  width: 28px; /* Increased from 20px */
+  height: 28px; /* Increased from 20px */
   border-radius: 50%;
   background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  /* Enhanced shadow */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Enhanced shadow */
   transition: all 0.25s ease;
   z-index: 1;
 }
 
 .toggle-thumb.dark-active {
-  transform: translateX(32px);
-  /* Adjusted for new width */
+  transform: translateX(32px); /* Adjusted for new width */
 }
 
-.toggle-moon,
-.toggle-sun {
-  width: 24px;
-  /* Increased from 16px */
-  height: 24px;
-  /* Increased from 16px */
+.toggle-moon, .toggle-sun {
+  width: 24px; /* Increased from 16px */
+  height: 24px; /* Increased from 16px */
   position: absolute;
   top: 4px;
   display: flex;
@@ -1923,15 +1913,13 @@ export default {
 }
 
 .toggle-moon {
-  right: 8px;
-  /* Adjusted position */
+  right: 8px; /* Adjusted position */
   opacity: 0;
   color: #fff;
 }
 
 .toggle-sun {
-  left: 8px;
-  /* Adjusted position */
+  left: 8px; /* Adjusted position */
   opacity: 1;
   color: #fff;
 }
@@ -1947,14 +1935,12 @@ export default {
 /* Add hover and focus effects */
 .modern-theme-toggle:hover .toggle-track {
   background-color: #555;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
-  /* Added glow effect on hover */
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2); /* Added glow effect on hover */
 }
 
 .modern-theme-toggle:hover .toggle-track.dark-active {
   background-color: #9D6FE7;
-  box-shadow: 0 0 8px rgba(187, 134, 252, 0.4);
-  /* Purple glow in dark mode */
+  box-shadow: 0 0 8px rgba(187, 134, 252, 0.4); /* Purple glow in dark mode */
 }
 
 .modern-theme-toggle:focus-visible {
@@ -1964,12 +1950,9 @@ export default {
 }
 
 /* Animation for the icons */
-.toggle-moon svg,
-.toggle-sun svg {
-  width: 20px;
-  /* Increased from default */
-  height: 20px;
-  /* Increased from default */
+.toggle-moon svg, .toggle-sun svg {
+  width: 20px; /* Increased from default */
+  height: 20px; /* Increased from default */
   transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
@@ -1984,23 +1967,22 @@ export default {
     width: 46px;
     height: 24px;
   }
-
+  
   .toggle-track {
     width: 40px;
     height: 20px;
   }
-
+  
   .toggle-thumb {
     width: 16px;
     height: 16px;
   }
-
+  
   .toggle-thumb.dark-active {
     transform: translateX(18px);
   }
-
-  .toggle-sun,
-  .toggle-moon {
+  
+  .toggle-sun, .toggle-moon {
     width: 14px;
     height: 14px;
   }

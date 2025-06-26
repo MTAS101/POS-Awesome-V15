@@ -83,7 +83,7 @@ export default {
     async check_opening_entry() {
       await initPromise;
       return frappe
-        .call('posawesome.posawesome.api.shifts.check_opening_shift', {
+        .call('posawesome.posawesome.api.posapp.check_opening_shift', {
           user: frappe.session.user,
         })
         .then((r) => {
@@ -198,7 +198,7 @@ export default {
       }
 
       return frappe
-        .call('posawesome.posawesome.api.offers.get_offers', {
+        .call('posawesome.posawesome.api.posapp.get_offers', {
           profile: pos_profile,
         })
         .then((r) => {
