@@ -289,6 +289,21 @@ export function getPendingOfflineInvoiceCount() {
 export function saveOfflinePayment(entry) {
   const key = 'offline_payments';
   const entries = memory.offline_payments;
+  // Strip down POS Profile to essential fields to avoid
+  // serialization errors from complex reactive objects
+  if (entry?.args?.payload?.pos_profile) {
+    const profile = entry.args.payload.pos_profile;
+    entry.args.payload.pos_profile = {
+      posa_use_pos_awesome_payments: profile.posa_use_pos_awesome_payments,
+      posa_allow_make_new_payments: profile.posa_allow_make_new_payments,
+      posa_allow_reconcile_payments: profile.posa_allow_reconcile_payments,
+      posa_allow_mpesa_reconcile_payments:
+        profile.posa_allow_mpesa_reconcile_payments,
+      cost_center: profile.cost_center,
+      posa_cash_mode_of_payment: profile.posa_cash_mode_of_payment,
+      name: profile.name,
+    };
+  }
   let cleanEntry;
   try {
     cleanEntry = JSON.parse(JSON.stringify(entry));
