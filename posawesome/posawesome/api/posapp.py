@@ -440,9 +440,11 @@ def get_item_group_condition(pos_profile):
     cond = " and 1=1"
     item_groups = get_item_groups(pos_profile)
     if item_groups:
-        cond = " and item_group in (%s)" % (", ".join(["%s"] * len(item_groups)))
+        cond = " and item_group in ({})".format(
+            ", ".join(item_groups)
+        )
 
-    return cond % tuple(item_groups)
+    return cond
 
 
 def get_root_of(doctype):
@@ -503,9 +505,11 @@ def get_customer_group_condition(pos_profile):
     cond = "disabled = 0"
     customer_groups = get_customer_groups(pos_profile)
     if customer_groups:
-        cond = " customer_group in (%s)" % (", ".join(["%s"] * len(customer_groups)))
+        cond = " customer_group in ({})".format(
+            ", ".join(customer_groups)
+        )
 
-    return cond % tuple(customer_groups)
+    return cond
 
 
 @frappe.whitelist()
