@@ -771,6 +771,8 @@ def submit_invoice(invoice, data):
     invoice_doc.flags.ignore_permissions = True
     frappe.flags.ignore_account_permission = True
     invoice_doc.posa_is_printed = 1
+    invoice_doc.flags.ignore_version_check = True
+    invoice_doc.reload()
     invoice_doc.save()
 
     if data.get("due_date"):
