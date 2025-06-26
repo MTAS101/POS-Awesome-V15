@@ -221,57 +221,43 @@ export default {
       }
     }, 300),
     customer_price_list: _.debounce(function () {
-      const vm = this;
-      if (vm.pos_profile.posa_force_reload_items) {
-        if (vm.pos_profile.posa_smart_reload_mode) {
+      if (this.pos_profile.posa_force_reload_items) {
+        if (this.pos_profile.posa_smart_reload_mode) {
           // When limit search is enabled there may be no items yet.
           // Fallback to full reload if nothing is loaded
-          if (!vm.items_loaded || !vm.items.length) {
-            vm.items_loaded = false;
-            vm.get_items(true);
+          if (!this.items_loaded || !this.items.length) {
+            this.items_loaded = false;
+            this.get_items(true);
           } else {
             // Only refresh prices for visible items when smart reload is enabled
-            vm.$nextTick(() => vm.refreshPricesForVisibleItems());
+            this.$nextTick(() => this.refreshPricesForVisibleItems());
           }
         } else {
           // Fall back to full reload
-          vm.items_loaded = false;
-          vm.get_items(true);
+          this.items_loaded = false;
+          this.get_items(true);
         }
         return;
       }
-
-      const activeList = vm.customer_price_list || vm.pos_profile.selling_price_list;
-
-      if (vm.items_loaded && vm.items && vm.items.length > 0) {
-        const cached = getCachedPriceListItems(activeList);
+      // Apply cached rates if available for immediate update
+      if (this.items_loaded && this.items && this.items.length > 0) {
+        const cached = getCachedPriceListItems(this.customer_price_list);
         if (cached && cached.length) {
           const map = {};
           cached.forEach(ci => { map[ci.item_code] = ci; });
-          vm.items.forEach(it => {
+          this.items.forEach(it => {
             const ci = map[it.item_code];
             if (ci) {
               it.rate = ci.rate;
               it.price_list_rate = ci.price_list_rate || ci.rate;
             }
           });
-          vm.eventBus.emit("set_all_items", vm.items);
-          vm.update_items_details(vm.items);
+          this.eventBus.emit("set_all_items", this.items);
+          this.update_items_details(this.items);
           return;
         }
-
-        // Fetch updated prices from the server when cache is missing
-        if (vm.pos_profile.posa_smart_reload_mode) {
-          vm.$nextTick(() => vm.refreshPricesForVisibleItems());
-        } else {
-          vm.items_loaded = false;
-          vm.get_items(true);
-        }
-        return;
       }
-
-      // If items not loaded yet, trigger a fresh load
-      vm.get_items(true);
+      // No cache found; keep existing items without reloading from server
     }, 300),
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
