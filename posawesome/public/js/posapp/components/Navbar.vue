@@ -292,6 +292,7 @@
 import { io } from 'socket.io-client';
 import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline } from '../../offline.js';
 import OfflineInvoicesDialog from './OfflineInvoices.vue';
+import { silentPrint } from '../plugins/print.js';
 
 export default {
   name: 'NavBar', // Component name
@@ -784,9 +785,12 @@ export default {
       // Construct the full print URL for the Sales Invoice
       const url = `${frappe.urllib.get_base_url()}/printview?doctype=Sales%20Invoice&name=${this.lastInvoiceId}` +
         `&trigger_print=1&format=${pf}&no_letterhead=${noLetterHead}`;
-      const win = window.open(url, '_blank'); // Open the URL in a new browser tab/window
-      // Add a one-time event listener to the new window to trigger print once it's loaded
-      win.addEventListener('load', () => win.print(), { once: true });
+      if (this.posProfile.posa_silent_print) {
+        silentPrint(url);
+      } else {
+        const win = window.open(url, '_blank');
+        win.addEventListener('load', () => win.print(), { once: true });
+      }
     },
     goAbout() {
       this.showAboutDialog = true;

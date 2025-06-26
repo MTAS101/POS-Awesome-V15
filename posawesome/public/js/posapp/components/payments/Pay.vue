@@ -254,6 +254,7 @@ import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
 import { getOpeningStorage, setOpeningStorage, initPromise } from "../../../offline.js";
+import { silentPrint } from "../../plugins/print.js";
 
 export default {
   mixins: [format],
@@ -853,16 +854,19 @@ export default {
       }
 
       // Use simplest URL possible to avoid errors
-      const url = 
+      const url =
         frappe.urllib.get_base_url() +
         "/printview?doctype=Payment%20Entry" +
         "&name=" + payment_name +
         "&trigger_print=1";
 
       console.log("Opening printing URL:", url);
-      
-      // Open in new window/tab
-      window.open(url, '_blank');
+
+      if (this.pos_profile?.posa_silent_print) {
+        silentPrint(url);
+      } else {
+        window.open(url, '_blank');
+      }
     },
   },
 

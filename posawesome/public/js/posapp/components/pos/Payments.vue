@@ -650,6 +650,7 @@ import {
   setSalesPersonsStorage,
 } from "../../../offline.js";
 import generateOfflineInvoiceHTML from "../../../offline_print_template";
+import { silentPrint } from "../../plugins/print.js";
 
 export default {
   // Using format mixin for shared formatting methods
@@ -1281,14 +1282,18 @@ export default {
         print_format +
         "&no_letterhead=" +
         letter_head;
-      const printWindow = window.open(url, "Print");
-      printWindow.addEventListener(
-        "load",
-        function () {
-          printWindow.print();
-        },
-        true
-      );
+      if (this.pos_profile.posa_silent_print) {
+        silentPrint(url);
+      } else {
+        const printWindow = window.open(url, "Print");
+        printWindow.addEventListener(
+          "load",
+          function () {
+            printWindow.print();
+          },
+          { once: true }
+        );
+      }
     },
     // Print invoice using a more detailed offline template
     print_offline_invoice(invoice) {
