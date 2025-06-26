@@ -195,13 +195,13 @@ export default {
   watch: {
     customer: _.debounce(function () {
       if (this.pos_profile.posa_force_reload_items) {
-        if (this.pos_profile.posa_smart_reload_mode) {
-          // Only refresh prices for visible items when smart reload is enabled
-          this.$nextTick(() => this.refreshPricesForVisibleItems());
-        } else {
-          // Fall back to full reload
+        if (this.pos_profile.pose_use_limit_search || !this.pos_profile.posa_smart_reload_mode) {
+          // When limit search is active or smart reload disabled, reload all items
           this.items_loaded = false;
           this.get_items(true);
+        } else {
+          // Otherwise only refresh visible items
+          this.$nextTick(() => this.refreshPricesForVisibleItems());
         }
         return;
       }
@@ -215,13 +215,13 @@ export default {
     }, 300),
     customer_price_list: _.debounce(function () {
       if (this.pos_profile.posa_force_reload_items) {
-        if (this.pos_profile.posa_smart_reload_mode) {
-          // Only refresh prices for visible items when smart reload is enabled
-          this.$nextTick(() => this.refreshPricesForVisibleItems());
-        } else {
-          // Fall back to full reload
+        if (this.pos_profile.pose_use_limit_search || !this.pos_profile.posa_smart_reload_mode) {
+          // When limit search is active or smart reload disabled, reload all items
           this.items_loaded = false;
           this.get_items(true);
+        } else {
+          // Otherwise refresh visible items only
+          this.$nextTick(() => this.refreshPricesForVisibleItems());
         }
         return;
       }
