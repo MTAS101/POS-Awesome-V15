@@ -195,7 +195,7 @@
       </v-list>
     </v-navigation-drawer>
 
-    <v-snackbar v-model="snack" :timeout="5000" :color="snackColor" location="top right">
+    <v-snackbar v-model="snack" :timeout="2000" :color="snackColor" location="top right">
       {{ snackText }}
     </v-snackbar>
 
@@ -710,6 +710,12 @@ export default {
     toggleManualOffline() {
       this.manualOffline = !this.manualOffline;
       setManualOffline(this.manualOffline);
+
+      // Show message with shorter duration
+      this.showMessage({
+        color: this.manualOffline ? 'warning' : 'success',
+        title: this.manualOffline ? this.__('Switched to Offline Mode') : this.__('Switched to Online Mode')
+      });
 
       if (this.manualOffline) {
         this.serverOnline = false;
@@ -1430,7 +1436,7 @@ export default {
 }
 
 .warning-action:hover .warning-icon {
-  transform: scale(1.1);
+  transform: scale(1.1) rotate(-5deg);
   box-shadow: 0 3px 8px rgba(255, 152, 0, 0.25);
 }
 
