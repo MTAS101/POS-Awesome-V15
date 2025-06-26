@@ -131,7 +131,7 @@
 
 <script>
 import UpdateCustomer from './UpdateCustomer.vue';
-import { getCustomerStorage, setCustomerStorage, isOffline } from '../../../offline.js';
+import { getCustomerStorage, setCustomerStorage, isOffline, initPromise } from '../../../offline.js';
 
 export default {
   props: {
@@ -244,7 +244,8 @@ export default {
     },
 
     // Fetch customers list
-    get_customer_names() {
+    async get_customer_names() {
+      await initPromise;
       var vm = this;
       if (this.customers.length > 0) return;
 
@@ -295,7 +296,8 @@ export default {
     },
   },
 
-  created() {
+  async created() {
+    await initPromise;
     // Load cached customers immediately for offline use
     if (getCustomerStorage().length) {
       try {
