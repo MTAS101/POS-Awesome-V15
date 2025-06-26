@@ -31,7 +31,8 @@ const memory = {
   opening_dialog_storage: null,
   sales_persons_storage: [],
   price_list_cache: {},
-  item_details_cache: {}
+  item_details_cache: {},
+  manual_offline: false
 };
 
 // Modify initializeStockCache function to set the flag
@@ -233,25 +234,28 @@ export function saveOfflineInvoice(entry) {
 export function isOffline() {
   if (typeof window === 'undefined') {
     // Not in a browser (SSR/Node), assume online (or handle explicitly if needed)
-    return false;
+    return memory.manual_offline || false;
   }
 
   const { protocol, hostname, navigator } = window;
   const online = navigator.onLine;
 
+  const serverOnline =
+    typeof window.serverOnline === 'boolean' ? window.serverOnline : true;
+
   const isIpAddress = /^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname);
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
   const isDnsName   = !isIpAddress && !isLocalhost;
 
-  // HTTPS with DNS name: more strict checks (navigator and serverOnline)
+  if (memory.manual_offline) {
+    return true;
+  }
+
   if (protocol === 'https:' && isDnsName) {
-    const serverOnline =
-      typeof window.serverOnline === 'boolean' ? window.serverOnline : true;
     return !online || !serverOnline;
   }
 
-  // Fallback for all other cases (localhost, IP, HTTP, etc.)
-  return !online;
+  return !online || !serverOnline;
 }
 
 
@@ -835,4 +839,17 @@ export function getLocalStockCache() {
 export function setLocalStockCache(cache) {
   memory.local_stock_cache = cache || {};
   persist('local_stock_cache');
+}
+
+export function isManualOffline() {
+  return memory.manual_offline || false;
+}
+
+export function setManualOffline(state) {
+  memory.manual_offline = !!state;
+  persist('manual_offline');
+}
+
+export function toggleManualOffline() {
+  setManualOffline(!memory.manual_offline);
 }

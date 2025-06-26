@@ -108,6 +108,20 @@
               </div>
             </v-list-item>
 
+            <v-list-item @click="toggleManualOffline" class="menu-item-compact warning-action">
+              <template v-slot:prepend>
+                <div class="menu-icon-wrapper-compact warning-icon">
+                  <v-icon color="white" size="16">mdi-wifi-off</v-icon>
+                </div>
+              </template>
+              <div class="menu-content-compact">
+                <v-list-item-title class="menu-item-title-compact">{{ manualOffline ? __('Go Online') : __('Go Offline') }}</v-list-item-title>
+                <v-list-item-subtitle class="menu-item-subtitle-compact">
+                  {{ manualOffline ? __('Disable offline mode') : __('Work without server connection') }}
+                </v-list-item-subtitle>
+              </div>
+            </v-list-item>
+
             <v-divider class="menu-section-divider-compact"></v-divider>
 
             <v-list-item @click="goAbout" class="menu-item-compact neutral-action">
@@ -276,7 +290,7 @@
 // Import the Socket.IO client library for real-time server status monitoring.
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
-import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals } from '../../offline.js';
+import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline } from '../../offline.js';
 import OfflineInvoicesDialog from './OfflineInvoices.vue';
 
 export default {
@@ -306,6 +320,7 @@ export default {
       serverOnline: false,             // Boolean: Reflects the real-time server health via WebSocket (true if connected, false if disconnected)
       serverConnecting: false,         // Boolean: Indicates if the client is currently attempting to establish a connection to the server via WebSocket
       socket: null,                    // Instance of the Socket.IO client, used for real-time communication with the server
+      manualOffline: isManualOffline(), // Allows user to force offline mode manually
       offlineMessageShown: false,      // Flag to avoid repeating offline warnings
       showOfflineInvoices: false,      // Controls the Offline Invoices dialog
       showAboutDialog: false,          // Controls the About dialog
@@ -688,6 +703,30 @@ export default {
       // Disconnect the socket gracefully if the network goes offline.
       if (this.socket) {
         this.socket.disconnect();
+      }
+    },
+
+    toggleManualOffline() {
+      this.manualOffline = !this.manualOffline;
+      setManualOffline(this.manualOffline);
+
+      if (this.manualOffline) {
+        this.serverOnline = false;
+        window.serverOnline = false;
+        if (this.socket) {
+          this.socket.disconnect();
+        }
+        this.eventBus.emit('network-offline');
+      } else {
+        window.serverOnline = this.serverOnline;
+        if (this.networkOnline) {
+          if (this.socket) {
+            this.socket.connect();
+          } else {
+            this.initSocketConnection();
+          }
+        }
+        this.eventBus.emit(this.networkOnline ? 'network-online' : 'network-offline');
       }
     },
     // --- NAVIGATION AND POS ACTIONS ---
@@ -1379,6 +1418,20 @@ export default {
 
 .danger-action:hover::before {
   background: linear-gradient(135deg, rgba(211, 47, 47, 0.05) 0%, rgba(244, 67, 54, 0.08) 100%) !important;
+}
+
+.warning-icon {
+  background: linear-gradient(135deg, #ff9800 0%, #ffc107 100%);
+  box-shadow: 0 2px 6px rgba(255, 152, 0, 0.2);
+}
+
+.warning-action:hover .warning-icon {
+  transform: scale(1.1);
+  box-shadow: 0 3px 8px rgba(255, 152, 0, 0.25);
+}
+
+.warning-action:hover::before {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.05) 0%, rgba(255, 193, 7, 0.08) 100%) !important;
 }
 
 /* Compact Responsive Design */
