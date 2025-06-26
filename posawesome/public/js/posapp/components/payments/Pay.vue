@@ -253,7 +253,7 @@
 import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
-import { getOpeningStorage, setOpeningStorage, initPromise } from "../../../offline.js";
+import { getOpeningStorage, setOpeningStorage, initPromise, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline } from "../../../offline.js";
 import { silentPrint } from "../../plugins/print.js";
 
 export default {
@@ -706,6 +706,23 @@ export default {
         this.total_selected_mpesa_payments
       );
 
+      if (isOffline()) {
+        try {
+          saveOfflinePayment({ args: { payload } });
+          vm.eventBus.emit('show_message', { title: __('Payment saved offline'), color: 'warning' });
+          vm.clear_all(false);
+          vm.customer_name = customer;
+          vm.get_outstanding_invoices();
+          vm.get_unallocated_payments();
+          vm.set_mpesa_search_params();
+          vm.get_draft_mpesa_payments_register();
+        } catch (error) {
+          frappe.msgprint(__('Cannot Save Offline Payment: ') + (error.message || __('Unknown error')));
+        }
+        vm.isSubmitting = false;
+        return;
+      }
+
       frappe.call({
         method: "posawesome.posawesome.api.payment_entry.process_pos_payment",
         args: { payload },
@@ -778,6 +795,23 @@ export default {
       payload.total_selected_mpesa_payments = flt(
         this.total_selected_mpesa_payments
       );
+
+      if (isOffline()) {
+        try {
+          saveOfflinePayment({ args: { payload } });
+          vm.eventBus.emit('show_message', { title: __('Payment saved offline'), color: 'warning' });
+          vm.clear_all(false);
+          vm.customer_name = customer;
+          vm.get_outstanding_invoices();
+          vm.get_unallocated_payments();
+          vm.set_mpesa_search_params();
+          vm.get_draft_mpesa_payments_register();
+        } catch (error) {
+          frappe.msgprint(__('Cannot Save Offline Payment: ') + (error.message || __('Unknown error')));
+        }
+        vm.isSubmitting = false;
+        return;
+      }
 
       frappe.call({
         method: "posawesome.posawesome.api.payment_entry.process_pos_payment",
@@ -868,6 +902,26 @@ export default {
         window.open(url, '_blank');
       }
     },
+
+    async syncPendingPayments() {
+      const pending = getPendingOfflinePaymentCount();
+      if (pending) {
+        this.eventBus.emit('show_message', {
+          title: `${pending} payment${pending > 1 ? 's' : ''} pending for sync`,
+          color: 'warning'
+        });
+      }
+      if (isOffline()) {
+        return;
+      }
+      const result = await syncOfflinePayments();
+      if (result && result.synced) {
+        this.eventBus.emit('show_message', {
+          title: `${result.synced} offline payment${result.synced > 1 ? 's' : ''} synced`,
+          color: 'success'
+        });
+      }
+    },
   },
 
   computed: {
@@ -948,6 +1002,12 @@ export default {
     }
   },
 
+  created() {
+    this.syncPendingPayments();
+    this.eventBus.on('network-online', this.syncPendingPayments);
+    this.eventBus.on('server-online', this.syncPendingPayments);
+  },
+
   mounted: function () {
     this.$nextTick(function () {
       this.check_opening_entry();
@@ -967,6 +1027,8 @@ export default {
   beforeUnmount() {
     this.eventBus.off("update_customer");
     this.eventBus.off("fetch_customer_details");
+    this.eventBus.off('network-online', this.syncPendingPayments);
+    this.eventBus.off('server-online', this.syncPendingPayments);
   },
 };
 </script>

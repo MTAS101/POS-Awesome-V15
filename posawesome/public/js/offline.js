@@ -19,6 +19,7 @@ if (typeof Worker !== 'undefined') {
 const memory = {
   offline_invoices: [],
   offline_customers: [],
+  offline_payments: [],
   pos_last_sync_totals: { pending: 0, synced: 0, drafted: 0 },
   uom_cache: {},
   offers_cache: [],
@@ -144,10 +145,12 @@ function persist(key) {
 export function resetOfflineState() {
   memory.offline_invoices = [];
   memory.offline_customers = [];
+  memory.offline_payments = [];
   memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
 
   persist('offline_invoices');
   persist('offline_customers');
+  persist('offline_payments');
   persist('pos_last_sync_totals');
 }
 
@@ -281,6 +284,45 @@ export function deleteOfflineInvoice(index) {
 
 export function getPendingOfflineInvoiceCount() {
   return memory.offline_invoices.length;
+}
+
+export function saveOfflinePayment(entry) {
+  const key = 'offline_payments';
+  const entries = memory.offline_payments;
+  let cleanEntry;
+  try {
+    cleanEntry = JSON.parse(JSON.stringify(entry));
+  } catch (e) {
+    console.error('Failed to serialize offline payment', e);
+    throw e;
+  }
+  entries.push(cleanEntry);
+  memory.offline_payments = entries;
+  persist(key);
+}
+
+export function getOfflinePayments() {
+  return memory.offline_payments;
+}
+
+export function clearOfflinePayments() {
+  memory.offline_payments = [];
+  persist('offline_payments');
+}
+
+export function deleteOfflinePayment(index) {
+  if (
+    Array.isArray(memory.offline_payments) &&
+    index >= 0 &&
+    index < memory.offline_payments.length
+  ) {
+    memory.offline_payments.splice(index, 1);
+    persist('offline_payments');
+  }
+}
+
+export function getPendingOfflinePaymentCount() {
+  return memory.offline_payments.length;
 }
 
 export function saveOfflineCustomer(entry) {
@@ -442,6 +484,43 @@ export async function syncOfflineCustomers() {
     persist('offline_customers');
   } else {
     clearOfflineCustomers();
+  }
+
+  return { pending: failures.length, synced };
+}
+
+export async function syncOfflinePayments() {
+  await syncOfflineCustomers();
+
+  const payments = getOfflinePayments();
+  if (!payments.length) {
+    return { pending: 0, synced: 0 };
+  }
+  if (isOffline()) {
+    return { pending: payments.length, synced: 0 };
+  }
+
+  const failures = [];
+  let synced = 0;
+
+  for (const pay of payments) {
+    try {
+      await frappe.call({
+        method: 'posawesome.posawesome.api.payment_entry.process_pos_payment',
+        args: pay.args
+      });
+      synced++;
+    } catch (error) {
+      console.error('Failed to submit payment', error);
+      failures.push(pay);
+    }
+  }
+
+  if (failures.length) {
+    memory.offline_payments = failures;
+    persist('offline_payments');
+  } else {
+    clearOfflinePayments();
   }
 
   return { pending: failures.length, synced };
