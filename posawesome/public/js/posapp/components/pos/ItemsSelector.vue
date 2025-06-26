@@ -438,12 +438,10 @@ export default {
           vm.loading = false;
           vm.items_loaded = true;
 
-      setTimeout(() => {
-        if (vm.items && vm.items.length > 0) {
-          vm.prePopulateStockCache(vm.items);
-          vm.update_items_details(vm.items);
-        }
-      }, 300);
+      if (vm.items && vm.items.length > 0) {
+        vm.prePopulateStockCache(vm.items);
+        vm.update_items_details(vm.items);
+      }
           return;
         }
       }
@@ -471,12 +469,10 @@ export default {
         vm.loading = false;
         vm.items_loaded = true;
 
-        setTimeout(async () => {
-          if (vm.items && vm.items.length > 0) {
-            await vm.prePopulateStockCache(vm.items);
-            vm.update_items_details(vm.items);
-          }
-        }, 300);
+        if (vm.items && vm.items.length > 0) {
+          await vm.prePopulateStockCache(vm.items);
+          vm.update_items_details(vm.items);
+        }
         return;
       }
       if (this.itemWorker) {
@@ -534,11 +530,9 @@ export default {
               });
 
               // Always refresh quantities after items are loaded
-              setTimeout(() => {
-                if (vm.items && vm.items.length > 0) {
-                  vm.update_items_details(vm.items);
-                }
-              }, 300);
+              if (vm.items && vm.items.length > 0) {
+                vm.update_items_details(vm.items);
+              }
 
               if (
                 vm.pos_profile.posa_local_storage &&
@@ -612,11 +606,9 @@ export default {
             });
 
             // Always refresh quantities after items are loaded
-            setTimeout(() => {
-              if (vm.items && vm.items.length > 0) {
-                vm.update_items_details(vm.items);
-              }
-            }, 300);
+            if (vm.items && vm.items.length > 0) {
+              vm.update_items_details(vm.items);
+            }
 
             if (
               vm.pos_profile.posa_local_storage &&
