@@ -131,7 +131,7 @@
 
 <script>
 import UpdateCustomer from './UpdateCustomer.vue';
-import { getCustomerStorage, setCustomerStorage, isOffline } from '../../../offline.js';
+import { getCustomerStorage, setCustomerStorage } from '../../../offline.js';
 
 export default {
   props: {
@@ -255,12 +255,6 @@ export default {
           console.error('Failed to parse customer cache:', e);
           vm.customers = [];
         }
-      }
-
-      if (isOffline()) {
-        // In offline mode, rely solely on cached customers
-        vm.loadingCustomers = false;
-        return;
       }
 
       this.loadingCustomers = true; // ? Start loading
