@@ -246,7 +246,7 @@
 import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
-import { getOpeningStorage, setOpeningStorage, initPromise, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline } from "../../../offline.js";
+import { getOpeningStorage, setOpeningStorage, initPromise, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline, getCustomerStorage } from "../../../offline.js";
 import { silentPrint } from "../../plugins/print.js";
 
 export default {
@@ -508,7 +508,10 @@ export default {
     },
     async fetch_customer_details() {
       var vm = this;
-      if (this.customer_name) {
+      if (!this.customer_name) return;
+
+      // When offline, attempt to load details from cached customers
+      if (isOffline()) {
         try {
           const r = await frappe.call({
             method: "posawesome.posawesome.api.customers.get_customer_info",
@@ -521,12 +524,33 @@ export default {
             vm.customer_info = {
               ...message,
             };
+
             vm.set_mpesa_search_params();
             vm.eventBus.emit("set_customer_info_to_edit", vm.customer_info);
           }
         } catch (error) {
-          console.error("Failed to fetch customer details", error);
+          console.error("Failed to fetch cached customer", error);
         }
+        return;
+      }
+
+      try {
+        const r = await frappe.call({
+          method: "posawesome.posawesome.api.posapp.get_customer_info",
+          args: {
+            customer: vm.customer_name,
+          },
+        });
+        const message = r.message;
+        if (!r.exc) {
+          vm.customer_info = {
+            ...message,
+          };
+          vm.set_mpesa_search_params();
+          vm.eventBus.emit("set_customer_info_to_edit", vm.customer_info);
+        }
+      } catch (error) {
+        console.error("Failed to fetch customer details", error);
       }
     },
     onInvoiceSelected(event) {
@@ -542,6 +566,13 @@ export default {
       this.invoices_loading = true;
       // Reset selection completely
       this.selected_invoices = [];
+
+      if (isOffline()) {
+        this.outstanding_invoices = [];
+        this.invoices_loading = false;
+        return;
+      }
+
       return frappe
         .call(
           "posawesome.posawesome.api.payment_entry.get_outstanding_invoices",
@@ -567,6 +598,12 @@ export default {
       if (!this.pos_profile.posa_allow_reconcile_payments) return;
       this.unallocated_payments_loading = true;
       if (!this.customer_name) {
+        this.unallocated_payments = [];
+        this.unallocated_payments_loading = false;
+        return;
+      }
+
+      if (isOffline()) {
         this.unallocated_payments = [];
         this.unallocated_payments_loading = false;
         return;
@@ -602,6 +639,12 @@ export default {
       if (!this.pos_profile.posa_allow_mpesa_reconcile_payments) return;
       const vm = this;
       this.mpesa_payments_loading = true;
+
+      if (isOffline()) {
+        this.mpesa_payments = [];
+        this.mpesa_payments_loading = false;
+        return;
+      }
       return frappe
         .call("posawesome.posawesome.api.m_pesa.get_mpesa_draft_payments", {
           company: vm.company,
@@ -659,6 +702,7 @@ export default {
         return;
       }
 
+
       // Check if we have selected invoices
       if (this.selected_invoices.length == 0) {
         this.isSubmitting = false;
@@ -670,6 +714,7 @@ export default {
       let total_payments = this.total_selected_payments +
         this.total_selected_mpesa_payments +
         this.total_payment_methods;
+
 
       if (total_payments <= 0) {
         this.isSubmitting = false;
@@ -749,6 +794,7 @@ export default {
         return;
       }
 
+
       // Check if we have selected invoices
       if (this.selected_invoices.length == 0) {
         this.isSubmitting = false;
@@ -760,6 +806,7 @@ export default {
       let total_payments = this.total_selected_payments +
         this.total_selected_mpesa_payments +
         this.total_payment_methods;
+
 
       if (total_payments <= 0) {
         this.isSubmitting = false;
