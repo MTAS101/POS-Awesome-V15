@@ -260,38 +260,78 @@ def get_items(
 
         result = []
 
-        items_data = frappe.db.sql(
-            """
-            SELECT
-                name AS item_code,
-                item_name,
-                description,
-                stock_uom,
-                image,
-                is_stock_item,
-                has_variants,
-                variant_of,
-                item_group,
-                idx as idx,
-                has_batch_no,
-                has_serial_no,
-                max_discount,
-                brand
-            FROM
-                `tabItem`
-            WHERE
-                disabled = 0
-                    AND is_sales_item = 1
-                    AND is_fixed_asset = 0
-                    {condition}
-            ORDER BY
-                item_name asc
-            {limit}
-                """.format(
-                condition=condition,
-                limit=limit_clause
-            ),
-            as_dict=1,
+        # Build ORM filters
+        filters = {
+            "disabled": 0,
+            "is_sales_item": 1,
+            "is_fixed_asset": 0
+        }
+        
+        # Add item group filter
+        item_groups = get_item_groups(pos_profile.get("name"))
+        if item_groups:
+            filters["item_group"] = ["in", item_groups]
+        
+        # Add search conditions
+        or_filters = []
+        if use_limit_search and search_value:
+            data = search_serial_or_batch_or_barcode_number(
+                search_value, search_serial_no
+            )
+            item_code = data.get("item_code") if data.get("item_code") else search_value
+            
+            or_filters = [
+                ["name", "like", f"%{item_code}%"],
+                ["item_name", "like", f"%{item_code}%"]
+            ]
+            
+            # Check for exact barcode match
+            if data.get("item_code"):
+                filters["name"] = data.get("item_code")
+                or_filters = []
+        
+        if item_group:
+            filters["item_group"] = ["like", f"%{item_group}%"]
+        
+        if not posa_show_template_items:
+            filters["has_variants"] = 0
+        
+        # Determine limit
+        limit_page_length = None
+        limit_start = None
+        
+        if limit is not None:
+            limit_page_length = limit
+            if offset:
+                limit_start = offset
+        elif use_limit_search:
+            limit_page_length = search_limit
+            if pos_profile.get("posa_force_reload_items") and search_value:
+                limit_page_length = None
+        
+        items_data = frappe.get_all(
+            "Item",
+            filters=filters,
+            or_filters=or_filters if or_filters else None,
+            fields=[
+                "name as item_code",
+                "item_name",
+                "description", 
+                "stock_uom",
+                "image",
+                "is_stock_item",
+                "has_variants",
+                "variant_of",
+                "item_group",
+                "idx",
+                "has_batch_no",
+                "has_serial_no",
+                "max_discount",
+                "brand"
+            ],
+            limit_start=limit_start,
+            limit_page_length=limit_page_length,
+            order_by="item_name asc"
         )
 
         if items_data:
@@ -460,14 +500,12 @@ def get_root_of(doctype):
 
 @frappe.whitelist()
 def get_items_groups():
-    return frappe.db.sql(
-        """
-        select name 
-        from `tabItem Group`
-        where is_group = 0
-        order by name
-        LIMIT 0, 200 """,
-        as_dict=1,
+    return frappe.get_all(
+        "Item Group",
+        filters={"is_group": 0},
+        fields=["name"],
+        limit_page_length=200,
+        order_by="name"
     )
 
 
@@ -490,12 +528,14 @@ def get_customer_groups(pos_profile):
 
 def get_child_nodes(group_type, root):
     lft, rgt = frappe.db.get_value(group_type, root, ["lft", "rgt"])
-    return frappe.db.sql(
-        """ Select name, lft, rgt from `tab{tab}` where
-			lft >= {lft} and rgt <= {rgt} order by lft""".format(
-            tab=group_type, lft=lft, rgt=rgt
-        ),
-        as_dict=1,
+    return frappe.get_all(
+        group_type,
+        filters={
+            "lft": [">=", lft],
+            "rgt": ["<=", rgt]
+        },
+        fields=["name", "lft", "rgt"],
+        order_by="lft"
     )
 
 
@@ -521,18 +561,17 @@ def get_customer_names(pos_profile):
 
     def _get_customer_names(pos_profile):
         pos_profile = json.loads(pos_profile)
-        condition = ""
-        condition += get_customer_group_condition(pos_profile)
-        customers = frappe.db.sql(
-            """
-            SELECT name, mobile_no, email_id, tax_id, customer_name, primary_address
-            FROM `tabCustomer`
-            WHERE {0}
-            ORDER by name
-            """.format(
-                condition
-            ),
-            as_dict=1,
+        filters = {"disabled": 0}
+        
+        customer_groups = get_customer_groups(pos_profile)
+        if customer_groups:
+            filters["customer_group"] = ["in", customer_groups]
+        
+        customers = frappe.get_all(
+            "Customer",
+            filters=filters,
+            fields=["name", "mobile_no", "email_id", "tax_id", "customer_name", "primary_address"],
+            order_by="name"
         )
         return customers
 
