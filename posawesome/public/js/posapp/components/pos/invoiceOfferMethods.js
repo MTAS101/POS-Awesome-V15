@@ -833,6 +833,16 @@ export default {
           this.currency_precision
         );
         this.discount_percentage_offer_name = offer.name;
+
+        // Update invoice level discount fields so the value
+        // is reflected in the UI and saved correctly
+        this.additional_discount = this.discount_amount;
+        if (this.Total && this.Total !== 0) {
+          this.additional_discount_percentage =
+            (this.discount_amount / this.Total) * 100;
+        } else {
+          this.additional_discount_percentage = 0;
+        }
       }
     },
 
@@ -843,6 +853,10 @@ export default {
       ) {
         this.discount_amount = 0;
         this.discount_percentage_offer_name = null;
+
+        // Reset invoice discount fields when offer is removed
+        this.additional_discount = 0;
+        this.additional_discount_percentage = 0;
       }
     },
 
