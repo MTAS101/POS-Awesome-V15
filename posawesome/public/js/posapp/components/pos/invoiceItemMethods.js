@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems } from "../../../offline.js";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems } from "../../../offline/index.js";
 
 export default {
 

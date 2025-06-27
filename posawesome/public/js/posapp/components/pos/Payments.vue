@@ -393,7 +393,7 @@ import {
   getSalesPersonsStorage,
   setSalesPersonsStorage,
   updateLocalStock,
-} from "../../../offline.js";
+} from "../../../offline/index.js";
 import generateOfflineInvoiceHTML from "../../../offline_print_template";
 import { silentPrint } from "../../plugins/print.js";
 
@@ -1200,15 +1200,15 @@ export default {
       formData["customer_credit_dict"] = this.customer_credit_dict;
       formData["is_cashback"] = this.is_cashback;
       frappe.call({
-          method: "posawesome.posawesome.api.invoices.update_invoice",
-          args: { data: formData },
-          async: false,
-          callback: function (r) {
-            if (r.message) {
-              vm.invoice_doc = r.message;
-            }
-          },
-        }).then(() => {
+        method: "posawesome.posawesome.api.invoices.update_invoice",
+        args: { data: formData },
+        async: false,
+        callback: function (r) {
+          if (r.message) {
+            vm.invoice_doc = r.message;
+          }
+        },
+      }).then(() => {
         frappe.call({
           method: "posawesome.posawesome.api.payments.create_payment_request",
           args: { doc: vm.invoice_doc },

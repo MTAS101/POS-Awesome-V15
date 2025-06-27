@@ -134,7 +134,7 @@
               <v-col> </v-col>
               <v-col md="3" cols="12">
                 <v-btn block color="warning" theme="dark" @click="get_draft_mpesa_payments_register">{{ __("Search")
-                  }}</v-btn>
+                }}</v-btn>
               </v-col>
             </v-row>
             <v-data-table :headers="mpesa_payment_headers" :items="mpesa_payments" item-key="name"
@@ -246,7 +246,7 @@
 import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
-import { getOpeningStorage, setOpeningStorage, initPromise, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline, getCustomerStorage } from "../../../offline.js";
+import { getOpeningStorage, setOpeningStorage, initPromise, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline, getCustomerStorage } from "../../../offline/index.js";
 import { silentPrint } from "../../plugins/print.js";
 
 export default {

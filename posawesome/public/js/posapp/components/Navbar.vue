@@ -71,7 +71,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('Close Shift') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('End current session')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -85,7 +85,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('Print Last Invoice') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Reprint previous transaction')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -98,7 +98,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('Sync Offline Invoices') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Upload pending transactions')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -110,7 +110,7 @@
               </template>
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ manualOffline ? __('Go Online') : __('Go Offline')
-                  }}</v-list-item-title>
+                }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">
                   {{ manualOffline ? __('Disable offline mode') : __('Work without server connection') }}
                 </v-list-item-subtitle>
@@ -128,7 +128,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('About') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('App information')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -137,14 +137,14 @@
               <template v-slot:prepend>
                 <div class="menu-icon-wrapper-compact info-icon">
                   <v-icon color="white" size="16">{{ isDark ? 'mdi-white-balance-sunny' : 'mdi-moon-waning-crescent'
-                    }}</v-icon>
+                  }}</v-icon>
                 </div>
               </template>
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ isDark ? __('Light Mode') : __('Dark Mode')
-                  }}</v-list-item-title>
+                }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Switch theme appearance')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
 
@@ -157,7 +157,7 @@
               <div class="menu-content-compact">
                 <v-list-item-title class="menu-item-title-compact">{{ __('Logout') }}</v-list-item-title>
                 <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Sign out of session')
-                }}</v-list-item-subtitle>
+                  }}</v-list-item-subtitle>
               </div>
             </v-list-item>
           </v-list>
@@ -288,7 +288,7 @@
 // Import the Socket.IO client library for real-time server status monitoring.
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
-import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline } from '../../offline.js';
+import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline } from '../../offline/index.js';
 import OfflineInvoicesDialog from './OfflineInvoices.vue';
 import { silentPrint } from '../plugins/print.js';
 
