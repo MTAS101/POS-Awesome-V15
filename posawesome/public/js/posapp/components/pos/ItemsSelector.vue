@@ -800,7 +800,10 @@ export default {
       if (newSearchTerm) vm.search = newSearchTerm;
 
       if (vm.pos_profile.pose_use_limit_search) {
-        vm.get_items();
+        // Only trigger search when query length meets minimum threshold
+        if (vm.search && vm.search.length >= 3) {
+          vm.get_items();
+        }
       } else {
         // Save the current filtered items before search to maintain quantity data
         const current_items = [...vm.filtered_items];
