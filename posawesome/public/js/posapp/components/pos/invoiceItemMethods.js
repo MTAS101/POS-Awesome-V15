@@ -545,9 +545,14 @@ export default {
       doc.grand_total = grandTotal;
       doc.base_grand_total = grandTotal * (1 / this.exchange_rate || 1);
 
-      // Apply rounding to get rounded total
-      doc.rounded_total = this.roundAmount(grandTotal);
-      doc.base_rounded_total = this.roundAmount(doc.base_grand_total);
+      // Apply rounding to get rounded total unless disabled in POS Profile
+      if (this.pos_profile.disable_rounded_total) {
+        doc.rounded_total = flt(grandTotal, this.currency_precision);
+        doc.base_rounded_total = flt(doc.base_grand_total, this.currency_precision);
+      } else {
+        doc.rounded_total = this.roundAmount(grandTotal);
+        doc.base_rounded_total = this.roundAmount(doc.base_grand_total);
+      }
 
       // Add POS specific fields
       doc.posa_pos_opening_shift = this.pos_opening_shift.name;
@@ -1035,11 +1040,19 @@ export default {
         invoice_doc.total = this.Total;
         invoice_doc.grand_total = this.subtotal;
 
-        // Apply rounding to get rounded total
-        invoice_doc.rounded_total = this.roundAmount(this.subtotal);
+        // Apply rounding to get rounded total unless disabled in POS Profile
+        if (this.pos_profile.disable_rounded_total) {
+          invoice_doc.rounded_total = flt(this.subtotal, this.currency_precision);
+        } else {
+          invoice_doc.rounded_total = this.roundAmount(this.subtotal);
+        }
         invoice_doc.base_total = this.Total * (1 / this.exchange_rate || 1);
         invoice_doc.base_grand_total = this.subtotal * (1 / this.exchange_rate || 1);
-        invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
+        if (this.pos_profile.disable_rounded_total) {
+          invoice_doc.base_rounded_total = flt(invoice_doc.base_grand_total, this.currency_precision);
+        } else {
+          invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
+        }
 
         // Check if this is a return invoice
         if (this.isReturnInvoice || invoice_doc.is_return) {

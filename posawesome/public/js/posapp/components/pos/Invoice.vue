@@ -781,6 +781,11 @@ export default {
 
     // Add new rounding function
     roundAmount(amount) {
+      // Respect POS Profile setting to disable rounding
+      if (this.pos_profile.disable_rounded_total) {
+        // Use configured precision without applying rounding
+        return this.flt(amount, this.currency_precision);
+      }
       // If multi-currency is enabled and selected currency is different from base currency
       if (this.pos_profile.posa_allow_multi_currency &&
         this.selected_currency !== this.pos_profile.currency) {
