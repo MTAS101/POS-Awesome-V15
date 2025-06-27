@@ -823,6 +823,13 @@ export default {
         offer = this.posOffers.find((el) => el.name == offer.offer_name);
       }
       if (
+        this.discount_percentage_offer_name === offer.name &&
+        this.discount_amount !== 0
+      ) {
+        // Discount already applied, do not recalculate when items change
+        return;
+      }
+      if (
         (!this.discount_percentage_offer_name ||
           this.discount_percentage_offer_name == offer.name) &&
         offer.discount_percentage > 0 &&
