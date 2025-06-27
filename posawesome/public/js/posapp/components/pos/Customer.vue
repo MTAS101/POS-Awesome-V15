@@ -259,7 +259,7 @@ export default {
 
       this.loadingCustomers = true; // ? Start loading
       frappe.call({
-        method: 'posawesome.posawesome.api.posapp.get_customer_names',
+        method: 'posawesome.posawesome.api.customers.get_customer_names',
         args: {
           pos_profile: this.pos_profile.pos_profile,
         },

@@ -329,7 +329,7 @@ export default {
       const itemsToFetch = vm.filtered_items.filter(it => cacheResult.missing.includes(it.item_code));
 
       frappe.call({
-        method: "posawesome.posawesome.api.posapp.get_items_details",
+        method: "posawesome.posawesome.api.items.get_items_details",
         args: {
           pos_profile: JSON.stringify(vm.pos_profile),
           items_data: JSON.stringify(itemsToFetch),
@@ -478,7 +478,7 @@ export default {
       if (this.itemWorker) {
         try {
           const res = await fetch(
-            "/api/method/posawesome.posawesome.api.posapp.get_items",
+            "/api/method/posawesome.posawesome.api.items.get_items",
             {
               method: "POST",
               headers: {
@@ -565,7 +565,7 @@ export default {
         }
       } else {
         frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_items",
+          method: "posawesome.posawesome.api.items.get_items",
           args: {
             pos_profile: JSON.stringify(vm.pos_profile),
             price_list: vm.customer_price_list,
@@ -647,7 +647,7 @@ export default {
       } else {
         const vm = this;
         frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_items_groups",
+          method: "posawesome.posawesome.api.items.get_items_groups",
           args: {},
           callback: function (r) {
             if (r.message) {
@@ -923,7 +923,7 @@ export default {
       const itemsToFetch = items.filter(it => cacheResult.missing.includes(it.item_code));
 
       vm.currentRequest = frappe.call({
-        method: "posawesome.posawesome.api.posapp.get_items_details",
+        method: "posawesome.posawesome.api.items.get_items_details",
         args: {
           pos_profile: JSON.stringify(vm.pos_profile),
           items_data: JSON.stringify(itemsToFetch),
