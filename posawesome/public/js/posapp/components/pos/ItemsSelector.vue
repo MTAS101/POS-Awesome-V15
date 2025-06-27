@@ -163,7 +163,8 @@ export default {
     search: "",
     first_search: "",
     search_backup: "",
-    itemsPerPage: 1000,
+    // Limit the displayed items to avoid overly large lists
+    itemsPerPage: 50,
     offersCount: 0,
     appliedOffersCount: 0,
     couponsCount: 0,
@@ -1352,9 +1353,9 @@ export default {
           ) {
             filtered = filtred_group_list
               .filter((item) => !item.variant_of)
-              .slice(0, 50);
+              .slice(0, this.itemsPerPage);
           } else {
-            filtered = filtred_group_list.slice(0, 50);
+            filtered = filtred_group_list.slice(0, this.itemsPerPage);
           }
 
           // Ensure quantities are defined
@@ -1366,73 +1367,61 @@ export default {
 
           return filtered;
         } else if (this.search) {
-          filtred_list = filtred_group_list.filter((item) => {
-            let found = false;
-            for (let element of item.item_barcode) {
-              if (element.barcode == this.search) {
-                found = true;
-                break;
-              }
-            }
-            return found;
-          });
-          if (filtred_list.length == 0) {
-            filtred_list = filtred_group_list.filter((item) =>
-              item.item_code.toLowerCase().includes(this.search.toLowerCase())
+          const term = this.search.toLowerCase();
+          // Match barcode directly
+          filtred_list = filtred_group_list.filter(item =>
+            item.item_barcode.some(b => b.barcode === this.search)
+          );
+
+          if (filtred_list.length === 0) {
+            // Match by code or name containing the term
+            filtred_list = filtred_group_list.filter(item =>
+              item.item_code.toLowerCase().includes(term) ||
+              item.item_name.toLowerCase().includes(term)
             );
-            if (filtred_list.length == 0) {
-              const search_combinations = this.generateWordCombinations(
-                this.search
-              );
-              filtred_list = filtred_group_list.filter((item) => {
-                let found = false;
-                for (let element of search_combinations) {
-                  element = element.toLowerCase().trim();
-                  let element_regex = new RegExp(
-                    `.*${element.split("").join(".*")}.*`
-                  );
-                  if (element_regex.test(item.item_name.toLowerCase())) {
-                    found = true;
-                    break;
-                  }
-                }
-                return found;
+          }
+
+          if (filtred_list.length === 0) {
+            // Fallback to partial fuzzy match on name
+            const search_combinations = this.generateWordCombinations(this.search);
+            filtred_list = filtred_group_list.filter(item => {
+              const nameLower = item.item_name.toLowerCase();
+              return search_combinations.some(element => {
+                element = element.toLowerCase().trim();
+                const element_regex = new RegExp(`.*${element.split('').join('.*')}.*`);
+                return element_regex.test(nameLower);
               });
-            }
-            if (
-              filtred_list.length == 0 &&
-              this.pos_profile.posa_search_serial_no
-            ) {
-              filtred_list = filtred_group_list.filter((item) => {
-                let found = false;
-                for (let element of item.serial_no_data) {
-                  if (element.serial_no == this.search) {
-                    found = true;
-                    this.flags.serial_no = null;
-                    this.flags.serial_no = this.search;
-                    break;
-                  }
+            });
+          }
+
+          if (
+            filtred_list.length === 0 &&
+            this.pos_profile.posa_search_serial_no
+          ) {
+            filtred_list = filtred_group_list.filter(item => {
+              for (let element of item.serial_no_data) {
+                if (element.serial_no === this.search) {
+                  this.flags.serial_no = this.search;
+                  return true;
                 }
-                return found;
-              });
-            }
-            if (
-              filtred_list.length == 0 &&
-              this.pos_profile.posa_search_batch_no
-            ) {
-              filtred_list = filtred_group_list.filter((item) => {
-                let found = false;
-                for (let element of item.batch_no_data) {
-                  if (element.batch_no == this.search) {
-                    found = true;
-                    this.flags.batch_no = null;
-                    this.flags.batch_no = this.search;
-                    break;
-                  }
+              }
+              return false;
+            });
+          }
+
+          if (
+            filtred_list.length === 0 &&
+            this.pos_profile.posa_search_batch_no
+          ) {
+            filtred_list = filtred_group_list.filter(item => {
+              for (let element of item.batch_no_data) {
+                if (element.batch_no === this.search) {
+                  this.flags.batch_no = this.search;
+                  return true;
                 }
-                return found;
-              });
-            }
+              }
+              return false;
+            });
           }
         }
 
@@ -1441,9 +1430,9 @@ export default {
           this.pos_profile.posa_show_template_items &&
           this.pos_profile.posa_hide_variants_items
         ) {
-          final_filtered_list = filtred_list.filter((item) => !item.variant_of).slice(0, 50);
+          final_filtered_list = filtred_list.filter((item) => !item.variant_of).slice(0, this.itemsPerPage);
         } else {
-          final_filtered_list = filtred_list.slice(0, 50);
+          final_filtered_list = filtred_list.slice(0, this.itemsPerPage);
         }
 
         // Ensure quantities are defined for each item
@@ -1462,7 +1451,7 @@ export default {
 
         return final_filtered_list;
       } else {
-        const items_list = this.items.slice(0, 50);
+        const items_list = this.items.slice(0, this.itemsPerPage);
 
         // Ensure quantities are defined
         items_list.forEach(item => {
