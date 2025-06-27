@@ -6,6 +6,7 @@
 #### An open-source Point of Sale for [Erpnext](https://github.com/frappe/erpnext) using [Vue.js](https://github.com/vuejs/vue) and [Vuetify](https://github.com/vuetifyjs/vuetify) (VERSION 15 Support)
 
 ---
+
 ### Update Instructions
 
 After switching branches or pulling latest changes:
@@ -23,10 +24,9 @@ After switching branches or pulling latest changes:
 
 1. Supports Erpnext Version 15
 2. Supports Multi-Currency Transactions.
-    Customers can be invoiced in different currencies
-    Exchange Rate is fetched automatically based on selected currency
-    Invoices made with posawesome display Grand Total in both base and selected currency in erpnext.
-    
+   Customers can be invoiced in different currencies
+   Exchange Rate is fetched automatically based on selected currency
+   Invoices made with posawesome display Grand Total in both base and selected currency in erpnext.
 3. Supports offline mode for creating invoices and customers, saves data locally with stock validation, and syncs automatically when reconnected. If **Allow Negative Stock** is enabled in Stock Settings, offline invoices can still be saved even when quantities are below zero.
 4. User-friendly and provides a good user experience and speed of use
 5. The cashier can either use list view or card view during sales transactions. Card view shows the images of the items
