@@ -5,10 +5,10 @@
         <v-card-title>
           <span v-if="customer_id" class="text-h5 text-primary">{{
             __('Update Customer')
-            }}</span>
+          }}</span>
           <span v-else class="text-h5 text-primary">{{
             __('Create Customer')
-            }}</span>
+          }}</span>
         </v-card-title>
         <v-card-text class="pa-0">
           <v-container>
@@ -92,10 +92,10 @@
           <v-spacer></v-spacer>
           <v-btn color="error" theme="dark" @click="confirm_close">{{
             __('Close')
-            }}</v-btn>
+          }}</v-btn>
           <v-btn color="success" theme="dark" @click="submit_dialog">{{
             __('Submit')
-            }}</v-btn>
+          }}</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -124,7 +124,7 @@
 </template>
 
 <script>
-import { isOffline, saveOfflineCustomer } from '../../../offline.js';
+import { isOffline, saveOfflineCustomer } from '../../../offline/index.js';
 
 export default {
   data: () => ({

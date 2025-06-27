@@ -75,7 +75,7 @@
 
 <script>
 import format from '../../format';
-import { getOpeningDialogStorage, setOpeningDialogStorage, setOpeningStorage, initPromise } from '../../../offline.js';
+import { getOpeningDialogStorage, setOpeningDialogStorage, setOpeningStorage, initPromise } from '../../../offline/index.js';
 
 export default {
   mixins: [format],

@@ -44,9 +44,9 @@ import NewAddress from './NewAddress.vue';
 import Variants from './Variants.vue';
 import Returns from './Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
-import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, clearOpeningStorage, initPromise } from '../../../offline.js';
+import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, clearOpeningStorage, initPromise } from '../../../offline/index.js';
 // Import the cache cleanup function
-import { clearExpiredCustomerBalances } from "../../../offline.js";
+import { clearExpiredCustomerBalances } from "../../../offline/index.js";
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
