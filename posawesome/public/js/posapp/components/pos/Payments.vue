@@ -392,6 +392,7 @@ import {
   isOffline,
   getSalesPersonsStorage,
   setSalesPersonsStorage,
+  updateLocalStock,
 } from "../../../offline.js";
 import generateOfflineInvoiceHTML from "../../../offline_print_template";
 import { silentPrint } from "../../plugins/print.js";
@@ -943,6 +944,9 @@ export default {
             color: "success",
           });
           frappe.utils.play_sound("submit");
+          // Update local stock quantities immediately after successful
+          // invoice submission so item availability reflects changes
+          updateLocalStock(vm.invoice_doc.items || []);
           vm.addresses = [];
           vm.eventBus.emit("clear_invoice");
           vm.eventBus.emit("reset_posting_date");
