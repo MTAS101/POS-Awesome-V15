@@ -155,7 +155,7 @@
               :value="formatCurrency(invoice_doc.grand_total)" readonly :prefix="currencySymbol(invoice_doc.currency)"
               persistent-placeholder></v-text-field>
           </v-col>
-          <v-col v-if="invoice_doc.rounded_total" cols="6">
+          <v-col v-if="invoice_doc.rounded_total && invoice_doc.rounded_total !== invoice_doc.grand_total" cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Rounded Total')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
               :value="formatCurrency(invoice_doc.rounded_total)" readonly :prefix="currencySymbol(invoice_doc.currency)"

@@ -721,11 +721,11 @@ export default {
       // If multi-currency is enabled and selected currency is different from base currency
       if (this.pos_profile.posa_allow_multi_currency &&
         this.selected_currency !== this.pos_profile.currency) {
-        // For multi-currency, just keep 2 decimal places without rounding to nearest integer
-        return this.flt(amount, 2);
+        // For multi-currency keep the standard currency precision
+        return this.flt(amount, this.currency_precision);
       }
-      // For base currency or when multi-currency is disabled, round to nearest integer
-      return Math.round(amount);
+      // For base currency also keep precision instead of rounding to integer
+      return this.flt(amount, this.currency_precision);
     },
 
     // Increase quantity of an item (handles return logic)
