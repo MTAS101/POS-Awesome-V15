@@ -634,17 +634,29 @@ export function clearExpiredCustomerBalances() {
 
 // Price list items caching functions
 export function savePriceListItems(priceList, items) {
-	try {
-		const cache = memory.price_list_cache || {};
-		cache[priceList] = {
-			items,
-			timestamp: Date.now(),
-		};
-		memory.price_list_cache = cache;
-		persist("price_list_cache");
-	} catch (e) {
-		console.error("Failed to cache price list items", e);
-	}
+        try {
+                const cache = memory.price_list_cache || {};
+
+                // Clone the items to remove any Vue reactivity objects.
+                // Reactive proxies cannot be structured cloned and will
+                // trigger a DataCloneError when sent to a Web Worker.
+                let cleanItems;
+                try {
+                        cleanItems = JSON.parse(JSON.stringify(items));
+                } catch (err) {
+                        console.error("Failed to serialize price list items", err);
+                        cleanItems = [];
+                }
+
+                cache[priceList] = {
+                        items: cleanItems,
+                        timestamp: Date.now(),
+                };
+                memory.price_list_cache = cache;
+                persist("price_list_cache");
+        } catch (e) {
+                console.error("Failed to cache price list items", e);
+        }
 }
 
 export function getCachedPriceListItems(priceList) {
