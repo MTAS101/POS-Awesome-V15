@@ -43,17 +43,22 @@ export function getCachedOffers() {
 
 // Price list items caching functions
 export function savePriceListItems(priceList, items) {
-	try {
-		const cache = memory.price_list_cache || {};
-		cache[priceList] = {
-			items,
-			timestamp: Date.now(),
-		};
-		memory.price_list_cache = cache;
-		persist("price_list_cache", memory.price_list_cache);
-	} catch (e) {
-		console.error("Failed to cache price list items", e);
-	}
+        try {
+                const cache = memory.price_list_cache || {};
+
+                // Clone items to avoid sending reactive objects to the worker
+                // which would result in a DataCloneError when persisted
+                const cleanItems = JSON.parse(JSON.stringify(items));
+
+                cache[priceList] = {
+                        items: cleanItems,
+                        timestamp: Date.now(),
+                };
+                memory.price_list_cache = cache;
+                persist("price_list_cache", memory.price_list_cache);
+        } catch (e) {
+                console.error("Failed to cache price list items", e);
+        }
 }
 
 export function getCachedPriceListItems(priceList) {
