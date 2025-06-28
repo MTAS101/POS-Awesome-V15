@@ -45,6 +45,9 @@ export function getCachedOffers() {
 export function savePriceListItems(priceList, items) {
         try {
                 const cache = memory.price_list_cache || {};
+
+                // Clone the items to strip Vue's reactive proxies which cannot
+                // be structured cloned when sent to a worker.
                 let cleanItems;
                 try {
                         cleanItems = JSON.parse(JSON.stringify(items));
@@ -52,6 +55,7 @@ export function savePriceListItems(priceList, items) {
                         console.error("Failed to serialize price list items", err);
                         cleanItems = [];
                 }
+
                 cache[priceList] = {
                         items: cleanItems,
                         timestamp: Date.now(),
@@ -93,16 +97,18 @@ export function saveItemDetailsCache(profileName, priceList, items) {
                 const cache = memory.item_details_cache || {};
                 const profileCache = cache[profileName] || {};
                 const priceCache = profileCache[priceList] || {};
-                items.forEach((item) => {
-                        let cleanItem;
-                        try {
-                                cleanItem = JSON.parse(JSON.stringify(item));
-                        } catch (err) {
-                                console.error("Failed to serialize item details", err);
-                                cleanItem = {};
-                        }
+
+                let cleanItems;
+                try {
+                        cleanItems = JSON.parse(JSON.stringify(items));
+                } catch (err) {
+                        console.error("Failed to serialize item details", err);
+                        cleanItems = [];
+                }
+
+                cleanItems.forEach((item) => {
                         priceCache[item.item_code] = {
-                                data: cleanItem,
+                                data: item,
                                 timestamp: Date.now(),
                         };
                 });
