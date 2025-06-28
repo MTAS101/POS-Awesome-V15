@@ -19,7 +19,9 @@ async function persist(key, value) {
 }
 
 self.onmessage = async (event) => {
-	console.log("item worker", event);
+        // Logging every message can flood the console and increase memory usage
+        // when the worker is used for frequent persistence operations. Remove
+        // the noisy log to keep the console clean.
 	const data = event.data || {};
 	if (data.type === "parse_and_cache") {
 		try {
