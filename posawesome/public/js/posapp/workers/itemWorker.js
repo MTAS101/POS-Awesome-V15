@@ -1,4 +1,4 @@
-importScripts("https://unpkg.com/dexie@latest/dist/dexie.min.js");
+importScripts('/assets/posawesome/js/libs/dexie.min.js');
 
 const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
@@ -19,12 +19,23 @@ async function persist(key, value) {
 }
 
 self.onmessage = async (event) => {
-	console.log("item worker", event);
+        // Logging every message can flood the console and increase memory usage
+        // when the worker is used for frequent persistence operations. Remove
+        // the noisy log to keep the console clean.
 	const data = event.data || {};
 	if (data.type === "parse_and_cache") {
 		try {
-			const parsed = JSON.parse(data.json);
-			const items = parsed.message || parsed;
+                        const parsed = JSON.parse(data.json);
+                        const itemsRaw = parsed.message || parsed;
+                        let items;
+                        try {
+                                // Ensure data passed back is cloneable
+                                items = JSON.parse(JSON.stringify(itemsRaw));
+                        } catch (e) {
+                                console.error("Failed to clone items", e);
+                                self.postMessage({ type: "error", error: e.message });
+                                return;
+                        }
 			let cache = {};
 			try {
 				const stored = await db.table("keyval").get("price_list_cache");

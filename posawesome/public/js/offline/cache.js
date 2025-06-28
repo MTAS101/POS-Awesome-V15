@@ -1,3 +1,4 @@
+import Dexie from 'dexie';
 import { db, persist } from './core.js';
 
 // Memory cache object
@@ -146,5 +147,43 @@ export function setManualOffline(state) {
 }
 
 export function toggleManualOffline() {
-	setManualOffline(!memory.manual_offline);
+        setManualOffline(!memory.manual_offline);
+}
+
+export async function clearAllCache() {
+        try {
+                if (db.isOpen()) {
+                        await db.close();
+                }
+                await Dexie.delete('posawesome_offline');
+                await db.open();
+        } catch (e) {
+                console.error('Failed to clear IndexedDB cache', e);
+        }
+
+        if (typeof localStorage !== 'undefined') {
+                Object.keys(localStorage).forEach((key) => {
+                        if (key.startsWith('posa_')) {
+                                localStorage.removeItem(key);
+                        }
+                });
+        }
+
+        memory.offline_invoices = [];
+        memory.offline_customers = [];
+        memory.offline_payments = [];
+        memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.customer_balance_cache = {};
+        memory.local_stock_cache = {};
+        memory.stock_cache_ready = false;
+        memory.items_storage = [];
+        memory.customer_storage = [];
+        memory.pos_opening_storage = null;
+        memory.opening_dialog_storage = null;
+        memory.sales_persons_storage = [];
+        memory.price_list_cache = {};
+        memory.item_details_cache = {};
+        memory.manual_offline = false;
 }
