@@ -555,6 +555,20 @@ export default {
         } else {
           new_item.rate = offer.rate;
         }
+      } else if (offer.discount_type === "Discount Percentage") {
+        // Apply percentage discount on item's base rate
+        const base_price = item.base_rate || (item.rate * this.exchange_rate);
+        const base_discount = this.flt((base_price * offer.discount_percentage) / 100, this.currency_precision);
+        new_item.base_discount_amount = base_discount;
+        new_item.base_rate = this.flt(base_price - base_discount, this.currency_precision);
+
+        if (this.selected_currency !== this.pos_profile.currency) {
+          new_item.discount_amount = this.flt(base_discount / this.exchange_rate, this.currency_precision);
+          new_item.rate = this.flt(new_item.base_rate / this.exchange_rate, this.currency_precision);
+        } else {
+          new_item.discount_amount = base_discount;
+          new_item.rate = new_item.base_rate;
+        }
       } else {
         // Use item's original rate
         if (this.selected_currency !== this.pos_profile.currency) {
@@ -576,7 +590,7 @@ export default {
         } else {
           new_item.discount_amount = offer.discount_amount;
         }
-      } else {
+      } else if (offer.discount_type !== "Discount Percentage") {
         new_item.base_discount_amount = 0;
         new_item.discount_amount = 0;
       }
@@ -587,7 +601,12 @@ export default {
       new_item.actual_batch_qty = "";
       new_item.conversion_factor = 1;
       new_item.posa_offers = JSON.stringify([]);
-      new_item.posa_offer_applied = 0;
+      new_item.posa_offer_applied =
+        offer.discount_type === "Rate" ||
+        offer.discount_type === "Discount Amount" ||
+        offer.discount_type === "Discount Percentage"
+          ? 1
+          : 0;
       new_item.posa_is_offer = 1;
       new_item.posa_is_replace = null;
       new_item.posa_notes = "";
@@ -823,6 +842,13 @@ export default {
         offer = this.posOffers.find((el) => el.name == offer.offer_name);
       }
       if (
+        this.discount_percentage_offer_name === offer.name &&
+        this.discount_amount !== 0
+      ) {
+        // Discount already applied, do not recalculate when items change
+        return;
+      }
+      if (
         (!this.discount_percentage_offer_name ||
           this.discount_percentage_offer_name == offer.name) &&
         offer.discount_percentage > 0 &&
@@ -833,6 +859,16 @@ export default {
           this.currency_precision
         );
         this.discount_percentage_offer_name = offer.name;
+
+        // Update invoice level discount fields so the value
+        // is reflected in the UI and saved correctly
+        this.additional_discount = this.discount_amount;
+        if (this.Total && this.Total !== 0) {
+          this.additional_discount_percentage =
+            (this.discount_amount / this.Total) * 100;
+        } else {
+          this.additional_discount_percentage = 0;
+        }
       }
     },
 
@@ -843,6 +879,10 @@ export default {
       ) {
         this.discount_amount = 0;
         this.discount_percentage_offer_name = null;
+
+        // Reset invoice discount fields when offer is removed
+        this.additional_discount = 0;
+        this.additional_discount_percentage = 0;
       }
     },
 
