@@ -231,10 +231,41 @@ export default {
         }
       }
 
-      // Online mode: fetch from server and cache the result
-      const r = await frappe.call({
-        method: "posawesome.posawesome.api.customer.get_customer_balance",
-        args: { customer: this.customer }
+    // Cancel the current invoice, optionally delete from backend
+    async cancel_invoice() {
+      const doc = this.get_invoice_doc();
+      this.invoiceType = this.pos_profile.posa_default_sales_order
+        ? "Order"
+        : "Invoice";
+      this.invoiceTypes = ["Invoice", "Order"];
+      this.posting_date = frappe.datetime.nowdate();
+      var vm = this;
+      if (doc.name && this.pos_profile.posa_allow_delete) {
+        await frappe.call({
+        method: "posawesome.posawesome.api.invoices.delete_invoice",
+          args: { invoice: doc.name },
+          async: true,
+          callback: function (r) {
+            if (r.message) {
+              vm.eventBus.emit("show_message", {
+                text: r.message,
+                color: "warning",
+              });
+            }
+          },
+        });
+      }
+      this.clear_invoice()
+      this.cancel_dialog = false;
+    },
+
+    // Load an invoice (or return invoice) from data, set all fields accordingly
+    async load_invoice(data = {}) {
+      console.log("load_invoice called with data:", {
+        is_return: data.is_return,
+        return_against: data.return_against,
+        customer: data.customer,
+        items_count: data.items ? data.items.length : 0
       });
 
       const balance = r?.message?.balance || 0;
@@ -740,11 +771,57 @@ export default {
     doc.posa_delivery_charges_rate = this.delivery_charges_rate || 0;
     doc.posting_date = this.formatDateForBackend(this.posting_date_display);
 
-    // Add flags to ensure proper rate handling
-    doc.ignore_pricing_rule = 1;
-    doc.price_list_currency = doc.currency;
-    doc.plc_conversion_rate = doc.conversion_rate;
-    doc.ignore_default_fields = 1;  // Add this to prevent default field updates
+    // Get invoice doc from order doc (for sales order to invoice conversion)
+    async get_invoice_from_order_doc() {
+      let doc = {};
+      if (this.invoice_doc.doctype == "Sales Order") {
+        await frappe.call({
+          method:
+          "posawesome.posawesome.api.invoices.create_sales_invoice_from_order",
+          args: {
+            sales_order: this.invoice_doc.name,
+          },
+          // async: false,
+          callback: function (r) {
+            if (r.message) {
+              doc = r.message;
+            }
+          },
+        });
+      } else {
+        doc = this.invoice_doc;
+      }
+      const Items = [];
+      const updatedItemsData = this.get_invoice_items();
+      doc.items.forEach((item) => {
+        const updatedData = updatedItemsData.find(
+          (updatedItem) => updatedItem.item_code === item.item_code
+        );
+        if (updatedData) {
+          item.item_code = updatedData.item_code;
+          item.posa_row_id = updatedData.posa_row_id;
+          item.posa_offers = updatedData.posa_offers;
+          item.posa_offer_applied = updatedData.posa_offer_applied;
+          item.posa_is_offer = updatedData.posa_is_offer;
+          item.posa_is_replace = updatedData.posa_is_replace;
+          item.is_free_item = updatedData.is_free_item;
+          item.qty = flt(updatedData.qty);
+          item.rate = flt(updatedData.rate);
+          item.uom = updatedData.uom;
+          item.amount = flt(updatedData.qty) * flt(updatedData.rate);
+          item.conversion_factor = updatedData.conversion_factor;
+          item.serial_no = updatedData.serial_no;
+          item.discount_percentage = flt(updatedData.discount_percentage);
+          item.discount_amount = flt(updatedData.discount_amount);
+          item.batch_no = updatedData.batch_no;
+          item.posa_notes = updatedData.posa_notes;
+          item.posa_delivery_date = this.formatDateForDisplay(
+            updatedData.posa_delivery_date
+          );
+          item.price_list_rate = updatedData.price_list_rate;
+          Items.push(item);
+        }
+      });
 
     // Add custom fields to track offer rates
     doc.posa_is_offer_applied = this.posa_offers.length > 0 ? 1 : 0;
@@ -793,13 +870,110 @@ export default {
     return doc;
   },
 
-  // Get invoice doc from order doc (for sales order to invoice conversion)
-  async get_invoice_from_order_doc() {
-    let doc = {};
-    if (this.invoice_doc.doctype == "Sales Order") {
-      await frappe.call({
-        method:
-          "posawesome.posawesome.api.invoices.create_sales_invoice_from_order",
+    // Prepare items array for order doc
+    get_order_items() {
+      const items_list = [];
+      this.items.forEach((item) => {
+        const new_item = {
+          item_code: item.item_code,
+          // Retain item name to show on offline order documents
+          // Use item_code if item_name is missing
+          item_name: item.item_name || item.item_code,
+          posa_row_id: item.posa_row_id,
+          posa_offers: item.posa_offers,
+          posa_offer_applied: item.posa_offer_applied,
+          posa_is_offer: item.posa_is_offer,
+          posa_is_replace: item.posa_is_replace,
+          is_free_item: item.is_free_item,
+          qty: flt(item.qty),
+          rate: flt(item.rate),
+          uom: item.uom,
+          amount: flt(item.qty) * flt(item.rate),
+          conversion_factor: item.conversion_factor,
+          serial_no: item.serial_no,
+          discount_percentage: flt(item.discount_percentage),
+          discount_amount: flt(item.discount_amount),
+          batch_no: item.batch_no,
+          posa_notes: item.posa_notes,
+          posa_delivery_date: item.posa_delivery_date,
+          price_list_rate: item.price_list_rate,
+        };
+        items_list.push(new_item);
+      });
+
+      return items_list;
+    },
+
+    // Prepare payments array for invoice doc
+    get_payments() {
+      const payments = [];
+      // Use this.subtotal which is already in selected currency and includes all calculations
+      const total_amount = this.subtotal;
+      let remaining_amount = total_amount;
+
+      this.pos_profile.payments.forEach((payment, index) => {
+        // For the first payment method, assign the full remaining amount
+        const payment_amount = index === 0 ? remaining_amount : (payment.amount || 0);
+
+        // For return invoices, ensure payment amounts are negative
+        const adjusted_amount = this.isReturnInvoice ?
+          -Math.abs(payment_amount) : payment_amount;
+
+        // Handle currency conversion
+        // If selected_currency is USD and base is PKR:
+        // amount is in USD (e.g. 10 USD)
+        // base_amount should be in PKR (e.g. 3000 PKR)
+        // So multiply by exchange rate to get base_amount
+        const base_amount = this.selected_currency !== this.pos_profile.currency ?
+          this.flt(adjusted_amount * (this.exchange_rate || 1), this.currency_precision) :
+          adjusted_amount;
+
+        payments.push({
+          amount: adjusted_amount,  // Keep in selected currency (e.g. USD)
+          base_amount: base_amount,  // Convert to base currency (e.g. PKR)
+          mode_of_payment: payment.mode_of_payment,
+          default: payment.default,
+          account: payment.account || "",
+          type: payment.type || "Cash",
+          currency: this.selected_currency || this.pos_profile.currency,
+          conversion_rate: this.exchange_rate || 1
+        });
+
+        remaining_amount -= payment_amount;
+      });
+
+      console.log('Generated payments:', {
+        currency: this.selected_currency,
+        exchange_rate: this.exchange_rate,
+        payments: payments.map(p => ({
+          mode: p.mode_of_payment,
+          amount: p.amount,
+          base_amount: p.base_amount
+        }))
+      });
+
+      return payments;
+    },
+
+    // Convert amount to selected currency
+    convert_amount(amount) {
+      if (this.selected_currency === this.pos_profile.currency) {
+        return amount;
+      }
+      return this.flt(amount * this.exchange_rate, this.currency_precision);
+    },
+
+    // Update invoice in backend
+    update_invoice(doc) {
+      var vm = this;
+      if (isOffline()) {
+        // When offline, simply merge the passed doc with the current invoice_doc
+        // to allow offline invoice creation without server calls
+        vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
+        return vm.invoice_doc;
+      }
+      frappe.call({
+      method: "posawesome.posawesome.api.invoices.update_invoice",
         args: {
           sales_order: this.invoice_doc.name,
         },
@@ -843,7 +1017,20 @@ export default {
         item.price_list_rate = updatedData.price_list_rate;
         Items.push(item);
       }
-    });
+      frappe.call({
+        method: "posawesome.posawesome.api.invoices.update_invoice_from_order",
+        args: {
+          data: doc,
+        },
+        async: false,
+        callback: function (r) {
+          if (r.message) {
+            vm.invoice_doc = r.message;
+          }
+        },
+      });
+      return this.invoice_doc;
+    },
 
     doc.items = Items;
     const newItems = [...doc.items];
@@ -1088,6 +1275,237 @@ export default {
           title: __(`Select a customer`),
           color: "error",
         });
+      }
+    },
+
+    // Validate invoice before payment/submit (return logic, quantity, rates, etc)
+    async validate() {
+      console.log('Starting return validation');
+
+      // For all returns, check if amounts are negative
+      if (this.isReturnInvoice) {
+        console.log('Validating return invoice values');
+
+        // Check if quantities are negative
+        const positiveItems = this.items.filter(item => item.qty >= 0 || item.stock_qty >= 0);
+        if (positiveItems.length > 0) {
+          console.log('Found positive quantities in return items:', positiveItems.map(i => i.item_code));
+          this.eventBus.emit('show_message', {
+            title: __(`Return items must have negative quantities`),
+            color: 'error'
+          });
+
+          // Fix the quantities to be negative
+          positiveItems.forEach(item => {
+            item.qty = -Math.abs(item.qty);
+            item.stock_qty = -Math.abs(item.stock_qty);
+          });
+
+          // Force update to reflect changes
+          this.$forceUpdate();
+        }
+
+        // Ensure total amount is negative
+        if (this.subtotal > 0) {
+          console.log('Return has positive subtotal:', this.subtotal);
+          this.eventBus.emit('show_message', {
+            title: __(`Return total must be negative`),
+            color: 'warning'
+          });
+        }
+      }
+
+      // For return with reference to existing invoice
+      if (this.invoice_doc.is_return && this.invoice_doc.return_against) {
+        console.log('Return doc:', this.invoice_doc);
+        console.log('Current items:', this.items);
+
+        try {
+          // Get original invoice items for comparison
+          const original_items = await new Promise((resolve, reject) => {
+            frappe.call({
+              method: 'frappe.client.get',
+              args: {
+                doctype: 'Sales Invoice',
+                name: this.invoice_doc.return_against
+              },
+              callback: (r) => {
+                if (r.message) {
+                  console.log('Original invoice data:', r.message);
+                  resolve(r.message.items || []);
+                } else {
+                  reject(new Error('Original invoice not found'));
+                }
+              }
+            });
+          });
+
+          console.log('Original invoice items:', original_items);
+          console.log('Original item codes:', original_items.map(item => ({
+            item_code: item.item_code,
+            qty: item.qty,
+            rate: item.rate
+          })));
+
+          // Validate each return item
+          for (const item of this.items) {
+            console.log('Validating return item:', {
+              item_code: item.item_code,
+              rate: item.rate,
+              qty: item.qty
+            });
+
+            // Normalize item codes by trimming and converting to uppercase
+            const normalized_return_item_code = item.item_code.trim().toUpperCase();
+
+            // Find matching item in original invoice
+            const original_item = original_items.find(orig =>
+              orig.item_code.trim().toUpperCase() === normalized_return_item_code
+            );
+
+            if (!original_item) {
+              console.log('Item not found in original invoice:', {
+                return_item_code: normalized_return_item_code,
+                original_items: original_items.map(i => i.item_code.trim().toUpperCase())
+              });
+
+              this.eventBus.emit('show_message', {
+                title: __(`Item ${item.item_code} not found in original invoice`),
+                color: 'error'
+              });
+              return false;
+            }
+
+            // Compare rates with precision
+            const rate_diff = Math.abs(original_item.rate - item.rate);
+            console.log('Rate comparison:', {
+              return_rate: item.rate,
+              orig_rate: original_item.rate,
+              difference: rate_diff
+            });
+
+            if (rate_diff > 0.01) {
+              this.eventBus.emit('show_message', {
+                title: __(`Rate mismatch for item ${item.item_code}`),
+                color: 'error'
+              });
+              return false;
+            }
+
+            // Compare quantities
+            const return_qty = Math.abs(item.qty);
+            const orig_qty = original_item.qty;
+            console.log('Quantity comparison:', {
+              return_qty: return_qty,
+              orig_qty: orig_qty
+            });
+
+            if (return_qty > orig_qty) {
+              this.eventBus.emit('show_message', {
+                title: __(`Return quantity cannot be greater than original quantity for item ${item.item_code}`),
+                color: 'error'
+              });
+              return false;
+            }
+          }
+        } catch (error) {
+          console.error('Error in validation:', error);
+          this.eventBus.emit('show_message', {
+            title: __(`Error validating return: ${error.message}`),
+            color: 'error'
+          });
+          return false;
+        }
+      }
+      return true;
+    },
+
+    // Get draft invoices from backend
+    get_draft_invoices() {
+      var vm = this;
+      frappe.call({
+        method: "posawesome.posawesome.api.invoices.get_draft_invoices",
+        args: {
+          pos_opening_shift: this.pos_opening_shift.name,
+        },
+        async: false,
+        callback: function (r) {
+          if (r.message) {
+            vm.eventBus.emit("open_drafts", r.message);
+          }
+        },
+      });
+    },
+
+    // Get draft orders from backend
+    get_draft_orders() {
+      var vm = this;
+      frappe.call({
+      method: "posawesome.posawesome.api.sales_orders.search_orders",
+        args: {
+          company: this.pos_profile.company,
+          currency: this.pos_profile.currency,
+        },
+        async: false,
+        callback: function (r) {
+          if (r.message) {
+            vm.eventBus.emit("open_orders", r.message);
+          }
+        },
+      });
+    },
+
+    // Open returns dialog
+    open_returns() {
+      this.eventBus.emit("open_returns", this.pos_profile.company);
+    },
+
+    // Close payment dialog
+    close_payments() {
+      this.eventBus.emit("show_payment", "false");
+    },
+
+    // Update details for all items (fetch from backend)
+    async update_items_details(items) {
+      if (!items?.length) return;
+      if (!this.pos_profile) return;
+
+      try {
+        const response = await frappe.call({
+          method: "posawesome.posawesome.api.items.get_items_details",
+          args: {
+            pos_profile: JSON.stringify(this.pos_profile),
+            items_data: JSON.stringify(items)
+          }
+        });
+
+        if (response?.message) {
+          items.forEach((item) => {
+            const updated_item = response.message.find(
+              (element) => element.posa_row_id == item.posa_row_id
+            );
+            if (updated_item) {
+              item.actual_qty = updated_item.actual_qty;
+              item.serial_no_data = updated_item.serial_no_data;
+              item.batch_no_data = updated_item.batch_no_data;
+              item.item_uoms = updated_item.item_uoms;
+              item.has_batch_no = updated_item.has_batch_no;
+              item.has_serial_no = updated_item.has_serial_no;
+            }
+          });
+        }
+      } catch (error) {
+        console.error("Error updating items:", error);
+        this.eventBus.emit("show_message", {
+          title: __("Error updating item details"),
+          color: "error"
+        });
+      }
+    },
+
+    // Update details for a single item (fetch from backend)
+    update_item_detail(item) {
+      if (!item.item_code) {
         return;
       }
 
@@ -1100,9 +1518,53 @@ export default {
         return;
       }
 
-      console.log('Basic validations passed, proceeding to main validation');
-      const isValid = this.validate();
-      console.log('Main validation result:', isValid);
+      frappe.call({
+        method: "posawesome.posawesome.api.items.get_item_detail",
+        args: {
+          warehouse: this.pos_profile.warehouse,
+          doc: this.get_invoice_doc(),
+          price_list: this.selected_price_list || this.pos_profile.selling_price_list,
+          item: {
+            item_code: item.item_code,
+            customer: this.customer,
+            doctype: "Sales Invoice",
+            name: "New Sales Invoice 1",
+            company: this.pos_profile.company,
+            conversion_rate: 1,
+            currency: this.pos_profile.currency,
+            qty: item.qty,
+            price_list_rate: item.base_price_list_rate || item.price_list_rate,
+            child_docname: "New Sales Invoice Item 1",
+            cost_center: this.pos_profile.cost_center,
+            pos_profile: this.pos_profile.name,
+            uom: item.uom,
+            tax_category: "",
+            transaction_type: "selling",
+            update_stock: this.pos_profile.update_stock,
+            price_list: this.get_price_list(),
+            has_batch_no: item.has_batch_no,
+            serial_no: item.serial_no,
+            batch_no: item.batch_no,
+            is_stock_item: item.is_stock_item,
+          },
+        },
+        callback: function (r) {
+          if (r.message) {
+            const data = r.message;
+            if (data.batch_no_data) {
+              item.batch_no_data = data.batch_no_data;
+            }
+            if (
+              item.has_batch_no &&
+              vm.pos_profile.posa_auto_set_batch &&
+              !item.batch_no &&
+              data.batch_no_data &&
+              data.batch_no_data.length > 0
+            ) {
+              item.batch_no_data = data.batch_no_data;
+              // Pass null instead of undefined to avoid console warning
+              vm.set_batch_qty(item, null, false);
+            }
 
       if (!isValid) {
         console.log('Main validation failed');
@@ -1193,53 +1655,13 @@ export default {
     }
   },
 
-  // Validate invoice before payment/submit (return logic, quantity, rates, etc)
-  async validate() {
-    console.log('Starting return validation');
-
-    // For all returns, check if amounts are negative
-    if (this.isReturnInvoice) {
-      console.log('Validating return invoice values');
-
-      // Check if quantities are negative
-      const positiveItems = this.items.filter(item => item.qty >= 0 || item.stock_qty >= 0);
-      if (positiveItems.length > 0) {
-        console.log('Found positive quantities in return items:', positiveItems.map(i => i.item_code));
-        this.eventBus.emit('show_message', {
-          title: __(`Return items must have negative quantities`),
-          color: 'error'
-        });
-
-        // Fix the quantities to be negative
-        positiveItems.forEach(item => {
-          item.qty = -Math.abs(item.qty);
-          item.stock_qty = -Math.abs(item.stock_qty);
-        });
-
-        // Force update to reflect changes
-        this.$forceUpdate();
-      }
-
-      // Ensure total amount is negative
-      if (this.subtotal > 0) {
-        console.log('Return has positive subtotal:', this.subtotal);
-        this.eventBus.emit('show_message', {
-          title: __(`Return total must be negative`),
-          color: 'warning'
-        });
-      }
-    }
-
-    // For return with reference to existing invoice
-    if (this.invoice_doc.is_return && this.invoice_doc.return_against) {
-      console.log('Return doc:', this.invoice_doc);
-      console.log('Current items:', this.items);
-
-      try {
-        // Get original invoice items for comparison
-        const original_items = await new Promise((resolve, reject) => {
-          frappe.call({
-            method: 'frappe.client.get',
+    // Fetch customer details (info, price list, etc)
+    async fetch_customer_details() {
+      var vm = this;
+      if (this.customer) {
+        try {
+          const r = await frappe.call({
+          method: "posawesome.posawesome.api.customers.get_customer_info",
             args: {
               doctype: 'Sales Invoice',
               name: this.invoice_doc.return_against
@@ -2115,7 +2537,7 @@ export default {
     // Update batch_no_data
     item.batch_no_data = batch_no_data;
 
-    // Force UI update
-    this.$forceUpdate();
-  },
+      // Force UI update
+      this.$forceUpdate();
+    },
 };

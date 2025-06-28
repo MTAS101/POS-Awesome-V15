@@ -27,9 +27,8 @@ export {
 	getLastSyncTotals,
 	isManualOffline,
 	setManualOffline,
-        toggleManualOffline,
-        resetOfflineState,
-        clearAllCache
+	toggleManualOffline,
+	resetOfflineState
 } from './cache.js';
 
 // Stock exports

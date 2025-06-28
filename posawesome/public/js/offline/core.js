@@ -57,16 +57,10 @@ function flushPersistQueue() {
 }
 
 export function persist(key, value) {
-        if (persistWorker) {
-                let clean = value;
-                try {
-                        clean = JSON.parse(JSON.stringify(value));
-                } catch (e) {
-                        console.error("Failed to serialize", key, e);
-                }
-                persistWorker.postMessage({ type: "persist", key, value: clean });
-                return;
-        }
+	if (persistWorker) {
+		persistWorker.postMessage({ type: "persist", key, value });
+		return;
+	}
 	
 	db.table("keyval")
 		.put({ key, value })
