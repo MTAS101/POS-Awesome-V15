@@ -303,8 +303,10 @@ export default {
             saveItemUOMs(item.item_code, det.item_uoms);
           }
           if (det.rate !== undefined) {
-            upd.rate = det.rate;
-            upd.price_list_rate = det.price_list_rate || det.rate;
+            if (det.rate !== 0 || !item.rate) {
+              upd.rate = det.rate;
+              upd.price_list_rate = det.price_list_rate || det.rate;
+            }
           }
           updates.push({ item, upd });
         }
@@ -346,8 +348,10 @@ export default {
                   saveItemUOMs(item.item_code, updItem.item_uoms);
                 }
                 if (updItem.rate !== undefined) {
-                  upd.rate = updItem.rate;
-                  upd.price_list_rate = updItem.price_list_rate || updItem.rate;
+                  if (updItem.rate !== 0 || !item.rate) {
+                    upd.rate = updItem.rate;
+                    upd.price_list_rate = updItem.price_list_rate || updItem.rate;
+                  }
                 }
                 updates.push({ item, upd });
               }
@@ -888,8 +892,10 @@ export default {
             saveItemUOMs(item.item_code, det.item_uoms);
           }
           if (det.rate !== undefined) {
-            item.rate = det.rate;
-            item.price_list_rate = det.price_list_rate || det.rate;
+            if (det.rate !== 0 || !item.rate) {
+              item.rate = det.rate;
+              item.price_list_rate = det.price_list_rate || det.rate;
+            }
           }
         }
       });

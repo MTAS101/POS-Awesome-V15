@@ -1399,10 +1399,11 @@ export default {
             // First save base rates if not exists or if in default currency
             if (!item.base_rate || vm.selected_currency === vm.pos_profile.currency) {
               // Always store base rates from server in base currency
-              item.base_price_list_rate = data.price_list_rate;
-
-              if (!item.posa_offer_applied) {
-                item.base_rate = data.price_list_rate;
+              if (data.price_list_rate !== 0 || !item.base_price_list_rate) {
+                item.base_price_list_rate = data.price_list_rate;
+                if (!item.posa_offer_applied) {
+                  item.base_rate = data.price_list_rate;
+                }
               }
             }
 
@@ -1558,21 +1559,29 @@ export default {
           const ci = map[item.item_code];
           if (!ci) return;
 
-          item.base_price_list_rate = ci.rate || ci.price_list_rate;
-          if (!item._manual_rate_set) {
-            item.base_rate = ci.rate || ci.price_list_rate;
+          const newRate = ci.rate || ci.price_list_rate;
+          if (newRate !== 0 || !item.base_price_list_rate) {
+            item.base_price_list_rate = newRate;
+            if (!item._manual_rate_set) {
+              item.base_rate = newRate;
+            }
           }
 
           if (this.selected_currency !== this.pos_profile.currency) {
             const conv = this.exchange_rate || 1;
-            item.price_list_rate = this.flt((ci.rate || ci.price_list_rate) / conv, this.currency_precision);
-            if (!item._manual_rate_set) {
-              item.rate = this.flt((ci.rate || ci.price_list_rate) / conv, this.currency_precision);
+            const convRate = this.flt((newRate) / conv, this.currency_precision);
+            if (newRate !== 0 || !item.price_list_rate) {
+              item.price_list_rate = convRate;
+            }
+            if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
+              item.rate = convRate;
             }
           } else {
-            item.price_list_rate = ci.rate || ci.price_list_rate;
-            if (!item._manual_rate_set) {
-              item.rate = ci.rate || ci.price_list_rate;
+            if (newRate !== 0 || !item.price_list_rate) {
+              item.price_list_rate = newRate;
+            }
+            if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
+              item.rate = newRate;
             }
           }
 
