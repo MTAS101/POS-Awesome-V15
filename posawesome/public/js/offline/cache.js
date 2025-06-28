@@ -66,8 +66,13 @@ export function getItemsStorage() {
 }
 
 export function setItemsStorage(items) {
-	memory.items_storage = items;
-	persist("items_storage", memory.items_storage);
+        try {
+                memory.items_storage = JSON.parse(JSON.stringify(items));
+        } catch (e) {
+                console.error("Failed to serialize items for storage", e);
+                memory.items_storage = [];
+        }
+        persist("items_storage", memory.items_storage);
 }
 
 export function getCustomerStorage() {

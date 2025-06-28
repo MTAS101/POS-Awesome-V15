@@ -692,21 +692,28 @@ export function clearPriceListCache() {
 
 // Item details caching functions
 export function saveItemDetailsCache(profileName, priceList, items) {
-	try {
-		const cache = memory.item_details_cache || {};
-		const profileCache = cache[profileName] || {};
-		const priceCache = profileCache[priceList] || {};
-		items.forEach((item) => {
-			priceCache[item.item_code] = {
-				data: item,
-				timestamp: Date.now(),
-			};
-		});
-		profileCache[priceList] = priceCache;
-		cache[profileName] = profileCache;
-		memory.item_details_cache = cache;
-		persist("item_details_cache");
-	} catch (e) {
+        try {
+                const cache = memory.item_details_cache || {};
+                const profileCache = cache[profileName] || {};
+                const priceCache = profileCache[priceList] || {};
+                let cleanItems;
+                try {
+                        cleanItems = JSON.parse(JSON.stringify(items));
+                } catch (err) {
+                        console.error("Failed to serialize item details", err);
+                        cleanItems = [];
+                }
+                cleanItems.forEach((item) => {
+                        priceCache[item.item_code] = {
+                                data: item,
+                                timestamp: Date.now(),
+                        };
+                });
+                profileCache[priceList] = priceCache;
+                cache[profileName] = profileCache;
+                memory.item_details_cache = cache;
+                persist("item_details_cache");
+        } catch (e) {
 		console.error("Failed to cache item details", e);
 	}
 }
@@ -877,8 +884,13 @@ export function getItemsStorage() {
 }
 
 export function setItemsStorage(items) {
-	memory.items_storage = items;
-	persist("items_storage");
+        try {
+                memory.items_storage = JSON.parse(JSON.stringify(items));
+        } catch (e) {
+                console.error("Failed to serialize items for storage", e);
+                memory.items_storage = [];
+        }
+        persist("items_storage");
 }
 
 export function getCustomerStorage() {
