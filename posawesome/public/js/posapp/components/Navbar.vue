@@ -301,7 +301,7 @@
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
 
-import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline, clearAllCache } from '../../offline.js';
+import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline, clearAllCache } from '../../offline/index.js';
 
 import OfflineInvoicesDialog from './OfflineInvoices.vue';
 import { silentPrint } from '../plugins/print.js';
@@ -934,17 +934,7 @@ export default {
       this.snackColor = data.color; // Set snackbar color
       this.snackText = data.title; // Set snackbar text
     },
-    /**
-     * A dummy translation method. In a real Frappe environment, `frappe.__` or `window.__`
-     * would be used for proper internationalization. This is a placeholder for demonstration.
-     * @param {string} text - The text string to be translated.
-     * @returns {string} The original text (as this is a dummy implementation).
-     */
-    __(text) {
-      // In a real Frappe environment, you would use frappe.__ or window.__
-      // For this example, we'll return the text as is.
-      return text;
-    }
+    // Translation helper is provided globally via `eventBus` plugin.
   }
 };
 </script>
