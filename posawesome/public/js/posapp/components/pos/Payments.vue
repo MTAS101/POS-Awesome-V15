@@ -393,7 +393,9 @@ import {
   getSalesPersonsStorage,
   setSalesPersonsStorage,
   updateLocalStock,
+
 } from "../../../offline/index.js";
+
 import generateOfflineInvoiceHTML from "../../../offline_print_template";
 import { silentPrint } from "../../plugins/print.js";
 

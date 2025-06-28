@@ -18,7 +18,7 @@
             <v-text-field :model-value="additional_discount" @update:model-value="$emit('update:additional_discount', $event)"
               :label="frappe._('Additional Discount')" prepend-inner-icon="mdi-cash-minus" variant="solo"
               density="compact" color="warning" :prefix="currencySymbol(pos_profile.currency)"
-              :disabled="!pos_profile.posa_allow_user_to_edit_additional_discount" />
+              :disabled="!pos_profile.posa_allow_user_to_edit_additional_discount || !!discount_percentage_offer_name" />
           </v-col>
 
           <v-col cols="6" v-else>

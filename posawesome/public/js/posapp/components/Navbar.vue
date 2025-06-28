@@ -117,6 +117,18 @@
               </div>
             </v-list-item>
 
+            <v-list-item @click="clearCache" class="menu-item-compact neutral-action">
+              <template v-slot:prepend>
+                <div class="menu-icon-wrapper-compact neutral-icon">
+                  <v-icon color="white" size="16">mdi-delete-sweep-outline</v-icon>
+                </div>
+              </template>
+              <div class="menu-content-compact">
+                <v-list-item-title class="menu-item-title-compact">{{ __('Clear Cache') }}</v-list-item-title>
+                <v-list-item-subtitle class="menu-item-subtitle-compact">{{ __('Remove local data and refresh') }}</v-list-item-subtitle>
+              </div>
+            </v-list-item>
+
             <v-divider class="menu-section-divider-compact"></v-divider>
 
             <v-list-item @click="goAbout" class="menu-item-compact neutral-action">
@@ -288,7 +300,9 @@
 // Import the Socket.IO client library for real-time server status monitoring.
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
-import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline } from '../../offline/index.js';
+
+import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline, clearAllCache } from '../../offline.js';
+
 import OfflineInvoicesDialog from './OfflineInvoices.vue';
 import { silentPrint } from '../plugins/print.js';
 
@@ -900,6 +914,16 @@ export default {
     updateAfterDelete() {
       this.updatePendingInvoices();
       this.eventBus.emit('pending_invoices_changed', this.pendingInvoices);
+    },
+
+    async clearCache() {
+      try {
+        await clearAllCache();
+      } catch (e) {
+        console.error('Failed to clear cache', e);
+      } finally {
+        location.reload();
+      }
     },
     /**
      * Displays a snackbar message at the top right of the screen.
