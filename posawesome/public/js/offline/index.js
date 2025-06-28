@@ -2,11 +2,10 @@
 
 // Core exports
 export {
-	db,
-	initPromise,
-	persist,
-	addToPersistQueue,
-	getSharedWorker
+        db,
+        initPromise,
+        persist,
+        addToPersistQueue
 } from './core.js';
 
 // Cache exports

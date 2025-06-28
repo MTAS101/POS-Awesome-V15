@@ -5,7 +5,6 @@ export const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
 
 let persistWorker = null;
-let sharedWorker = null;
 
 if (typeof Worker !== "undefined") {
 	try {
@@ -19,21 +18,6 @@ if (typeof Worker !== "undefined") {
 	}
 }
 
-// Initialize shared worker if available
-if (typeof SharedWorker !== "undefined") {
-	try {
-		const sharedWorkerUrl = "/assets/posawesome/js/posapp/workers/sharedWorker.js";
-		sharedWorker = new SharedWorker(sharedWorkerUrl, { type: "classic" });
-		sharedWorker.port.start();
-	} catch (e) {
-		console.error("Failed to init shared worker", e);
-		sharedWorker = null;
-	}
-}
-
-export function getSharedWorker() {
-	return sharedWorker;
-}
 
 // Persist queue for batching operations
 const persistQueue = {};
@@ -59,10 +43,20 @@ function flushPersistQueue() {
 }
 
 export function persist(key, value) {
-	if (persistWorker) {
-		persistWorker.postMessage({ type: "persist", key, value });
-		return;
-	}
+        if (persistWorker) {
+                let cleanValue = value;
+                try {
+                        cleanValue = JSON.parse(JSON.stringify(value));
+                } catch (e) {
+                        console.error("Failed to serialize", key, e);
+                }
+                try {
+                        persistWorker.postMessage({ type: "persist", key, value: cleanValue });
+                } catch (e) {
+                        console.error(`Failed to postMessage for ${key}`, e);
+                }
+                return;
+        }
 	
 	db.table("keyval")
 		.put({ key, value })
