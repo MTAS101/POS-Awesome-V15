@@ -498,71 +498,30 @@ export default {
 
 
           const text = await res.text();
-          // console.log(text)
           this.itemWorker.onmessage = async (ev) => {
-            console.log("trying to load items6")
             if (this.items_request_token !== request_token) return;
             if (ev.data.type === "parsed") {
               const parsed = ev.data.items;
-              vm.items = parsed.message || parsed;
-              savePriceListItems(vm.customer_price_list, vm.items);
-              // Ensure UOMs are available for each item
-              vm.items.forEach((it) => {
-                if (it.item_uoms && it.item_uoms.length > 0) {
-                  saveItemUOMs(it.item_code, it.item_uoms);
-                } else {
-                  const cached = getItemUOMs(it.item_code);
-                  if (cached.length > 0) {
-                    it.item_uoms = cached;
-                  } else if (it.stock_uom) {
-                    it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
-                  }
-                }
-              });
-              vm.eventBus.emit("set_all_items", vm.items);
-              vm.loading = false;
-              vm.items_loaded = true;
-              console.info("Items Loaded");
-
-              // Pre-populate stock cache when items are freshly loaded
-              vm.prePopulateStockCache(vm.items);
-
-              vm.$nextTick(() => {
-                if (vm.search && !vm.pos_profile.pose_use_limit_search) {
-                  vm.search_onchange();
-                }
-              });
-
-              // Always refresh quantities after items are loaded
-              if (vm.items && vm.items.length > 0) {
-                vm.update_items_details(vm.items);
-              }
-
-              if (
-                vm.pos_profile.posa_local_storage &&
-                !vm.pos_profile.pose_use_limit_search
-              ) {
-                try {
-                  setItemsStorage(vm.items);
-                  vm.items.forEach((it) => {
-                    if (it.item_uoms && it.item_uoms.length > 0) {
-                      saveItemUOMs(it.item_code, it.item_uoms);
-                    }
-                  });
-                } catch (e) {
-                  console.error(e);
-                }
-              }
-
-              if (vm.pos_profile.pose_use_limit_search) {
-                vm.enter_event();
-              }
+              this.handleParsedItems(parsed.message || parsed);
             } else if (ev.data.type === "error") {
               console.error('Item worker parse error:', ev.data.error);
               vm.loading = false;
             }
           };
-          this.itemWorker.postMessage({ type: 'parse_and_cache', json: text, priceList: vm.customer_price_list });
+
+          const workerData = { type: 'parse_and_cache', json: text, priceList: vm.customer_price_list };
+          try {
+            this.itemWorker.postMessage(workerData);
+          } catch (e) {
+            console.error('Worker postMessage failed, falling back to inline parsing', e);
+            try {
+              const parsed = JSON.parse(text);
+              this.handleParsedItems(parsed.message || parsed);
+            } catch (parseErr) {
+              console.error('Failed to parse items', parseErr);
+              vm.loading = false;
+            }
+          }
 
 
         } catch (err) {
@@ -1279,6 +1238,62 @@ export default {
 
       html += '</div>';
       return html;
+    },
+    handleParsedItems(items) {
+      const vm = this;
+      vm.items = items;
+      savePriceListItems(vm.customer_price_list, vm.items);
+      // Ensure UOMs are available for each item
+      vm.items.forEach((it) => {
+        if (it.item_uoms && it.item_uoms.length > 0) {
+          saveItemUOMs(it.item_code, it.item_uoms);
+        } else {
+          const cached = getItemUOMs(it.item_code);
+          if (cached.length > 0) {
+            it.item_uoms = cached;
+          } else if (it.stock_uom) {
+            it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+          }
+        }
+      });
+      vm.eventBus.emit("set_all_items", vm.items);
+      vm.loading = false;
+      vm.items_loaded = true;
+      console.info("Items Loaded");
+
+      // Pre-populate stock cache when items are freshly loaded
+      vm.prePopulateStockCache(vm.items);
+
+      vm.$nextTick(() => {
+        if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+          vm.search_onchange();
+        }
+      });
+
+      // Always refresh quantities after items are loaded
+      if (vm.items && vm.items.length > 0) {
+        vm.update_items_details(vm.items);
+      }
+
+      if (
+        vm.pos_profile.posa_local_storage &&
+        !vm.pos_profile.pose_use_limit_search
+      ) {
+        try {
+          setItemsStorage(vm.items);
+          vm.items.forEach((it) => {
+            if (it.item_uoms && it.item_uoms.length > 0) {
+              saveItemUOMs(it.item_code, it.item_uoms);
+            }
+          });
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (vm.pos_profile.pose_use_limit_search) {
+        vm.enter_event();
+      }
     },
     handleItemNotFound(scannedCode) {
       console.warn('Item not found for scanned code:', scannedCode);
