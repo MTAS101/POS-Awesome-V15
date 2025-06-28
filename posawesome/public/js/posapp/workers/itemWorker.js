@@ -25,8 +25,17 @@ self.onmessage = async (event) => {
 	const data = event.data || {};
 	if (data.type === "parse_and_cache") {
 		try {
-			const parsed = JSON.parse(data.json);
-			const items = parsed.message || parsed;
+                        const parsed = JSON.parse(data.json);
+                        const itemsRaw = parsed.message || parsed;
+                        let items;
+                        try {
+                                // Ensure data passed back is cloneable
+                                items = JSON.parse(JSON.stringify(itemsRaw));
+                        } catch (e) {
+                                console.error("Failed to clone items", e);
+                                self.postMessage({ type: "error", error: e.message });
+                                return;
+                        }
 			let cache = {};
 			try {
 				const stored = await db.table("keyval").get("price_list_cache");
