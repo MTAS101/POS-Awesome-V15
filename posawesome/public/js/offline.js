@@ -122,10 +122,16 @@ export const initPromise = new Promise((resolve) => {
 });
 
 function persist(key) {
-	if (persistWorker) {
-		persistWorker.postMessage({ type: "persist", key, value: memory[key] });
-		return;
-	}
+       if (persistWorker) {
+               let clean = memory[key];
+               try {
+                       clean = JSON.parse(JSON.stringify(memory[key]));
+               } catch (e) {
+                       console.error("Failed to serialize", key, e);
+               }
+               persistWorker.postMessage({ type: "persist", key, value: clean });
+               return;
+       }
 	db.table("keyval")
 		.put({ key, value: memory[key] })
 		.catch((e) => console.error(`Failed to persist ${key}`, e));
@@ -634,17 +640,29 @@ export function clearExpiredCustomerBalances() {
 
 // Price list items caching functions
 export function savePriceListItems(priceList, items) {
-	try {
-		const cache = memory.price_list_cache || {};
-		cache[priceList] = {
-			items,
-			timestamp: Date.now(),
-		};
-		memory.price_list_cache = cache;
-		persist("price_list_cache");
-	} catch (e) {
-		console.error("Failed to cache price list items", e);
-	}
+       try {
+               const cache = memory.price_list_cache || {};
+
+               // Clone the items to remove any Vue reactivity objects.
+               // Reactive proxies cannot be structured cloned and will
+               // trigger a DataCloneError when sent to a Web Worker.
+               let cleanItems;
+               try {
+                       cleanItems = JSON.parse(JSON.stringify(items));
+               } catch (err) {
+                       console.error("Failed to serialize price list items", err);
+                       cleanItems = [];
+               }
+
+               cache[priceList] = {
+                       items: cleanItems,
+                       timestamp: Date.now(),
+               };
+               memory.price_list_cache = cache;
+               persist("price_list_cache");
+       } catch (e) {
+               console.error("Failed to cache price list items", e);
+       }
 }
 
 export function getCachedPriceListItems(priceList) {
