@@ -122,13 +122,19 @@ export const initPromise = new Promise((resolve) => {
 });
 
 function persist(key) {
-	if (persistWorker) {
-		persistWorker.postMessage({ type: "persist", key, value: memory[key] });
-		return;
-	}
-	db.table("keyval")
-		.put({ key, value: memory[key] })
-		.catch((e) => console.error(`Failed to persist ${key}`, e));
+        if (persistWorker) {
+                let clean = memory[key];
+                try {
+                        clean = JSON.parse(JSON.stringify(memory[key]));
+                } catch (e) {
+                        console.error("Failed to serialize", key, e);
+                }
+                persistWorker.postMessage({ type: "persist", key, value: clean });
+                return;
+        }
+        db.table("keyval")
+                .put({ key, value: memory[key] })
+                .catch((e) => console.error(`Failed to persist ${key}`, e));
 
 	if (typeof localStorage !== "undefined") {
 		try {
