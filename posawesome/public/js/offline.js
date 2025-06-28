@@ -6,9 +6,10 @@ db.version(1).stores({ keyval: "&key" });
 
 let persistWorker = null;
 if (typeof Worker !== "undefined") {
-	try {
-		const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js?worker";
-		persistWorker = new Worker(workerUrl, { type: "classic" });
+        try {
+                // Use the plain URL so the service worker cache matches when offline
+                const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+                persistWorker = new Worker(workerUrl, { type: "classic" });
 	} catch (e) {
 		console.error("Failed to init persist worker", e);
 		persistWorker = null;
