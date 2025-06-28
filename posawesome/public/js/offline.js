@@ -6,13 +6,19 @@ db.version(1).stores({ keyval: "&key" });
 
 let persistWorker = null;
 if (typeof Worker !== "undefined") {
-	try {
-		const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js?worker";
-		persistWorker = new Worker(workerUrl, { type: "classic" });
-	} catch (e) {
-		console.error("Failed to init persist worker", e);
-		persistWorker = null;
-	}
+        try {
+                const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+                persistWorker = new Worker(workerUrl, { type: "classic" });
+                persistWorker.onerror = () => {
+                        if (persistWorker) {
+                                persistWorker.terminate();
+                                persistWorker = null;
+                        }
+                };
+        } catch (e) {
+                console.error("Failed to init persist worker", e);
+                persistWorker = null;
+        }
 }
 
 // Add stock_cache_ready flag to memory object

@@ -1498,14 +1498,19 @@ export default {
   created: function () {
     if (typeof Worker !== 'undefined') {
       try {
-        const workerUrl = '/assets/posawesome/js/posapp/workers/itemWorker.js?worker';
+        const workerUrl = '/assets/posawesome/js/posapp/workers/itemWorker.js';
         this.itemWorker = new Worker(workerUrl, { type: 'classic' });
 
-        this.itemWorker.onerror = function (event) {
+        // If the worker fails to load, disable worker mode and fall back
+        this.itemWorker.onerror = (event) => {
           console.error('Worker error:', event);
           console.error('Message:', event.message);
           console.error('Filename:', event.filename);
           console.error('Line number:', event.lineno);
+          if (this.itemWorker) {
+            this.itemWorker.terminate();
+            this.itemWorker = null;
+          }
         };
         console.log("Created worker nowwwwww")
       } catch (e) {
