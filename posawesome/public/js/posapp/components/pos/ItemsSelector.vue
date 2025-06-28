@@ -1498,7 +1498,7 @@ export default {
   created: function () {
     if (typeof Worker !== 'undefined') {
       try {
-        const workerUrl = '/assets/posawesome/js/posapp/workers/itemWorker.js?worker';
+        const workerUrl = '/assets/posawesome/js/posapp/workers/itemWorker.js';
         this.itemWorker = new Worker(workerUrl, { type: 'classic' });
 
         this.itemWorker.onerror = function (event) {
