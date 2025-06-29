@@ -41,8 +41,7 @@
                 class="overflow-y-auto dynamic-scroll"
                 :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
                 <template #default="{ item }">
-                  <v-col xl="2" lg="3" md="6" sm="6" cols="6" min-height="50">
-                    <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
+                  <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
                       <v-img :src="item.image ||
                         '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
                         " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
@@ -65,8 +64,7 @@
                           {{ item.stock_uom || "" }}
                         </div>
                       </v-card-text>
-                    </v-card>
-                  </v-col>
+                  </v-card>
                 </template>
               </RecycleScroller>
             </div>
@@ -1644,6 +1642,7 @@ export default {
   margin: var(--dynamic-xs);
   transition: var(--transition-normal);
   background-color: var(--surface-secondary);
+  width: 100%;
 }
 
 .dynamic-item-card:hover {
