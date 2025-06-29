@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2020, Youssef Restom and contributors
-# For license information, please see license.txt
+"""Expose API functions for POS Awesome."""
 
-# Import functions from modules to make them available at the API level
 from .items import (
     get_items,
     get_items_groups,
@@ -57,4 +55,6 @@ from .utilities import (
     get_selling_price_lists,
     get_app_info,
     get_language_options,
+    get_translation_dict,
 )
+
