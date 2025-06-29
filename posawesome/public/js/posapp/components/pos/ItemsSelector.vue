@@ -1621,6 +1621,8 @@ export default {
 .dynamic-scroll {
   transition: max-height var(--transition-normal);
   padding-bottom: var(--dynamic-xs);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .items-grid {
@@ -1628,6 +1630,7 @@ export default {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--dynamic-sm);
   align-items: start;
+  align-content: start;
 }
 
 .dynamic-item-card {
@@ -1636,7 +1639,12 @@ export default {
   background-color: var(--surface-secondary);
   display: flex;
   flex-direction: column;
+  height: auto;
   box-sizing: border-box;
+}
+
+.dynamic-item-card .v-img {
+  object-fit: contain;
 }
 
 .dynamic-item-card:hover {
