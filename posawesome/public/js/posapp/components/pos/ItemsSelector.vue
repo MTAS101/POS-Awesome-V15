@@ -46,7 +46,7 @@
                         '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
                         " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
                         height="100px">
-                        <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
+                        <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0 item-name"></v-card-text>
                       </v-img>
                       <v-card-text class="text--primary pa-1">
                         <div class="text-caption text-primary">
@@ -1511,12 +1511,16 @@ export default {
       const width = this.containerWidth || this.windowWidth;
       if (width >= 1920) {
         return 6;
+      } else if (width >= 1536) {
+        return 5;
       } else if (width >= 1280) {
         return 4;
       } else if (width >= 960) {
         return 3;
-      } else {
+      } else if (width >= 600) {
         return 2;
+      } else {
+        return 1;
       }
     }
   },
@@ -1658,12 +1662,21 @@ export default {
   margin: var(--dynamic-xs);
   transition: var(--transition-normal);
   background-color: var(--surface-secondary);
-  width: calc(100% - 2 * var(--dynamic-xs));
+  width: 100%;
   box-sizing: border-box;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .dynamic-item-card:hover {
   transform: scale(calc(1 + 0.02 * var(--font-scale)));
+}
+
+.item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .text-success {
