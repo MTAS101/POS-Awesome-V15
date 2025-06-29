@@ -206,3 +206,14 @@ def get_language_options():
 
     languages.sort()
     return "\n".join(languages)
+
+
+@frappe.whitelist()
+def get_translation_dict(lang: str) -> dict:
+    """Return translations for the given language from this app."""
+    from frappe.translate import get_translations_from_csv
+
+    try:
+        return get_translations_from_csv(lang, "posawesome") or {}
+    except Exception:
+        return {}
