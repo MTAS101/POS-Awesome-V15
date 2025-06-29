@@ -1636,6 +1636,7 @@ export default {
 
 .dynamic-scroll {
   transition: max-height var(--transition-normal);
+  padding-bottom: var(--dynamic-xs);
 }
 
 .dynamic-item-card {
