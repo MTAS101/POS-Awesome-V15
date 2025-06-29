@@ -35,38 +35,33 @@
               hide-details></v-checkbox>
           </v-col>
           <v-col cols="12" class="pt-0 mt-0">
-            <div fluid class="items" ref="itemsContainer" v-if="items_view == 'card'">
-              <RecycleScroller :items="filtered_items" :item-size="220" key-field="item_code"
-                :grid-items="gridItems"
-                class="overflow-y-auto dynamic-scroll"
-                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
-                <template #default="{ item }">
-                  <v-card hover="hover" @click="add_item(item)" class="dynamic-item-card">
-                      <v-img :src="item.image ||
+            <div fluid class="items-grid dynamic-scroll" ref="itemsContainer" v-if="items_view == 'card'"
+              :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
+              <v-card v-for="item in filtered_items" :key="item.item_code" hover class="dynamic-item-card"
+                @click="add_item(item)">
+                <v-img :src="item.image ||
                         '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
                         " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
                         height="100px">
-                        <v-card-text v-text="item.item_name" class="text-caption px-1 pb-0"></v-card-text>
-                      </v-img>
-                      <v-card-text class="text--primary pa-1">
-                        <div class="text-caption text-primary">
-                          {{ currencySymbol(pos_profile.currency) || "" }}
-                          {{ format_currency(item.rate, pos_profile.currency, ratePrecision(item.rate)) }}
-                        </div>
-                        <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
-                          class="text-caption text-success">
-                          {{ currencySymbol(selected_currency) || "" }}
-                          {{ format_currency(getConvertedRate(item), selected_currency,
-                            ratePrecision(getConvertedRate(item))) }}
-                        </div>
-                        <div class="text-caption golden--text">
-                          {{ format_number(item.actual_qty, 4) || 0 }}
-                          {{ item.stock_uom || "" }}
-                        </div>
-                      </v-card-text>
-                  </v-card>
-                </template>
-              </RecycleScroller>
+                  <v-card-text class="text-caption px-1 pb-0 truncate">{{ item.item_name }}</v-card-text>
+                </v-img>
+                <v-card-text class="text--primary pa-1">
+                  <div class="text-caption text-primary truncate">
+                    {{ currencySymbol(pos_profile.currency) || "" }}
+                    {{ format_currency(item.rate, pos_profile.currency, ratePrecision(item.rate)) }}
+                  </div>
+                  <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                    class="text-caption text-success truncate">
+                    {{ currencySymbol(selected_currency) || "" }}
+                    {{ format_currency(getConvertedRate(item), selected_currency,
+                      ratePrecision(getConvertedRate(item))) }}
+                  </div>
+                  <div class="text-caption golden--text truncate">
+                    {{ format_number(item.actual_qty, 4) || 0 }}
+                    {{ item.stock_uom || "" }}
+                  </div>
+                </v-card-text>
+              </v-card>
             </div>
             <div v-else>
               <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table overflow-y-auto"
@@ -140,8 +135,6 @@ import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
 
 
-import { RecycleScroller } from 'vue-virtual-scroller';
-import 'vue-virtual-scroller/dist/vue-virtual-scroller.css';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
@@ -149,7 +142,6 @@ export default {
   mixins: [format, responsiveMixin],
   components: {
     CameraScanner,
-    RecycleScroller
   },
   data: () => ({
     pos_profile: "",
@@ -183,7 +175,6 @@ export default {
     prePopulateInProgress: false,
     itemWorker: null,
     items_request_token: 0,
-    containerWidth: 0,
   }),
 
   watch: {
@@ -274,14 +265,6 @@ export default {
   },
 
   methods: {
-    updateContainerWidth() {
-      this.$nextTick(() => {
-        const el = this.$refs.itemsContainer;
-        if (el) {
-          this.containerWidth = el.clientWidth;
-        }
-      });
-    },
     refreshPricesForVisibleItems() {
       const vm = this;
       if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -1507,18 +1490,6 @@ export default {
     active_price_list() {
       return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
     },
-    gridItems() {
-      const width = this.containerWidth || this.windowWidth;
-      if (width >= 1920) {
-        return 6;
-      } else if (width >= 1280) {
-        return 4;
-      } else if (width >= 960) {
-        return 3;
-      } else {
-        return 2;
-      }
-    }
   },
 
   created: function () {
@@ -1599,8 +1570,7 @@ export default {
 
   mounted() {
     this.scan_barcoud();
-    this.updateContainerWidth();
-    window.addEventListener('resize', this.updateContainerWidth);
+    // grid layout adjusts automatically with CSS, no width tracking needed
   },
 
   beforeUnmount() {
@@ -1635,7 +1605,6 @@ export default {
 
     this.eventBus.off("update_currency");
     this.eventBus.off("server-online");
-    window.removeEventListener('resize', this.updateContainerWidth);
   },
 };
 </script>
@@ -1654,11 +1623,19 @@ export default {
   padding-bottom: var(--dynamic-xs);
 }
 
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--dynamic-sm);
+  align-items: start;
+}
+
 .dynamic-item-card {
   margin: var(--dynamic-xs);
   transition: var(--transition-normal);
   background-color: var(--surface-secondary);
-  width: calc(100% - 2 * var(--dynamic-xs));
+  display: flex;
+  flex-direction: column;
   box-sizing: border-box;
 }
 
@@ -1677,6 +1654,12 @@ export default {
 
 .sleek-data-table:hover {
   box-shadow: var(--shadow-md) !important;
+}
+
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Light mode card backgrounds */
