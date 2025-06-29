@@ -191,3 +191,18 @@ def get_sales_person_names():
         print(f"Error fetching sales persons: {str(e)}")
         frappe.log_error(f"Error fetching sales persons: {str(e)}", "POS Sales Person Error")
         return []
+
+
+@frappe.whitelist()
+def get_language_options():
+    """Return newline separated language codes from translations directory."""
+    import os
+
+    translations_path = frappe.get_app_path("posawesome", "translations")
+    languages = []
+    for filename in os.listdir(translations_path):
+        if filename.endswith(".csv"):
+            languages.append(os.path.splitext(filename)[0])
+
+    languages.sort()
+    return "\n".join(languages)

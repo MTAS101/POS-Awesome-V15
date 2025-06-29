@@ -48,7 +48,7 @@ After switching branches or pulling latest changes:
 21. Search and add items by Serial Number
 22. Create Sales Orders from POS directly
 23. Supports template items with variants
-24. Supports multiple languages
+24. Supports multiple languages with language selection per POS Profile
 25. Supports Mpesa mobile payment
 26. POS Coupons
 27. Supports Referral Code
