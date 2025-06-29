@@ -195,16 +195,20 @@ def get_sales_person_names():
 
 @frappe.whitelist()
 def get_language_options():
-    """Return newline separated language codes from translations directory."""
+    """Return newline separated language codes from translations directory.
+
+    Always include English (``en``) in the list of options so that users can
+    explicitly select it in the POS profile.
+    """
     import os
 
     translations_path = frappe.get_app_path("posawesome", "translations")
-    languages = []
+    languages = ["en"]
     for filename in os.listdir(translations_path):
         if filename.endswith(".csv"):
             languages.append(os.path.splitext(filename)[0])
 
-    languages.sort()
+    languages = sorted(set(languages))
     return "\n".join(languages)
 
 
@@ -212,6 +216,11 @@ def get_language_options():
 def get_translation_dict(lang: str) -> dict:
     """Return translations for the given language from this app."""
     from frappe.translate import get_translations_from_csv
+
+    if lang == "en":
+        # English is the base language and does not have a separate
+        # translation file. Return an empty dict to avoid file lookups.
+        return {}
 
     try:
         return get_translations_from_csv(lang, "posawesome") or {}
