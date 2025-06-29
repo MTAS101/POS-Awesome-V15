@@ -300,10 +300,7 @@
 // Import the Socket.IO client library for real-time server status monitoring.
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
-
-
 import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline, clearAllCache } from '../../offline.js';
-
 import OfflineInvoicesDialog from './OfflineInvoices.vue';
 import { silentPrint } from '../plugins/print.js';
 
