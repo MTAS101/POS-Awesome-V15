@@ -37,6 +37,7 @@
           <v-col cols="12" class="pt-0 mt-0">
             <div fluid class="items" v-if="items_view == 'card'">
               <RecycleScroller :items="filtered_items" :item-size="220" key-field="item_code"
+                :grid-items="gridItems"
                 class="overflow-y-auto dynamic-scroll"
                 :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
                 <template #default="{ item }">
@@ -1498,6 +1499,15 @@ export default {
     },
     active_price_list() {
       return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
+    },
+    gridItems() {
+      if (this.windowWidth >= 1920) {
+        return 6;
+      } else if (this.windowWidth >= 1280) {
+        return 4;
+      } else {
+        return 2;
+      }
     }
   },
 
