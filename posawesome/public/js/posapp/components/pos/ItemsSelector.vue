@@ -1643,7 +1643,8 @@ export default {
   margin: var(--dynamic-xs);
   transition: var(--transition-normal);
   background-color: var(--surface-secondary);
-  width: 100%;
+  width: calc(100% - 2 * var(--dynamic-xs));
+  box-sizing: border-box;
 }
 
 .dynamic-item-card:hover {
