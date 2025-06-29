@@ -17,9 +17,9 @@ frappe.pages['posapp'].on_page_load = function (wrapper) {
         $("head").append("<link rel='preload' href='https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900' as='style'>");
         $("head").append("<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900'>");
 	
-	// Listen for POS Profile registration
-	frappe.realtime.on('pos_profile_registered', () => {
-		const update_totals_based_on_tax_inclusive = () => {
+        // Listen for POS Profile registration
+        frappe.realtime.on('pos_profile_registered', () => {
+                const update_totals_based_on_tax_inclusive = () => {
 			console.log("Updating totals based on tax inclusive settings");
 			const posProfile = this.page.$PosApp.pos_profile;
 
@@ -59,14 +59,20 @@ frappe.pages['posapp'].on_page_load = function (wrapper) {
 			});
 		};
 
-		update_totals_based_on_tax_inclusive();
-	});
+                update_totals_based_on_tax_inclusive();
+
+                const profile = this.page.$PosApp.pos_profile;
+                if (profile && profile.posa_language) {
+                        frappe.boot.lang = profile.posa_language;
+                        loadTranslations(profile.posa_language);
+                }
+        });
 };
 
-function loadTranslations() {
+function loadTranslations(lang) {
     frappe.call({
         method: "posawesome.posawesome.api.utilities.get_translation_dict",
-        args: { lang: frappe.boot.lang },
+        args: { lang: lang || frappe.boot.lang },
         callback: function (r) {
             if (!r.exc && r.message) {
                 $.extend(frappe._messages, r.message);
