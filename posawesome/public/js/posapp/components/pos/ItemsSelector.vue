@@ -35,7 +35,7 @@
               hide-details></v-checkbox>
           </v-col>
           <v-col cols="12" class="pt-0 mt-0">
-            <div fluid class="items" v-if="items_view == 'card'">
+            <div fluid class="items" ref="itemsContainer" v-if="items_view == 'card'">
               <RecycleScroller :items="filtered_items" :item-size="220" key-field="item_code"
                 :grid-items="gridItems"
                 class="overflow-y-auto dynamic-scroll"
@@ -183,6 +183,7 @@ export default {
     prePopulateInProgress: false,
     itemWorker: null,
     items_request_token: 0,
+    containerWidth: 0,
   }),
 
   watch: {
@@ -273,6 +274,14 @@ export default {
   },
 
   methods: {
+    updateContainerWidth() {
+      this.$nextTick(() => {
+        const el = this.$refs.itemsContainer;
+        if (el) {
+          this.containerWidth = el.clientWidth;
+        }
+      });
+    },
     refreshPricesForVisibleItems() {
       const vm = this;
       if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -1499,10 +1508,13 @@ export default {
       return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
     },
     gridItems() {
-      if (this.windowWidth >= 1920) {
+      const width = this.containerWidth || this.windowWidth;
+      if (width >= 1920) {
         return 6;
-      } else if (this.windowWidth >= 1280) {
+      } else if (width >= 1280) {
         return 4;
+      } else if (width >= 960) {
+        return 3;
       } else {
         return 2;
       }
@@ -1587,6 +1599,8 @@ export default {
 
   mounted() {
     this.scan_barcoud();
+    this.updateContainerWidth();
+    window.addEventListener('resize', this.updateContainerWidth);
   },
 
   beforeUnmount() {
@@ -1621,6 +1635,7 @@ export default {
 
     this.eventBus.off("update_currency");
     this.eventBus.off("server-online");
+    window.removeEventListener('resize', this.updateContainerWidth);
   },
 };
 </script>
