@@ -233,19 +233,7 @@ export default {
               if (ci) {
                 it.rate = ci.rate;
                 it.price_list_rate = ci.price_list_rate || ci.rate;
-              } else {
-                it.rate = 0;
-                it.price_list_rate = 0;
               }
-            });
-            this.eventBus.emit("set_all_items", this.items);
-            this.update_items_details(this.items);
-            return;
-          } else if (cached && cached.length === 0) {
-            // When cached array is empty ensure all rates reset to 0
-            this.items.forEach(it => {
-              it.rate = 0;
-              it.price_list_rate = 0;
             });
             this.eventBus.emit("set_all_items", this.items);
             this.update_items_details(this.items);
