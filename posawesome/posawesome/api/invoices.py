@@ -558,3 +558,12 @@ def get_available_currencies():
     """Get list of available currencies from ERPNext"""
     return frappe.get_all("Currency", fields=["name", "currency_name"],
                          filters={"enabled": 1}, order_by="currency_name")
+
+
+@frappe.whitelist()
+def fetch_exchange_rate(currency: str, company: str, posting_date: str = None):
+    """Return exchange rate for the given currency against company's currency."""
+    posting_date = posting_date or nowdate()
+    company_currency = frappe.get_cached_value("Company", company, "default_currency")
+    exchange_rate = get_exchange_rate(currency, company_currency, posting_date)
+    return exchange_rate

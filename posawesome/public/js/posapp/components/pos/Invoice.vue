@@ -558,6 +558,30 @@ export default {
     // Update currency and exchange rate when currency is changed
     async update_currency_and_rate() {
       if (this.selected_currency) {
+        if (!this.items.length) {
+          try {
+            const r = await frappe.call({
+              method: "posawesome.posawesome.api.invoices.fetch_exchange_rate",
+              args: {
+                currency: this.selected_currency,
+                company: this.pos_profile.company,
+                posting_date: this.formatDateForBackend(this.posting_date_display)
+              },
+            });
+            if (r && r.message) {
+              this.exchange_rate = r.message;
+              this.sync_exchange_rate();
+            }
+          } catch (error) {
+            console.error("Error updating currency:", error);
+            this.eventBus.emit("show_message", {
+              text: "Error updating currency",
+              color: "error",
+            });
+          }
+          return;
+        }
+
         const doc = this.get_invoice_doc();
         doc.currency = this.selected_currency;
 
@@ -579,6 +603,11 @@ export default {
 
     async update_exchange_rate_on_server() {
       if (this.exchange_rate) {
+        if (!this.items.length) {
+          this.sync_exchange_rate();
+          return;
+        }
+
         const doc = this.get_invoice_doc();
         doc.conversion_rate = this.exchange_rate;
         try {
