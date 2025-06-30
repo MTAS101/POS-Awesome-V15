@@ -306,10 +306,11 @@ export default {
             saveItemUOMs(item.item_code, det.item_uoms);
           }
           if (det.rate !== undefined) {
-            if (det.rate !== 0 || !item.rate) {
-              upd.rate = det.rate;
-              upd.price_list_rate = det.price_list_rate || det.rate;
-            }
+            // Always update the rate even when it is zero so that
+            // switching price lists reflects items missing from the
+            // selected price list
+            upd.rate = det.rate;
+            upd.price_list_rate = det.price_list_rate || det.rate;
           }
           updates.push({ item, upd });
         }
@@ -351,10 +352,11 @@ export default {
                   saveItemUOMs(item.item_code, updItem.item_uoms);
                 }
                 if (updItem.rate !== undefined) {
-                  if (updItem.rate !== 0 || !item.rate) {
-                    upd.rate = updItem.rate;
-                    upd.price_list_rate = updItem.price_list_rate || updItem.rate;
-                  }
+                  // Always update the rate even when it is zero so that
+                  // switching price lists reflects items missing from the
+                  // selected price list
+                  upd.rate = updItem.rate;
+                  upd.price_list_rate = updItem.price_list_rate || updItem.rate;
                 }
                 updates.push({ item, upd });
               }
@@ -895,10 +897,11 @@ export default {
             saveItemUOMs(item.item_code, det.item_uoms);
           }
           if (det.rate !== undefined) {
-            if (det.rate !== 0 || !item.rate) {
-              item.rate = det.rate;
-              item.price_list_rate = det.price_list_rate || det.rate;
-            }
+            // Always update the rate even when it is zero so that
+            // switching price lists reflects items missing from the
+            // selected price list
+            item.rate = det.rate;
+            item.price_list_rate = det.price_list_rate || det.rate;
           }
         }
       });
