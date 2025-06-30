@@ -57,17 +57,17 @@ export function persist(key, value) {
                 }
                 return;
         }
-	
-	db.table("keyval")
-		.put({ key, value })
-		.catch((e) => console.error(`Failed to persist ${key}`, e));
 
-	if (typeof localStorage !== "undefined") {
-		try {
-			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
-		} catch (err) {
-			console.error("Failed to persist", key, "to localStorage", err);
-		}
+        db.table("keyval")
+                .put({ key, value })
+                .catch((e) => console.error(`Failed to persist ${key}`, e));
+
+        if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
+                try {
+                        localStorage.setItem(`posa_${key}`, JSON.stringify(value));
+                } catch (err) {
+                        console.error("Failed to persist", key, "to localStorage", err);
+                }
 	}
 }
 

@@ -386,7 +386,7 @@ export default {
       const vm = this;
       this.loading = true;
 
-      console.log("trying to load items")
+      // Removed noisy debug log
       let search = this.get_search(this.first_search);
       let gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
       let sr = search || "";
@@ -405,7 +405,7 @@ export default {
         this.loading = false;
         return;
       }
-      console.log("trying to load items2")
+      // Removed noisy debug log
 
       // Attempt to load cached items for the current price list
       if (
@@ -466,7 +466,7 @@ export default {
         }
         return;
       }
-      console.log("trying to load items3")
+      // Removed noisy debug log
 
       if (this.itemWorker) {
 
@@ -495,7 +495,6 @@ export default {
           const text = await res.text();
           // console.log(text)
           this.itemWorker.onmessage = async (ev) => {
-            console.log("trying to load items6")
             if (this.items_request_token !== request_token) return;
             if (ev.data.type === "parsed") {
               const parsed = ev.data.items;
