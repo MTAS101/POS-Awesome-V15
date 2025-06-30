@@ -4,18 +4,18 @@ const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
 
 async function persist(key, value) {
-	try {
-		await db.table("keyval").put({ key, value });
-	} catch (e) {
-		console.error("Worker persist failed", e);
-	}
-	if (typeof localStorage !== "undefined") {
-		try {
-			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
-		} catch (err) {
-			console.error("Worker localStorage failed", err);
-		}
-	}
+        try {
+                await db.table("keyval").put({ key, value });
+        } catch (e) {
+                console.error("Worker persist failed", e);
+        }
+        if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
+                try {
+                        localStorage.setItem(`posa_${key}`, JSON.stringify(value));
+                } catch (err) {
+                        console.error("Worker localStorage failed", err);
+                }
+        }
 }
 
 self.onmessage = async (event) => {
@@ -29,8 +29,12 @@ self.onmessage = async (event) => {
                         const itemsRaw = parsed.message || parsed;
                         let items;
                         try {
-                                // Ensure data passed back is cloneable
-                                items = JSON.parse(JSON.stringify(itemsRaw));
+                                if (typeof structuredClone === "function") {
+                                        items = structuredClone(itemsRaw);
+                                } else {
+                                        // Fallback for older browsers
+                                        items = JSON.parse(JSON.stringify(itemsRaw));
+                                }
                         } catch (e) {
                                 console.error("Failed to clone items", e);
                                 self.postMessage({ type: "error", error: e.message });
