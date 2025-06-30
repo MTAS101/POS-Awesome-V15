@@ -2463,6 +2463,14 @@ def get_available_currencies():
 
 
 @frappe.whitelist()
+def get_price_list_currency(price_list):
+    """Return the currency of the given price list"""
+    if not price_list:
+        return frappe.defaults.get_global_default("currency")
+    return frappe.get_cached_value("Price List", price_list, "currency")
+
+
+@frappe.whitelist()
 def get_selling_price_lists():
     """Return all selling price lists"""
     return frappe.get_all(
