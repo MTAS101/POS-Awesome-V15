@@ -489,8 +489,13 @@ export default {
 
       // Currency related fields
       doc.currency = this.selected_currency || this.pos_profile.currency;
-      doc.conversion_rate = this.exchange_rate || 1;
-      doc.plc_conversion_rate = this.exchange_rate || 1;
+      doc.conversion_rate =
+        (this.invoice_doc && this.invoice_doc.conversion_rate) ||
+        this.exchange_rate ||
+        1;
+      doc.plc_conversion_rate =
+        (this.invoice_doc && this.invoice_doc.plc_conversion_rate) ||
+        doc.conversion_rate;
       doc.price_list_currency = doc.currency;
 
       // Other fields

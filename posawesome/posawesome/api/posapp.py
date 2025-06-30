@@ -694,12 +694,25 @@ def update_invoice(data):
         # Get default conversion rate from ERPNext if currency is different from company currency
         if invoice_doc.currency != frappe.get_cached_value("Company", invoice_doc.company, "default_currency"):
             company_currency = frappe.get_cached_value("Company", invoice_doc.company, "default_currency")
-            # Get exchange rate from selected currency to base currency
-            exchange_rate = get_exchange_rate(
-                invoice_doc.currency,
-                company_currency,
-                invoice_doc.posting_date
-            )
+
+            exchange_rate = None
+            if invoice_doc.selling_price_list:
+                try:
+                    exchange_rate = frappe.db.get_value(
+                        "Price List",
+                        invoice_doc.selling_price_list,
+                        "exchange_rate",
+                    )
+                except Exception:
+                    exchange_rate = None
+
+            if not exchange_rate:
+                # Get exchange rate from selected currency to base currency
+                exchange_rate = get_exchange_rate(
+                    invoice_doc.currency,
+                    company_currency,
+                    invoice_doc.posting_date,
+                )
             invoice_doc.conversion_rate = exchange_rate
             invoice_doc.plc_conversion_rate = exchange_rate
             invoice_doc.price_list_currency = selected_currency
