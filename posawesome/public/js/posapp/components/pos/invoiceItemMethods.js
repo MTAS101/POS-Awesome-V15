@@ -1556,31 +1556,40 @@ export default {
 
       // Apply cached price list rates to existing invoice items
       apply_cached_price_list(price_list) {
-
-        const cached = getCachedPriceListItems(price_list) || [];
+        const cached = getCachedPriceListItems(price_list);
+        if (!cached) {
+          return;
+        }
 
         const map = {};
         cached.forEach(ci => { map[ci.item_code] = ci; });
 
         this.items.forEach(item => {
           const ci = map[item.item_code];
-          const newRate = ci ? (ci.rate || ci.price_list_rate) : 0;
+          if (!ci) return;
 
-          item.base_price_list_rate = newRate;
-          if (!item._manual_rate_set) {
-            item.base_rate = newRate;
+          const newRate = ci.rate || ci.price_list_rate;
+          if (newRate !== 0 || !item.base_price_list_rate) {
+            item.base_price_list_rate = newRate;
+            if (!item._manual_rate_set) {
+              item.base_rate = newRate;
+            }
           }
 
           if (this.selected_currency !== this.pos_profile.currency) {
             const conv = this.exchange_rate || 1;
-            const convRate = this.flt(newRate / conv, this.currency_precision);
-            item.price_list_rate = convRate;
-            if (!item._manual_rate_set) {
+            const convRate = this.flt((newRate) / conv, this.currency_precision);
+            if (newRate !== 0 || !item.price_list_rate) {
+              item.price_list_rate = convRate;
+            }
+            if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
               item.rate = convRate;
             }
           } else {
-            item.price_list_rate = newRate;
-            if (!item._manual_rate_set) {
+            if (newRate !== 0 || !item.price_list_rate) {
+              item.price_list_rate = newRate;
+            }
+            if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
               item.rate = newRate;
             }
           }
