@@ -1603,6 +1603,12 @@ export default {
 
     this.eventBus.off("update_currency");
     this.eventBus.off("server-online");
+    this.eventBus.off("register_pos_profile");
+    this.eventBus.off("update_cur_items_details");
+    this.eventBus.off("update_offers_counters");
+    this.eventBus.off("update_coupons_counters");
+    this.eventBus.off("update_customer_price_list");
+    this.eventBus.off("update_customer");
   },
 };
 </script>
