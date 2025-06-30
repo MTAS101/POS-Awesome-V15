@@ -263,14 +263,9 @@ export default {
   },
 
   methods: {
-   refreshPricesForVisibleItems() {
-     const vm = this;
-     if (!vm.filtered_items || vm.filtered_items.length === 0) return;
-
-      if (vm.pos_profile.posa_force_reload_items) {
-        vm.update_items_details(vm.filtered_items);
-        return;
-      }
+    refreshPricesForVisibleItems() {
+      const vm = this;
+      if (!vm.filtered_items || vm.filtered_items.length === 0) return;
 
       vm.loading = true;
 
@@ -354,9 +349,7 @@ export default {
             vm.$nextTick(() => {
               updates.forEach(({ item, upd }) => Object.assign(item, upd));
               updateLocalStockCache(r.message);
-              if (!force_reload) {
-                saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
-              }
+              saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
               vm.loading = false;
             });
           }
@@ -415,8 +408,7 @@ export default {
       // Attempt to load cached items for the current price list
       if (
         !force_server &&
-        !this.pos_profile.pose_use_limit_search &&
-        !this.pos_profile.posa_force_reload_items
+        !this.pos_profile.pose_use_limit_search
       ) {
         const cached = getCachedPriceListItems(vm.customer_price_list);
         if (cached && cached.length) {
@@ -448,8 +440,7 @@ export default {
         vm.pos_profile.posa_local_storage &&
         getItemsStorage().length &&
         !vm.pos_profile.pose_use_limit_search &&
-        !force_server &&
-        !vm.pos_profile.posa_force_reload_items
+        !force_server
       ) {
         vm.items = getItemsStorage();
         // Fallback to cached UOMs when loading from storage
@@ -507,9 +498,7 @@ export default {
             if (ev.data.type === "parsed") {
               const parsed = ev.data.items;
               vm.items = parsed.message || parsed;
-              if (!vm.pos_profile.posa_force_reload_items) {
-                savePriceListItems(vm.customer_price_list, vm.items);
-              }
+              savePriceListItems(vm.customer_price_list, vm.items);
               // Ensure UOMs are available for each item
               vm.items.forEach((it) => {
                 if (it.item_uoms && it.item_uoms.length > 0) {
@@ -544,8 +533,7 @@ export default {
 
               if (
                 vm.pos_profile.posa_local_storage &&
-                !vm.pos_profile.pose_use_limit_search &&
-                !vm.pos_profile.posa_force_reload_items
+                !vm.pos_profile.pose_use_limit_search
               ) {
                 try {
                   setItemsStorage(vm.items);
@@ -604,9 +592,7 @@ export default {
               vm.eventBus.emit("set_all_items", vm.items);
               vm.loading = false;
               vm.items_loaded = true;
-              if (!vm.pos_profile.posa_force_reload_items) {
-                savePriceListItems(vm.customer_price_list, vm.items);
-              }
+              savePriceListItems(vm.customer_price_list, vm.items);
               console.info("Items Loaded");
 
               // Pre-populate stock cache when items are freshly loaded
@@ -625,8 +611,7 @@ export default {
 
               if (
                 vm.pos_profile.posa_local_storage &&
-                !vm.pos_profile.pose_use_limit_search &&
-                !vm.pos_profile.posa_force_reload_items
+                !vm.pos_profile.pose_use_limit_search
               ) {
                 try {
                   setItemsStorage(r.message);
@@ -873,8 +858,6 @@ export default {
       const vm = this;
       if (!items || !items.length) return;
 
-      const force_reload = vm.pos_profile && vm.pos_profile.posa_force_reload_items;
-
       // reset any pending retry timer
       if (vm.itemDetailsRetryTimeout) {
         clearTimeout(vm.itemDetailsRetryTimeout);
@@ -882,9 +865,7 @@ export default {
       }
 
       const itemCodes = items.map(it => it.item_code);
-      const cacheResult = force_reload
-        ? { cached: [], missing: itemCodes }
-        : getCachedItemDetails(vm.pos_profile.name, vm.active_price_list, itemCodes);
+      const cacheResult = getCachedItemDetails(vm.pos_profile.name, vm.active_price_list, itemCodes);
       cacheResult.cached.forEach(det => {
         const item = items.find(it => it.item_code === det.item_code);
         if (item) {
@@ -929,8 +910,8 @@ export default {
         }
       });
 
-      // When offline or everything is cached (and not forcing), skip server call
-      if (isOffline() || (allCached && !force_reload)) {
+      // When offline or everything is cached, skip server call
+      if (isOffline() || allCached) {
         vm.itemDetailsRetryCount = 0;
         return;
       }
@@ -1004,9 +985,7 @@ export default {
 
               // Update local stock cache with latest quantities
               updateLocalStockCache(r.message);
-              if (!force_reload) {
-                saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
-              }
+              saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
 
               // Force update if any item's quantity changed significantly
               if (qtyChanged) {
