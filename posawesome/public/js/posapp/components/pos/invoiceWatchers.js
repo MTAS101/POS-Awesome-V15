@@ -63,30 +63,10 @@ export default {
       this.posting_date = this.formatDateForBackend(newVal);
     },
 
-    async selected_price_list(newVal) {
+    selected_price_list(newVal) {
       const price_list = newVal === this.pos_profile.selling_price_list ? null : newVal;
       this.eventBus.emit("update_customer_price_list", price_list);
       const applied = newVal || this.pos_profile.selling_price_list;
       this.apply_cached_price_list(applied);
-
-      // When switching price lists, also update currency based on the
-      // selected price list currency so item prices refresh correctly
-      try {
-        const r = await frappe.call({
-          method: "posawesome.posawesome.api.posapp.get_price_list_currency",
-          args: { price_list: applied }
-        });
-        if (r.message && r.message !== this.selected_currency) {
-          this.selected_currency = r.message;
-          await this.update_currency_and_rate();
-        }
-      } catch (err) {
-        console.error("Failed to fetch price list currency", err);
-      }
-
-      // Refresh item details so already added items get the new price list rates
-      if (this.items && this.items.length) {
-        this.items.forEach(item => this.update_item_detail(item));
-      }
     },
 };
