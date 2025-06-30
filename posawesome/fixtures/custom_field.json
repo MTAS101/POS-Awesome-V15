@@ -5416,20 +5416,10 @@
     "dt": "POS Profile",
     "fieldname": "posa_allow_delete_offline_invoice",
     "fieldtype": "Check",
-    "insert_after": "posa_allow_delete",
+    "insert_after": "posa_force_reload_items",
     "label": "Allow Delete Offline Invoice",
     "default": "0",
     "name": "POS Profile-posa_allow_delete_offline_invoice"
-  },
-  {
-    "doctype": "Custom Field",
-    "dt": "POS Profile",
-    "fieldname": "posa_enable_price_list_dropdown",
-    "fieldtype": "Check",
-    "insert_after": "posa_show_customer_balance",
-    "label": "Enable Price List Dropdown",
-    "default": "1",
-    "name": "POS Profile-posa_enable_price_list_dropdown"
   },
   {
     "doctype": "Custom Field",
@@ -5469,7 +5459,7 @@
     "in_list_view": 0,
     "in_preview": 0,
     "in_standard_filter": 0,
-    "insert_after": "posa_search_limit",
+    "insert_after": "posa_use_server_cache",
     "is_system_generated": 0,
     "is_virtual": 0,
     "label": "Force Reload Items",
