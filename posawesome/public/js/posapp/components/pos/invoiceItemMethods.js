@@ -1544,13 +1544,12 @@ export default {
 
     // Update price list for customer
       update_price_list() {
-        let price_list = this.get_price_list();
-        if (price_list == this.pos_profile.selling_price_list) {
-          this.selected_price_list = this.pos_profile.selling_price_list;
-          this.eventBus.emit("update_customer_price_list", null);
-        } else {
+        // Only set the POS Profile price list if it has changed
+        const price_list = this.pos_profile.selling_price_list;
+        if (this.selected_price_list !== price_list) {
           this.selected_price_list = price_list;
-          this.eventBus.emit("update_customer_price_list", price_list);
+          // Clear any customer specific price list to avoid reloading items
+          this.eventBus.emit("update_customer_price_list", null);
         }
       },
 
