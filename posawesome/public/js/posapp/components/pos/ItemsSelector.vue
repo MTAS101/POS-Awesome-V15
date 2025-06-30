@@ -222,26 +222,28 @@ export default {
         }
         return;
       }
-      // Apply cached rates if available for immediate update
-      if (this.items_loaded && this.items && this.items.length > 0) {
-        const cached = getCachedPriceListItems(this.customer_price_list);
-        if (cached && cached.length) {
-          const map = {};
-          cached.forEach(ci => { map[ci.item_code] = ci; });
-          this.items.forEach(it => {
-            const ci = map[it.item_code];
-            if (ci) {
-              it.rate = ci.rate;
-              it.price_list_rate = ci.price_list_rate || ci.rate;
-            }
-          });
-          this.eventBus.emit("set_all_items", this.items);
-          this.update_items_details(this.items);
-          return;
+        // Apply cached rates if available for immediate update
+        if (this.items_loaded && this.items && this.items.length > 0) {
+          const cached = getCachedPriceListItems(this.customer_price_list);
+          if (cached && cached.length) {
+            const map = {};
+            cached.forEach(ci => { map[ci.item_code] = ci; });
+            this.items.forEach(it => {
+              const ci = map[it.item_code];
+              if (ci) {
+                it.rate = ci.rate;
+                it.price_list_rate = ci.price_list_rate || ci.rate;
+              }
+            });
+            this.eventBus.emit("set_all_items", this.items);
+            this.update_items_details(this.items);
+            return;
+          }
         }
-      }
-      // No cache found; keep existing items without reloading from server
-    }, 300),
+        // Reload from server when cache is unavailable
+        this.items_loaded = false;
+        this.get_items(true);
+      }, 300),
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
     },
