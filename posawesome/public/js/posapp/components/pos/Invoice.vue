@@ -777,19 +777,20 @@ export default {
       this.initializeItemsHeaders();
 
       // Add this block to handle currency initialization
-      if (this.pos_profile.posa_allow_multi_currency) {
-        this.fetch_available_currencies().then(() => {
-          // Set default currency after currencies are loaded
-          this.selected_currency = this.pos_profile.currency;
-          this.exchange_rate = 1;
-        }).catch(error => {
-          console.error("Error initializing currencies:", error);
-          this.eventBus.emit("show_message", {
-            title: __("Error loading currencies"),
-            color: "error"
+        if (this.pos_profile.posa_allow_multi_currency) {
+          this.fetch_available_currencies().then(async () => {
+            // Set default currency after currencies are loaded
+            this.selected_currency = this.pos_profile.currency;
+            // Fetch proper exchange rate from server
+            await this.update_currency_and_rate();
+          }).catch(error => {
+            console.error("Error initializing currencies:", error);
+            this.eventBus.emit("show_message", {
+              title: __("Error loading currencies"),
+              color: "error"
+            });
           });
-        });
-      }
+        }
 
       this.fetch_price_lists();
       this.update_price_list();
