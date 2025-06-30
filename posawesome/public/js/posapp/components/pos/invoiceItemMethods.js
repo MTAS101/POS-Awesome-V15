@@ -1521,16 +1521,13 @@ export default {
               ...message,
             };
           }
-          // When force reload is enabled, always switch to the appropriate price
-          // list for the selected customer so that item rates are fetched
-          // correctly from the server. If the customer does not have a specific
-          // price list, fall back to the POS Profile selling price list.
-          if (vm.pos_profile.posa_force_reload_items) {
-            const price_list = message.customer_price_list || vm.pos_profile.selling_price_list;
-            const event_price_list = message.customer_price_list ? message.customer_price_list : null;
-            vm.selected_price_list = price_list;
-            vm.eventBus.emit("update_customer_price_list", event_price_list);
-            vm.apply_cached_price_list(price_list);
+          // When force reload is enabled, automatically switch to the
+          // customer's default price list so that item rates are fetched
+          // correctly from the server.
+          if (vm.pos_profile.posa_force_reload_items && message.customer_price_list) {
+            vm.selected_price_list = message.customer_price_list;
+            vm.eventBus.emit("update_customer_price_list", message.customer_price_list);
+            vm.apply_cached_price_list(message.customer_price_list);
           }
         } catch (error) {
           console.error("Failed to fetch customer details", error);
