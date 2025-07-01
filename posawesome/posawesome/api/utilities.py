@@ -179,31 +179,48 @@ def get_sales_person_names():
 
 @frappe.whitelist()
 def get_language_options():
-	"""Return newline separated language codes from translations directories of all apps.
+        """Return list of available languages with human friendly labels.
 
-	Always include English (``en``) in the list so that users can explicitly
-	select it in the POS profile.
-	"""
-	import os
+        Always include English (``en``) in the list so that users can explicitly
+        select it in the POS profile. Each option is returned as a dict with
+        ``label`` and ``value`` keys so that the dropdown displays a nice label
+        while the underlying value stored in the field remains the language code.
+        """
+        import os
 
-	languages = {"en"}
+        languages = {"en"}
 
-	# Collect languages from translation CSV files
-	for app in frappe.get_installed_apps():
-		translations_path = frappe.get_app_path(app, "translations")
-		if os.path.exists(translations_path):
-			for filename in os.listdir(translations_path):
-				if filename.endswith(".csv"):
-					languages.add(os.path.splitext(filename)[0])
+        # Collect languages from translation CSV files of all installed apps
+        for app in frappe.get_installed_apps():
+                translations_path = frappe.get_app_path(app, "translations")
+                if os.path.exists(translations_path):
+                        for filename in os.listdir(translations_path):
+                                if filename.endswith(".csv"):
+                                        languages.add(os.path.splitext(filename)[0])
 
-	# Also include languages from the Translation doctype, if available
-	if frappe.db.table_exists("Translation"):
-		rows = frappe.db.sql("SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL")
-		for (language,) in rows:
-			languages.add(language)
+        # Include languages stored in the Translation doctype, if available
+        if frappe.db.table_exists("Translation"):
+                rows = frappe.db.sql(
+                        "SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL"
+                )
+                for (language,) in rows:
+                        languages.add(language)
 
-	# Use a set to guarantee uniqueness before returning
-	return "\n".join(sorted(languages))
+        # Mapping of language code to human readable name and emoji flag
+        language_info = {
+                "en": ("English", "\U0001F1EC\U0001F1E7"),  # GB Flag
+                "ar": ("Arabic", "\U0001F1F8\U0001F1E6"),   # SA Flag
+                "es": ("Spanish", "\U0001F1EA\U0001F1F8"),  # ES Flag
+                "pt": ("Portuguese", "\U0001F1F5\U0001F1F9"),  # PT Flag
+        }
+
+        options = []
+        for code in sorted(languages):
+                name, icon = language_info.get(code, (code, ""))
+                label = f"{icon} {name} ({code})".strip()
+                options.append({"label": label, "value": code})
+
+        return options
 
 
 @frappe.whitelist()
