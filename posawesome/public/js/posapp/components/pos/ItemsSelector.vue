@@ -1433,6 +1433,10 @@ export default {
             filtered = filtred_group_list.slice(0, this.itemsPerPage);
           }
 
+          if (this.hide_zero_rate_items) {
+            filtered = filtered.filter(item => parseFloat(item.rate) !== 0);
+          }
+
           // Ensure quantities are defined
           filtered.forEach(item => {
             if (item.actual_qty === undefined) {
