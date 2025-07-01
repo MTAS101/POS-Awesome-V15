@@ -139,6 +139,25 @@ export default {
       new_item.discount_amount = 0;
       new_item.discount_percentage = 0;
       new_item.discount_amount_per_item = 0;
+
+      // Ensure item rate is in the selected currency when multi-currency is enabled
+      if (
+        this.selected_currency !== this.pos_profile.currency &&
+        (item.currency === this.pos_profile.currency || !item.currency)
+      ) {
+        // Preserve original base currency values
+        item.base_rate = item.rate;
+        item.base_price_list_rate = item.price_list_rate;
+
+        // Convert to selected currency using current exchange rate
+        item.rate = this.flt(item.rate / this.exchange_rate, this.currency_precision);
+        item.price_list_rate = this.flt(
+          item.price_list_rate / this.exchange_rate,
+          this.currency_precision
+        );
+        item.currency = this.selected_currency;
+      }
+
       new_item.price_list_rate = item.rate;
 
       // Setup base rates properly for multi-currency
