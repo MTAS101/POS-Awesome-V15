@@ -748,15 +748,22 @@ export default {
         // Convert rate if multi-currency is enabled
         if (this.pos_profile.posa_allow_multi_currency &&
           this.selected_currency !== this.pos_profile.currency) {
-          // Store original rate as base_rate
-          item.base_rate = item.rate;
-          item.base_price_list_rate = item.price_list_rate;
 
-          // Set converted rates
-          item.rate = this.getConvertedRate(item);
-          item.price_list_rate = this.getConvertedRate(item);
+          if (item.currency === this.selected_currency) {
+            // Item already priced in selected currency
+            item.base_rate = item.rate * this.exchange_rate;
+            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
+          } else {
+            // Item price is in base currency
+            item.base_rate = item.rate;
+            item.base_price_list_rate = item.price_list_rate;
 
-          // Set currency
+            const converted = this.getConvertedRate(item);
+            item.rate = converted;
+            item.price_list_rate = converted;
+          }
+
+          // Ensure currency matches selection
           item.currency = this.selected_currency;
         }
 

@@ -118,7 +118,7 @@
               <div class="form-row">
                 <div class="form-field">
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Rate')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :prefix="currencySymbol(pos_profile.currency)"
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :prefix="currencySymbol(displayCurrency)"
                     :model-value="formatCurrency(item.rate)" @change="[
                       setFormatedCurrency(item, 'rate', null, false, $event),
                       calcPrices(item, $event.target.value, $event),
@@ -144,7 +144,7 @@
                     @change="(event) => { if (expanded && expanded.length === 1 && expanded[0] === item.posa_row_id) { calcPrices(item, event.target.value, { target: { id: 'discount_amount' } }); } }"
                     :rules="['isNumber']" id="discount_amount"
                     :disabled="!!item.posa_is_replace || item.posa_offer_applied || !pos_profile.posa_allow_user_to_edit_item_discount || (isReturnInvoice && invoice_doc.return_against)"
-                    :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
+                    :prefix="currencySymbol(displayCurrency)"></v-text-field>
                 </div>
               </div>
 
@@ -154,7 +154,7 @@
                   <v-text-field density="compact" variant="outlined" color="primary"
                     :label="frappe._('Price list Rate')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                     :model-value="formatCurrency(item.price_list_rate)" disabled
-                    :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
+                    :prefix="currencySymbol(displayCurrency)"></v-text-field>
                 </div>
                 <div class="form-field">
                   <v-text-field density="compact" variant="outlined" color="primary"
