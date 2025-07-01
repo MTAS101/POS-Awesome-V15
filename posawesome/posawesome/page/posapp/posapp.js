@@ -64,7 +64,38 @@ frappe.pages['posapp'].on_page_load = function (wrapper) {
 };
 
 //Only if PT as we are not being able to load from pt.csv
-if (frappe.boot.lang == "pt") {
+//The language value may include flag emojis (e.g. "Portuguese \ud83c\uddf5\ud83c\uddf9")
+//so normalize it to the language code before comparing
+let boot_lang = frappe.boot.lang;
+if (boot_lang) {
+    const languageNameToCode = {
+        "English": "en",
+        "Arabic": "ar",
+        "Portuguese": "pt",
+        "Spanish": "es",
+        "French": "fr",
+        "German": "de",
+        "Italian": "it",
+        "Chinese": "zh",
+        "Japanese": "ja",
+        "Korean": "ko",
+        "Hindi": "hi",
+        "Russian": "ru",
+        "Dutch": "nl",
+        "Turkish": "tr",
+        "Vietnamese": "vi",
+        "Urdu": "ur",
+        "Persian": "fa",
+        "Swahili": "sw",
+        "Tamil": "ta",
+        "Telugu": "te",
+        "Thai": "th"
+    };
+    const cleaned = boot_lang.replace(/[\u{1F300}-\u{1FAFF}]/gu, "").trim();
+    const first_word = cleaned.split(" ")[0];
+    boot_lang = languageNameToCode[first_word] || cleaned;
+}
+if (boot_lang === "pt") {
 	$.extend(
 		frappe._messages, {
 		"Type": "Tipo",
