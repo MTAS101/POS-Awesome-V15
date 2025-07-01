@@ -1,23 +1,23 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2020, Youssef Restom and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
 import json
+from typing import Dict, List
+
 import frappe
-from frappe.utils import nowdate, flt, cstr, getdate, cint, money_in_words
-from erpnext.setup.utils import get_exchange_rate
-from frappe import _
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
-from frappe.utils.background_jobs import enqueue
-from typing import List, Dict
 from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
+from erpnext.setup.utils import get_exchange_rate
+from erpnext.stock.doctype.batch.batch import get_batch_no  # This should be from erpnext directly
+from frappe import _
+from frappe.utils import cint, cstr, flt, getdate, money_in_words, nowdate
+from frappe.utils.background_jobs import enqueue
+
 from posawesome.posawesome.api.payments import redeeming_customer_credit  # Updated import
 from posawesome.posawesome.api.utilities import (
+    ensure_child_doctype,
     set_batch_nos_for_bundels,
-    ensure_child_doctype
 )  # Updated imports
-from erpnext.stock.doctype.batch.batch import get_batch_no  # This should be from erpnext directly
 
 
 @frappe.whitelist()
@@ -75,25 +75,29 @@ def update_invoice(data):
         if not validation.get("valid"):
             frappe.throw(validation.get("message"))
     selected_currency = data.get("currency")
-    
+    price_list_currency = data.get("price_list_currency")
+
     # Set missing values first
     invoice_doc.set_missing_values()
-    
+
     # Ensure selected currency is preserved after set_missing_values
     if selected_currency:
         invoice_doc.currency = selected_currency
         # Get default conversion rate from ERPNext if currency is different from company currency
-        if invoice_doc.currency != frappe.get_cached_value("Company", invoice_doc.company, "default_currency"):
-            company_currency = frappe.get_cached_value("Company", invoice_doc.company, "default_currency")
+        base_currency = price_list_currency or frappe.get_cached_value(
+            "Company", invoice_doc.company, "default_currency"
+        )
+
+        if invoice_doc.currency != base_currency:
             # Get exchange rate from selected currency to base currency
             exchange_rate = get_exchange_rate(
                 invoice_doc.currency,
-                company_currency,
+                base_currency,
                 invoice_doc.posting_date
             )
             invoice_doc.conversion_rate = exchange_rate
             invoice_doc.plc_conversion_rate = exchange_rate
-            invoice_doc.price_list_currency = selected_currency
+            invoice_doc.price_list_currency = price_list_currency or selected_currency
 
             # Update rates and amounts for all items using multiplication
             for item in invoice_doc.items:
@@ -116,7 +120,7 @@ def update_invoice(data):
             invoice_doc.base_net_total = flt(invoice_doc.net_total * exchange_rate, invoice_doc.precision("base_net_total"))
             invoice_doc.base_grand_total = flt(invoice_doc.grand_total * exchange_rate, invoice_doc.precision("base_grand_total"))
             invoice_doc.base_rounded_total = flt(invoice_doc.rounded_total * exchange_rate, invoice_doc.precision("base_rounded_total"))
-            invoice_doc.base_in_words = money_in_words(invoice_doc.base_rounded_total, invoice_doc.company_currency)
+            invoice_doc.base_in_words = money_in_words(invoice_doc.base_rounded_total, base_currency)
 
             # Update data to be sent back to frontend
             data["conversion_rate"] = exchange_rate
@@ -168,11 +172,11 @@ def submit_invoice(invoice, data):
         if item.item_name and item.rate and item.qty:
             total = item.rate * item.qty
             items.append(f"{item.item_name} - Rate: {item.rate}, Qty: {item.qty}, Amount: {total}")
-    
+
     # Add the grand total at the end of remarks
     grand_total = f"\nGrand Total: {invoice_doc.grand_total}"
     items.append(grand_total)
-    
+
     invoice_doc.remarks = "\n".join(items)
 
     # creating advance payment
@@ -288,21 +292,21 @@ def submit_in_background_job(kwargs):
     payments = kwargs.get("payments")
 
     invoice_doc = frappe.get_doc("Sales Invoice", invoice)
-    
+
     # Update remarks with items details for background job
     items = []
     for item in invoice_doc.items:
         if item.item_name and item.rate and item.qty:
             total = item.rate * item.qty
             items.append(f"{item.item_name} - Rate: {item.rate}, Qty: {item.qty}, Amount: {total}")
-    
+
     # Add the grand total at the end of remarks
     grand_total = f"\nGrand Total: {invoice_doc.grand_total}"
     items.append(grand_total)
-    
+
     invoice_doc.remarks = "\n".join(items)
     invoice_doc.save()
-    
+
     invoice_doc.submit()
     redeeming_customer_credit(
         invoice_doc, data, is_payment_entry, total_cash, cash_account, payments
@@ -337,8 +341,8 @@ def get_draft_invoices(pos_opening_shift):
 
 
 @frappe.whitelist()
-def search_invoices_for_return(invoice_name, company, customer_name=None, customer_id=None, 
-                               mobile_no=None, tax_id=None, from_date=None, to_date=None, 
+def search_invoices_for_return(invoice_name, company, customer_name=None, customer_id=None,
+                               mobile_no=None, tax_id=None, from_date=None, to_date=None,
                                min_amount=None, max_amount=None, page=1):
     """
     Search for invoices that can be returned with separate customer search fields and pagination
@@ -367,64 +371,64 @@ def search_invoices_for_return(invoice_name, company, customer_name=None, custom
         "docstatus": 1,
         "is_return": 0,
     }
-    
+
     # Convert page to integer if it's a string
     if page and isinstance(page, str):
         page = int(page)
     else:
         page = 1  # Default to page 1
-    
+
     # Items per page - can be adjusted based on performance requirements
     page_length = 100
     start = (page - 1) * page_length
-    
+
     # Add invoice name filter if provided
     if invoice_name:
         filters["name"] = ["like", f"%{invoice_name}%"]
-    
+
     # Add date range filters if provided
     if from_date:
         filters["posting_date"] = [">=", from_date]
-    
+
     if to_date:
         if "posting_date" in filters:
             filters["posting_date"] = ["between", [from_date, to_date]]
         else:
             filters["posting_date"] = ["<=", to_date]
-    
+
     # Add amount filters if provided
     if min_amount:
         filters["grand_total"] = [">=", float(min_amount)]
-    
+
     if max_amount:
         if "grand_total" in filters:
             # If min_amount was already set, change to between
             filters["grand_total"] = ["between", [float(min_amount), float(max_amount)]]
         else:
             filters["grand_total"] = ["<=", float(max_amount)]
-    
+
     # If any customer search criteria is provided, find matching customers
     customer_ids = []
     if customer_name or customer_id or mobile_no or tax_id:
         conditions = []
         params = {}
-        
+
         if customer_name:
             conditions.append("customer_name LIKE %(customer_name)s")
             params["customer_name"] = f"%{customer_name}%"
-            
+
         if customer_id:
             conditions.append("name LIKE %(customer_id)s")
             params["customer_id"] = f"%{customer_id}%"
-            
+
         if mobile_no:
             conditions.append("mobile_no LIKE %(mobile_no)s")
             params["mobile_no"] = f"%{mobile_no}%"
-            
+
         if tax_id:
             conditions.append("tax_id LIKE %(tax_id)s")
             params["tax_id"] = f"%{tax_id}%"
-        
+
         # Build the WHERE clause for the query
         where_clause = " OR ".join(conditions)
         customer_query = f"""
@@ -433,17 +437,17 @@ def search_invoices_for_return(invoice_name, company, customer_name=None, custom
             WHERE {where_clause}
             LIMIT 100
         """
-        
+
         customers = frappe.db.sql(customer_query, params, as_dict=True)
         customer_ids = [c.name for c in customers]
-        
+
         # If we found matching customers, add them to the filter
         if customer_ids:
             filters["customer"] = ["in", customer_ids]
         # If customer search criteria provided but no matches found, return empty
         elif any([customer_name, customer_id, mobile_no, tax_id]):
             return {"invoices": [], "has_more": False}
-    
+
     # Count total invoices matching the criteria (for has_more flag)
     total_count_query = frappe.get_list(
         "Sales Invoice",
@@ -452,24 +456,24 @@ def search_invoices_for_return(invoice_name, company, customer_name=None, custom
         as_list=False,
     )
     total_count = total_count_query[0].total_count if total_count_query else 0
-    
+
     # Get invoices matching all criteria with pagination
     invoices_list = frappe.get_list(
         "Sales Invoice",
         filters=filters,
         fields=["name"],
-        limit_start=start, 
+        limit_start=start,
         limit_page_length=page_length,
         order_by="posting_date desc, name desc",
     )
-    
+
     # Process and return the results
     data = []
-    
+
     # Process invoices and check for returns
     for invoice in invoices_list:
         invoice_doc = frappe.get_doc("Sales Invoice", invoice.name)
-        
+
         # Check if any items have already been returned
         has_returns = frappe.get_all(
             "Sales Invoice",
@@ -479,7 +483,7 @@ def search_invoices_for_return(invoice_name, company, customer_name=None, custom
             },
             fields=["name"]
         )
-        
+
         if has_returns:
             # Calculate returned quantity per item_code
             returned_qty = {}
@@ -513,10 +517,10 @@ def search_invoices_for_return(invoice_name, company, customer_name=None, custom
                 data.append(filtered_invoice)
         else:
             data.append(invoice_doc)
-    
+
     # Check if there are more results
     has_more = (start + page_length) < total_count
-    
+
     return {
         "invoices": data,
         "has_more": has_more
@@ -567,6 +571,13 @@ def fetch_exchange_rate(currency: str, company: str, posting_date: str = None):
     company_currency = frappe.get_cached_value("Company", company, "default_currency")
     exchange_rate = get_exchange_rate(currency, company_currency, posting_date)
     return exchange_rate
+
+
+@frappe.whitelist()
+def fetch_exchange_rate_pair(from_currency: str, to_currency: str, posting_date: str = None):
+    """Return exchange rate between two currencies."""
+    posting_date = posting_date or nowdate()
+    return get_exchange_rate(from_currency, to_currency, posting_date)
 
 
 @frappe.whitelist()
