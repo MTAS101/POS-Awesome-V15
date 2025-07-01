@@ -717,7 +717,10 @@ def update_invoice(data):
                 )
             invoice_doc.conversion_rate = exchange_rate
             invoice_doc.plc_conversion_rate = exchange_rate
-            invoice_doc.price_list_currency = selected_currency
+
+            # Preserve provided price list currency if different from selected
+            price_list_currency = data.get("price_list_currency") or selected_currency
+            invoice_doc.price_list_currency = price_list_currency
 
             # Update rates and amounts for all items using multiplication
             for item in invoice_doc.items:

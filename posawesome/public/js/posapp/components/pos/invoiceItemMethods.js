@@ -496,7 +496,9 @@ export default {
       doc.plc_conversion_rate =
         (this.invoice_doc && this.invoice_doc.plc_conversion_rate) ||
         doc.conversion_rate;
-      doc.price_list_currency = doc.currency;
+
+      // Use actual price list currency if available
+      doc.price_list_currency = this.price_list_currency || doc.currency;
 
       // Other fields
       doc.campaign = doc.campaign || this.pos_profile.campaign;
@@ -615,7 +617,9 @@ export default {
 
       // Add flags to ensure proper rate handling
       doc.ignore_pricing_rule = 1;
-      doc.price_list_currency = doc.currency;
+
+      // Preserve the real price list currency
+      doc.price_list_currency = this.price_list_currency || doc.currency;
       doc.plc_conversion_rate = doc.conversion_rate;
       doc.ignore_default_fields = 1;  // Add this to prevent default field updates
 

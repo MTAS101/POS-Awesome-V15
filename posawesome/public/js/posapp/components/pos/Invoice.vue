@@ -165,6 +165,7 @@ export default {
       available_currencies: [], // List of available currencies
       price_lists: [], // Available selling price lists
       selected_price_list: "", // Currently selected price list
+      price_list_currency: "", // Currency of the selected price list
       selected_columns: [], // Selected columns for items table
       temp_selected_columns: [], // Temporary array for column selection
       available_columns: [], // All available columns
@@ -438,6 +439,20 @@ export default {
       if (!this.selected_price_list) {
         this.selected_price_list = this.pos_profile.selling_price_list;
       }
+
+      // Fetch and store currency for the applied price list
+      try {
+        const r = await frappe.call({
+          method: "posawesome.posawesome.api.invoices.get_price_list_currency",
+          args: { price_list: this.selected_price_list }
+        });
+        if (r && r.message) {
+          this.price_list_currency = r.message;
+        }
+      } catch (error) {
+        console.error("Failed fetching price list currency", error);
+      }
+
       return this.price_lists;
     },
 

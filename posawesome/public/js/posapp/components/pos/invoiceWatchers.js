@@ -76,6 +76,9 @@ export default {
           args: { price_list: applied },
           callback: (r) => {
             if (r.message) {
+              // Store price list currency for later use
+              this.price_list_currency = r.message;
+              // Sync invoice currency with price list currency
               this.update_currency(r.message);
             }
           },
