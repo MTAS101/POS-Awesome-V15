@@ -746,17 +746,20 @@ export default {
         }
 
         // Convert rate if multi-currency is enabled
-        if (this.pos_profile.posa_allow_multi_currency &&
-          this.selected_currency !== this.pos_profile.currency) {
+        if (
+          this.pos_profile.posa_allow_multi_currency &&
+          this.selected_currency !== this.pos_profile.currency
+        ) {
+          const toBase = item.plc_conversion_rate || 1;
 
           if (item.currency === this.selected_currency) {
-            // Item already priced in selected currency
-            item.base_rate = item.rate * this.exchange_rate;
-            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
+            // Item already priced in selected currency, just compute base values
+            item.base_rate = item.rate * toBase;
+            item.base_price_list_rate = item.price_list_rate * toBase;
           } else {
-            // Item price is in base currency
-            item.base_rate = item.rate;
-            item.base_price_list_rate = item.price_list_rate;
+            // Item price is in another currency (typically base currency)
+            item.base_rate = item.rate * toBase;
+            item.base_price_list_rate = item.price_list_rate * toBase;
 
             const converted = this.getConvertedRate(item);
             item.rate = converted;
@@ -1341,10 +1344,9 @@ export default {
       if (!item.rate) return 0;
       if (!this.exchange_rate) return item.rate;
 
-      // If exchange rate is 300 PKR = 1 USD
-      // To convert PKR to USD: divide by exchange rate
-      // Example: 3000 PKR / 300 = 10 USD
-      const convertedRate = item.rate / this.exchange_rate;
+      const toBase = item.plc_conversion_rate || 1;
+      const rateInBase = item.rate * toBase;
+      const convertedRate = rateInBase / this.exchange_rate;
       return this.flt(convertedRate, 4);
     },
     currencySymbol(currency) {
