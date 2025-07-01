@@ -68,5 +68,18 @@ export default {
       this.eventBus.emit("update_customer_price_list", price_list);
       const applied = newVal || this.pos_profile.selling_price_list;
       this.apply_cached_price_list(applied);
+
+      // If multi-currency is enabled, sync currency with the price list currency
+      if (this.pos_profile.posa_allow_multi_currency && applied) {
+        frappe.call({
+          method: "posawesome.posawesome.api.invoices.get_price_list_currency",
+          args: { price_list: applied },
+          callback: (r) => {
+            if (r.message) {
+              this.update_currency(r.message);
+            }
+          },
+        });
+      }
     },
 };

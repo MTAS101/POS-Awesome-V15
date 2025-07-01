@@ -567,3 +567,11 @@ def fetch_exchange_rate(currency: str, company: str, posting_date: str = None):
     company_currency = frappe.get_cached_value("Company", company, "default_currency")
     exchange_rate = get_exchange_rate(currency, company_currency, posting_date)
     return exchange_rate
+
+
+@frappe.whitelist()
+def get_price_list_currency(price_list: str) -> str:
+    """Return the currency of the given Price List."""
+    if not price_list:
+        return None
+    return frappe.db.get_value("Price List", price_list, "currency")
