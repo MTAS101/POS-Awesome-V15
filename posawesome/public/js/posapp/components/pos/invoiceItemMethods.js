@@ -63,7 +63,8 @@ export default {
           new_item.qty = -Math.abs(new_item.qty || 1);
         }
         this.items.unshift(new_item);
-        this.update_item_detail(new_item);
+        // Force update of item rates when item is first added
+        this.update_item_detail(new_item, true);
 
         // Expand new item if it has batch or serial number
         if ((!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no) {
@@ -1353,7 +1354,7 @@ export default {
     },
 
     // Update details for a single item (fetch from backend)
-    update_item_detail(item) {
+    update_item_detail(item, force_update = false) {
       if (!item.item_code) {
         return;
       }
@@ -1413,8 +1414,8 @@ export default {
               vm.set_batch_qty(item, null, false);
             }
 
-            // First save base rates if not exists or if in default currency
-            if (!item.base_rate || vm.selected_currency === vm.pos_profile.currency) {
+            // First save base rates if not exists, in default currency, or when force update is requested
+            if (force_update || !item.base_rate || vm.selected_currency === vm.pos_profile.currency) {
               // Always store base rates from server in base currency
               if (data.price_list_rate !== 0 || !item.base_price_list_rate) {
                 item.base_price_list_rate = data.price_list_rate;
