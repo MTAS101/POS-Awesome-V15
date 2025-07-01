@@ -195,26 +195,28 @@ def get_sales_person_names():
 
 @frappe.whitelist()
 def get_language_options():
-    """Return newline separated language codes from translations directory.
+    """Return newline separated language codes from translations directories of all apps.
 
-    Always include English (``en``) in the list of options so that users can
-    explicitly select it in the POS profile.
+    Always include English (``en``) in the list so that users can explicitly
+    select it in the POS profile.
     """
     import os
 
-    translations_path = frappe.get_app_path("posawesome", "translations")
-    languages = ["en"]
-    for filename in os.listdir(translations_path):
-        if filename.endswith(".csv"):
-            languages.append(os.path.splitext(filename)[0])
+    languages = {"en"}
 
-    languages = sorted(set(languages))
-    return "\n".join(languages)
+    for app in frappe.get_installed_apps():
+        translations_path = frappe.get_app_path(app, "translations")
+        if os.path.exists(translations_path):
+            for filename in os.listdir(translations_path):
+                if filename.endswith(".csv"):
+                    languages.add(os.path.splitext(filename)[0])
+
+    return "\n".join(sorted(languages))
 
 
 @frappe.whitelist()
 def get_translation_dict(lang: str) -> dict:
-    """Return translations for the given language from this app."""
+    """Return translations for the given language from all installed apps."""
     from frappe.translate import get_translations_from_csv
 
     if lang == "en":
@@ -222,7 +224,13 @@ def get_translation_dict(lang: str) -> dict:
         # translation file. Return an empty dict to avoid file lookups.
         return {}
 
-    try:
-        return get_translations_from_csv(lang, "posawesome") or {}
-    except Exception:
-        return {}
+    translations = {}
+
+    for app in frappe.get_installed_apps():
+        try:
+            messages = get_translations_from_csv(lang, app) or {}
+            translations.update(messages)
+        except Exception:
+            pass
+
+    return translations
