@@ -77,8 +77,8 @@
                 </v-img>
                 <v-card-text class="text--primary pa-1">
                   <div class="text-caption text-primary truncate">
-                    {{ currencySymbol(pos_profile.currency) || "" }}
-                    {{ format_currency(item.rate, pos_profile.currency, ratePrecision(item.rate)) }}
+                    {{ currencySymbol(item.currency || pos_profile.currency) || "" }}
+                    {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}
                   </div>
                   <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                     class="text-caption text-success truncate">
@@ -100,8 +100,8 @@
 
                 <template v-slot:item.rate="{ item }">
                   <div>
-                    <div class="text-primary">{{ currencySymbol(pos_profile.currency) }}
-                      {{ format_currency(item.rate, pos_profile.currency, ratePrecision(item.rate)) }}</div>
+                    <div class="text-primary">{{ currencySymbol(item.currency || pos_profile.currency) }}
+                      {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}</div>
                     <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                       class="text-success">
                       {{ currencySymbol(selected_currency) }}
