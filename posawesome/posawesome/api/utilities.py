@@ -179,31 +179,31 @@ def get_sales_person_names():
 
 @frappe.whitelist()
 def get_language_options():
-    """Return newline separated language codes from translations directories of all apps.
+	"""Return newline separated language codes from translations directories of all apps.
 
-    Always include English (``en``) in the list so that users can explicitly
-    select it in the POS profile.
-    """
-    import os
+	Always include English (``en``) in the list so that users can explicitly
+	select it in the POS profile.
+	"""
+	import os
 
-    languages = {"en"}
+	languages = {"en"}
 
-    # Collect languages from translation CSV files
-    for app in frappe.get_installed_apps():
-        translations_path = frappe.get_app_path(app, "translations")
-        if os.path.exists(translations_path):
-            for filename in os.listdir(translations_path):
-                if filename.endswith(".csv"):
-                    languages.add(os.path.splitext(filename)[0].lower())
+	# Collect languages from translation CSV files
+	for app in frappe.get_installed_apps():
+		translations_path = frappe.get_app_path(app, "translations")
+		if os.path.exists(translations_path):
+			for filename in os.listdir(translations_path):
+				if filename.endswith(".csv"):
+					languages.add(os.path.splitext(filename)[0])
 
-    # Also include languages from the Translation doctype, if available
-    if frappe.db.table_exists("Translation"):
-        rows = frappe.db.sql("SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL")
-        for (language,) in rows:
-            languages.add(language.lower())
+	# Also include languages from the Translation doctype, if available
+	if frappe.db.table_exists("Translation"):
+		rows = frappe.db.sql("SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL")
+		for (language,) in rows:
+			languages.add(language)
 
-    # Normalize to lowercase and deduplicate, then sort for consistent order
-    return "\n".join(sorted(languages))
+	# Use a set to guarantee uniqueness before returning
+	return "\n".join(sorted(languages))
 
 
 @frappe.whitelist()
