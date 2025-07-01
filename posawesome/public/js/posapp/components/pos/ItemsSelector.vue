@@ -578,6 +578,13 @@ export default {
               if (vm.pos_profile.pose_use_limit_search) {
                 vm.enter_event();
               }
+
+              // Terminate the worker after items are parsed to
+              // release memory held by the worker thread.
+              if (vm.itemWorker) {
+                vm.itemWorker.terminate();
+                vm.itemWorker = null;
+              }
             } else if (ev.data.type === "error") {
               console.error('Item worker parse error:', ev.data.error);
               vm.loading = false;
