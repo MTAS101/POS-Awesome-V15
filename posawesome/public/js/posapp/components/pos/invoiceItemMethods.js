@@ -139,34 +139,19 @@ export default {
       new_item.discount_amount = 0;
       new_item.discount_percentage = 0;
       new_item.discount_amount_per_item = 0;
+      new_item.price_list_rate = item.rate;
 
-      // Ensure we always have a price_list_rate value
-      new_item.price_list_rate = item.price_list_rate || item.rate;
-
-      // Setup base and display rates with multi-currency awareness
+      // Setup base rates properly for multi-currency
       if (this.selected_currency !== this.pos_profile.currency) {
-        // If the selector already provided converted and base rates use them
-        if (item.base_rate && item.base_price_list_rate) {
-          new_item.base_rate = item.base_rate;
-          new_item.base_price_list_rate = item.base_price_list_rate;
-          new_item.rate = item.rate;
-          new_item.price_list_rate = item.price_list_rate || item.rate;
-        } else {
-          // Item is still in base currency - convert using current exchange rate
-          new_item.base_rate = item.rate;
-          new_item.base_price_list_rate = item.price_list_rate || item.rate;
-          new_item.rate = this.flt(item.rate / this.exchange_rate, this.currency_precision);
-          new_item.price_list_rate = this.flt((item.price_list_rate || item.rate) / this.exchange_rate, this.currency_precision);
-        }
+        // Store original base currency values
+        new_item.base_price_list_rate = item.rate * this.exchange_rate;
+        new_item.base_rate = item.rate * this.exchange_rate;
         new_item.base_discount_amount = 0;
-        new_item.currency = this.selected_currency;
       } else {
-        new_item.base_price_list_rate = item.base_price_list_rate || item.price_list_rate || item.rate;
-        new_item.base_rate = item.base_rate || item.rate;
+        // In base currency, base rates = displayed rates
+        new_item.base_price_list_rate = item.rate;
+        new_item.base_rate = item.rate;
         new_item.base_discount_amount = 0;
-        new_item.rate = item.rate;
-        new_item.price_list_rate = item.price_list_rate || item.rate;
-        new_item.currency = this.pos_profile.currency;
       }
 
       new_item.qty = item.qty;
