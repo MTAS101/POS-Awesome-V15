@@ -85,7 +85,7 @@
                       ratePrecision(getConvertedRate(item))) }}
                   </div>
                   <div class="text-caption golden--text truncate">
-                    {{ format_number(item.actual_qty, 4) || 0 }}
+                    {{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) || 0 }}
                     {{ item.stock_uom || "" }}
                   </div>
                 </v-card-text>
@@ -109,7 +109,7 @@
                   </div>
                 </template>
                 <template v-slot:item.actual_qty="{ item }">
-                  <span class="golden--text">{{ format_number(item.actual_qty, 4) }}</span>
+                  <span class="golden--text">{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) }}</span>
                 </template>
               </v-data-table-virtual>
             </div>

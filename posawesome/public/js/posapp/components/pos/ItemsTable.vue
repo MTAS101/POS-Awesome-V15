@@ -159,7 +159,7 @@
                 <div class="form-field">
                   <v-text-field density="compact" variant="outlined" color="primary"
                     :label="frappe._('Available QTY')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    :model-value="formatFloat(item.actual_qty)" disabled></v-text-field>
+                    :model-value="formatFloat(item.actual_qty, hide_qty_decimals ? 0 : undefined)" disabled></v-text-field>
                 </div>
                 <div class="form-field">
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Group')"
@@ -208,7 +208,7 @@
                   <div class="form-field">
                     <v-text-field density="compact" variant="outlined" color="primary"
                       :label="frappe._('Batch No. Available QTY')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                      :model-value="formatFloat(item.actual_batch_qty)" disabled></v-text-field>
+                      :model-value="formatFloat(item.actual_batch_qty, hide_qty_decimals ? 0 : undefined)" disabled></v-text-field>
                   </div>
                   <div class="form-field">
                     <v-text-field density="compact" variant="outlined" color="primary"
