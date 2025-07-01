@@ -61,18 +61,25 @@ export function resetOfflineState() {
 }
 
 // --- Generic getters and setters for cached data ----------------------------
-export function getItemsStorage() {
-	return memory.items_storage || [];
+export async function getItemsStorage(limit = 0, offset = 0) {
+        try {
+                let query = db.table("items");
+                if (offset) query = query.offset(offset);
+                if (limit) query = query.limit(limit);
+                return await query.toArray();
+        } catch (e) {
+                console.error("Failed to get items from storage", e);
+                return [];
+        }
 }
 
-export function setItemsStorage(items) {
+export async function setItemsStorage(items) {
         try {
-                memory.items_storage = JSON.parse(JSON.stringify(items));
+                const clean = JSON.parse(JSON.stringify(items));
+                await db.table("items").bulkPut(clean);
         } catch (e) {
-                console.error("Failed to serialize items for storage", e);
-                memory.items_storage = [];
+                console.error("Failed to persist items", e);
         }
-        persist("items_storage", memory.items_storage);
 }
 
 export function getCustomerStorage() {
