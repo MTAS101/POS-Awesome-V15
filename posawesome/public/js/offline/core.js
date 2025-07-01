@@ -3,6 +3,7 @@ import Dexie from "dexie";
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
+db.version(2).stores({ keyval: "&key", items: "&item_code" });
 
 let persistWorker = null;
 
