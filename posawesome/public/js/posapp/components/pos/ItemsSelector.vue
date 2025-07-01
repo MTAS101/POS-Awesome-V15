@@ -312,6 +312,13 @@ export default {
       if (this.loading || !this.hasMoreItems) return;
       await this.get_items(false, true);
     },
+    async preloadAllItems() {
+      let guard = 0;
+      while (this.hasMoreItems && guard < 200) {
+        await this.get_items(false, true);
+        guard += 1;
+      }
+    },
     refreshPricesForVisibleItems() {
       const vm = this;
       if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -1437,6 +1444,9 @@ export default {
         await this.get_items(true);
       } else {
         await this.get_items();
+      }
+      if (this.hasMoreItems) {
+        this.preloadAllItems();
       }
       this.get_items_groups();
       this.items_view = this.pos_profile.posa_default_card_view
