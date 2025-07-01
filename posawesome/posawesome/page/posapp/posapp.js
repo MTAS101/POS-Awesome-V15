@@ -1,12 +1,14 @@
 // Include onscan.js
-frappe.pages['posapp'].on_page_load = function (wrapper) {
-	var page = frappe.ui.make_app_page({
-		parent: wrapper,
-		title: 'POS Awesome',
-		single_column: true
-	});
+frappe.pages['posapp'].on_page_load = async function (wrapper) {
+        await setupLanguage();
 
-	this.page.$PosApp = new frappe.PosApp.posapp(this.page);
+        var page = frappe.ui.make_app_page({
+                parent: wrapper,
+                title: 'POS Awesome',
+                single_column: true
+        });
+
+        this.page.$PosApp = new frappe.PosApp.posapp(this.page);
 
 	$('div.navbar-fixed-top').find('.container').css('padding', '0');
 
@@ -69,16 +71,34 @@ frappe.pages['posapp'].on_page_load = function (wrapper) {
         });
 };
 
-function loadTranslations(lang) {
-    frappe.call({
-        method: "posawesome.posawesome.api.utilities.get_translation_dict",
-        args: { lang: lang || frappe.boot.lang },
-        callback: function (r) {
-            if (!r.exc && r.message) {
-                $.extend(frappe._messages, r.message);
-            }
-        },
-    });
+async function setupLanguage() {
+        try {
+                const r = await frappe.call({
+                        method: 'posawesome.posawesome.api.shifts.check_opening_shift',
+                        args: { user: frappe.session.user },
+                });
+                if (r.message && r.message.pos_profile && r.message.pos_profile.posa_language) {
+                        frappe.boot.lang = r.message.pos_profile.posa_language;
+                        await loadTranslations(r.message.pos_profile.posa_language);
+                        return;
+                }
+        } catch (e) {
+                console.error('Failed to fetch POS profile language', e);
+        }
+        await loadTranslations();
 }
 
-loadTranslations();
+function loadTranslations(lang) {
+    return new Promise((resolve) => {
+        frappe.call({
+            method: "posawesome.posawesome.api.utilities.get_translation_dict",
+            args: { lang: lang || frappe.boot.lang },
+            callback: function (r) {
+                if (!r.exc && r.message) {
+                    $.extend(frappe._messages, r.message);
+                }
+                resolve();
+            },
+        });
+    });
+}
