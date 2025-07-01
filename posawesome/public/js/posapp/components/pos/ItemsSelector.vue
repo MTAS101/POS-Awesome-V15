@@ -63,8 +63,8 @@
             </div>
           </v-col>
           <v-col cols="12" class="pt-0 mt-0">
-            <div fluid class="items-grid dynamic-scroll" ref="scrollContainer" v-if="items_view == 'card'"
-              :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }" @scroll.passive="handleScroll">
+            <div fluid class="items-grid dynamic-scroll" ref="itemsContainer" v-if="items_view == 'card'"
+              :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
               <v-card v-for="item in filtered_items" :key="item.item_code" hover class="dynamic-item-card"
                 @click="add_item(item)">
                 <v-img :src="item.image ||
@@ -90,11 +90,10 @@
                   </div>
                 </v-card-text>
               </v-card>
-              <div ref="scrollSentinel" style="height: 1px;"></div>
             </div>
-            <div v-else class="dynamic-scroll" ref="scrollContainer" @scroll.passive="handleScroll"
-                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
-              <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table"
+            <div v-else>
+              <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table overflow-y-auto"
+                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }"
                 item-key="item_code" @click:row="click_item_row">
 
                 <template v-slot:item.rate="{ item }">
@@ -113,7 +112,6 @@
                   <span class="golden--text">{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) }}</span>
                 </template>
               </v-data-table-virtual>
-              <div ref="scrollSentinel" style="height:1px;"></div>
             </div>
           </v-col>
         </v-row>
@@ -200,8 +198,6 @@ export default {
     show_item_settings: false,
     hide_qty_decimals: false,
     temp_hide_qty_decimals: false,
-    itemsOffset: 0,
-    hasMoreItems: true,
   }),
 
   watch: {
@@ -212,7 +208,6 @@ export default {
           // Fallback to full reload if nothing is loaded
           if (!this.items_loaded || !this.filtered_items.length) {
             this.items_loaded = false;
-            this.resetPagination();
             this.get_items(true);
           } else {
             // Only refresh prices for visible items when smart reload is enabled
@@ -221,7 +216,6 @@ export default {
         } else {
           // Fall back to full reload
           this.items_loaded = false;
-          this.resetPagination();
           this.get_items(true);
         }
         return;
@@ -241,7 +235,6 @@ export default {
           // Fallback to full reload if nothing is loaded
           if (!this.items_loaded || !this.items.length) {
             this.items_loaded = false;
-            this.resetPagination();
             this.get_items(true);
           } else {
             // Only refresh prices for visible items when smart reload is enabled
@@ -250,7 +243,6 @@ export default {
         } else {
           // Fall back to full reload
           this.items_loaded = false;
-          this.resetPagination();
           this.get_items(true);
         }
         return;
@@ -296,22 +288,6 @@ export default {
   },
 
   methods: {
-    resetPagination() {
-      this.itemsOffset = 0;
-      this.hasMoreItems = true;
-      this.items = [];
-    },
-    handleScroll() {
-      const el = this.$refs.scrollContainer;
-      if (!el || this.loading || !this.hasMoreItems) return;
-      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
-        this.loadMoreItems();
-      }
-    },
-    async loadMoreItems() {
-      if (this.loading || !this.hasMoreItems) return;
-      await this.get_items(false, true);
-    },
     refreshPricesForVisibleItems() {
       const vm = this;
       if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -418,7 +394,7 @@ export default {
     show_coupons() {
       this.eventBus.emit("show_coupons", "true");
     },
-    async get_items(force_server = false, append = false) {
+    async get_items(force_server = false) {
       await initPromise;
       const request_token = ++this.items_request_token;
       if (!this.pos_profile) {
@@ -426,40 +402,192 @@ export default {
         return;
       }
 
+      if (force_server && this.pos_profile.posa_local_storage) {
+        localStorage.setItem("items_storage", "");
+      }
+
       const vm = this;
       this.loading = true;
 
-      if (force_server && this.pos_profile.posa_local_storage) {
-        // Clear local cache when forcing reload
-        await db.table("items").clear();
-      }
-
-      const limit = this.itemsPerPage;
-      const offset = append ? this.itemsOffset : 0;
-
+      // Removed noisy debug log
       let search = this.get_search(this.first_search);
       let gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
       let sr = search || "";
 
-      if (this.pos_profile.posa_local_storage && !force_server) {
-        const stored = await getItemsStorage(limit, offset);
-        if (stored && stored.length) {
-          if (append) vm.items = vm.items.concat(stored);
-          else vm.items = stored;
-          vm.itemsOffset = offset + stored.length;
-          vm.hasMoreItems = stored.length === limit;
+      // Skip reload if items already loaded, not forcing, not searching and limit search disabled
+      if (
+        this.items_loaded &&
+        !force_server &&
+        !this.first_search &&
+        !this.pos_profile.pose_use_limit_search
+      ) {
+        console.info("Items already loaded, skipping reload");
+        if (this.filtered_items && this.filtered_items.length > 0) {
+          this.update_items_details(this.filtered_items);
+        }
+        this.loading = false;
+        return;
+      }
+      // Removed noisy debug log
+
+      // Attempt to load cached items for the current price list
+      if (
+        !force_server &&
+        !this.pos_profile.pose_use_limit_search
+      ) {
+        const cached = getCachedPriceListItems(vm.customer_price_list);
+        if (cached && cached.length) {
+          vm.items = cached;
+          vm.items.forEach((it) => {
+            if (!it.item_uoms || it.item_uoms.length === 0) {
+              const cachedUoms = getItemUOMs(it.item_code);
+              if (cachedUoms.length > 0) {
+                it.item_uoms = cachedUoms;
+              } else if (it.stock_uom) {
+                it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+              }
+            }
+          });
+          this.eventBus.emit("set_all_items", vm.items);
           vm.loading = false;
           vm.items_loaded = true;
-          if (stored.length) {
-            vm.prePopulateStockCache(stored);
-            vm.update_items_details(stored);
+
+          if (vm.items && vm.items.length > 0) {
+            vm.prePopulateStockCache(vm.items);
+            vm.update_items_details(vm.items);
           }
           return;
         }
       }
 
-      try {
-        const r = await frappe.call({
+      // Load from localStorage when available and not forcing
+      if (
+        vm.pos_profile.posa_local_storage &&
+        getItemsStorage().length &&
+        !vm.pos_profile.pose_use_limit_search &&
+        !force_server
+      ) {
+        vm.items = getItemsStorage();
+        // Fallback to cached UOMs when loading from storage
+        vm.items.forEach((it) => {
+          if (!it.item_uoms || it.item_uoms.length === 0) {
+            const cached = getItemUOMs(it.item_code);
+            if (cached.length > 0) {
+              it.item_uoms = cached;
+            } else if (it.stock_uom) {
+              it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+            }
+          }
+        });
+        this.eventBus.emit("set_all_items", vm.items);
+        vm.loading = false;
+        vm.items_loaded = true;
+
+        if (vm.items && vm.items.length > 0) {
+          await vm.prePopulateStockCache(vm.items);
+          vm.update_items_details(vm.items);
+        }
+        return;
+      }
+      // Removed noisy debug log
+
+      if (this.itemWorker) {
+
+        try {
+          const res = await fetch(
+            "/api/method/posawesome.posawesome.api.items.get_items",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-Frappe-CSRF-Token": frappe.csrf_token,
+              },
+              credentials: "same-origin",
+              body: JSON.stringify({
+                pos_profile: JSON.stringify(vm.pos_profile),
+                price_list: vm.customer_price_list,
+                item_group: gr,
+                search_value: sr,
+                customer: vm.customer,
+              }),
+            }
+          );
+
+
+
+          const text = await res.text();
+          // console.log(text)
+          this.itemWorker.onmessage = async (ev) => {
+            if (this.items_request_token !== request_token) return;
+            if (ev.data.type === "parsed") {
+              const parsed = ev.data.items;
+              vm.items = parsed.message || parsed;
+              savePriceListItems(vm.customer_price_list, vm.items);
+              // Ensure UOMs are available for each item
+              vm.items.forEach((it) => {
+                if (it.item_uoms && it.item_uoms.length > 0) {
+                  saveItemUOMs(it.item_code, it.item_uoms);
+                } else {
+                  const cached = getItemUOMs(it.item_code);
+                  if (cached.length > 0) {
+                    it.item_uoms = cached;
+                  } else if (it.stock_uom) {
+                    it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+                  }
+                }
+              });
+              vm.eventBus.emit("set_all_items", vm.items);
+              vm.loading = false;
+              vm.items_loaded = true;
+              console.info("Items Loaded");
+
+              // Pre-populate stock cache when items are freshly loaded
+              vm.prePopulateStockCache(vm.items);
+
+              vm.$nextTick(() => {
+                if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+                  vm.search_onchange();
+                }
+              });
+
+              // Always refresh quantities after items are loaded
+              if (vm.items && vm.items.length > 0) {
+                vm.update_items_details(vm.items);
+              }
+
+              if (
+                vm.pos_profile.posa_local_storage &&
+                !vm.pos_profile.pose_use_limit_search
+              ) {
+                try {
+                  setItemsStorage(vm.items);
+                  vm.items.forEach((it) => {
+                    if (it.item_uoms && it.item_uoms.length > 0) {
+                      saveItemUOMs(it.item_code, it.item_uoms);
+                    }
+                  });
+                } catch (e) {
+                  console.error(e);
+                }
+              }
+
+              if (vm.pos_profile.pose_use_limit_search) {
+                vm.enter_event();
+              }
+            } else if (ev.data.type === "error") {
+              console.error('Item worker parse error:', ev.data.error);
+              vm.loading = false;
+            }
+          };
+          this.itemWorker.postMessage({ type: 'parse_and_cache', json: text, priceList: vm.customer_price_list });
+
+
+        } catch (err) {
+          console.error('Failed to fetch items', err);
+          vm.loading = false;
+        }
+      } else {
+        frappe.call({
           method: "posawesome.posawesome.api.items.get_items",
           args: {
             pos_profile: JSON.stringify(vm.pos_profile),
@@ -467,37 +595,65 @@ export default {
             item_group: gr,
             search_value: sr,
             customer: vm.customer,
-            limit,
-            offset,
           },
-          freeze: false,
-        });
-        if (vm.items_request_token !== request_token) return;
-        if (r.message) {
-          const page = r.message;
-          if (append) vm.items = vm.items.concat(page);
-          else vm.items = page;
-          vm.itemsOffset = offset + page.length;
-          vm.hasMoreItems = page.length === limit;
-          setItemsStorage(page);
-          page.forEach((it) => {
-            if (it.item_uoms && it.item_uoms.length > 0) {
-              saveItemUOMs(it.item_code, it.item_uoms);
+          callback: async function (r) {
+            if (vm.items_request_token !== request_token) return;
+            if (r.message) {
+              vm.items = r.message;
+              // Ensure UOMs are available for each item
+              vm.items.forEach((it) => {
+                if (it.item_uoms && it.item_uoms.length > 0) {
+                  saveItemUOMs(it.item_code, it.item_uoms);
+                } else {
+                  const cached = getItemUOMs(it.item_code);
+                  if (cached.length > 0) {
+                    it.item_uoms = cached;
+                  } else if (it.stock_uom) {
+                    it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+                  }
+                }
+              });
+              vm.eventBus.emit("set_all_items", vm.items);
+              vm.loading = false;
+              vm.items_loaded = true;
+              savePriceListItems(vm.customer_price_list, vm.items);
+              console.info("Items Loaded");
+
+              // Pre-populate stock cache when items are freshly loaded
+              vm.prePopulateStockCache(vm.items);
+
+              vm.$nextTick(() => {
+                if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+                  vm.search_onchange();
+                }
+              });
+
+              // Always refresh quantities after items are loaded
+              if (vm.items && vm.items.length > 0) {
+                vm.update_items_details(vm.items);
+              }
+
+              if (
+                vm.pos_profile.posa_local_storage &&
+                !vm.pos_profile.pose_use_limit_search
+              ) {
+                try {
+                  setItemsStorage(r.message);
+                  r.message.forEach((it) => {
+                    if (it.item_uoms && it.item_uoms.length > 0) {
+                      saveItemUOMs(it.item_code, it.item_uoms);
+                    }
+                  });
+                } catch (e) {
+                  console.error(e);
+                }
+              }
+              if (vm.pos_profile.pose_use_limit_search) {
+                vm.enter_event();
+              }
             }
-          });
-          vm.eventBus.emit("set_all_items", vm.items);
-          vm.loading = false;
-          vm.items_loaded = true;
-          if (page.length) {
-            vm.prePopulateStockCache(page);
-            vm.update_items_details(page);
           }
-        } else {
-          vm.loading = false;
-        }
-      } catch (err) {
-        console.error('Failed to fetch items', err);
-        vm.loading = false;
+        });
       }
     },
     get_items_groups() {
@@ -667,7 +823,6 @@ export default {
       if (vm.pos_profile.pose_use_limit_search) {
         // Only trigger search when query length meets minimum threshold
         if (vm.search && vm.search.length >= 3) {
-          vm.resetPagination();
           vm.get_items();
         }
       } else {
@@ -1430,7 +1585,6 @@ export default {
     this.eventBus.on("register_pos_profile", async (data) => {
       await initPromise;
       this.pos_profile = data.pos_profile;
-      this.resetPagination();
       if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
         await this.get_items(true);
       } else {

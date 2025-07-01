@@ -2,7 +2,6 @@ importScripts('/assets/posawesome/js/libs/dexie.min.js');
 
 const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
-db.version(2).stores({ keyval: "&key", items: "&item_code" });
 
 async function persist(key, value) {
         try {
@@ -41,20 +40,15 @@ self.onmessage = async (event) => {
                                 self.postMessage({ type: "error", error: e.message });
                                 return;
                         }
-                        try {
-                                await db.table("items").bulkPut(items);
-                        } catch (e) {
-                                console.error("Failed to persist items in worker", e);
-                        }
-                        let cache = {};
-                        try {
-                                const stored = await db.table("keyval").get("price_list_cache");
-                                if (stored && stored.value) cache = stored.value;
-                        } catch (e) {
-                                console.error("Failed to read cache in worker", e);
-                        }
-                        cache[data.priceList] = { items, timestamp: Date.now() };
-                        await persist("price_list_cache", cache);
+			let cache = {};
+			try {
+				const stored = await db.table("keyval").get("price_list_cache");
+				if (stored && stored.value) cache = stored.value;
+			} catch (e) {
+				console.error("Failed to read cache in worker", e);
+			}
+			cache[data.priceList] = { items, timestamp: Date.now() };
+			await persist("price_list_cache", cache);
 			self.postMessage({ type: "parsed", items });
 		} catch (err) {
 			console.log(err);
