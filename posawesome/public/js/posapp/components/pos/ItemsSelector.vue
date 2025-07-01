@@ -34,6 +34,34 @@
             <v-checkbox v-model="new_line" color="accent" value="true" label="NLine" density="default"
               hide-details></v-checkbox>
           </v-col>
+          <v-col cols="12" class="dynamic-margin-xs">
+            <div class="settings-container">
+              <v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-cog-outline"
+                @click="toggleItemSettings" class="settings-btn">
+                {{ __('Settings') }}
+              </v-btn>
+
+              <v-dialog v-model="show_item_settings" max-width="400px">
+                <v-card>
+                  <v-card-title class="text-h6 pa-4 d-flex align-center">
+                    <span>{{ __('Item Selector Settings') }}</span>
+                    <v-spacer></v-spacer>
+                    <v-btn icon="mdi-close" variant="text" density="compact" @click="show_item_settings = false"></v-btn>
+                  </v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text class="pa-4">
+                    <v-switch v-model="temp_hide_qty_decimals" :label="__('Hide quantity decimals')" hide-details
+                      density="compact" color="primary" class="mb-2"></v-switch>
+                  </v-card-text>
+                  <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="error" variant="text" @click="cancelItemSettings">{{ __('Cancel') }}</v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="primary" variant="tonal" @click="applyItemSettings">{{ __('Apply') }}</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-dialog>
+            </div>
+          </v-col>
           <v-col cols="12" class="pt-0 mt-0">
             <div fluid class="items-grid dynamic-scroll" ref="itemsContainer" v-if="items_view == 'card'"
               :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
@@ -112,41 +140,7 @@
               __("Coupons")
             }}</v-btn>
         </v-col>
-        <v-col cols="5" class="dynamic-margin-xs">
-          <v-btn size="small" block color="primary" variant="text" @click="show_offers" class="action-btn-consistent">{{
-            offersCount }} {{
-              __("Offers") }}
-            : {{ appliedOffersCount }}
-            {{ __("Applied") }}</v-btn>
-        </v-col>
-        <v-col cols="12" class="dynamic-margin-xs">
-          <div class="settings-container">
-            <v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-cog-outline"
-              @click="toggleItemSettings" class="settings-btn">
-              {{ __('Settings') }}
-            </v-btn>
-
-            <v-dialog v-model="show_item_settings" max-width="400px">
-              <v-card>
-                <v-card-title class="text-h6 pa-4 d-flex align-center">
-                  <span>{{ __('Item Selector Settings') }}</span>
-                  <v-spacer></v-spacer>
-                  <v-btn icon="mdi-close" variant="text" density="compact" @click="show_item_settings = false"></v-btn>
-                </v-card-title>
-                <v-divider></v-divider>
-                <v-card-text class="pa-4">
-                  <v-switch v-model="temp_hide_qty_decimals" :label="__('Hide quantity decimals')" hide-details
-                    density="compact" color="primary" class="mb-2"></v-switch>
-                </v-card-text>
-                <v-card-actions class="pa-4 pt-0">
-                  <v-btn color="error" variant="text" @click="cancelItemSettings">{{ __('Cancel') }}</v-btn>
-                  <v-spacer></v-spacer>
-                  <v-btn color="primary" variant="tonal" @click="applyItemSettings">{{ __('Apply') }}</v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-dialog>
-          </div>
-        </v-col>
+        
       </v-row>
     </v-card>
 

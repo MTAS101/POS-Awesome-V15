@@ -9,7 +9,7 @@
         <v-row dense>
           <!-- Total Qty -->
           <v-col cols="6">
-            <v-text-field :model-value="formatFloat(total_qty)" :label="frappe._('Total Qty')"
+            <v-text-field :model-value="formatFloat(total_qty, hide_qty_decimals ? 0 : undefined)" :label="frappe._('Total Qty')"
               prepend-inner-icon="mdi-format-list-numbered" variant="solo" density="compact" readonly
               color="accent" />
           </v-col>
@@ -163,6 +163,18 @@ export default {
   computed: {
     isDarkTheme() {
       return this.$theme?.current === 'dark';
+    },
+    hide_qty_decimals() {
+      try {
+        const saved = localStorage.getItem('posawesome_item_selector_settings');
+        if (saved) {
+          const opts = JSON.parse(saved);
+          return !!opts.hide_qty_decimals;
+        }
+      } catch (e) {
+        console.error('Failed to load item selector settings:', e);
+      }
+      return false;
     }
   }
 }
