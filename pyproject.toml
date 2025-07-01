@@ -14,8 +14,6 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
     # Core dependencies
-    "pycountry",
-    "emoji",
 ]
 
 [build-system]
