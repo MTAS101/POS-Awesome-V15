@@ -1573,28 +1573,43 @@ export default {
           if (!ci) return;
 
           const newRate = ci.rate || ci.price_list_rate;
-          if (newRate !== 0 || !item.base_price_list_rate) {
-            item.base_price_list_rate = newRate;
-            if (!item._manual_rate_set) {
-              item.base_rate = newRate;
-            }
-          }
+          const priceCurrency = ci.currency || this.selected_currency;
 
-          if (this.selected_currency !== this.pos_profile.currency) {
-            const conv = this.exchange_rate || 1;
-            const convRate = this.flt((newRate) / conv, this.currency_precision);
-            if (newRate !== 0 || !item.price_list_rate) {
-              item.price_list_rate = convRate;
+          if (priceCurrency === this.selected_currency) {
+            // Rate already in selected currency
+            item.base_price_list_rate = newRate * this.exchange_rate;
+            if (!item._manual_rate_set) {
+              item.base_rate = newRate * this.exchange_rate;
             }
-            if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
-              item.rate = convRate;
+            item.price_list_rate = newRate;
+            if (!item._manual_rate_set) {
+              item.rate = newRate;
             }
           } else {
-            if (newRate !== 0 || !item.price_list_rate) {
-              item.price_list_rate = newRate;
+            // Rate in base currency
+            if (newRate !== 0 || !item.base_price_list_rate) {
+              item.base_price_list_rate = newRate;
+              if (!item._manual_rate_set) {
+                item.base_rate = newRate;
+              }
             }
-            if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
-              item.rate = newRate;
+
+            if (this.selected_currency !== this.pos_profile.currency) {
+              const conv = this.exchange_rate || 1;
+              const convRate = this.flt(newRate / conv, this.currency_precision);
+              if (newRate !== 0 || !item.price_list_rate) {
+                item.price_list_rate = convRate;
+              }
+              if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
+                item.rate = convRate;
+              }
+            } else {
+              if (newRate !== 0 || !item.price_list_rate) {
+                item.price_list_rate = newRate;
+              }
+              if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
+                item.rate = newRate;
+              }
             }
           }
 
