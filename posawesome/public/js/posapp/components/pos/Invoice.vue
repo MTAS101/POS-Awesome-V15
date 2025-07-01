@@ -573,32 +573,40 @@ export default {
     // Update currency and exchange rate when currency is changed
     async update_currency_and_rate() {
       if (this.selected_currency) {
+        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+
         if (!this.items.length) {
-          try {
-            const r = await frappe.call({
-              method: "posawesome.posawesome.api.invoices.fetch_exchange_rate",
-              args: {
-                currency: this.selected_currency,
-                company: this.pos_profile.company,
-                posting_date: this.formatDateForBackend(this.posting_date_display)
-              },
-            });
-            if (r && r.message) {
-              this.exchange_rate = r.message;
-              this.sync_exchange_rate();
+          if (this.selected_currency === baseCurrency) {
+            this.exchange_rate = 1;
+            this.sync_exchange_rate();
+          } else {
+            try {
+              const r = await frappe.call({
+                method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
+                args: {
+                  from_currency: this.selected_currency,
+                  to_currency: baseCurrency,
+                  posting_date: this.formatDateForBackend(this.posting_date_display)
+                },
+              });
+              if (r && r.message) {
+                this.exchange_rate = r.message;
+                this.sync_exchange_rate();
+              }
+            } catch (error) {
+              console.error("Error updating currency:", error);
+              this.eventBus.emit("show_message", {
+                text: "Error updating currency",
+                color: "error",
+              });
             }
-          } catch (error) {
-            console.error("Error updating currency:", error);
-            this.eventBus.emit("show_message", {
-              text: "Error updating currency",
-              color: "error",
-            });
           }
           return;
         }
 
         const doc = this.get_invoice_doc();
         doc.currency = this.selected_currency;
+        doc.price_list_currency = baseCurrency;
 
         try {
           const response = await this.update_invoice(doc);
