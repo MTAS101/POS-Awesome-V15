@@ -52,6 +52,8 @@
                   <v-card-text class="pa-4">
                     <v-switch v-model="temp_hide_qty_decimals" :label="__('Hide quantity decimals')" hide-details
                       density="compact" color="primary" class="mb-2"></v-switch>
+                    <v-switch v-model="temp_hide_zero_rate_items" :label="__('Hide zero rated items')" hide-details
+                      density="compact" color="primary"></v-switch>
                   </v-card-text>
                   <v-card-actions class="pa-4 pt-0">
                     <v-btn color="error" variant="text" @click="cancelItemSettings">{{ __('Cancel') }}</v-btn>
@@ -198,6 +200,8 @@ export default {
     show_item_settings: false,
     hide_qty_decimals: false,
     temp_hide_qty_decimals: false,
+    hide_zero_rate_items: false,
+    temp_hide_zero_rate_items: false,
   }),
 
   watch: {
@@ -1357,6 +1361,7 @@ export default {
 
     toggleItemSettings() {
       this.temp_hide_qty_decimals = this.hide_qty_decimals;
+      this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
       this.show_item_settings = true;
     },
     cancelItemSettings() {
@@ -1364,12 +1369,16 @@ export default {
     },
     applyItemSettings() {
       this.hide_qty_decimals = this.temp_hide_qty_decimals;
+      this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
       this.saveItemSettings();
       this.show_item_settings = false;
     },
     saveItemSettings() {
       try {
-        const settings = { hide_qty_decimals: this.hide_qty_decimals };
+        const settings = { 
+          hide_qty_decimals: this.hide_qty_decimals,
+          hide_zero_rate_items: this.hide_zero_rate_items,
+        };
         localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(settings));
       } catch (e) {
         console.error('Failed to save item selector settings:', e);
@@ -1382,6 +1391,9 @@ export default {
           const opts = JSON.parse(saved);
           if (typeof opts.hide_qty_decimals === 'boolean') {
             this.hide_qty_decimals = opts.hide_qty_decimals;
+          }
+          if (typeof opts.hide_zero_rate_items === 'boolean') {
+            this.hide_zero_rate_items = opts.hide_zero_rate_items;
           }
         }
       } catch (e) {
@@ -1498,6 +1510,10 @@ export default {
           final_filtered_list = filtred_list.slice(0, this.itemsPerPage);
         }
 
+        if (this.hide_zero_rate_items) {
+          final_filtered_list = final_filtered_list.filter(item => parseFloat(item.rate) !== 0);
+        }
+
         // Ensure quantities are defined for each item
         final_filtered_list.forEach(item => {
           if (item.actual_qty === undefined) {
@@ -1522,6 +1538,10 @@ export default {
             item.actual_qty = 0;
           }
         });
+
+        if (this.hide_zero_rate_items) {
+          return items_list.filter(item => parseFloat(item.rate) !== 0);
+        }
 
         return items_list;
       }
