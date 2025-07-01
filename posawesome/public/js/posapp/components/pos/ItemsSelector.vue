@@ -119,6 +119,34 @@
             : {{ appliedOffersCount }}
             {{ __("Applied") }}</v-btn>
         </v-col>
+        <v-col cols="12" class="dynamic-margin-xs">
+          <div class="settings-container">
+            <v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-cog-outline"
+              @click="toggleItemSettings" class="settings-btn">
+              {{ __('Settings') }}
+            </v-btn>
+
+            <v-dialog v-model="show_item_settings" max-width="400px">
+              <v-card>
+                <v-card-title class="text-h6 pa-4 d-flex align-center">
+                  <span>{{ __('Item Selector Settings') }}</span>
+                  <v-spacer></v-spacer>
+                  <v-btn icon="mdi-close" variant="text" density="compact" @click="show_item_settings = false"></v-btn>
+                </v-card-title>
+                <v-divider></v-divider>
+                <v-card-text class="pa-4">
+                  <v-switch v-model="temp_hide_qty_decimals" :label="__('Hide quantity decimals')" hide-details
+                    density="compact" color="primary" class="mb-2"></v-switch>
+                </v-card-text>
+                <v-card-actions class="pa-4 pt-0">
+                  <v-btn color="error" variant="text" @click="cancelItemSettings">{{ __('Cancel') }}</v-btn>
+                  <v-spacer></v-spacer>
+                  <v-btn color="primary" variant="tonal" @click="applyItemSettings">{{ __('Apply') }}</v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-dialog>
+          </div>
+        </v-col>
       </v-row>
     </v-card>
 
@@ -173,6 +201,9 @@ export default {
     prePopulateInProgress: false,
     itemWorker: null,
     items_request_token: 0,
+    show_item_settings: false,
+    hide_qty_decimals: false,
+    temp_hide_qty_decimals: false,
   }),
 
   watch: {
@@ -725,8 +756,12 @@ export default {
         }
 
         if (!item.qty || item.qty === 1) {
-          const qtyVal = this.qty != null ? this.qty : 1;
-          item.qty = Math.abs(qtyVal);
+          let qtyVal = this.qty != null ? this.qty : 1;
+          qtyVal = Math.abs(qtyVal);
+          if (this.hide_qty_decimals) {
+            qtyVal = Math.trunc(qtyVal);
+          }
+          item.qty = qtyVal;
         }
         this.eventBus.emit("add_item", item);
         this.qty = 1;
@@ -831,6 +866,9 @@ export default {
             pesokg1.substr(0, 2) + "." + pesokg1.substr(2, pesokg1.length);
         }
         scal_qty = pesokg;
+      }
+      if (this.hide_qty_decimals) {
+        scal_qty = Math.trunc(scal_qty);
       }
       return scal_qty;
     },
@@ -1322,6 +1360,40 @@ export default {
       }
       return !Number.isInteger(value);
     },
+
+    toggleItemSettings() {
+      this.temp_hide_qty_decimals = this.hide_qty_decimals;
+      this.show_item_settings = true;
+    },
+    cancelItemSettings() {
+      this.show_item_settings = false;
+    },
+    applyItemSettings() {
+      this.hide_qty_decimals = this.temp_hide_qty_decimals;
+      this.saveItemSettings();
+      this.show_item_settings = false;
+    },
+    saveItemSettings() {
+      try {
+        const settings = { hide_qty_decimals: this.hide_qty_decimals };
+        localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(settings));
+      } catch (e) {
+        console.error('Failed to save item selector settings:', e);
+      }
+    },
+    loadItemSettings() {
+      try {
+        const saved = localStorage.getItem('posawesome_item_selector_settings');
+        if (saved) {
+          const opts = JSON.parse(saved);
+          if (typeof opts.hide_qty_decimals === 'boolean') {
+            this.hide_qty_decimals = opts.hide_qty_decimals;
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load item selector settings:', e);
+      }
+    },
   },
 
   computed: {
@@ -1471,12 +1543,16 @@ export default {
     debounce_qty: {
       get() {
         // Display the raw quantity while typing to avoid forced decimal format
-        return this.qty === null || this.qty === '' ? '' : this.qty;
+        if (this.qty === null || this.qty === '') return '';
+        return this.hide_qty_decimals ? Math.trunc(this.qty) : this.qty;
       },
       set: _.debounce(function (value) {
         let parsed = parseFloat(String(value).replace(/,/g, ''));
         if (isNaN(parsed)) {
           parsed = null;
+        }
+        if (this.hide_qty_decimals && parsed != null) {
+          parsed = Math.trunc(parsed);
         }
         this.qty = parsed;
       }, 200),
@@ -1490,6 +1566,7 @@ export default {
   },
 
   created: function () {
+    this.loadItemSettings();
     if (typeof Worker !== 'undefined') {
       try {
         // Use the plain URL so the service worker can match the cached file
@@ -1665,6 +1742,11 @@ export default {
 
 .sleek-data-table:hover {
   box-shadow: var(--shadow-md) !important;
+}
+
+.settings-container {
+  display: flex;
+  align-items: center;
 }
 
 .truncate {
