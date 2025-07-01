@@ -179,68 +179,31 @@ def get_sales_person_names():
 
 @frappe.whitelist()
 def get_language_options():
-        """Return language options for the POS Profile drop down.
+	"""Return newline separated language codes from translations directories of all apps.
 
-        The returned value is a list of dictionaries with ``label`` and ``value``
-        keys so that the drop down can display the language name along with a
-        symbol while storing the language code as the value.
-        """
+	Always include English (``en``) in the list so that users can explicitly
+	select it in the POS profile.
+	"""
+	import os
 
-        import os
-        import csv
+	languages = {"en"}
 
-        languages = {"en"}
+	# Collect languages from translation CSV files
+	for app in frappe.get_installed_apps():
+		translations_path = frappe.get_app_path(app, "translations")
+		if os.path.exists(translations_path):
+			for filename in os.listdir(translations_path):
+				if filename.endswith(".csv"):
+					languages.add(os.path.splitext(filename)[0])
 
-        # Collect languages from translation CSV files
-        for app in frappe.get_installed_apps():
-                translations_path = frappe.get_app_path(app, "translations")
-                if os.path.exists(translations_path):
-                        for filename in os.listdir(translations_path):
-                                if filename.endswith(".csv"):
-                                        languages.add(os.path.splitext(filename)[0])
+	# Also include languages from the Translation doctype, if available
+	if frappe.db.table_exists("Translation"):
+		rows = frappe.db.sql("SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL")
+		for (language,) in rows:
+			languages.add(language)
 
-        # Also include languages from the Translation doctype, if available
-        if frappe.db.table_exists("Translation"):
-                rows = frappe.db.sql(
-                        "SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL"
-                )
-                for (language,) in rows:
-                        languages.add(language)
-
-        # Map language codes to names using frappe's languages.csv if available
-        language_names = {}
-        try:
-                csv_path = frappe.get_app_path("frappe", "geo", "languages.csv")
-                if os.path.exists(csv_path):
-                        with open(csv_path) as f:
-                                reader = csv.DictReader(f)
-                                for row in reader:
-                                        language_names[row["language_code"]] = row["language_name"]
-        except Exception:
-                pass
-
-        # Optional symbols (usually flag emojis) for some common languages
-        symbols = {
-                "en": "🇬🇧",
-                "ar": "🇸🇦",
-                "es": "🇪🇸",
-                "pt": "🇵🇹",
-                "fr": "🇫🇷",
-                "de": "🇩🇪",
-                "tr": "🇹🇷",
-                "fa": "🇮🇷",
-                "sv": "🇸🇪",
-                "bs": "🇧🇦",
-                "sr-CS": "🇷🇸",
-        }
-
-        options = []
-        for lang in sorted(languages):
-                name = language_names.get(lang, lang)
-                label = f"{symbols.get(lang, '')} {name}".strip()
-                options.append({"label": label, "value": lang})
-
-        return options
+	# Use a set to guarantee uniqueness before returning
+	return "\n".join(sorted(languages))
 
 
 @frappe.whitelist()
