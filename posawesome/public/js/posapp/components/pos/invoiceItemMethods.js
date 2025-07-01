@@ -146,11 +146,16 @@ export default {
         new_item.base_price_list_rate = item.rate * this.exchange_rate;
         new_item.base_rate = item.rate * this.exchange_rate;
         new_item.base_discount_amount = 0;
+        // Calculate amounts immediately for smoother UI
+        new_item.amount = this.flt(item.qty * item.rate, this.currency_precision);
+        new_item.base_amount = this.flt(item.qty * new_item.base_rate, this.currency_precision);
       } else {
         // In base currency, base rates = displayed rates
         new_item.base_price_list_rate = item.rate;
         new_item.base_rate = item.rate;
         new_item.base_discount_amount = 0;
+        new_item.amount = this.flt(item.qty * item.rate, this.currency_precision);
+        new_item.base_amount = new_item.amount;
       }
 
       new_item.qty = item.qty;
