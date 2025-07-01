@@ -233,7 +233,7 @@ def get_language_options():
 
                flag = get_flag(flag_map.get(code, ""))
                label = f"{flag} {name} ({code})".strip()
-               options.append(f"{label}|{code}")
+               options.append(label)
 
        return "\n".join(options)
 
