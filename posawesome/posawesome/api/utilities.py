@@ -1,11 +1,12 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2020, Youssef Restom and contributors
 # For license information, please see license.txt
 
+from __future__ import unicode_literals
 import json
-from typing import Dict, List
-
 import frappe
 from frappe.utils import cstr
+from typing import List, Dict
 
 
 def get_version():
@@ -24,7 +25,7 @@ def get_app_branch(app):
 
 	try:
 		branch = subprocess.check_output(
-			f"cd ../apps/{app} && git rev-parse --abbrev-ref HEAD", shell=True
+			"cd ../apps/{0} && git rev-parse --abbrev-ref HEAD".format(app), shell=True
 		)
 		branch = branch.decode("utf-8")
 		branch = branch.strip()
@@ -36,10 +37,10 @@ def get_app_branch(app):
 def get_root_of(doctype):
 	"""Get root element of a DocType with a tree structure"""
 	result = frappe.db.sql(
-		f"""select t1.name from `tab{doctype}` t1 where
-		(select count(*) from `tab{doctype}` t2 where
+		"""select t1.name from `tab{0}` t1 where
+		(select count(*) from `tab{1}` t2 where
 			t2.lft < t1.lft and t2.rgt > t1.rgt) = 0
-		and t1.rgt > t1.lft"""
+		and t1.rgt > t1.lft""".format(doctype, doctype)
 	)
 	return result[0][0] if result else None
 
@@ -128,7 +129,7 @@ def get_selling_price_lists():
 
 
 @frappe.whitelist()
-def get_app_info() -> dict[str, list[dict[str, str]]]:
+def get_app_info() -> Dict[str, List[Dict[str, str]]]:
 	"""
 	Return a list of installed apps and their versions.
 	"""
@@ -158,6 +159,7 @@ def ensure_child_doctype(doc, table_field, child_doctype):
 
 @frappe.whitelist()
 def get_sales_person_names():
+	import json
 
 	print("Fetching sales persons...")
 	try:
@@ -170,72 +172,38 @@ def get_sales_person_names():
 		print(f"Found {len(sales_persons)} sales persons: {json.dumps(sales_persons)}")
 		return sales_persons
 	except Exception as e:
-		print(f"Error fetching sales persons: {e!s}")
-		frappe.log_error(f"Error fetching sales persons: {e!s}", "POS Sales Person Error")
+		print(f"Error fetching sales persons: {str(e)}")
+		frappe.log_error(f"Error fetching sales persons: {str(e)}", "POS Sales Person Error")
 		return []
 
 
 @frappe.whitelist()
 def get_language_options():
-       """Return newline separated language names with flag emojis.
+	"""Return newline separated language codes from translations directories of all apps.
 
-       Languages are collected from translation directories of all installed apps
-       and the ``Translation`` DocType. Each option will be of the form
-       ``"<flag> <Language Name> (<code>)"`` so that POS Profile displays a more
-       user friendly dropdown.
-       """
-       import os
+	Always include English (``en``) in the list so that users can explicitly
+	select it in the POS profile.
+	"""
+	import os
 
-       import pycountry
+	languages = {"en"}
 
-       languages = {"en"}
+	# Collect languages from translation CSV files
+	for app in frappe.get_installed_apps():
+		translations_path = frappe.get_app_path(app, "translations")
+		if os.path.exists(translations_path):
+			for filename in os.listdir(translations_path):
+				if filename.endswith(".csv"):
+					languages.add(os.path.splitext(filename)[0])
 
-       # Collect languages from translation CSV files
-       for app in frappe.get_installed_apps():
-               translations_path = frappe.get_app_path(app, "translations")
-               if os.path.exists(translations_path):
-                       for filename in os.listdir(translations_path):
-                               if filename.endswith(".csv"):
-                                       languages.add(os.path.splitext(filename)[0])
+	# Also include languages from the Translation doctype, if available
+	if frappe.db.table_exists("Translation"):
+		rows = frappe.db.sql("SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL")
+		for (language,) in rows:
+			languages.add(language)
 
-       # Also include languages from the Translation doctype, if available
-       if frappe.db.table_exists("Translation"):
-               rows = frappe.db.sql("SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL")
-               for (language,) in rows:
-                       languages.add(language)
-
-       def get_flag(cc: str) -> str:
-               """Return emoji flag for given country code."""
-               if len(cc) != 2:
-                       return ""
-               base = 0x1F1E6
-               return chr(base + ord(cc[0].upper()) - 65) + chr(base + ord(cc[1].upper()) - 65)
-
-       # Map language codes to representative country codes for flags
-       flag_map = {
-               "ar": "sa",
-               "de": "de",
-               "en": "us",
-               "es": "es",
-               "fr": "fr",
-               "ja": "jp",
-               "pt": "pt",
-               "zh": "cn",
-       }
-
-       options = []
-       for code in sorted(languages):
-               try:
-                       lang = pycountry.languages.get(alpha_2=code)
-                       name = lang.name if lang else code
-               except Exception:
-                       name = code
-
-               flag = get_flag(flag_map.get(code, ""))
-               label = f"{flag} {name} ({code})".strip()
-               options.append(label)
-
-       return "\n".join(options)
+	# Use a set to guarantee uniqueness before returning
+	return "\n".join(sorted(languages))
 
 
 @frappe.whitelist()
