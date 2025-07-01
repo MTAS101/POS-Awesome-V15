@@ -336,13 +336,14 @@ def get_items(
 
         if items_data:
             items = [d.item_code for d in items_data]
+            price_list_currency = frappe.db.get_value("Price List", price_list, "currency")
             item_prices_data = frappe.get_all(
                 "Item Price",
                 fields=["item_code", "price_list_rate", "currency", "uom"],
                 filters={
                     "price_list": price_list,
                     "item_code": ["in", items],
-                    "currency": pos_profile.get("currency"),
+                    "currency": price_list_currency or pos_profile.get("currency"),
                     "selling": 1,
                     "valid_from": ["<=", today],
                     "customer": ["in", ["", None, customer]],
@@ -441,6 +442,7 @@ def get_items(
                         {
                             "rate": item_price.get("price_list_rate") or 0,
                             "currency": item_price.get("currency")
+                            or price_list_currency
                             or pos_profile.get("currency"),
                             "item_barcode": item_barcode or [],
                             "actual_qty": item_stock_qty or 0,
@@ -1166,13 +1168,14 @@ def get_items_details(pos_profile, items_data, price_list=None):
 
         item_codes = [item.get("item_code") for item in items_data]
 
+        price_list_currency = frappe.db.get_value("Price List", price_list, "currency")
         item_prices_data = frappe.get_all(
             "Item Price",
             fields=["item_code", "price_list_rate", "currency", "uom"],
             filters={
                 "price_list": price_list,
                 "item_code": ["in", item_codes],
-                "currency": pos_profile.get("currency"),
+                "currency": price_list_currency or pos_profile.get("currency"),
                 "selling": 1,
                 "valid_from": ["<=", today],
             },
@@ -1272,6 +1275,9 @@ def get_items_details(pos_profile, items_data, price_list=None):
                         "has_serial_no": has_serial_no,
                         "rate": item_price.get("price_list_rate") or 0,
                         "price_list_rate": item_price.get("price_list_rate") or 0,
+                        "currency": item_price.get("currency")
+                        or price_list_currency
+                        or pos_profile.get("currency"),
                     }
                 )
 
