@@ -13,7 +13,9 @@ After switching branches or pulling latest changes:
 
 1. cd apps/posawesome
 2. git pull
-3. cd frontend && yarn install && yarn build
+3. If you changed frontend code, run `cd frontend && yarn install && yarn build`.
+   Prebuilt production assets are already committed, so this step can be skipped
+   if you only pulled the latest changes.
 4. cd ../..
 5. bench build --app posawesome
 6. bench --site your.site migrate
