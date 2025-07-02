@@ -2,7 +2,8 @@
   "name": "posawesome",
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm install"
+    "prebuild": "npm install",
+    "build": "node build.mjs"
   },
   "dependencies": {
     "@vuepic/vue-datepicker": "11.0.2",
