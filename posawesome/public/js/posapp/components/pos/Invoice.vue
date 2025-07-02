@@ -9,16 +9,6 @@
       :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)', backgroundColor: isDarkTheme ? '#121212' : '' }"
       :class="['cards my-0 py-0 mt-3', isDarkTheme ? '' : 'bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]">
 
-      <!-- Visible banner to indicate return invoice -->
-      <v-alert
-        v-if="isReturnInvoice"
-        type="error"
-        density="compact"
-        variant="tonal"
-        class="ma-2">
-        {{ __('Return Invoice') }}
-      </v-alert>
-
       <!-- Dynamic padding wrapper -->
       <div class="dynamic-padding">
         <!-- Top Row: Customer Selection and Invoice Type -->
