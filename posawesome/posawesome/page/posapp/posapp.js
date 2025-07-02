@@ -1,8 +1,7 @@
 // Include onscan.js
 frappe.pages['posapp'].on_page_load = async function (wrapper) {
         // Ensure bundled assets are loaded before initializing the app
-       // Use dynamic import so the bundled script is loaded as an ES module
-       await import('/assets/posawesome/js/posawesome.bundle.js');
+        await frappe.require('/assets/posawesome/js/posawesome.bundle.js');
         await setupLanguage();
 
         var page = frappe.ui.make_app_page({
