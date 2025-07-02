@@ -25,6 +25,7 @@
           </v-col>
         </v-row>
 
+
         <!-- Delivery Charges Section (Only if enabled in POS profile) -->
         <DeliveryCharges :pos_profile="pos_profile" :delivery_charges="delivery_charges"
           :selected_delivery_charge="selected_delivery_charge" :delivery_charges_rate="delivery_charges_rate"
@@ -893,8 +894,11 @@ export default {
 }
 
 /* Red border and label for return mode card */
+
+/* Red border and label for return mode card */
+
 .return-mode {
-  border: 2px solid var(--error) !important;
+  border: 2px solid rgb(var(--v-theme-error)) !important;
   position: relative;
 }
 
@@ -904,7 +908,7 @@ export default {
   position: absolute;
   top: 0;
   right: 0;
-  background-color: var(--error);
+  background-color: rgb(var(--v-theme-error));
   color: white;
   padding: 4px 12px;
   font-weight: bold;
