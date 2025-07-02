@@ -486,16 +486,14 @@ export default {
         // First ensure base rates exist for all items
         if (!item.base_rate) {
           console.log(`Setting base rates for ${item.item_code} for the first time`);
-
-          // Determine if the item price was already in the base currency
-          if (item.currency === this.pos_profile.currency) {
-            // Item was in base currency, store rates directly
+          if (this.selected_currency === this.pos_profile.currency) {
+            // When in base currency, base rates = displayed rates
             item.base_rate = item.rate;
             item.base_price_list_rate = item.price_list_rate;
             item.base_discount_amount = item.discount_amount || 0;
           } else {
-            // Item was in a foreign currency, convert to base using current exchange rate
-            item.base_rate = item.price_list_rate * this.exchange_rate;
+            // When in another currency, calculate base rates
+            item.base_rate = item.rate * this.exchange_rate;
             item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
             item.base_discount_amount = (item.discount_amount || 0) * this.exchange_rate;
           }
