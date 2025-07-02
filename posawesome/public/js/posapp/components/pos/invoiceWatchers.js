@@ -69,11 +69,20 @@ export default {
       const applied = newVal || this.pos_profile.selling_price_list;
       this.apply_cached_price_list(applied);
 
-      // If multi-currency is enabled, force price list currency to POS default
-      // currency to avoid conversion issues
+      // If multi-currency is enabled, sync currency with the price list currency
       if (this.pos_profile.posa_allow_multi_currency && applied) {
-        this.price_list_currency = this.pos_profile.currency;
-        this.update_currency(this.pos_profile.currency);
+        frappe.call({
+          method: "posawesome.posawesome.api.invoices.get_price_list_currency",
+          args: { price_list: applied },
+          callback: (r) => {
+            if (r.message) {
+              // Store price list currency for later use
+              this.price_list_currency = r.message;
+              // Sync invoice currency with price list currency
+              this.update_currency(r.message);
+            }
+          },
+        });
       }
     },
 
