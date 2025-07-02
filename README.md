@@ -19,6 +19,7 @@ After switching branches or pulling latest changes:
 6. bench --site your.site migrate
    - If the build exits with code 143, verify that your system has enough RAM or swap space.
    - You can also try building the app in smaller parts to reduce memory usage.
+   - If the POS page loads blank, rebuild the frontend assets with `yarn build` inside the `frontend` folder and run `bench build --app posawesome` again.
 
 ### Main Features
 
