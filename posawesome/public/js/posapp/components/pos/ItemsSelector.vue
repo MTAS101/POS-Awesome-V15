@@ -289,9 +289,40 @@ export default {
         this.search_onchange(val);
       }
     }, 300),
+
+    // Recalculate item rates whenever currency or exchange rate changes
+    selected_currency() {
+      this.recalculateItemRates();
+    },
+    exchange_rate() {
+      this.recalculateItemRates();
+    },
   },
 
   methods: {
+    recalculateItemRates() {
+      if (!this.items || !this.items.length) return;
+
+      this.items.forEach(it => {
+        if (it._base_price_list_rate === undefined) {
+          it._base_price_list_rate = it.price_list_rate || it.rate || 0;
+        }
+
+        const baseRate = it._base_price_list_rate;
+
+        if (this.exchange_rate && this.selected_currency) {
+          it.rate = this.flt(baseRate * this.exchange_rate, this.currency_precision);
+          it.price_list_rate = it.rate;
+          it.currency = this.selected_currency;
+        } else {
+          it.rate = baseRate;
+          it.price_list_rate = baseRate;
+          it.currency = this.pos_profile.currency;
+        }
+      });
+
+      this.$forceUpdate();
+    },
     refreshPricesForVisibleItems() {
       const vm = this;
       if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -745,25 +776,20 @@ export default {
           }
         }
 
-        // Convert rate if multi-currency is enabled
-        if (this.pos_profile.posa_allow_multi_currency &&
-          this.selected_currency !== this.pos_profile.currency) {
-
-          if (item.currency === this.selected_currency) {
-            // Item already priced in selected currency
-            item.base_rate = item.rate * this.exchange_rate;
-            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
-          } else {
-            // Item price is in base currency
-            item.base_rate = item.rate;
-            item.base_price_list_rate = item.price_list_rate;
-
-            const converted = this.getConvertedRate(item);
-            item.rate = converted;
-            item.price_list_rate = converted;
+        // Convert rate if currency differs from item currency
+        if (
+          this.pos_profile.posa_allow_multi_currency &&
+          item.currency !== this.selected_currency
+        ) {
+          if (item._base_price_list_rate === undefined) {
+            item._base_price_list_rate = item.price_list_rate || item.rate || 0;
           }
 
-          // Ensure currency matches selection
+          item.base_rate = item._base_price_list_rate * this.exchange_rate;
+          item.base_price_list_rate = item._base_price_list_rate * this.exchange_rate;
+
+          item.rate = this.flt(item._base_price_list_rate * this.exchange_rate, this.currency_precision);
+          item.price_list_rate = item.rate;
           item.currency = this.selected_currency;
         }
 
@@ -1338,14 +1364,9 @@ export default {
     },
 
     getConvertedRate(item) {
-      if (!item.rate) return 0;
-      if (!this.exchange_rate) return item.rate;
-
-      // If exchange rate is 300 PKR = 1 USD
-      // To convert PKR to USD: divide by exchange rate
-      // Example: 3000 PKR / 300 = 10 USD
-      const convertedRate = item.rate / this.exchange_rate;
-      return this.flt(convertedRate, 4);
+      const base = item._base_price_list_rate || item.price_list_rate || item.rate || 0;
+      if (!this.exchange_rate) return base;
+      return this.flt(base * this.exchange_rate, this.currency_precision);
     },
     currencySymbol(currency) {
       return get_currency_symbol(currency);
