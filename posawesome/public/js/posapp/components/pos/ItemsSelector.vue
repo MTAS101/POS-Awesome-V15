@@ -289,6 +289,16 @@ export default {
         this.search_onchange(val);
       }
     }, 300),
+    selected_currency() {
+      if (this.items && this.items.length && this.pos_profile.posa_allow_multi_currency) {
+        this.update_item_rates();
+      }
+    },
+    exchange_rate() {
+      if (this.items && this.items.length && this.pos_profile.posa_allow_multi_currency) {
+        this.update_item_rates();
+      }
+    }
   },
 
   methods: {
@@ -1413,6 +1423,33 @@ export default {
       } catch (e) {
         console.error('Failed to load item selector settings:', e);
       }
+    },
+
+    update_item_rates() {
+      if (!this.items || !this.items.length) return;
+      const baseCurrency = this.pos_profile.currency;
+      this.items.forEach(item => {
+        if (!item.base_price_list_rate) {
+          if (item.currency && item.currency !== baseCurrency) {
+            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
+            item.base_rate = item.rate * this.exchange_rate;
+          } else {
+            item.base_price_list_rate = item.price_list_rate;
+            item.base_rate = item.rate;
+          }
+        }
+
+        if (this.selected_currency === baseCurrency) {
+          item.price_list_rate = item.base_price_list_rate;
+          item.rate = item.base_rate;
+          item.currency = baseCurrency;
+        } else {
+          item.price_list_rate = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
+          item.rate = item.price_list_rate;
+          item.currency = this.selected_currency;
+        }
+      });
+      this.eventBus.emit("set_all_items", this.items);
     },
   },
 
