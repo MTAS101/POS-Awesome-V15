@@ -289,6 +289,16 @@ export default {
         this.search_onchange(val);
       }
     }, 300),
+
+    // Refresh item prices whenever the user changes currency
+    selected_currency() {
+      this.applyCurrencyConversionToItems();
+    },
+
+    // Also react when exchange rate is adjusted manually
+    exchange_rate() {
+      this.applyCurrencyConversionToItems();
+    },
   },
 
   methods: {
@@ -745,26 +755,17 @@ export default {
           }
         }
 
-        // Convert rate if multi-currency is enabled
-        if (this.pos_profile.posa_allow_multi_currency &&
-          this.selected_currency !== this.pos_profile.currency) {
+        // Ensure correct rate based on selected currency
+        if (this.pos_profile.posa_allow_multi_currency) {
+          this.applyCurrencyConversionToItem(item);
 
-          if (item.currency === this.selected_currency) {
-            // Item already priced in selected currency
-            item.base_rate = item.rate * this.exchange_rate;
-            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
-          } else {
-            // Item price is in base currency
-            item.base_rate = item.rate;
-            item.base_price_list_rate = item.price_list_rate;
-
-            const converted = this.getConvertedRate(item);
-            item.rate = converted;
-            item.price_list_rate = converted;
-          }
-
-          // Ensure currency matches selection
-          item.currency = this.selected_currency;
+          // Compute base rates from original values
+          const base_rate =
+            item.original_currency === this.pos_profile.currency
+              ? item.original_rate
+              : item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
+          item.base_rate = base_rate;
+          item.base_price_list_rate = base_rate;
         }
 
         if (!item.qty || item.qty === 1) {
@@ -935,6 +936,13 @@ export default {
               item.price_list_rate = det.price_list_rate || det.rate;
             }
           }
+
+          if (!item.original_rate) {
+            item.original_rate = item.rate;
+            item.original_currency = item.currency || vm.pos_profile.currency;
+          }
+
+          vm.applyCurrencyConversionToItem(item);
         }
       });
 
@@ -1030,6 +1038,7 @@ export default {
               // Apply all updates in one batch
               updatedItems.forEach(({ item, updates }) => {
                 Object.assign(item, updates);
+                vm.applyCurrencyConversionToItem(item);
               });
 
               // Update local stock cache with latest quantities
@@ -1104,6 +1113,38 @@ export default {
       } finally {
         this.prePopulateInProgress = false;
       }
+    },
+
+    applyCurrencyConversionToItems() {
+      if (!this.items || !this.items.length) return;
+      this.items.forEach(it => this.applyCurrencyConversionToItem(it));
+    },
+
+    applyCurrencyConversionToItem(item) {
+      if (!item) return;
+      const base = this.pos_profile.currency;
+
+      if (!item.original_rate) {
+        item.original_rate = item.rate;
+        item.original_currency = item.currency || base;
+      }
+
+      let base_rate;
+      if (item.original_currency === base) {
+        base_rate = item.original_rate;
+      } else {
+        base_rate = item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
+      }
+
+      if (this.selected_currency === base) {
+        item.rate = this.flt(base_rate, this.currency_precision);
+        item.currency = base;
+      } else {
+        item.rate = this.flt(base_rate / this.exchange_rate, this.currency_precision);
+        item.currency = this.selected_currency;
+      }
+
+      item.price_list_rate = item.rate;
     },
     scan_barcoud() {
       const vm = this;
@@ -1341,11 +1382,12 @@ export default {
       if (!item.rate) return 0;
       if (!this.exchange_rate) return item.rate;
 
-      // If exchange rate is 300 PKR = 1 USD
-      // To convert PKR to USD: divide by exchange rate
-      // Example: 3000 PKR / 300 = 10 USD
-      const convertedRate = item.rate / this.exchange_rate;
-      return this.flt(convertedRate, 4);
+      if (this.selected_currency !== this.pos_profile.currency) {
+        // item.rate currently in selected currency, convert back to base currency
+        return this.flt(item.rate * this.exchange_rate, 4);
+      }
+
+      return this.flt(item.rate / this.exchange_rate, 4);
     },
     currencySymbol(currency) {
       return get_currency_symbol(currency);
@@ -1673,6 +1715,7 @@ export default {
       this.exchange_rate = data.exchange_rate;
 
       // Refresh visible item prices when currency changes
+      this.applyCurrencyConversionToItems();
       this.update_cur_items_details();
     });
   },
