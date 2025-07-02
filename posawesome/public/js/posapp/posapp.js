@@ -2,7 +2,6 @@ import { createVuetify } from "vuetify";
 import { createApp } from "vue";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
-import "../css/responsive.css";
 import eventBus from "./bus";
 import themePlugin from "./plugins/theme.js";
 import * as components from "vuetify/components";
