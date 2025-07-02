@@ -1174,15 +1174,24 @@ export default {
       }
     },
     trigger_onscan(sCode) {
-      if (this.filtered_items.length == 0) {
-        this.eventBus.emit("show_message", {
-          title: `No Item has this barcode "${sCode}"`,
-          color: "error",
-        });
-        frappe.utils.play_sound("error");
-      } else {
-        this.enter_event();
-      }
+      // apply scanned code as search term
+      this.first_search = sCode;
+      this.search = sCode;
+
+      this.$nextTick(() => {
+        if (this.filtered_items.length == 0) {
+          this.eventBus.emit("show_message", {
+            title: `No Item has this barcode "${sCode}"`,
+            color: "error",
+          });
+          frappe.utils.play_sound("error");
+        } else {
+          this.enter_event();
+        }
+
+        // clear search field for next scan
+        this.clearSearch();
+      });
     },
     generateWordCombinations(inputString) {
       const words = inputString.split(" ");

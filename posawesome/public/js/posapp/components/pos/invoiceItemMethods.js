@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems } from "../../../offline/index.js";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs } from "../../../offline/index.js";
 
 export default {
 
@@ -1819,7 +1819,24 @@ export default {
 
     // Update UOM (unit of measure) for an item and recalculate prices
     calc_uom(item, value) {
-      const new_uom = item.item_uoms.find((element) => element.uom == value);
+      let new_uom = item.item_uoms.find((element) => element.uom == value);
+
+      // try cached uoms when not found on item
+      if (!new_uom) {
+        const cached = getItemUOMs(item.item_code);
+        if (cached.length) {
+          item.item_uoms = cached;
+          new_uom = cached.find(u => u.uom == value);
+        }
+      }
+
+      // fallback to stock uom
+      if (!new_uom && item.stock_uom === value) {
+        new_uom = { uom: item.stock_uom, conversion_factor: 1 };
+        if (!item.item_uoms) item.item_uoms = [];
+        item.item_uoms.push(new_uom);
+      }
+
       if (!new_uom) {
         this.eventBus.emit("show_message", {
           title: __("UOM not found"),
