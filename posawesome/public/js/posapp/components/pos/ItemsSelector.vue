@@ -1129,18 +1129,12 @@ export default {
         item.original_currency = item.currency || base;
       }
 
-      // Always recompute the base rate from the original values so that
-      // changing the exchange rate or currency later keeps prices accurate.
       let base_rate;
       if (item.original_currency === base) {
         base_rate = item.original_rate;
       } else {
         base_rate = item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
       }
-
-      // Store the current base calculations for future conversions
-      item.base_rate = base_rate;
-      item.base_price_list_rate = base_rate;
 
       if (this.selected_currency === base) {
         item.rate = this.flt(base_rate, this.currency_precision);
