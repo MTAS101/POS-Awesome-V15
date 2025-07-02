@@ -1,4 +1,4 @@
-module.exports = function frappeVueStyle() {
+export default function frappeVueStyle() {
   return {
     name: 'frappe-vue-style',
     setup(build) {
