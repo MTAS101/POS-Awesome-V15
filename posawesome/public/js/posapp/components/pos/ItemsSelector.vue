@@ -1671,6 +1671,9 @@ export default {
     this.eventBus.on("update_currency", (data) => {
       this.selected_currency = data.currency;
       this.exchange_rate = data.exchange_rate;
+
+      // Refresh visible item prices when currency changes
+      this.update_cur_items_details();
     });
   },
 

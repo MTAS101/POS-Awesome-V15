@@ -85,4 +85,18 @@ export default {
         });
       }
     },
+
+    // Reactively update item prices when currency changes
+    selected_currency() {
+      if (this.items && this.items.length) {
+        this.update_item_rates();
+      }
+    },
+
+    // Reactively update item prices when exchange rate changes
+    exchange_rate() {
+      if (this.items && this.items.length) {
+        this.update_item_rates();
+      }
+    },
 };
