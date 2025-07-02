@@ -2,13 +2,21 @@
 frappe.pages['posapp'].on_page_load = async function (wrapper) {
         await setupLanguage();
 
-        var page = frappe.ui.make_app_page({
-                parent: wrapper,
-                title: 'POS Awesome',
-                single_column: true
-        });
+       var page = frappe.ui.make_app_page({
+               parent: wrapper,
+               title: 'POS Awesome',
+               single_column: true
+       });
 
-        this.page.$PosApp = new frappe.PosApp.posapp(this.page);
+       if (!frappe.PosApp || !frappe.PosApp.posapp) {
+               console.error(
+                       'POS Awesome assets not loaded. ' +
+                       "Run 'yarn build' in the frontend folder and 'bench build --app posawesome'."
+               );
+               return;
+       }
+
+       this.page.$PosApp = new frappe.PosApp.posapp(this.page);
 
 	$('div.navbar-fixed-top').find('.container').css('padding', '0');
 
