@@ -483,27 +483,41 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 
     item["selling_price_list"] = price_list
 
+    # Determine if multi-currency is enabled on the POS Profile
+    allow_multi_currency = False
+    if item.get("pos_profile"):
+        allow_multi_currency = (
+            frappe.db.get_value("POS Profile", item.get("pos_profile"), "posa_allow_multi_currency")
+            or 0
+        )
+
     # Ensure conversion rate exists when price list currency differs from
     # company currency to avoid ValidationError from ERPNext
     if company and price_list:
         price_list_currency = frappe.db.get_value("Price List", price_list, "currency")
         company_currency = frappe.db.get_value("Company", company, "default_currency")
+
         if price_list_currency and company_currency and price_list_currency != company_currency:
-            from erpnext.setup.utils import get_exchange_rate
-            try:
-                exchange_rate = get_exchange_rate(price_list_currency, company_currency, today)
-                item["price_list_currency"] = price_list_currency
-                item["plc_conversion_rate"] = exchange_rate
-                item["conversion_rate"] = exchange_rate
-                if doc:
-                    doc.price_list_currency = price_list_currency
-                    doc.plc_conversion_rate = exchange_rate
-                    doc.conversion_rate = exchange_rate
-            except Exception:
-                frappe.log_error(
-                    f"Missing exchange rate from {price_list_currency} to {company_currency}",
-                    "POS Awesome",
-                )
+            exchange_rate = 1
+            if allow_multi_currency:
+                from erpnext.setup.utils import get_exchange_rate
+
+                try:
+                    exchange_rate = get_exchange_rate(price_list_currency, company_currency, today)
+                except Exception:
+                    frappe.log_error(
+                        f"Missing exchange rate from {price_list_currency} to {company_currency}",
+                        "POS Awesome",
+                    )
+
+            item["price_list_currency"] = price_list_currency
+            item["plc_conversion_rate"] = exchange_rate
+            item["conversion_rate"] = exchange_rate
+
+            if doc:
+                doc.price_list_currency = price_list_currency
+                doc.plc_conversion_rate = exchange_rate
+                doc.conversion_rate = exchange_rate
     
     # Add company and doctype to the item args for ERPNext validation
     if company:
