@@ -289,9 +289,40 @@ export default {
         this.search_onchange(val);
       }
     }, 300),
+
+    // Reactively update item rates when currency changes
+    selected_currency() {
+      this.convertItemRates();
+    },
+
+    // Reactively update item rates when exchange rate changes
+    exchange_rate() {
+      this.convertItemRates();
+    },
   },
 
   methods: {
+    convertItemRates() {
+      if (!this.items || !this.items.length) return;
+
+      this.items.forEach(item => {
+        if (item._base_price_list_rate === undefined) {
+          item._base_price_list_rate = item.price_list_rate || item.rate;
+        }
+
+        if (this.exchange_rate && this.selected_currency) {
+          item.rate = this.flt(item._base_price_list_rate * this.exchange_rate, this.currency_precision);
+          item.price_list_rate = item.rate;
+          item.currency = this.selected_currency;
+        } else {
+          item.rate = item._base_price_list_rate;
+          item.price_list_rate = item._base_price_list_rate;
+        }
+      });
+
+      this.$forceUpdate();
+    },
+
     refreshPricesForVisibleItems() {
       const vm = this;
       if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -1674,6 +1705,7 @@ export default {
 
       // Refresh visible item prices when currency changes
       this.update_cur_items_details();
+      this.convertItemRates();
     });
   },
 
