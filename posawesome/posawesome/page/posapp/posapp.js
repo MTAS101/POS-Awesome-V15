@@ -1,5 +1,7 @@
 // Include onscan.js
 frappe.pages['posapp'].on_page_load = async function (wrapper) {
+        // Ensure bundled assets are loaded before initializing the app
+        await frappe.require('/assets/posawesome/js/posawesome.bundle.js');
         await setupLanguage();
 
         var page = frappe.ui.make_app_page({
@@ -7,6 +9,9 @@ frappe.pages['posapp'].on_page_load = async function (wrapper) {
                 title: 'POS Awesome',
                 single_column: true
         });
+
+        // store the created page in this.page so it can be reused later
+        this.page = page;
 
         this.page.$PosApp = new frappe.PosApp.posapp(this.page);
 
