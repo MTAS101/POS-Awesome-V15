@@ -832,12 +832,19 @@ export default {
         this.flags.serial_no = null;
         this.flags.batch_no = null;
         this.qty = 1;
+        this.clearSearch();
         this.$refs.debounce_search.focus();
       }
     },
     search_onchange: _.debounce(function (newSearchTerm) {
       const vm = this;
-      if (newSearchTerm) vm.search = newSearchTerm;
+
+      // When triggered via keydown event, the argument will be an Event object.
+      const triggeredByEnter = newSearchTerm && newSearchTerm.target;
+
+      if (typeof newSearchTerm === "string") {
+        vm.search = newSearchTerm;
+      }
 
       if (vm.pos_profile.pose_use_limit_search) {
         // Only trigger search when query length meets minimum threshold
@@ -845,17 +852,27 @@ export default {
           vm.get_items();
         }
       } else {
-        // Save the current filtered items before search to maintain quantity data
-        const current_items = [...vm.filtered_items];
         if (vm.search && vm.search.length >= 3) {
           vm.enter_event();
         }
 
-        // After search, update quantities for newly filtered items
+        // Provide feedback when no item matches on manual scan
+        if (triggeredByEnter && vm.filtered_items.length === 0) {
+          vm.eventBus.emit("show_message", {
+            title: `No Item has this barcode "${vm.search}"`,
+            color: "error",
+          });
+          frappe.utils.play_sound("error");
+        }
+
         if (vm.filtered_items && vm.filtered_items.length > 0) {
           setTimeout(() => {
             vm.update_items_details(vm.filtered_items);
           }, 300);
+        }
+
+        if (triggeredByEnter) {
+          vm.clearSearch();
         }
       }
     }, 300),
