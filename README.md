@@ -13,7 +13,7 @@ After switching branches or pulling latest changes:
 
 1. cd apps/posawesome
 2. git pull
-3. yarn install
+3. cd frontend && yarn install && yarn build
 4. cd ../..
 5. bench build --app posawesome
 6. bench --site your.site migrate

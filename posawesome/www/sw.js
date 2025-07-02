@@ -7,7 +7,7 @@ self.addEventListener('install', event => {
       const cache = await caches.open(CACHE_NAME);
       const resources = [
         '/app/posapp',
-        '/assets/posawesome/js/posawesome.bundle.js',
+        '/assets/posawesome/dist/js/posawesome.js',
 
         '/assets/posawesome/js/offline/index.js',
 
