@@ -440,18 +440,9 @@ export default {
         this.selected_price_list = this.pos_profile.selling_price_list;
       }
 
-      // Fetch and store currency for the applied price list
-      try {
-        const r = await frappe.call({
-          method: "posawesome.posawesome.api.invoices.get_price_list_currency",
-          args: { price_list: this.selected_price_list }
-        });
-        if (r && r.message) {
-          this.price_list_currency = r.message;
-        }
-      } catch (error) {
-        console.error("Failed fetching price list currency", error);
-      }
+      // In multi-currency mode set the price list currency to the POS
+      // default currency to avoid conversion issues
+      this.price_list_currency = this.pos_profile.currency;
 
       return this.price_lists;
     },
