@@ -433,29 +433,47 @@ export default {
       }
     },
 
-    async fetch_price_lists() {
-      // POS Awesome now only uses the price list defined in the POS Profile.
-      // Avoid unnecessary server calls and set the list directly.
-      this.price_lists = [this.pos_profile.selling_price_list];
-      if (!this.selected_price_list) {
-        this.selected_price_list = this.pos_profile.selling_price_list;
-      }
+      async fetch_price_lists() {
+        if (this.pos_profile.posa_enable_price_list_dropdown) {
+          // Fetch all selling price lists from the server when the dropdown is enabled
+          try {
+            const r = await frappe.call({
+              method: "posawesome.posawesome.api.posapp.get_selling_price_lists",
+            });
+            if (r && r.message) {
+              this.price_lists = r.message.map((pl) => pl.name);
+            }
+          } catch (error) {
+            console.error("Failed fetching price lists", error);
+            this.price_lists = [this.pos_profile.selling_price_list];
+          }
 
-      // Fetch and store currency for the applied price list
-      try {
-        const r = await frappe.call({
-          method: "posawesome.posawesome.api.invoices.get_price_list_currency",
-          args: { price_list: this.selected_price_list }
-        });
-        if (r && r.message) {
-          this.price_list_currency = r.message;
+          if (!this.selected_price_list) {
+            this.selected_price_list = this.pos_profile.selling_price_list;
+          }
+        } else {
+          // When dropdown is disabled use the price list defined in the POS Profile
+          this.price_lists = [this.pos_profile.selling_price_list];
+          if (!this.selected_price_list) {
+            this.selected_price_list = this.pos_profile.selling_price_list;
+          }
         }
-      } catch (error) {
-        console.error("Failed fetching price list currency", error);
-      }
 
-      return this.price_lists;
-    },
+        // Fetch and store currency for the applied price list
+        try {
+          const r = await frappe.call({
+            method: "posawesome.posawesome.api.invoices.get_price_list_currency",
+            args: { price_list: this.selected_price_list }
+          });
+          if (r && r.message) {
+            this.price_list_currency = r.message;
+          }
+        } catch (error) {
+          console.error("Failed fetching price list currency", error);
+        }
+
+        return this.price_lists;
+      },
 
     async update_currency(currency) {
       if (!currency) return;
@@ -737,9 +755,11 @@ export default {
           });
         }
 
-      this.fetch_price_lists();
-      this.update_price_list();
-    });
+        this.fetch_price_lists();
+        if (!this.pos_profile.posa_enable_price_list_dropdown) {
+          this.update_price_list();
+        }
+      });
     this.eventBus.on("add_item", this.add_item);
     this.eventBus.on("update_customer", (customer) => {
       this.customer = customer;
