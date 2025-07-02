@@ -9,19 +9,21 @@ export default defineConfig({
                lib: {
                        entry: resolve(__dirname, "frontend/src/posawesome.bundle.js"),
                        name: "PosAwesome",
-                       fileName: "posawesome",
+                       fileName: () => "posawesome.js",
+                       formats: ["umd"],
                },
                outDir: "posawesome/public/dist/js",
                emptyOutDir: true,
-		rollupOptions: {
-			external: ["socket.io-client"],
-			output: {
-				globals: {
-					"socket.io-client": "io",
-				},
-			},
-		},
-	},
+                rollupOptions: {
+                        external: ["socket.io-client"],
+                        output: {
+                                entryFileNames: "posawesome.js",
+                                globals: {
+                                        "socket.io-client": "io",
+                                },
+                        },
+                },
+        },
 	resolve: {
 		alias: {
 			"@": resolve(__dirname, "frontend/src"),
