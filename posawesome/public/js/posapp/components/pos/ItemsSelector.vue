@@ -1211,7 +1211,7 @@ export default {
         item.rate = this.flt(base_rate, this.currency_precision);
         item.currency = base;
       } else {
-        item.rate = this.flt(base_rate / this.exchange_rate, this.currency_precision);
+        item.rate = this.flt(base_rate * this.exchange_rate, this.currency_precision);
         item.currency = this.selected_currency;
       }
 
@@ -1466,10 +1466,10 @@ export default {
 
       if (this.selected_currency !== this.pos_profile.currency) {
         // item.rate currently in selected currency, convert back to base currency
-        return this.flt(item.rate * rate, 4);
+        return this.flt(item.rate / rate, 4);
       }
 
-      return this.flt(item.rate / rate, 4);
+      return this.flt(item.rate * rate, 4);
     },
     currencySymbol(currency) {
       return get_currency_symbol(currency);
