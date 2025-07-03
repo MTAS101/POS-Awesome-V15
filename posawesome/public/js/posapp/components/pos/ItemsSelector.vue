@@ -319,11 +319,13 @@ export default {
     // Refresh item prices whenever the user changes currency
     selected_currency() {
       this.applyCurrencyConversionToItems();
+      this.update_cur_items_details();
     },
 
     // Also react when exchange rate is adjusted manually
     exchange_rate() {
       this.applyCurrencyConversionToItems();
+      this.update_cur_items_details();
     },
   },
 
