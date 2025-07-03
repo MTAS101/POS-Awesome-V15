@@ -6,7 +6,7 @@
         @update:model-value="onCurrencyUpdate"></v-select>
     </v-col>
     <v-col cols="4" class="pb-2">
-      <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Exchange Rate')"
+      <v-text-field density="compact" variant="outlined" color="primary" :label="exchangeRateLabel"
         bg-color="white" hide-details v-model="internal_exchange_rate" :rules="[isNumber]"
         @change="onExchangeChange"></v-text-field>
     </v-col>
@@ -29,6 +29,11 @@ export default {
       // POS logic expects selected -> base but we show base -> selected
       internal_exchange_rate: this.exchange_rate ? 1 / this.exchange_rate : 1,
     };
+  },
+  computed: {
+    exchangeRateLabel() {
+      return `${frappe._('Exchange Rate')} (${this.pos_profile.currency} → ${this.internal_selected_currency})`;
+    }
   },
   watch: {
     selected_currency(val) {
