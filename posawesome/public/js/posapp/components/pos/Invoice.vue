@@ -117,7 +117,10 @@ import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
 import invoiceComputed from "./invoiceComputed";
 import invoiceWatchers from "./invoiceWatchers";
-import itemMethods from "./invoiceItemMethods";
+import itemAddition from "./invoice-item/itemAddition";
+import batchSerial from "./invoice-item/batchSerial";
+import discounts from "./invoice-item/discounts";
+import stockUtils from "./invoice-item/stockUtils";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
@@ -194,7 +197,10 @@ export default {
 
   methods: {
     ...shortcutMethods,
-    ...itemMethods,
+    ...itemAddition,
+    ...batchSerial,
+    ...discounts,
+    ...stockUtils,
     ...offerMethods,
     initializeItemsHeaders() {
       // Define all available columns
