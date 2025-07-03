@@ -206,6 +206,8 @@ export default {
     items_loaded: false,
     selected_currency: "",
     exchange_rate: 1,
+    price_list_currency: "",
+    price_to_pos_rate: 1,
     prePopulateInProgress: false,
     itemWorker: null,
     items_request_token: 0,
@@ -319,6 +321,10 @@ export default {
     // Also react when exchange rate is adjusted manually
     exchange_rate() {
       this.applyCurrencyConversionToItems();
+    },
+
+    price_list_currency() {
+      this.updatePriceConversionRate();
     },
   },
 
@@ -1170,6 +1176,12 @@ export default {
       let base_rate;
       if (item.original_currency === base) {
         base_rate = item.original_rate;
+      } else if (
+        this.price_list_currency &&
+        item.original_currency === this.price_list_currency &&
+        this.price_to_pos_rate
+      ) {
+        base_rate = item.original_rate * this.price_to_pos_rate;
       } else {
         base_rate = item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
       }
@@ -1183,6 +1195,33 @@ export default {
       }
 
       item.price_list_rate = item.rate;
+    },
+
+    async updatePriceConversionRate() {
+      if (
+        this.price_list_currency &&
+        this.price_list_currency !== this.pos_profile.currency
+      ) {
+        try {
+          const r = await frappe.call({
+            method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
+            args: {
+              from_currency: this.price_list_currency,
+              to_currency: this.pos_profile.currency,
+            },
+          });
+          if (r && r.message) {
+            this.price_to_pos_rate = r.message;
+          }
+        } catch (err) {
+          console.error("Failed fetching price list exchange rate", err);
+          this.price_to_pos_rate = 1;
+        }
+      } else {
+        this.price_to_pos_rate = 1;
+      }
+
+      this.applyCurrencyConversionToItems();
     },
     scan_barcoud() {
       const vm = this;
@@ -1739,6 +1778,10 @@ export default {
     this.eventBus.on("update_customer", (data) => {
       this.customer = data;
     });
+    this.eventBus.on("update_price_list_currency", (currency) => {
+      this.price_list_currency = currency;
+      this.updatePriceConversionRate();
+    });
 
     // Refresh item quantities when connection to server is restored
     this.eventBus.on("server-online", async () => {
@@ -1810,6 +1853,7 @@ export default {
     this.eventBus.off("update_coupons_counters");
     this.eventBus.off("update_customer_price_list");
     this.eventBus.off("update_customer");
+    this.eventBus.off("update_price_list_currency");
   },
 };
 </script>
