@@ -82,8 +82,8 @@
                   </div>
                   <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                     class="text-caption text-success truncate">
-                    {{ currencySymbol(selected_currency) || "" }}
-                    {{ format_currency(getConvertedRate(item), selected_currency,
+                    {{ currencySymbol(pos_profile.currency) || "" }}
+                    {{ format_currency(getConvertedRate(item), pos_profile.currency,
                       ratePrecision(getConvertedRate(item))) }}
                   </div>
                   <div class="text-caption golden--text truncate">
@@ -104,8 +104,8 @@
                       {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}</div>
                     <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                       class="text-success">
-                      {{ currencySymbol(selected_currency) }}
-                      {{ format_currency(getConvertedRate(item), selected_currency,
+                      {{ currencySymbol(pos_profile.currency) }}
+                      {{ format_currency(getConvertedRate(item), pos_profile.currency,
                         ratePrecision(getConvertedRate(item))) }}
                     </div>
                   </div>
