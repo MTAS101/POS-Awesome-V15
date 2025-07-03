@@ -1414,13 +1414,20 @@ export default {
               vm.set_batch_qty(item, null, false);
             }
 
-            // First save base rates if not exists, in default currency, or when force update is requested
-            if (force_update || !item.base_rate || vm.selected_currency === vm.pos_profile.currency) {
-              // Always store base rates from server in base currency
+            // First save base rates if missing or a force update is requested
+            if (force_update || !item.base_rate) {
               if (data.price_list_rate !== 0 || !item.base_price_list_rate) {
-                item.base_price_list_rate = data.price_list_rate;
+                // When POS currency differs from company's base currency,
+                // convert server rate to base currency using the current exchange rate
+                if (vm.selected_currency !== vm.pos_profile.currency) {
+                  const exchange_rate = vm.exchange_rate || 1;
+                  item.base_price_list_rate = vm.flt(data.price_list_rate * exchange_rate, vm.currency_precision);
+                } else {
+                  item.base_price_list_rate = data.price_list_rate;
+                }
+
                 if (!item.posa_offer_applied) {
-                  item.base_rate = data.price_list_rate;
+                  item.base_rate = item.base_price_list_rate;
                 }
               }
             }
