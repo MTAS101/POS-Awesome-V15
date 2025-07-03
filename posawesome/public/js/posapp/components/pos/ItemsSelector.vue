@@ -77,14 +77,16 @@
                 </v-img>
                 <v-card-text class="text--primary pa-1">
                   <div class="text-caption text-primary truncate">
-                    {{ currencySymbol(item.currency || pos_profile.currency) || "" }}
-                    {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}
+                    {{ currencySymbol(item.original_currency || pos_profile.currency) || "" }}
+                    {{ format_currency(item.base_price_list_rate || item.rate,
+                      item.original_currency || pos_profile.currency,
+                      ratePrecision(item.base_price_list_rate || item.rate)) }}
                   </div>
                   <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                     class="text-caption text-success truncate">
                     {{ currencySymbol(selected_currency) || "" }}
-                    {{ format_currency(getConvertedRate(item), selected_currency,
-                      ratePrecision(getConvertedRate(item))) }}
+                    {{ format_currency(item.rate, selected_currency,
+                      ratePrecision(item.rate)) }}
                   </div>
                   <div class="text-caption golden--text truncate">
                     {{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) || 0 }}
@@ -100,13 +102,15 @@
 
                 <template v-slot:item.rate="{ item }">
                   <div>
-                    <div class="text-primary">{{ currencySymbol(item.currency || pos_profile.currency) }}
-                      {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}</div>
+                    <div class="text-primary">{{ currencySymbol(item.original_currency || pos_profile.currency) }}
+                      {{ format_currency(item.base_price_list_rate || item.rate,
+                        item.original_currency || pos_profile.currency,
+                        ratePrecision(item.base_price_list_rate || item.rate)) }}</div>
                     <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                       class="text-success">
                       {{ currencySymbol(selected_currency) }}
-                      {{ format_currency(getConvertedRate(item), selected_currency,
-                        ratePrecision(getConvertedRate(item))) }}
+                      {{ format_currency(item.rate, selected_currency,
+                        ratePrecision(item.rate)) }}
                     </div>
                   </div>
                 </template>
@@ -1396,17 +1400,6 @@ export default {
       this.trigger_onscan(scannedCode);
     },
 
-    getConvertedRate(item) {
-      if (!item.rate) return 0;
-      if (!this.exchange_rate) return item.rate;
-
-      if (this.selected_currency !== this.pos_profile.currency) {
-        // item.rate currently in selected currency, convert back to base currency
-        return this.flt(item.rate * this.exchange_rate, 4);
-      }
-
-      return this.flt(item.rate / this.exchange_rate, 4);
-    },
     currencySymbol(currency) {
       return get_currency_symbol(currency);
     },
