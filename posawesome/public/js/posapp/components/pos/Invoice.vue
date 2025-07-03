@@ -592,7 +592,8 @@ export default {
     // Update currency and exchange rate when currency is changed
     async update_currency_and_rate() {
       if (this.selected_currency) {
-        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+        // Always use POS Profile currency as the base currency
+        const baseCurrency = this.pos_profile.currency;
 
         if (!this.items.length) {
           if (this.selected_currency === baseCurrency) {
@@ -603,13 +604,16 @@ export default {
               const r = await frappe.call({
                 method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
                 args: {
-                  from_currency: this.selected_currency,
-                  to_currency: baseCurrency,
+                  // Convert from POS Profile currency to selected currency
+                  from_currency: baseCurrency,
+                  to_currency: this.selected_currency,
                   posting_date: this.formatDateForBackend(this.posting_date_display)
                 },
               });
               if (r && r.message) {
-                this.exchange_rate = r.message;
+                // API returns rate from baseCurrency to selected currency
+                // Convert to ERPNext expected orientation: selected -> base
+                this.exchange_rate = r.message ? 1 / r.message : 1;
                 this.sync_exchange_rate();
               }
             } catch (error) {
