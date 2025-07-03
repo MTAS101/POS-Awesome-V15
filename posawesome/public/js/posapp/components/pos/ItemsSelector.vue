@@ -1484,18 +1484,45 @@ export default {
       // Emit event to hide drop feedback
       this.eventBus.emit('item-drag-end');
     },
-    saveItemSettings() {
+    async saveItemSettings() {
+      const settings = {
+        hide_qty_decimals: this.hide_qty_decimals,
+        hide_zero_rate_items: this.hide_zero_rate_items,
+      };
       try {
-        const settings = { 
-          hide_qty_decimals: this.hide_qty_decimals,
-          hide_zero_rate_items: this.hide_zero_rate_items,
-        };
-        localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(settings));
+        await frappe.call({
+          method: 'posawesome.posawesome.api.preferences.save_user_preferences',
+          args: { key: 'item_selector_settings', prefs: JSON.stringify(settings) },
+        });
       } catch (e) {
         console.error('Failed to save item selector settings:', e);
       }
+      try {
+        localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(settings));
+      } catch (e) {
+        console.error('Failed to save item selector settings locally:', e);
+      }
     },
-    loadItemSettings() {
+    async loadItemSettings() {
+      try {
+        const r = await frappe.call({
+          method: 'posawesome.posawesome.api.preferences.load_user_preferences',
+          args: { key: 'item_selector_settings' },
+        });
+        if (r.message) {
+          const opts = r.message;
+          if (typeof opts.hide_qty_decimals === 'boolean') {
+            this.hide_qty_decimals = opts.hide_qty_decimals;
+          }
+          if (typeof opts.hide_zero_rate_items === 'boolean') {
+            this.hide_zero_rate_items = opts.hide_zero_rate_items;
+          }
+          localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(opts));
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to load item selector settings from server:', e);
+      }
       try {
         const saved = localStorage.getItem('posawesome_item_selector_settings');
         if (saved) {
