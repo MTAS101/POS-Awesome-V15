@@ -1427,14 +1427,15 @@ export default {
 
     getConvertedRate(item) {
       if (!item.rate) return 0;
-      if (!this.exchange_rate) return item.rate;
+
+      const rate = item.plc_conversion_rate || this.exchange_rate || 1;
 
       if (this.selected_currency !== this.pos_profile.currency) {
         // item.rate currently in selected currency, convert back to base currency
-        return this.flt(item.rate * this.exchange_rate, 4);
+        return this.flt(item.rate * rate, 4);
       }
 
-      return this.flt(item.rate / this.exchange_rate, 4);
+      return this.flt(item.rate / rate, 4);
     },
     currencySymbol(currency) {
       return get_currency_symbol(currency);
