@@ -1417,8 +1417,11 @@ export default {
               vm.set_batch_qty(item, null, false);
             }
 
-            // First save base rates if not exists, in default currency, or when force update is requested
-            if (force_update || !item.base_rate || vm.selected_currency === vm.pos_profile.currency) {
+            // First save base rates if not exists or when force update is requested
+            // Avoid overriding existing base rates when the selected currency
+            // matches the POS Profile currency. This prevents manual or offer
+            // adjusted rates from being reset whenever an item row is expanded.
+            if (force_update || !item.base_rate) {
               // Always store base rates from server in base currency
               if (data.price_list_rate !== 0 || !item.base_price_list_rate) {
                 item.base_price_list_rate = data.price_list_rate;
