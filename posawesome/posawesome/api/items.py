@@ -461,6 +461,7 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
     today = nowdate()
     item_code = item.get("item_code")
     batch_no_data = []
+    serial_no_data = []
     if warehouse and item.get("has_batch_no"):
         batch_list = get_batch_qty(warehouse=warehouse, item_code=item_code)
         if batch_list:
@@ -480,17 +481,16 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
                                 "manufacturing_date": batch_doc.manufacturing_date,
                             }
                         )
-        serial_no_data = []
-        if warehouse and item.get("has_serial_no"):
-            serial_no_data = frappe.get_all(
-                "Serial No",
-                filters={
-                    "item_code": item_code,
-                    "status": "Active",
-                    "warehouse": warehouse,
-                },
-                fields=["name as serial_no"],
-            )
+    if warehouse and item.get("has_serial_no"):
+        serial_no_data = frappe.get_all(
+            "Serial No",
+            filters={
+                "item_code": item_code,
+                "status": "Active",
+                "warehouse": warehouse,
+            },
+            fields=["name as serial_no"],
+        )
 
     item["selling_price_list"] = price_list
 
