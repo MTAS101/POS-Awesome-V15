@@ -55,8 +55,9 @@
 <script>
 
 import format from '../../format';
+import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 export default {
-  mixins: [format],
+  mixins: [format, themeSettingsMixin],
   data: () => ({
     loading: false,
     pos_profile: '',
@@ -80,9 +81,6 @@ export default {
     },
     appliedOffersCount() {
       return this.pos_offers.filter((el) => !!el.offer_applied).length;
-    },
-    isDarkTheme() {
-      return this.$theme?.current === 'dark';
     },
   },
 

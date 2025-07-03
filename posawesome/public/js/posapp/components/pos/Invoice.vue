@@ -121,6 +121,7 @@ import itemMethods from "./invoiceItemMethods";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
+
 import { useInvoiceStore } from "../../stores/invoice.js";
 
 export default {
@@ -130,6 +131,7 @@ export default {
     const invoiceStore = useInvoiceStore();
     return { invoiceStore };
   },
+
   data() {
     return {
       // POS profile settings
@@ -191,9 +193,7 @@ export default {
   },
   computed: {
     ...invoiceComputed,
-    isDarkTheme() {
-      return this.$theme.current === 'dark';
-    }
+    
   },
 
 

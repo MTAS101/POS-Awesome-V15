@@ -183,10 +183,12 @@ import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
+
 import { useInvoiceStore } from "../../stores/invoice.js";
 
+
 export default {
-  mixins: [format, responsiveMixin],
+  mixins: [format, responsiveMixin, themeSettingsMixin],
   components: {
     CameraScanner,
   },
@@ -1688,9 +1690,6 @@ export default {
         }
         this.qty = parsed;
       }, 200),
-    },
-    isDarkTheme() {
-      return this.$theme.current === 'dark';
     },
     active_price_list() {
       return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
