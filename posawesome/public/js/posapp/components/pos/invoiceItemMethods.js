@@ -1381,9 +1381,8 @@ export default {
             doctype: "Sales Invoice",
             name: "New Sales Invoice 1",
             company: this.pos_profile.company,
-            // Use current exchange rate and currency when fetching item details
-            conversion_rate: this.exchange_rate || 1,
-            currency: this.selected_currency || this.pos_profile.currency,
+            conversion_rate: 1,
+            currency: this.pos_profile.currency,
             qty: item.qty,
             price_list_rate: item.base_price_list_rate || item.price_list_rate,
             child_docname: "New Sales Invoice Item 1",
