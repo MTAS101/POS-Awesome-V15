@@ -738,7 +738,7 @@ def update_invoice(data):
         for item in invoice_doc.items:
             if item.price_list_rate:
                 item.base_price_list_rate = flt(
-                    item.price_list_rate * plc_rate,
+                    item.price_list_rate * exchange_rate,
                     item.precision("base_price_list_rate"),
                 )
             if item.rate:
@@ -1330,7 +1330,14 @@ def get_items_details(pos_profile, items_data, price_list=None):
 
 
 @frappe.whitelist()
-def get_item_detail(item, doc=None, warehouse=None, price_list=None):
+def get_item_detail(
+    item,
+    doc=None,
+    warehouse=None,
+    price_list=None,
+    pos_currency=None,
+    allow_multi_currency=False,
+):
     item = json.loads(item)
     today = nowdate()
     item_code = item.get("item_code")
@@ -1400,6 +1407,16 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
             uoms.append({"uom": stock_uom, "conversion_factor": 1.0})
     
     res["item_uoms"] = uoms
+
+    # Provide conversion rate to POS currency when needed
+    if allow_multi_currency and pos_currency and price_list:
+        price_list_currency = frappe.db.get_value("Price List", price_list, "currency")
+        if price_list_currency and price_list_currency != pos_currency:
+            try:
+                conv = get_exchange_rate(price_list_currency, pos_currency, today)
+            except Exception:
+                conv = 1
+            res["plc_conversion_rate"] = conv
     
     return res
 
