@@ -1,4 +1,5 @@
 import Dexie from "dexie";
+import { checkLocalStorageUsage } from './storage_monitor.js';
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
@@ -65,10 +66,11 @@ export function persist(key, value) {
         if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
                 try {
                         localStorage.setItem(`posa_${key}`, JSON.stringify(value));
+                        checkLocalStorageUsage();
                 } catch (err) {
                         console.error("Failed to persist", key, "to localStorage", err);
                 }
-	}
+        }
 }
 
 export const initPromise = new Promise((resolve) => {
