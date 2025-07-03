@@ -503,23 +503,20 @@ export default {
         // Set skip flag to avoid double calculations
         item._skip_calc = true;
 
-        // First ensure base rates exist for all items
-        if (!item.base_rate) {
-          console.log(`Setting base rates for ${item.item_code} for the first time`);
-          if (this.selected_currency === this.pos_profile.currency) {
-            // When in base currency, base rates = displayed rates
-            item.base_rate = item.rate;
-            item.base_price_list_rate = item.price_list_rate;
-            item.base_discount_amount = item.discount_amount || 0;
-          } else {
-            // When in another currency, calculate base rates
-            item.base_rate = item.rate * this.exchange_rate;
-            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
-            item.base_discount_amount = (item.discount_amount || 0) * this.exchange_rate;
-          }
+        // Always compute base rates from current displayed values
+        if (this.selected_currency === this.pos_profile.currency) {
+          // When in base currency, base rates mirror displayed rates
+          item.base_rate = item.rate;
+          item.base_price_list_rate = item.price_list_rate;
+          item.base_discount_amount = item.discount_amount || 0;
+        } else {
+          // When in another currency, store base currency equivalents
+          item.base_rate = this.flt(item.rate * this.exchange_rate, this.currency_precision);
+          item.base_price_list_rate = this.flt(item.price_list_rate * this.exchange_rate, this.currency_precision);
+          item.base_discount_amount = this.flt((item.discount_amount || 0) * this.exchange_rate, this.currency_precision);
         }
 
-        // Currency conversion logic
+        // Currency conversion logic for displayed values
         if (this.selected_currency === this.pos_profile.currency) {
           // When switching back to default currency, restore from base rates
           console.log(`Restoring rates for ${item.item_code} from base rates`);
@@ -530,14 +527,10 @@ export default {
           // When switching to another currency, convert from base rates
           console.log(`Converting rates for ${item.item_code} to ${this.selected_currency}`);
 
-          // If exchange rate is 285 PKR = 1 USD
-          // To convert PKR to USD: divide by exchange rate
-          // Example: 100 PKR / 285 = 0.35 USD
           const converted_price = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
           const converted_rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
           const converted_discount = this.flt(item.base_discount_amount / this.exchange_rate, this.currency_precision);
 
-          // Ensure we don't set values to 0 if they're just very small
           item.price_list_rate = converted_price < 0.000001 ? 0 : converted_price;
           item.rate = converted_rate < 0.000001 ? 0 : converted_rate;
           item.discount_amount = converted_discount < 0.000001 ? 0 : converted_discount;
