@@ -601,8 +601,10 @@ export default {
               const r = await frappe.call({
                 method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
                 args: {
-                  from_currency: baseCurrency,
-                  to_currency: this.selected_currency
+                  // Use selected currency as the source to keep exchange_rate orientation
+                  // consistent with conversion_rate returned from update_invoice
+                  from_currency: this.selected_currency,
+                  to_currency: baseCurrency
                 },
               });
               if (r && r.message) {
