@@ -468,8 +468,6 @@ export default {
           });
           if (r && r.message) {
             this.price_list_currency = r.message;
-            // Notify item list about price list currency
-            this.eventBus.emit("update_price_list_currency", r.message);
           }
         } catch (error) {
           console.error("Failed fetching price list currency", error);
