@@ -1325,6 +1325,17 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
                                 "manufacturing_date": batch_doc.manufacturing_date,
                             }
                         )
+    serial_no_data = []
+    if warehouse and item.get("has_serial_no"):
+        serial_no_data = frappe.get_all(
+            "Serial No",
+            filters={
+                "item_code": item_code,
+                "status": "Active",
+                "warehouse": warehouse,
+            },
+            fields=["name as serial_no"],
+        )
 
     item["selling_price_list"] = price_list
 
@@ -1338,6 +1349,7 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
         res["actual_qty"] = get_stock_availability(item_code, warehouse)
     res["max_discount"] = max_discount
     res["batch_no_data"] = batch_no_data
+    res["serial_no_data"] = serial_no_data
     
     # Add UOMs data directly from item document
     uoms = frappe.get_all(
