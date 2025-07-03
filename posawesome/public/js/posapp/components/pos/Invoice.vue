@@ -503,16 +503,20 @@ export default {
         // Set skip flag to avoid double calculations
         item._skip_calc = true;
 
-        // First ensure base rates exist for all items
-        if (!item.base_rate) {
-          console.log(`Setting base rates for ${item.item_code} for the first time`);
+        // Ensure base rates are correctly set when exchange rates are fetched later
+        if (!item.base_rate ||
+            (this.selected_currency === this.pos_profile.currency &&
+              Math.abs(item.base_rate - item.rate) < 0.000001 && this.exchange_rate !== 1) ||
+            (this.selected_currency !== this.pos_profile.currency &&
+              Math.abs(item.base_rate - item.rate) < 0.000001)) {
+          console.log(`Setting or updating base rates for ${item.item_code}`);
           if (this.selected_currency === this.pos_profile.currency) {
-            // When in base currency, base rates = displayed rates
-            item.base_rate = item.rate;
-            item.base_price_list_rate = item.price_list_rate;
-            item.base_discount_amount = item.discount_amount || 0;
+            // In POS currency, convert displayed rates to company currency
+            item.base_rate = item.rate * this.exchange_rate;
+            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
+            item.base_discount_amount = (item.discount_amount || 0) * this.exchange_rate;
           } else {
-            // When in another currency, calculate base rates
+            // When in another currency, base rates are derived from displayed rates
             item.base_rate = item.rate * this.exchange_rate;
             item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
             item.base_discount_amount = (item.discount_amount || 0) * this.exchange_rate;
