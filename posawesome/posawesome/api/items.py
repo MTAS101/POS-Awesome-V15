@@ -437,6 +437,8 @@ def get_items_details(pos_profile, items_data, price_list=None):
     items_data = json.loads(items_data)
     warehouse = pos_profile.get("warehouse")
     company = pos_profile.get("company")
+    pos_currency = pos_profile.get("currency")
+    allow_multi_currency = pos_profile.get("posa_allow_multi_currency")
     result = []
     
     if items_data:
@@ -445,9 +447,11 @@ def get_items_details(pos_profile, items_data, price_list=None):
             if item_code:
                 item_detail = get_item_detail(
                     json.dumps(item),
-                    warehouse=warehouse, 
+                    warehouse=warehouse,
                     price_list=price_list or pos_profile.get("selling_price_list"),
-                    company=company
+                    company=company,
+                    pos_currency=pos_currency,
+                    allow_multi_currency=allow_multi_currency,
                 )
                 if item_detail:
                     result.append(item_detail)
@@ -456,7 +460,15 @@ def get_items_details(pos_profile, items_data, price_list=None):
 
 
 @frappe.whitelist()
-def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=None):
+def get_item_detail(
+    item,
+    doc=None,
+    warehouse=None,
+    price_list=None,
+    company=None,
+    pos_currency=None,
+    allow_multi_currency=False,
+):
     item = json.loads(item)
     today = nowdate()
     item_code = item.get("item_code")
@@ -512,14 +524,14 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
         )
 
         exchange_rate = 1
-        if price_list_currency != company_currency and allow_multi_currency:
+        if allow_multi_currency and pos_currency and price_list_currency != pos_currency:
             from erpnext.setup.utils import get_exchange_rate
 
             try:
-                exchange_rate = get_exchange_rate(price_list_currency, company_currency, today)
+                exchange_rate = get_exchange_rate(price_list_currency, pos_currency, today)
             except Exception:
                 frappe.log_error(
-                    f"Missing exchange rate from {price_list_currency} to {company_currency}",
+                    f"Missing exchange rate from {price_list_currency} to {pos_currency}",
                     "POS Awesome",
                 )
 

@@ -123,7 +123,7 @@ def update_invoice(data):
         for item in invoice_doc.items:
             if item.price_list_rate:
                 item.base_price_list_rate = flt(
-                    item.price_list_rate * plc_rate,
+                    item.price_list_rate * exchange_rate,
                     item.precision("base_price_list_rate"),
                 )
             if item.rate:
