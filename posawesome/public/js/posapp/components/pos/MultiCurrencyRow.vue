@@ -25,9 +25,9 @@ export default {
   data() {
     return {
       internal_selected_currency: this.selected_currency,
-      // Keep exchange rate in the same orientation as the POS logic
-      // (selected currency -> base currency)
-      internal_exchange_rate: this.exchange_rate || 1,
+      // Display exchange rate in the intuitive orientation
+      // POS logic expects selected -> base but we show base -> selected
+      internal_exchange_rate: this.exchange_rate ? 1 / this.exchange_rate : 1,
     };
   },
   watch: {
@@ -35,8 +35,8 @@ export default {
       this.internal_selected_currency = val;
     },
     exchange_rate(val) {
-      // Keep the internal value in the same orientation
-      this.internal_exchange_rate = val || 1;
+      // Convert to user friendly orientation when prop updates
+      this.internal_exchange_rate = val ? 1 / val : 1;
     },
   },
   methods: {
@@ -44,8 +44,8 @@ export default {
       this.$emit('update:selected_currency', val);
     },
     onExchangeChange() {
-      // Emit the exchange rate directly in selected -> base orientation
-      const rate = this.internal_exchange_rate || 1;
+      // Convert back to selected -> base orientation before emitting
+      const rate = this.internal_exchange_rate ? 1 / this.internal_exchange_rate : 1;
       this.$emit('update:exchange_rate', rate);
     },
   },
