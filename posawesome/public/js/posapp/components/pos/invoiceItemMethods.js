@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs } from "../../../offline/index.js";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, clearPriceListCache } from "../../../offline/index.js";
 
 export default {
 
@@ -1537,7 +1537,11 @@ export default {
           if (vm.pos_profile.posa_force_reload_items && message.customer_price_list) {
             vm.selected_price_list = message.customer_price_list;
             vm.eventBus.emit("update_customer_price_list", message.customer_price_list);
-            vm.apply_cached_price_list(message.customer_price_list);
+            if (vm.pos_profile.posa_smart_reload_mode) {
+              vm.apply_cached_price_list(message.customer_price_list);
+            } else {
+              clearPriceListCache();
+            }
           }
         } catch (error) {
           console.error("Failed to fetch customer details", error);
