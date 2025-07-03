@@ -121,11 +121,17 @@ import itemMethods from "./invoiceItemMethods";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
-import { themeSettingsMixin } from "../../mixins/themeSettings.js";
+
+import { useInvoiceStore } from "../../stores/invoice.js";
 
 export default {
   name: 'POSInvoice',
-  mixins: [format, themeSettingsMixin],
+  mixins: [format],
+  setup() {
+    const invoiceStore = useInvoiceStore();
+    return { invoiceStore };
+  },
+
   data() {
     return {
       // POS profile settings
@@ -759,6 +765,26 @@ export default {
   mounted() {
     // Load saved column preferences
     this.loadColumnPreferences();
+    const store = this.invoiceStore;
+    store.$onAction(({ name, args }) => {
+      if (name === 'addItem') {
+        this.add_item(args[0]);
+      } else if (name === 'setCustomer') {
+        this.customer = args[0];
+      } else if (name === 'setNewLine') {
+        this.new_line = args[0];
+      } else if (name === 'setSelectedColumns') {
+        this.selected_columns = args[0];
+      } else if (name === 'setItemSelectorSettings') {
+        const opts = args[0] || {};
+        if (typeof opts.hide_qty_decimals !== 'undefined') {
+          this.hide_qty_decimals = opts.hide_qty_decimals;
+        }
+        if (typeof opts.hide_zero_rate_items !== 'undefined') {
+          this.hide_zero_rate_items = opts.hide_zero_rate_items;
+        }
+      }
+    });
     this.eventBus.on("item-drag-start", (item) => {
       this.showDropFeedback(true);
     });
@@ -800,10 +826,6 @@ export default {
 
       this.fetch_price_lists();
       this.update_price_list();
-    });
-    this.eventBus.on("add_item", this.add_item);
-    this.eventBus.on("update_customer", (customer) => {
-      this.customer = customer;
     });
     this.eventBus.on("fetch_customer_details", () => {
       this.fetch_customer_details();
@@ -875,9 +897,6 @@ export default {
         customer: this.customer
       });
     });
-    this.eventBus.on("set_new_line", (data) => {
-      this.new_line = data;
-    });
     if (this.pos_profile.posa_allow_multi_currency) {
       this.fetch_available_currencies();
     }
@@ -898,8 +917,6 @@ export default {
   beforeUnmount() {
     // Existing cleanup
     this.eventBus.off("register_pos_profile");
-    this.eventBus.off("add_item");
-    this.eventBus.off("update_customer");
     this.eventBus.off("fetch_customer_details");
     this.eventBus.off("clear_invoice");
     // Cleanup reset_posting_date listener

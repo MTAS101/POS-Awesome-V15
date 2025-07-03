@@ -183,12 +183,18 @@ import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
-import { themeSettingsMixin } from '../../mixins/themeSettings.js';
+
+import { useInvoiceStore } from "../../stores/invoice.js";
+
 
 export default {
   mixins: [format, responsiveMixin, themeSettingsMixin],
   components: {
     CameraScanner,
+  },
+  setup() {
+    const invoiceStore = useInvoiceStore();
+    return { invoiceStore };
   },
   data: () => ({
     pos_profile: "",
@@ -208,8 +214,6 @@ export default {
     couponsCount: 0,
     appliedCouponsCount: 0,
     customer_price_list: null,
-    customer: null,
-    new_line: false,
     qty: 1,
     refresh_interval: null,
     currentRequest: null,
@@ -223,9 +227,7 @@ export default {
     itemWorker: null,
     items_request_token: 0,
     show_item_settings: false,
-    hide_qty_decimals: false,
     temp_hide_qty_decimals: false,
-    hide_zero_rate_items: false,
     temp_hide_zero_rate_items: false,
     isDragging: false,
   }),
@@ -297,9 +299,6 @@ export default {
       }
       // No cache found; keep existing items without reloading from server
     }, 300),
-    new_line() {
-      this.eventBus.emit("set_new_line", this.new_line);
-    },
     filtered_items(new_value, old_value) {
       // Update item details if items changed
       if (
@@ -802,7 +801,7 @@ export default {
           }
           item.qty = qtyVal;
         }
-        this.eventBus.emit("add_item", item);
+        this.invoiceStore.addItem(item);
         this.qty = 1;
       }
     },
@@ -1461,6 +1460,10 @@ export default {
     applyItemSettings() {
       this.hide_qty_decimals = this.temp_hide_qty_decimals;
       this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
+      this.invoiceStore.setItemSelectorSettings({
+        hide_qty_decimals: this.hide_qty_decimals,
+        hide_zero_rate_items: this.hide_zero_rate_items,
+      });
       this.saveItemSettings();
       this.show_item_settings = false;
     },
@@ -1507,6 +1510,7 @@ export default {
           if (typeof opts.hide_zero_rate_items === 'boolean') {
             this.hide_zero_rate_items = opts.hide_zero_rate_items;
           }
+          this.invoiceStore.setItemSelectorSettings(opts);
         }
       } catch (e) {
         console.error('Failed to load item selector settings:', e);
@@ -1690,6 +1694,38 @@ export default {
     active_price_list() {
       return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
     },
+    customer: {
+      get() {
+        return this.invoiceStore.customer;
+      },
+      set(val) {
+        this.invoiceStore.setCustomer(val);
+      }
+    },
+    new_line: {
+      get() {
+        return this.invoiceStore.itemSelectorSettings.new_line;
+      },
+      set(val) {
+        this.invoiceStore.setNewLine(val);
+      }
+    },
+    hide_qty_decimals: {
+      get() {
+        return this.invoiceStore.itemSelectorSettings.hide_qty_decimals;
+      },
+      set(val) {
+        this.invoiceStore.setItemSelectorSettings({ hide_qty_decimals: val });
+      }
+    },
+    hide_zero_rate_items: {
+      get() {
+        return this.invoiceStore.itemSelectorSettings.hide_zero_rate_items;
+      },
+      set(val) {
+        this.invoiceStore.setItemSelectorSettings({ hide_zero_rate_items: val });
+      }
+    },
   },
 
   created: function () {
@@ -1741,9 +1777,6 @@ export default {
     });
     this.eventBus.on("update_customer_price_list", (data) => {
       this.customer_price_list = data;
-    });
-    this.eventBus.on("update_customer", (data) => {
-      this.customer = data;
     });
 
     // Refresh item quantities when connection to server is restored
@@ -1815,7 +1848,6 @@ export default {
     this.eventBus.off("update_offers_counters");
     this.eventBus.off("update_coupons_counters");
     this.eventBus.off("update_customer_price_list");
-    this.eventBus.off("update_customer");
   },
 };
 </script>
