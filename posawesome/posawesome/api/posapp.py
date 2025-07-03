@@ -44,7 +44,6 @@ def ensure_child_doctype(doc, table_field, child_doctype):
 @frappe.whitelist()
 def get_opening_dialog_data():
     data = {}
-    data["companies"] = frappe.get_list("Company", limit_page_length=0, order_by="name")
     
     # Get only POS Profiles where current user is defined in POS Profile User table
     pos_profiles_data = frappe.db.sql("""
@@ -56,6 +55,13 @@ def get_opening_dialog_data():
     """, frappe.session.user, as_dict=1)
     
     data["pos_profiles_data"] = pos_profiles_data
+
+    # Derive companies from accessible POS Profiles
+    company_names = []
+    for profile in pos_profiles_data:
+        if profile.company and profile.company not in company_names:
+            company_names.append(profile.company)
+    data["companies"] = [{"name": c} for c in company_names]
 
     pos_profiles_list = []
     for i in data["pos_profiles_data"]:
@@ -397,7 +403,7 @@ def get_items(
                                         }
                                     )
                 serial_no_data = []
-                if search_serial_no:
+                if search_serial_no or item.has_serial_no:
                     serial_no_data = frappe.get_all(
                         "Serial No",
                         filters={
@@ -1348,6 +1354,17 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
                                 "manufacturing_date": batch_doc.manufacturing_date,
                             }
                         )
+    serial_no_data = []
+    if warehouse and item.get("has_serial_no"):
+        serial_no_data = frappe.get_all(
+            "Serial No",
+            filters={
+                "item_code": item_code,
+                "status": "Active",
+                "warehouse": warehouse,
+            },
+            fields=["name as serial_no"],
+        )
 
     item["selling_price_list"] = price_list
 
@@ -1361,6 +1378,7 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
         res["actual_qty"] = get_stock_availability(item_code, warehouse)
     res["max_discount"] = max_discount
     res["batch_no_data"] = batch_no_data
+    res["serial_no_data"] = serial_no_data
     
     # Add UOMs data directly from item document
     uoms = frappe.get_all(

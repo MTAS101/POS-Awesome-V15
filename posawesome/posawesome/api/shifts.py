@@ -13,7 +13,6 @@ from .utilities import get_version
 @frappe.whitelist()
 def get_opening_dialog_data():
     data = {}
-    data["companies"] = frappe.get_list("Company", limit_page_length=0, order_by="name")
     
     # Get only POS Profiles where current user is defined in POS Profile User table
     pos_profiles_data = frappe.db.sql("""
@@ -25,6 +24,13 @@ def get_opening_dialog_data():
     """, frappe.session.user, as_dict=1)
     
     data["pos_profiles_data"] = pos_profiles_data
+
+    # Derive companies from accessible POS Profiles
+    company_names = []
+    for profile in pos_profiles_data:
+        if profile.company and profile.company not in company_names:
+            company_names.append(profile.company)
+    data["companies"] = [{"name": c} for c in company_names]
 
     pos_profiles_list = []
     for i in data["pos_profiles_data"]:

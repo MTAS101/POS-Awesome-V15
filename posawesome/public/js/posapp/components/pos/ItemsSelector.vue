@@ -135,6 +135,18 @@
             <v-btn size="small" value="card">{{ __("Card") }}</v-btn>
           </v-btn-toggle>
         </v-col>
+        <v-col cols="5" class="dynamic-margin-xs">
+          <v-btn
+            size="small"
+            block
+            color="warning"
+            variant="text"
+            @click="show_offers"
+            class="action-btn-consistent"
+          >
+            {{ offersCount }} {{ __("Offers") }}
+          </v-btn>
+        </v-col>
         <v-col cols="4" class="dynamic-margin-xs">
           <v-btn size="small" block color="primary" variant="text" @click="show_coupons"
             class="action-btn-consistent">{{
