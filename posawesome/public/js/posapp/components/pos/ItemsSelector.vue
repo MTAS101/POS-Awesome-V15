@@ -282,8 +282,15 @@ export default {
           this.update_items_details(this.items);
           return;
         }
+        // No cached items found for this price list, fetch from server
+        this.items_loaded = false;
+        this.get_items(true);
+        return;
       }
-      // No cache found; keep existing items without reloading from server
+      // Items not loaded yet, fetch items for the selected price list
+      if (!this.items_loaded) {
+        this.get_items(true);
+      }
     }, 300),
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
