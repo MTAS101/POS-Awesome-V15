@@ -356,6 +356,10 @@ export default {
               upd.rate = det.rate;
               upd.price_list_rate = det.price_list_rate || det.rate;
             }
+            upd.currency = det.currency;
+            if (det.plc_conversion_rate !== undefined) {
+              upd.plc_conversion_rate = det.plc_conversion_rate;
+            }
           }
           updates.push({ item, upd });
         }
@@ -363,7 +367,16 @@ export default {
 
       if (cacheResult.missing.length === 0) {
         vm.$nextTick(() => {
-          updates.forEach(({ item, upd }) => Object.assign(item, upd));
+          updates.forEach(({ item, upd }) => {
+            Object.assign(item, upd);
+            if (upd.rate !== undefined) {
+              item.original_rate = upd.rate;
+              item.original_currency = upd.currency || vm.pos_profile.currency;
+              if (upd.plc_conversion_rate !== undefined) {
+                item.plc_conversion_rate = upd.plc_conversion_rate;
+              }
+            }
+          });
           updateLocalStockCache(cacheResult.cached);
           vm.loading = false;
         });
@@ -401,13 +414,26 @@ export default {
                     upd.rate = updItem.rate;
                     upd.price_list_rate = updItem.price_list_rate || updItem.rate;
                   }
+                  upd.currency = updItem.currency;
+                  if (updItem.plc_conversion_rate !== undefined) {
+                    upd.plc_conversion_rate = updItem.plc_conversion_rate;
+                  }
                 }
                 updates.push({ item, upd });
               }
             });
 
             vm.$nextTick(() => {
-              updates.forEach(({ item, upd }) => Object.assign(item, upd));
+              updates.forEach(({ item, upd }) => {
+                Object.assign(item, upd);
+                if (upd.rate !== undefined) {
+                  item.original_rate = upd.rate;
+                  item.original_currency = upd.currency || vm.pos_profile.currency;
+                  if (upd.plc_conversion_rate !== undefined) {
+                    item.plc_conversion_rate = upd.plc_conversion_rate;
+                  }
+                }
+              });
               updateLocalStockCache(r.message);
               saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
               vm.loading = false;
@@ -973,6 +999,12 @@ export default {
               item.rate = det.rate;
               item.price_list_rate = det.price_list_rate || det.rate;
             }
+            // Always store latest server rate as original for accurate conversions
+            item.original_rate = det.rate;
+            item.original_currency = det.currency || vm.pos_profile.currency;
+          }
+          if (det.plc_conversion_rate !== undefined) {
+            item.plc_conversion_rate = det.plc_conversion_rate;
           }
 
           if (!item.original_rate) {
@@ -1076,6 +1108,11 @@ export default {
               // Apply all updates in one batch
               updatedItems.forEach(({ item, updates }) => {
                 Object.assign(item, updates);
+                if (updates.rate !== undefined) {
+                  // Persist latest rate details for accurate future conversions
+                  item.original_rate = updates.rate;
+                  item.original_currency = updates.currency || vm.pos_profile.currency;
+                }
                 vm.applyCurrencyConversionToItem(item);
               });
 
