@@ -1141,21 +1141,15 @@ export default {
         item.original_currency = item.currency || base;
       }
 
-      let base_rate;
-      if (item.original_currency === base) {
-        base_rate = item.original_rate;
-      } else {
-        base_rate = item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
-      }
+      // original_rate is in price list currency
+      const price_list_rate = item.original_rate;
+      const base_rate = price_list_rate * (item.plc_conversion_rate || 1);
 
-      if (this.selected_currency === base) {
-        item.rate = this.flt(base_rate, this.currency_precision);
-        item.currency = base;
-      } else {
-        item.rate = this.flt(base_rate / this.exchange_rate, this.currency_precision);
-        item.currency = this.selected_currency;
-      }
+      item.base_rate = base_rate;
+      item.base_price_list_rate = price_list_rate;
 
+      item.rate = this.flt(price_list_rate * (this.exchange_rate || 1), this.currency_precision);
+      item.currency = this.selected_currency;
       item.price_list_rate = item.rate;
     },
     scan_barcoud() {

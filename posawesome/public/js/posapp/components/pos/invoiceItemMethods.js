@@ -144,8 +144,8 @@ export default {
       // Setup base rates properly for multi-currency
       if (this.selected_currency !== this.pos_profile.currency) {
         // Store original base currency values
-        new_item.base_price_list_rate = item.rate * this.exchange_rate;
-        new_item.base_rate = item.rate * this.exchange_rate;
+        new_item.base_price_list_rate = item.rate / this.exchange_rate;
+        new_item.base_rate = item.rate / this.exchange_rate;
         new_item.base_discount_amount = 0;
       } else {
         // In base currency, base rates = displayed rates
@@ -633,12 +633,12 @@ export default {
         const multiplier = isReturn ? -1 : 1;
 
         // If exchange rate is 300 PKR = 1 USD
-        // To convert USD to PKR: multiply by exchange rate
-        doc.base_total = total * this.exchange_rate * multiplier;
-        doc.base_net_total = total * this.exchange_rate * multiplier;
-        doc.base_discount_amount = discountAmount * this.exchange_rate * multiplier;
-        doc.base_grand_total = grandTotal * this.exchange_rate * multiplier;
-        doc.base_rounded_total = grandTotal * this.exchange_rate * multiplier;
+        // To convert PKR to USD: divide by exchange rate
+        doc.base_total = total / this.exchange_rate * multiplier;
+        doc.base_net_total = total / this.exchange_rate * multiplier;
+        doc.base_discount_amount = discountAmount / this.exchange_rate * multiplier;
+        doc.base_grand_total = grandTotal / this.exchange_rate * multiplier;
+        doc.base_rounded_total = grandTotal / this.exchange_rate * multiplier;
       } else {
         // Same currency, just ensure negative values for returns
         const multiplier = isReturn ? -1 : 1;
@@ -655,7 +655,7 @@ export default {
         doc.payments.forEach(payment => {
           if (this.selected_currency !== this.pos_profile.currency) {
             // Convert payment amount to base currency
-            payment.base_amount = payment.amount * this.exchange_rate;
+            payment.base_amount = payment.amount / this.exchange_rate;
           } else {
             payment.base_amount = payment.amount;
           }
@@ -780,18 +780,18 @@ export default {
           new_item.rate = flt(item.rate);  // Keep rate in USD
 
           // Use pre-stored base_rate if available, otherwise calculate
-          new_item.base_rate = item.base_rate || flt(item.rate * this.exchange_rate);
+          new_item.base_rate = item.base_rate || flt(item.rate / this.exchange_rate);
 
           new_item.price_list_rate = flt(item.price_list_rate);  // Keep price list rate in USD
-          new_item.base_price_list_rate = item.base_price_list_rate || flt(item.price_list_rate * this.exchange_rate);
+          new_item.base_price_list_rate = item.base_price_list_rate || flt(item.price_list_rate / this.exchange_rate);
 
           // Calculate amounts
           new_item.amount = flt(item.qty) * new_item.rate;  // Amount in USD
-          new_item.base_amount = new_item.amount * this.exchange_rate;  // Convert to PKR
+          new_item.base_amount = new_item.amount / this.exchange_rate;  // Convert to base currency
 
           // Handle discount amount
           new_item.discount_amount = flt(item.discount_amount);  // Keep discount in USD
-          new_item.base_discount_amount = item.base_discount_amount || flt(item.discount_amount * this.exchange_rate);
+          new_item.base_discount_amount = item.base_discount_amount || flt(item.discount_amount / this.exchange_rate);
         } else {
           // Same currency (base currency), make sure we use base rates if available
           new_item.rate = flt(item.rate);
@@ -874,7 +874,7 @@ export default {
         // base_amount should be in PKR (e.g. 3000 PKR)
         // So multiply by exchange rate to get base_amount
         const base_amount = this.selected_currency !== this.pos_profile.currency ?
-          this.flt(adjusted_amount * (this.exchange_rate || 1), this.currency_precision) :
+          this.flt(adjusted_amount / (this.exchange_rate || 1), this.currency_precision) :
           adjusted_amount;
 
         payments.push({
@@ -909,7 +909,7 @@ export default {
       if (this.selected_currency === this.pos_profile.currency) {
         return amount;
       }
-      return this.flt(amount * this.exchange_rate, this.currency_precision);
+      return this.flt(amount / this.exchange_rate, this.currency_precision);
     },
 
     // Update invoice in backend
@@ -1582,9 +1582,9 @@ export default {
 
           if (priceCurrency === this.selected_currency) {
             // Rate already in selected currency
-            item.base_price_list_rate = newRate * this.exchange_rate;
+            item.base_price_list_rate = newRate / this.exchange_rate;
             if (!item._manual_rate_set) {
-              item.base_rate = newRate * this.exchange_rate;
+              item.base_rate = newRate / this.exchange_rate;
             }
             item.price_list_rate = newRate;
             if (!item._manual_rate_set) {
@@ -1601,7 +1601,7 @@ export default {
 
             if (this.selected_currency !== this.pos_profile.currency) {
               const conv = this.exchange_rate || 1;
-              const convRate = this.flt(newRate / conv, this.currency_precision);
+              const convRate = this.flt(newRate * conv, this.currency_precision);
               if (newRate !== 0 || !item.price_list_rate) {
                 item.price_list_rate = convRate;
               }
@@ -1675,7 +1675,7 @@ export default {
         switch (fieldId) {
           case "rate":
             // Store base rate and convert to selected currency
-            item.base_rate = this.flt(newValue * this.exchange_rate, this.currency_precision);
+            item.base_rate = this.flt(newValue / this.exchange_rate, this.currency_precision);
             item.rate = newValue;
 
             // Calculate discount amount in selected currency
@@ -1700,7 +1700,7 @@ export default {
             console.log("[calc_prices] Input value (newValue after Math.min):", newValue);
 
             // Store base discount and convert to selected currency
-            item.base_discount_amount = this.flt(newValue * this.exchange_rate, this.currency_precision);
+            item.base_discount_amount = this.flt(newValue / this.exchange_rate, this.currency_precision);
             item.discount_amount = newValue;
             console.log("[calc_prices] Updated item.discount_amount:", item.discount_amount);
             console.log("[calc_prices] Updated item.base_discount_amount:", item.base_discount_amount);
@@ -1798,8 +1798,8 @@ export default {
 
         // Store base discount amount
         if (this.selected_currency !== this.pos_profile.currency) {
-          // Convert discount amount back to base currency by multiplying with exchange rate
-          item.base_discount_amount = this.flt(discount_amount * this.exchange_rate, this.currency_precision);
+          // Convert discount amount back to base currency by dividing by exchange rate
+          item.base_discount_amount = this.flt(discount_amount / this.exchange_rate, this.currency_precision);
         } else {
           item.base_discount_amount = item.discount_amount;
         }
@@ -1808,8 +1808,8 @@ export default {
       // Calculate amounts
       item.amount = this.flt(item.qty * item.rate, this.currency_precision);
       if (this.selected_currency !== this.pos_profile.currency) {
-        // Convert amount back to base currency by multiplying with exchange rate
-        item.base_amount = this.flt(item.amount * this.exchange_rate, this.currency_precision);
+        // Convert amount back to base currency by dividing by exchange rate
+        item.base_amount = this.flt(item.amount / this.exchange_rate, this.currency_precision);
       } else {
         item.base_amount = item.amount;
       }

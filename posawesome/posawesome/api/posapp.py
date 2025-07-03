@@ -703,52 +703,46 @@ def update_invoice(data):
         if invoice_doc.currency != frappe.get_cached_value("Company", invoice_doc.company, "default_currency"):
             company_currency = frappe.get_cached_value("Company", invoice_doc.company, "default_currency")
 
-            exchange_rate = None
-            if invoice_doc.selling_price_list:
-                try:
-                    exchange_rate = frappe.db.get_value(
-                        "Price List",
-                        invoice_doc.selling_price_list,
-                        "exchange_rate",
-                    )
-                except Exception:
-                    exchange_rate = None
-
-            if not exchange_rate:
-                # Get exchange rate from selected currency to base currency
-                exchange_rate = get_exchange_rate(
-                    invoice_doc.currency,
-                    company_currency,
-                    invoice_doc.posting_date,
+            # Determine price list currency
+            price_list_currency = data.get("price_list_currency")
+            if not price_list_currency and invoice_doc.get("selling_price_list"):
+                price_list_currency = frappe.db.get_value(
+                    "Price List", invoice_doc.selling_price_list, "currency"
                 )
+            if not price_list_currency:
+                price_list_currency = company_currency
+
+            # Get exchange rate from price list currency to selected currency
+            exchange_rate = get_exchange_rate(
+                price_list_currency,
+                invoice_doc.currency,
+                invoice_doc.posting_date,
+            )
             invoice_doc.conversion_rate = exchange_rate
             invoice_doc.plc_conversion_rate = exchange_rate
-
-            # Preserve provided price list currency if different from selected
-            price_list_currency = data.get("price_list_currency") or selected_currency
             invoice_doc.price_list_currency = price_list_currency
 
-            # Update rates and amounts for all items using multiplication
+            # Update rates and amounts for all items using division
             for item in invoice_doc.items:
                 if item.price_list_rate:
                     # If exchange rate is 285 PKR = 1 USD
-                    # To convert USD to PKR: multiply by exchange rate
-                    # Example: 0.35 USD * 285 = 100 PKR
-                    item.base_price_list_rate = flt(item.price_list_rate * exchange_rate, item.precision("base_price_list_rate"))
+                    # To convert PKR to USD: divide by exchange rate
+                    # Example: 100 PKR / 285 = 0.35 USD
+                    item.base_price_list_rate = flt(item.price_list_rate / exchange_rate, item.precision("base_price_list_rate"))
                 if item.rate:
-                    item.base_rate = flt(item.rate * exchange_rate, item.precision("base_rate"))
+                    item.base_rate = flt(item.rate / exchange_rate, item.precision("base_rate"))
                 if item.amount:
-                    item.base_amount = flt(item.amount * exchange_rate, item.precision("base_amount"))
+                    item.base_amount = flt(item.amount / exchange_rate, item.precision("base_amount"))
 
             # Update payment amounts
             for payment in invoice_doc.payments:
-                payment.base_amount = flt(payment.amount * exchange_rate, payment.precision("base_amount"))
+                payment.base_amount = flt(payment.amount / exchange_rate, payment.precision("base_amount"))
 
             # Update invoice level amounts
-            invoice_doc.base_total = flt(invoice_doc.total * exchange_rate, invoice_doc.precision("base_total"))
-            invoice_doc.base_net_total = flt(invoice_doc.net_total * exchange_rate, invoice_doc.precision("base_net_total"))
-            invoice_doc.base_grand_total = flt(invoice_doc.grand_total * exchange_rate, invoice_doc.precision("base_grand_total"))
-            invoice_doc.base_rounded_total = flt(invoice_doc.rounded_total * exchange_rate, invoice_doc.precision("base_rounded_total"))
+            invoice_doc.base_total = flt(invoice_doc.total / exchange_rate, invoice_doc.precision("base_total"))
+            invoice_doc.base_net_total = flt(invoice_doc.net_total / exchange_rate, invoice_doc.precision("base_net_total"))
+            invoice_doc.base_grand_total = flt(invoice_doc.grand_total / exchange_rate, invoice_doc.precision("base_grand_total"))
+            invoice_doc.base_rounded_total = flt(invoice_doc.rounded_total / exchange_rate, invoice_doc.precision("base_rounded_total"))
             invoice_doc.base_in_words = money_in_words(invoice_doc.base_rounded_total, invoice_doc.company_currency)
 
             # Update data to be sent back to frontend

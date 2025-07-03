@@ -494,9 +494,9 @@ export default {
             item.base_discount_amount = item.discount_amount || 0;
           } else {
             // When in another currency, calculate base rates
-            item.base_rate = item.rate * this.exchange_rate;
-            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
-            item.base_discount_amount = (item.discount_amount || 0) * this.exchange_rate;
+            item.base_rate = item.rate / this.exchange_rate;
+            item.base_price_list_rate = item.price_list_rate / this.exchange_rate;
+            item.base_discount_amount = (item.discount_amount || 0) / this.exchange_rate;
           }
         }
 
@@ -585,8 +585,8 @@ export default {
               const r = await frappe.call({
                 method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
                 args: {
-                  from_currency: this.selected_currency,
-                  to_currency: baseCurrency,
+                  from_currency: baseCurrency,
+                  to_currency: this.selected_currency,
                   posting_date: this.formatDateForBackend(this.posting_date_display)
                 },
               });
