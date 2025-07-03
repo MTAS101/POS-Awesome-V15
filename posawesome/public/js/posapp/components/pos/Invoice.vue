@@ -535,9 +535,9 @@ export default {
           item.base_discount_amount = item.discount_amount || 0;
         } else {
           // When in another currency, store base currency equivalents
-          item.base_rate = this.flt(item.rate / this.exchange_rate, this.currency_precision);
-          item.base_price_list_rate = this.flt(item.price_list_rate / this.exchange_rate, this.currency_precision);
-          item.base_discount_amount = this.flt((item.discount_amount || 0) / this.exchange_rate, this.currency_precision);
+          item.base_rate = this.flt(item.rate * this.exchange_rate, this.currency_precision);
+          item.base_price_list_rate = this.flt(item.price_list_rate * this.exchange_rate, this.currency_precision);
+          item.base_discount_amount = this.flt((item.discount_amount || 0) * this.exchange_rate, this.currency_precision);
         }
 
         // Currency conversion logic for displayed values
@@ -551,9 +551,9 @@ export default {
           // When switching to another currency, convert from base rates
           console.log(`Converting rates for ${item.item_code} to ${this.selected_currency}`);
 
-          const converted_price = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
-          const converted_rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
-          const converted_discount = this.flt(item.base_discount_amount * this.exchange_rate, this.currency_precision);
+          const converted_price = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
+          const converted_rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
+          const converted_discount = this.flt(item.base_discount_amount / this.exchange_rate, this.currency_precision);
 
           item.price_list_rate = converted_price < 0.000001 ? 0 : converted_price;
           item.rate = converted_rate < 0.000001 ? 0 : converted_rate;
@@ -628,8 +628,7 @@ export default {
                 },
               });
               if (r && r.message) {
-                // convert to company->selected orientation
-                this.exchange_rate = 1 / r.message;
+                this.exchange_rate = r.message;
                 this.sync_exchange_rate();
               }
             } catch (error) {
@@ -650,7 +649,7 @@ export default {
         try {
           const response = await this.update_invoice(doc);
           if (response && response.conversion_rate) {
-            this.exchange_rate = 1 / response.conversion_rate;
+            this.exchange_rate = response.conversion_rate;
             this.sync_exchange_rate();
           }
         } catch (error) {
@@ -671,7 +670,7 @@ export default {
         }
 
         const doc = this.get_invoice_doc();
-        doc.conversion_rate = 1 / this.exchange_rate;
+        doc.conversion_rate = this.exchange_rate;
         try {
           await this.update_invoice(doc);
           this.sync_exchange_rate();
