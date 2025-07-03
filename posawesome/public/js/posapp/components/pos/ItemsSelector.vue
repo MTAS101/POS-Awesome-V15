@@ -267,7 +267,7 @@ export default {
       }
       // Apply cached rates if available for immediate update
       if (this.items_loaded && this.items && this.items.length > 0) {
-        const cached = getCachedPriceListItems(this.customer_price_list);
+        const cached = getCachedPriceListItems(this.active_price_list);
         if (cached && cached.length) {
           const map = {};
           cached.forEach(ci => { map[ci.item_code] = ci; });
@@ -463,7 +463,7 @@ export default {
         !force_server &&
         !this.pos_profile.pose_use_limit_search
       ) {
-        const cached = getCachedPriceListItems(vm.customer_price_list);
+        const cached = getCachedPriceListItems(vm.active_price_list);
         if (cached && cached.length) {
           vm.items = cached;
           vm.items.forEach((it) => {
@@ -533,7 +533,7 @@ export default {
               credentials: "same-origin",
               body: JSON.stringify({
                 pos_profile: JSON.stringify(vm.pos_profile),
-                price_list: vm.customer_price_list,
+                  price_list: vm.active_price_list,
                 item_group: gr,
                 search_value: sr,
                 customer: vm.customer,
@@ -550,7 +550,7 @@ export default {
             if (ev.data.type === "parsed") {
               const parsed = ev.data.items;
               vm.items = parsed.message || parsed;
-              savePriceListItems(vm.customer_price_list, vm.items);
+              savePriceListItems(vm.active_price_list, vm.items);
               // Ensure UOMs are available for each item
               vm.items.forEach((it) => {
                 if (it.item_uoms && it.item_uoms.length > 0) {
@@ -614,7 +614,7 @@ export default {
               vm.loading = false;
             }
           };
-          this.itemWorker.postMessage({ type: 'parse_and_cache', json: text, priceList: vm.customer_price_list });
+            this.itemWorker.postMessage({ type: 'parse_and_cache', json: text, priceList: vm.active_price_list });
 
 
         } catch (err) {
@@ -626,7 +626,7 @@ export default {
           method: "posawesome.posawesome.api.items.get_items",
           args: {
             pos_profile: JSON.stringify(vm.pos_profile),
-            price_list: vm.customer_price_list,
+              price_list: vm.active_price_list,
             item_group: gr,
             search_value: sr,
             customer: vm.customer,
@@ -651,7 +651,7 @@ export default {
               vm.eventBus.emit("set_all_items", vm.items);
               vm.loading = false;
               vm.items_loaded = true;
-              savePriceListItems(vm.customer_price_list, vm.items);
+              savePriceListItems(vm.active_price_list, vm.items);
               console.info("Items Loaded");
 
               // Pre-populate stock cache when items are freshly loaded
