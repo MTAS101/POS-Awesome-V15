@@ -44,8 +44,10 @@
 </template>
 
 <script>
+import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 
 export default {
+  mixins: [themeSettingsMixin],
   data: () => ({
     loading: false,
     pos_profile: '',
@@ -68,9 +70,6 @@ export default {
     },
     appliedCouponsCount() {
       return this.posa_coupons.filter((el) => !!el.applied).length;
-    },
-    isDarkTheme() {
-      return this.$theme?.current === 'dark';
     },
   },
 
