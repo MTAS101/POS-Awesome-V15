@@ -121,10 +121,11 @@ import itemMethods from "./invoiceItemMethods";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
+import { themeSettingsMixin } from "../../mixins/themeSettings.js";
 
 export default {
   name: 'POSInvoice',
-  mixins: [format],
+  mixins: [format, themeSettingsMixin],
   data() {
     return {
       // POS profile settings
@@ -186,9 +187,7 @@ export default {
   },
   computed: {
     ...invoiceComputed,
-    isDarkTheme() {
-      return this.$theme.current === 'dark';
-    }
+    
   },
 
 
