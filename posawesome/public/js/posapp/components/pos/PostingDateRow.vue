@@ -46,9 +46,7 @@
 </template>
 
 <script>
-import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 export default {
-  mixins: [themeSettingsMixin],
   props: {
     pos_profile: Object,
     posting_date_display: String,
@@ -62,6 +60,11 @@ export default {
       internal_posting_date_display: this.posting_date_display,
       internal_price_list: this.priceList,
     };
+  },
+  computed: {
+    isDarkTheme() {
+      return this.$theme?.current === 'dark';
+    }
   },
   watch: {
     posting_date_display(val) {

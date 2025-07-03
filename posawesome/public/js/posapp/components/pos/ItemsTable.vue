@@ -1,46 +1,27 @@
 <template>
-  <div class="my-0 py-0 overflow-y-auto items-table-container"
-    :style="{ height: 'calc(var(--container-height) - 80px)', maxHeight: 'calc(var(--container-height) - 80px)' }"
-    @dragover="onDragOverFromSelector($event)" @drop="onDropFromSelector($event)" @dragenter="onDragEnterFromSelector"
-    @dragleave="onDragLeaveFromSelector">
-    <v-data-table-virtual :headers="headers" :items="items" :theme="$theme.current" :expanded="expanded" show-expand
-      item-value="posa_row_id" class="modern-items-table elevation-2" :items-per-page="itemsPerPage" expand-on-click
-      density="compact" hide-default-footer :single-expand="true" :header-props="headerProps"
-      @update:expanded="$emit('update:expanded', $event)" :search="itemSearch">
-
-      <template #item="{ item, index }">
-        <tr
-          class="draggable-row"
-          draggable="true"
-          :aria-grabbed="draggedIndex === index"
-          role="row"
-          tabindex="0"
-          @dragstart="startDrag(index)"
-          @dragend="endDrag"
-          @dragover.prevent="onRowDragOver(index)"
-          @drop="onRowDrop(index)"
-          @keydown.up.prevent="moveRow(index, -1)"
-          @keydown.down.prevent="moveRow(index, 1)"
-        >
-          <td class="drag-handle-cell">
-            <v-icon class="drag-handle" aria-label="Drag to reorder item">mdi-drag</v-icon>
-          </td>
-          <td v-for="header in headers" :key="header.key">
-            <slot :name="`item.${header.key}`" :item="item">
-              {{ item[header.key] }}
-            </slot>
-          </td>
-        </tr>
-      </template>
-
-      <!-- Quantity column -->
+  <div class="my-0 py-0 overflow-y-auto" :style="{ height: 'calc(var(--container-height) - 80px)', maxHeight: 'calc(var(--container-height) - 80px)' }">
+    <v-data-table-virtual
+      :headers="headers"
+      :items="items"
+      :theme="$theme.current"
+      :expanded="expanded"
+      show-expand
+      item-value="posa_row_id"
+      class="modern-items-table elevation-2"
+      :items-per-page="itemsPerPage"
+      expand-on-click
+      density="compact"
+      hide-default-footer
+      :single-expand="true"
+      :header-props="headerProps"
+      @update:expanded="$emit('update:expanded', $event)"
+      :search="itemSearch"
+    >
+      <!-- Custom cell renderers for numeric values with proper alignment -->
       <template v-slot:item.qty="{ item }">
-        <div class="amount-value">
-          {{ formatFloat(item.qty, hide_qty_decimals ? 0 : undefined) }}
-        </div>
+        <div class="amount-value">{{ formatFloat(item.qty, hide_qty_decimals ? 0 : undefined) }}</div>
       </template>
 
-      <!-- Rate column -->
       <template v-slot:item.rate="{ item }">
         <div class="currency-display">
           <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
@@ -48,7 +29,6 @@
         </div>
       </template>
 
-      <!-- Amount column -->
       <template v-slot:item.amount="{ item }">
         <div class="currency-display">
           <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
@@ -56,15 +36,12 @@
         </div>
       </template>
 
-      <!-- Discount percentage column -->
       <template v-slot:item.discount_value="{ item }">
         <div class="amount-value">
-          {{ formatFloat(item.discount_percentage || (item.price_list_rate ? (item.discount_amount /
-            item.price_list_rate) * 100 : 0)) }}%
+          {{ formatFloat(item.discount_percentage || (item.price_list_rate ? (item.discount_amount / item.price_list_rate) * 100 : 0)) }}%
         </div>
       </template>
 
-      <!-- Discount amount column -->
       <template v-slot:item.discount_amount="{ item }">
         <div class="currency-display">
           <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
@@ -72,7 +49,6 @@
         </div>
       </template>
 
-      <!-- Price list rate column -->
       <template v-slot:item.price_list_rate="{ item }">
         <div class="currency-display">
           <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
@@ -80,13 +56,12 @@
         </div>
       </template>
 
-      <!-- Offer checkbox column -->
       <template v-slot:item.posa_is_offer="{ item }">
         <v-checkbox-btn v-model="item.posa_is_offer" class="center" @change="toggleOffer(item)"></v-checkbox-btn>
       </template>
 
-      <!-- Expanded row content using Vuetify's built-in system -->
-      <template v-slot:expanded-row="{ item }">
+      <!-- Enhanced expandable row with modern design -->
+      <template v-slot:expanded-row="{ columns: headers, item }">
         <td :colspan="headers.length" class="ma-0 pa-0">
           <div class="expanded-content">
             <!-- Action buttons with improved layout and visual feedback -->
@@ -98,7 +73,7 @@
                   <span class="action-label">{{ __('Remove') }}</span>
                 </v-btn>
               </div>
-
+              
               <div class="action-button-group">
                 <v-btn :disabled="!!item.posa_is_replace" size="large" color="warning" variant="tonal"
                   class="item-action-btn minus-btn" @click.stop="subtractOne(item)">
@@ -113,108 +88,162 @@
               </div>
             </div>
 
-            <!-- Item details form with all fields -->
+            <!-- Item details form with improved layout -->
             <div class="item-details-form">
               <!-- First row of fields -->
               <div class="form-row">
                 <div class="form-field">
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Item Code')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    v-model="item.item_code" disabled prepend-inner-icon="mdi-barcode"></v-text-field>
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details v-model="item.item_code" disabled
+                    prepend-inner-icon="mdi-barcode"></v-text-field>
                 </div>
                 <div class="form-field">
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('QTY')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    :model-value="formatFloat(item.qty, hide_qty_decimals ? 0 : undefined)" @change="[
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :model-value="formatFloat(item.qty, hide_qty_decimals ? 0 : undefined)" @change="[
                       setFormatedQty(item, 'qty', null, false, $event.target.value),
                       calcStockQty(item, item.qty),
                     ]" :rules="[isNumber]" :disabled="!!item.posa_is_replace"
                     prepend-inner-icon="mdi-numeric"></v-text-field>
                 </div>
                 <div class="form-field">
-                  <v-select density="compact" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field"
-                    :label="frappe._('UOM')" v-model="item.uom" :items="item.item_uoms" variant="outlined"
-                    item-title="uom" item-value="uom" hide-details @update:model-value="calcUom(item, $event)"
+                  <v-select density="compact" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" :label="frappe._('UOM')" v-model="item.uom"
+                    :items="item.item_uoms" variant="outlined" item-title="uom" item-value="uom" hide-details
+                    @update:model-value="calcUom(item, $event)"
                     :disabled="!!item.posa_is_replace || (isReturnInvoice && invoice_doc.return_against)"
                     prepend-inner-icon="mdi-weight"></v-select>
                 </div>
               </div>
-              
+
               <!-- Second row of fields -->
               <div class="form-row">
                 <div class="form-field">
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Rate')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :prefix="currencySymbol(displayCurrency)"
                     :model-value="formatCurrency(item.rate)" @change="[
-                      setFormatedCurrency(item, 'rate', $event.target.value),
-                      calcPrices(item)
-                    ]" :disabled="!!item.posa_is_replace || !!item.posa_offer_applied"
-                    prepend-inner-icon="mdi-currency-usd"></v-text-field>
+                      setFormatedCurrency(item, 'rate', null, false, $event),
+                      calcPrices(item, $event.target.value, $event),
+                    ]" :rules="[isNumber]" id="rate" :disabled="!!item.posa_is_replace ||
+                      !!item.posa_offer_applied ||
+                      !pos_profile.posa_allow_user_to_edit_rate ||
+                      (isReturnInvoice && invoice_doc.return_against)"></v-text-field>
                 </div>
                 <div class="form-field">
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Discount %')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    :model-value="formatFloat(item.discount_percentage || 0)" @change="[
-                      setFormatedCurrency(item, 'discount_percentage', $event.target.value),
-                      calcPrices(item)
-                    ]" :disabled="!!item.posa_is_replace || !!item.posa_offer_applied"
-                    prepend-inner-icon="mdi-percent"></v-text-field>
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :model-value="formatFloat(item.discount_percentage)" @change="[
+                      setFormatedCurrency(item, 'discount_percentage', null, true, $event),
+                      calcPrices(item, $event.target.value, $event),
+                    ]" :rules="[isNumber]" id="discount_percentage" :disabled="!!item.posa_is_replace ||
+                      item.posa_offer_applied ||
+                      !pos_profile.posa_allow_user_to_edit_item_discount ||
+                      (isReturnInvoice && invoice_doc.return_against)" suffix="%"></v-text-field>
                 </div>
                 <div class="form-field">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Discount Amount')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    :model-value="formatCurrency(item.discount_amount || 0)" @change="[
-                      setFormatedCurrency(item, 'discount_amount', $event.target.value),
-                      calcPrices(item)
-                    ]" :disabled="!!item.posa_is_replace || !!item.posa_offer_applied"
-                    prepend-inner-icon="mdi-tag-minus"></v-text-field>
+                  <v-text-field density="compact" variant="outlined" color="primary"
+                    :label="frappe._('Discount Amount')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+                    :model-value="formatCurrency(item.discount_amount || 0)" ref="discount"
+                    @change="(event) => { if (expanded && expanded.length === 1 && expanded[0] === item.posa_row_id) { calcPrices(item, event.target.value, { target: { id: 'discount_amount' } }); } }"
+                    :rules="['isNumber']" id="discount_amount"
+                    :disabled="!!item.posa_is_replace || item.posa_offer_applied || !pos_profile.posa_allow_user_to_edit_item_discount || (isReturnInvoice && invoice_doc.return_against)"
+                    :prefix="currencySymbol(displayCurrency)"></v-text-field>
                 </div>
               </div>
-              
-              <!-- Third row for serial/batch numbers if applicable -->
-              <div class="form-row" v-if="item.has_serial_no || item.has_batch_no">
-                <div class="form-field" v-if="item.has_serial_no">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Serial Numbers')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    v-model="item.serial_no" @change="setSerialNo(item, $event.target.value)"
-                    :disabled="!!item.posa_is_replace"
-                    prepend-inner-icon="mdi-numeric"></v-text-field>
-                </div>
-                <div class="form-field" v-if="item.has_batch_no">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Batch No')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    v-model="item.batch_no" @change="setBatchQty(item, $event.target.value)"
-                    :disabled="!!item.posa_is_replace"
-                    prepend-inner-icon="mdi-package-variant"></v-text-field>
-                </div>
-                <div class="form-field" v-if="item.has_batch_no">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Expiry Date')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    v-model="item.expiry_date" type="date" @change="validateDueDate(item, $event.target.value)"
-                    :disabled="!!item.posa_is_replace"
-                    prepend-inner-icon="mdi-calendar"></v-text-field>
-                </div>
-              </div>
-              
-              <!-- Fourth row for warehouse and other details -->
+
+              <!-- Third row of fields -->
               <div class="form-row">
                 <div class="form-field">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Warehouse')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    v-model="item.warehouse" disabled
-                    prepend-inner-icon="mdi-warehouse"></v-text-field>
+                  <v-text-field density="compact" variant="outlined" color="primary"
+                    :label="frappe._('Price list Rate')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+                    :model-value="formatCurrency(item.price_list_rate)" disabled
+                    :prefix="currencySymbol(displayCurrency)"></v-text-field>
                 </div>
                 <div class="form-field">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Price List Rate')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    :model-value="formatCurrency(item.price_list_rate || 0)" disabled
-                    prepend-inner-icon="mdi-format-list-numbered"></v-text-field>
+                  <v-text-field density="compact" variant="outlined" color="primary"
+                    :label="frappe._('Available QTY')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+                    :model-value="formatFloat(item.actual_qty, hide_qty_decimals ? 0 : undefined)" disabled></v-text-field>
                 </div>
                 <div class="form-field">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Amount')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    :model-value="formatCurrency(item.qty * item.rate)" disabled
-                    prepend-inner-icon="mdi-calculator"></v-text-field>
+                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Group')"
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details v-model="item.item_group" disabled></v-text-field>
+                </div>
+              </div>
+
+              <!-- Fourth row of fields -->
+              <div class="form-row">
+                <div class="form-field">
+                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Stock QTY')"
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details :model-value="formatFloat(item.stock_qty)" disabled></v-text-field>
+                </div>
+                <div class="form-field">
+                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Stock UOM')"
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details v-model="item.stock_uom" disabled></v-text-field>
+                </div>
+                <div class="form-field" v-if="item.posa_offer_applied">
+                  <v-checkbox density="compact" :label="frappe._('Offer Applied')" v-model="item.posa_offer_applied"
+                    readonly hide-details class="mt-1"></v-checkbox>
+                </div>
+              </div>
+
+              <!-- Serial Number Section -->
+              <div class="form-section" v-if="item.has_serial_no == 1 || item.serial_no">
+                <div class="form-row">
+                  <div class="form-field">
+                    <v-text-field density="compact" variant="outlined" color="primary"
+                      :label="frappe._('Serial No QTY')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+                      v-model="item.serial_no_selected_count" type="number" disabled></v-text-field>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-field full-width">
+                    <v-autocomplete v-model="item.serial_no_selected" :items="item.serial_no_data"
+                      item-title="serial_no" variant="outlined" density="compact" chips color="primary" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field"
+                      :label="frappe._('Serial No')" multiple
+                      @update:model-value="setSerialNo(item)"></v-autocomplete>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Batch Number Section -->
+              <div class="form-section" v-if="item.has_batch_no == 1 || item.batch_no">
+                <div class="form-row">
+                  <div class="form-field">
+                    <v-text-field density="compact" variant="outlined" color="primary"
+                      :label="frappe._('Batch No. Available QTY')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+                      :model-value="formatFloat(item.actual_batch_qty, hide_qty_decimals ? 0 : undefined)" disabled></v-text-field>
+                  </div>
+                  <div class="form-field">
+                    <v-text-field density="compact" variant="outlined" color="primary"
+                      :label="frappe._('Batch No Expiry Date')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+                      v-model="item.batch_no_expiry_date" disabled></v-text-field>
+                  </div>
+                  <div class="form-field">
+                    <v-autocomplete v-model="item.batch_no" :items="item.batch_no_data" item-title="batch_no"
+                      variant="outlined" density="compact" color="primary" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" :label="frappe._('Batch No')"
+                      @update:model-value="setBatchQty(item, $event)" hide-details>
+                      <template v-slot:item="{ props, item }">
+                        <v-list-item v-bind="props">
+                          <v-list-item-title v-html="item.raw.batch_no"></v-list-item-title>
+                          <v-list-item-subtitle v-html="`Available QTY  '${item.raw.batch_qty}' - Expiry Date ${item.raw.expiry_date}`"></v-list-item-subtitle>
+                        </v-list-item>
+                      </template>
+                    </v-autocomplete>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Delivery Date Section -->
+              <div class="form-section" v-if="pos_profile.posa_allow_sales_order && invoiceType == 'Order'">
+                <div class="form-row">
+                  <div class="form-field">
+                    <VueDatePicker
+                      v-model="item.posa_delivery_date"
+                      model-type="format"
+                      format="dd-MM-yyyy"
+                      :min-date="new Date()"
+                      auto-apply
+                      :dark="isDarkTheme"
+                      @update:model-value="validateDueDate(item)"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -226,10 +255,8 @@
 </template>
 
 <script>
-import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 export default {
   name: 'ItemsTable',
-  mixins: [themeSettingsMixin],
   props: {
     headers: Array,
     items: Array,
@@ -258,96 +285,32 @@ export default {
     isReturnInvoice: Boolean,
     toggleOffer: Function,
   },
-  data() {
-    return {
-      draggedItem: null,
-      draggedIndex: null,
-      dragOverIndex: null,
-      isDragging: false,
-    };
-  },
   computed: {
     headerProps() {
       return this.isDarkTheme
         ? { style: 'background-color:#121212;color:#fff' }
         : {};
     },
-
-  },
-  methods: {
-    onDragOverFromSelector(event) {
-      // Check if drag data is from item selector
-      const dragData = event.dataTransfer.types.includes('application/json');
-      if (dragData) {
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'copy';
-      }
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
     },
-
-    onDragEnterFromSelector(event) {
-      this.$emit('show-drop-feedback', true);
-    },
-
-    onDragLeaveFromSelector(event) {
-      // Only hide feedback if leaving the entire table area
-      if (!event.currentTarget.contains(event.relatedTarget)) {
-        this.$emit('show-drop-feedback', false);
-      }
-    },
-
-    onDropFromSelector(event) {
-      event.preventDefault();
-
+    hide_qty_decimals() {
       try {
-        const dragData = JSON.parse(event.dataTransfer.getData('application/json'));
-
-        if (dragData.type === 'item-from-selector') {
-          this.$emit('add-item-from-drag', dragData.item);
-          this.$emit('item-dropped', false);
+        const saved = localStorage.getItem('posawesome_item_selector_settings');
+        if (saved) {
+          const opts = JSON.parse(saved);
+          return !!opts.hide_qty_decimals;
         }
-      } catch (error) {
-        console.error('Error parsing drag data:', error);
+      } catch (e) {
+        console.error('Failed to load item selector settings:', e);
       }
-    },
-
-    startDrag(index) {
-      this.draggedIndex = index;
-      this.isDragging = true;
-    },
-
-    endDrag() {
-      this.draggedIndex = null;
-      this.dragOverIndex = null;
-      this.isDragging = false;
-    },
-
-    onRowDragOver(index) {
-      this.dragOverIndex = index;
-    },
-
-    onRowDrop(index) {
-      if (this.draggedIndex === null) return;
-      this.reorderRows(this.draggedIndex, index);
-      this.endDrag();
-    },
-
-    moveRow(index, direction) {
-      const newIndex = index + direction;
-      if (newIndex < 0 || newIndex >= this.items.length) return;
-      this.reorderRows(index, newIndex);
-      this.draggedIndex = newIndex;
-    },
-
-    reorderRows(fromIndex, toIndex) {
-      const moved = this.items.splice(fromIndex, 1)[0];
-      this.items.splice(toIndex, 0, moved);
-      this.$emit('reorder-items', { fromIndex, toIndex });
+      return false;
     },
   },
 };
 </script>
 
-<style scoped>
+<style>
 /* Modern table styling with enhanced visual hierarchy */
 .modern-items-table {
   border-radius: var(--border-radius-lg);
@@ -413,15 +376,8 @@ export default {
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* Action panel styling */
@@ -471,7 +427,7 @@ export default {
   .item-action-btn .action-label {
     display: inline-block;
   }
-
+  
   .item-action-btn {
     min-width: 120px !important;
   }
@@ -600,77 +556,5 @@ export default {
 .amount-value {
   font-weight: 500;
   text-align: right;
-}
-
-/* Drag and drop styles */
-.draggable-row {
-  transition: all 0.2s ease;
-  cursor: move;
-}
-
-.draggable-row:hover {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.draggable-row:focus {
-  outline: 2px solid #1976d2;
-  outline-offset: -1px;
-}
-
-:deep(.dark-theme) .draggable-row:hover,
-:deep(.v-theme--dark) .draggable-row:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.drag-handle-cell {
-  width: 40px;
-  text-align: center;
-  padding: 8px 4px;
-}
-
-.drag-handle {
-  cursor: grab;
-  opacity: 0.6;
-  transition: opacity 0.2s ease;
-}
-
-.drag-handle:hover {
-  opacity: 1;
-}
-
-.drag-handle:active {
-  cursor: grabbing;
-}
-
-.drag-source {
-  opacity: 0.5;
-  background-color: rgba(25, 118, 210, 0.1) !important;
-}
-
-.drag-over {
-  background-color: rgba(25, 118, 210, 0.2) !important;
-  border-top: 2px solid #1976d2;
-  transform: translateY(-1px);
-}
-
-.drag-active .draggable-row:not(.drag-source):not(.drag-over) {
-  opacity: 0.7;
-}
-
-/* Dark theme drag styles */
-:deep(.dark-theme) .drag-source,
-:deep(.v-theme--dark) .drag-source {
-  background-color: rgba(144, 202, 249, 0.1) !important;
-}
-
-:deep(.dark-theme) .drag-over,
-:deep(.v-theme--dark) .drag-over {
-  background-color: rgba(144, 202, 249, 0.2) !important;
-  border-top: 2px solid #90caf9;
-}
-
-/* Expanded row styling */
-.expanded-row {
-  background-color: var(--surface-secondary);
 }
 </style>

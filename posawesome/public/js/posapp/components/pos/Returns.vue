@@ -138,10 +138,9 @@
 
 <script>
 import format from '../../format';
-import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 
 export default {
-  mixins: [format, themeSettingsMixin],
+  mixins: [format],
   data: () => ({
     invoicesDialog: false,
     singleSelect: true,
@@ -192,6 +191,11 @@ export default {
       },
     ],
   }),
+  computed: {
+    isDarkTheme() {
+      return this.$theme?.current === 'dark';
+    }
+  },
   watch: {
     from_date() {
       this.formatFromDate();

@@ -9,63 +9,112 @@
       </v-overlay>
       <!-- Add dynamic-padding wrapper like Invoice component -->
       <div class="dynamic-padding">
-        <ItemSearchBar
-          :pos_profile="pos_profile"
-          :searchValue="first_search"
-          @update:searchValue="val => first_search = val"
-          :qtyValue="qty"
-          @update:qtyValue="val => qty = val"
-          :newLineValue="new_line"
-          @update:newLineValue="val => new_line = val"
-          @enter="search_onchange"
-          @esc="esc_event"
-          @clear="clearSearch"
-          @focus="handleItemSearchFocus"
-          @clear-qty="clearQty"
-          @camera="startCameraScanning"
-          @toggle-settings="show_item_settings = true"
-        />
-        <ItemSettingsDialog
-          v-model="show_item_settings"
-          :hide-qty-decimals="hide_qty_decimals"
-          :hide-zero-rate-items="hide_zero_rate_items"
-          @update:hideQtyDecimals="val => hide_qty_decimals = val"
-          @update:hideZeroRateItems="val => hide_zero_rate_items = val"
-          @apply="saveItemSettings"
-        />
-        <v-row>
+        <v-row class="items">
+          <v-col class="pb-0">
+            <v-text-field density="compact" clearable autofocus variant="solo" color="primary"
+              :label="frappe._('Search Items')" hint="Search by item code, serial number, batch no or barcode"
+              hide-details v-model="debounce_search" @keydown.esc="esc_event" @keydown.enter="search_onchange"
+              @click:clear="clearSearch" prepend-inner-icon="mdi-magnify" @focus="handleItemSearchFocus"
+              ref="debounce_search">
+              <!-- Add camera scan button if enabled -->
+              <template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
+                <v-btn icon="mdi-camera" size="small" color="primary" variant="text" @click="startCameraScanning"
+                  :title="__('Scan with Camera')">
+                </v-btn>
+              </template>
+            </v-text-field>
+
+          </v-col>
+          <v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')" hide-details
+              v-model="debounce_qty" type="text" @keydown.enter="enter_event" @keydown.esc="esc_event"
+              @focus="clearQty"></v-text-field>
+          </v-col>
+          <v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
+            <v-checkbox v-model="new_line" color="accent" value="true" label="NLine" density="default"
+              hide-details></v-checkbox>
+          </v-col>
+          <v-col cols="12" class="dynamic-margin-xs">
+            <div class="settings-container">
+              <v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-cog-outline"
+                @click="toggleItemSettings" class="settings-btn">
+                {{ __('Settings') }}
+              </v-btn>
+
+              <v-dialog v-model="show_item_settings" max-width="400px">
+                <v-card>
+                  <v-card-title class="text-h6 pa-4 d-flex align-center">
+                    <span>{{ __('Item Selector Settings') }}</span>
+                    <v-spacer></v-spacer>
+                    <v-btn icon="mdi-close" variant="text" density="compact" @click="show_item_settings = false"></v-btn>
+                  </v-card-title>
+                  <v-divider></v-divider>
+                  <v-card-text class="pa-4">
+                    <v-switch v-model="temp_hide_qty_decimals" :label="__('Hide quantity decimals')" hide-details
+                      density="compact" color="primary" class="mb-2"></v-switch>
+                    <v-switch v-model="temp_hide_zero_rate_items" :label="__('Hide zero rated items')" hide-details
+                      density="compact" color="primary"></v-switch>
+                  </v-card-text>
+                  <v-card-actions class="pa-4 pt-0">
+                    <v-btn color="error" variant="text" @click="cancelItemSettings">{{ __('Cancel') }}</v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn color="primary" variant="tonal" @click="applyItemSettings">{{ __('Apply') }}</v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-dialog>
+            </div>
+          </v-col>
           <v-col cols="12" class="pt-0 mt-0">
-            <ItemCardList v-if="items_view == 'card'"
-              :items="filtered_items"
-              :pos_profile="pos_profile"
-              :selected_currency="selected_currency"
-              :hide_qty_decimals="hide_qty_decimals"
-              :responsiveStyles="responsiveStyles"
-              :currencySymbol="currencySymbol"
-              :format_currency="format_currency"
-              :getConvertedRate="getConvertedRate"
-              :ratePrecision="ratePrecision"
-              :format_number="format_number"
-              @add-item="add_item"
-              @drag-start="onDragStart"
-              @drag-end="onDragEnd"
-            />
-            <ItemListTable v-else
-              :headers="headers"
-              :items="filtered_items"
-              :pos_profile="pos_profile"
-              :selected_currency="selected_currency"
-              :hide_qty_decimals="hide_qty_decimals"
-              :responsiveStyles="responsiveStyles"
-              :currencySymbol="currencySymbol"
-              :format_currency="format_currency"
-              :getConvertedRate="getConvertedRate"
-              :ratePrecision="ratePrecision"
-              :format_number="format_number"
-              @row-click="click_item_row"
-              @drag-start="onDragStart"
-              @drag-end="onDragEnd"
-            />
+            <div fluid class="items-grid dynamic-scroll" ref="itemsContainer" v-if="items_view == 'card'"
+              :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
+              <v-card v-for="item in filtered_items" :key="item.item_code" hover class="dynamic-item-card"
+                @click="add_item(item)">
+                <v-img :src="item.image ||
+                        '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
+                        " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
+                        height="100px">
+                  <v-card-text class="text-caption px-1 pb-0 truncate">{{ item.item_name }}</v-card-text>
+                </v-img>
+                <v-card-text class="text--primary pa-1">
+                  <div class="text-caption text-primary truncate">
+                    {{ currencySymbol(item.currency || pos_profile.currency) || "" }}
+                    {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}
+                  </div>
+                  <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                    class="text-caption text-success truncate">
+                    {{ currencySymbol(selected_currency) || "" }}
+                    {{ format_currency(getConvertedRate(item), selected_currency,
+                      ratePrecision(getConvertedRate(item))) }}
+                  </div>
+                  <div class="text-caption golden--text truncate">
+                    {{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) || 0 }}
+                    {{ item.stock_uom || "" }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </div>
+            <div v-else>
+              <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table overflow-y-auto"
+                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }"
+                item-key="item_code" @click:row="click_item_row">
+
+                <template v-slot:item.rate="{ item }">
+                  <div>
+                    <div class="text-primary">{{ currencySymbol(item.currency || pos_profile.currency) }}
+                      {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}</div>
+                    <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                      class="text-success">
+                      {{ currencySymbol(selected_currency) }}
+                      {{ format_currency(getConvertedRate(item), selected_currency,
+                        ratePrecision(getConvertedRate(item))) }}
+                    </div>
+                  </div>
+                </template>
+                <template v-slot:item.actual_qty="{ item }">
+                  <span class="golden--text">{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) }}</span>
+                </template>
+              </v-data-table-virtual>
+            </div>
           </v-col>
         </v-row>
       </div>
@@ -120,28 +169,13 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import ItemSearchBar from './ItemSearchBar.vue';
-import ItemCardList from './ItemCardList.vue';
-import ItemListTable from './ItemListTable.vue';
-import ItemSettingsDialog from './ItemSettingsDialog.vue';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
-import { useInvoiceStore } from "../../stores/invoice.js";
-
-
 export default {
-  mixins: [format, responsiveMixin, themeSettingsMixin],
+  mixins: [format, responsiveMixin],
   components: {
     CameraScanner,
-    ItemSearchBar,
-    ItemCardList,
-    ItemListTable,
-    ItemSettingsDialog,
-  },
-  setup() {
-    const invoiceStore = useInvoiceStore();
-    return { invoiceStore };
   },
   data: () => ({
     pos_profile: "",
@@ -161,6 +195,8 @@ export default {
     couponsCount: 0,
     appliedCouponsCount: 0,
     customer_price_list: null,
+    customer: null,
+    new_line: false,
     qty: 1,
     refresh_interval: null,
     currentRequest: null,
@@ -175,9 +211,9 @@ export default {
     items_request_token: 0,
     show_item_settings: false,
     hide_qty_decimals: false,
+    temp_hide_qty_decimals: false,
     hide_zero_rate_items: false,
-
-    isDragging: false,
+    temp_hide_zero_rate_items: false,
   }),
 
   watch: {
@@ -247,6 +283,9 @@ export default {
       }
       // No cache found; keep existing items without reloading from server
     }, 300),
+    new_line() {
+      this.eventBus.emit("set_new_line", this.new_line);
+    },
     filtered_items(new_value, old_value) {
       // Update item details if items changed
       if (
@@ -749,7 +788,7 @@ export default {
           }
           item.qty = qtyVal;
         }
-        this.invoiceStore.addItem(item);
+        this.eventBus.emit("add_item", item);
         this.qty = 1;
       }
     },
@@ -1397,7 +1436,6 @@ export default {
       return !Number.isInteger(value);
     },
 
-
     toggleItemSettings() {
       this.temp_hide_qty_decimals = this.hide_qty_decimals;
       this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
@@ -1409,74 +1447,21 @@ export default {
     applyItemSettings() {
       this.hide_qty_decimals = this.temp_hide_qty_decimals;
       this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
-      this.invoiceStore.setItemSelectorSettings({
-        hide_qty_decimals: this.hide_qty_decimals,
-        hide_zero_rate_items: this.hide_zero_rate_items,
-      });
       this.saveItemSettings();
       this.show_item_settings = false;
     },
-
-    onDragStart(event, item) {
-      this.isDragging = true;
-      
-      // Set drag data
-      event.dataTransfer.setData('application/json', JSON.stringify({
-        type: 'item-from-selector',
-        item: item
-      }));
-      
-      // Set drag effect
-      event.dataTransfer.effectAllowed = 'copy';
-      
-      // Emit event to show drop feedback in ItemsTable
-      this.eventBus.emit('item-drag-start', item);
-    },
-    onDragEnd(event) {
-      this.isDragging = false;
-      
-      // Emit event to hide drop feedback
-      this.eventBus.emit('item-drag-end');
-    },
-    async saveItemSettings() {
-      const settings = {
-        hide_qty_decimals: this.hide_qty_decimals,
-        hide_zero_rate_items: this.hide_zero_rate_items,
-      };
+    saveItemSettings() {
       try {
-        await frappe.call({
-          method: 'posawesome.posawesome.api.preferences.save_user_preferences',
-          args: { key: 'item_selector_settings', prefs: JSON.stringify(settings) },
-        });
+        const settings = { 
+          hide_qty_decimals: this.hide_qty_decimals,
+          hide_zero_rate_items: this.hide_zero_rate_items,
+        };
+        localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(settings));
       } catch (e) {
         console.error('Failed to save item selector settings:', e);
       }
-      try {
-        localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(settings));
-      } catch (e) {
-        console.error('Failed to save item selector settings locally:', e);
-      }
     },
-    async loadItemSettings() {
-      try {
-        const r = await frappe.call({
-          method: 'posawesome.posawesome.api.preferences.load_user_preferences',
-          args: { key: 'item_selector_settings' },
-        });
-        if (r.message) {
-          const opts = r.message;
-          if (typeof opts.hide_qty_decimals === 'boolean') {
-            this.hide_qty_decimals = opts.hide_qty_decimals;
-          }
-          if (typeof opts.hide_zero_rate_items === 'boolean') {
-            this.hide_zero_rate_items = opts.hide_zero_rate_items;
-          }
-          localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(opts));
-          return;
-        }
-      } catch (e) {
-        console.error('Failed to load item selector settings from server:', e);
-      }
+    loadItemSettings() {
       try {
         const saved = localStorage.getItem('posawesome_item_selector_settings');
         if (saved) {
@@ -1487,7 +1472,6 @@ export default {
           if (typeof opts.hide_zero_rate_items === 'boolean') {
             this.hide_zero_rate_items = opts.hide_zero_rate_items;
           }
-          this.invoiceStore.setItemSelectorSettings(opts);
         }
       } catch (e) {
         console.error('Failed to load item selector settings:', e);
@@ -1668,40 +1652,11 @@ export default {
         this.qty = parsed;
       }, 200),
     },
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
+    },
     active_price_list() {
       return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
-    },
-    customer: {
-      get() {
-        return this.invoiceStore.customer;
-      },
-      set(val) {
-        this.invoiceStore.setCustomer(val);
-      }
-    },
-    new_line: {
-      get() {
-        return this.invoiceStore.itemSelectorSettings.new_line;
-      },
-      set(val) {
-        this.invoiceStore.setNewLine(val);
-      }
-    },
-    hide_qty_decimals: {
-      get() {
-        return this.invoiceStore.itemSelectorSettings.hide_qty_decimals;
-      },
-      set(val) {
-        this.invoiceStore.setItemSelectorSettings({ hide_qty_decimals: val });
-      }
-    },
-    hide_zero_rate_items: {
-      get() {
-        return this.invoiceStore.itemSelectorSettings.hide_zero_rate_items;
-      },
-      set(val) {
-        this.invoiceStore.setItemSelectorSettings({ hide_zero_rate_items: val });
-      }
     },
   },
 
@@ -1754,6 +1709,9 @@ export default {
     });
     this.eventBus.on("update_customer_price_list", (data) => {
       this.customer_price_list = data;
+    });
+    this.eventBus.on("update_customer", (data) => {
+      this.customer = data;
     });
 
     // Refresh item quantities when connection to server is restored
@@ -1825,6 +1783,7 @@ export default {
     this.eventBus.off("update_offers_counters");
     this.eventBus.off("update_coupons_counters");
     this.eventBus.off("update_customer_price_list");
+    this.eventBus.off("update_customer");
   },
 };
 </script>

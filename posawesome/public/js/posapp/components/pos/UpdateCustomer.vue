@@ -125,10 +125,8 @@
 
 <script>
 import { isOffline, saveOfflineCustomer } from '../../../offline/index.js';
-import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 
 export default {
-  mixins: [themeSettingsMixin],
   data: () => ({
     customerDialog: false,
     confirmDialog: false,
@@ -245,7 +243,11 @@ export default {
       }
     }
   },
-  
+  computed: {
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
+    }
+  },
   methods: {
     // Add a new method to update calendar date
     updateCalendarDate(day, month, year) {

@@ -132,10 +132,8 @@
 <script>
 import UpdateCustomer from './UpdateCustomer.vue';
 import { getCustomerStorage, setCustomerStorage } from '../../../offline/index.js';
-import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 
 export default {
-  mixins: [themeSettingsMixin],
   props: {
     pos_profile: Object
   },
@@ -158,6 +156,10 @@ export default {
   },
 
   computed: {
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
+    },
+
     filteredCustomers() {
       const search = this.customerSearch.toLowerCase();
       let results = this.customers;

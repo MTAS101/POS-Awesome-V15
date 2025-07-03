@@ -52,15 +52,18 @@
 </template>
 
 <script>
-import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 
 export default {
-  mixins: [themeSettingsMixin],
   data: () => ({
     addressDialog: false,
     address: {},
     customer: '',
   }),
+  computed: {
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
+    }
+  },
 
   methods: {
     close_dialog() {

@@ -398,11 +398,10 @@ import {
 
 import generateOfflineInvoiceHTML from "../../../offline_print_template";
 import { silentPrint } from "../../plugins/print.js";
-import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 
 export default {
   // Using format mixin for shared formatting methods
-  mixins: [format, themeSettingsMixin],
+  mixins: [format],
   data() {
     return {
       loading: false, // UI loading state
@@ -571,6 +570,9 @@ export default {
       return this.pos_settings?.invoice_fields?.some(
         (el) => el.fieldtype === "Button" && el.fieldname === "request_for_payment"
       ) || false;
+    },
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
     }
   },
   watch: {
