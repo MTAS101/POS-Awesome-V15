@@ -42,6 +42,7 @@
         <!-- Multi-Currency Section (Only if enabled in POS profile) -->
         <MultiCurrencyRow :pos_profile="pos_profile" :selected_currency="selected_currency"
           :exchange_rate="exchange_rate" :available_currencies="available_currencies" :isNumber="isNumber"
+          :company_currency="company_currency"
           @update:selected_currency="(val) => { selected_currency = val; update_currency(val); }"
           @update:exchange_rate="(val) => { exchange_rate = val; update_exchange_rate(); }" />
 

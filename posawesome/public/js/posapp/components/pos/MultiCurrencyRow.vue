@@ -21,18 +21,18 @@ export default {
     exchange_rate: Number,
     available_currencies: Array,
     isNumber: Function,
+    company_currency: String,
   },
   data() {
     return {
       internal_selected_currency: this.selected_currency,
-      // Display exchange rate in the intuitive orientation
-      // POS logic expects selected -> base but we show base -> selected
-      internal_exchange_rate: this.exchange_rate ? 1 / this.exchange_rate : 1,
+      // Keep rate in the same orientation as provided (selected -> company)
+      internal_exchange_rate: this.exchange_rate || 1,
     };
   },
   computed: {
     exchangeRateLabel() {
-      return `${frappe._('Exchange Rate')} (${this.pos_profile.currency} → ${this.internal_selected_currency})`;
+      return `${frappe._('Exchange Rate')} (${this.internal_selected_currency} → ${this.company_currency})`;
     }
   },
   watch: {
@@ -40,8 +40,7 @@ export default {
       this.internal_selected_currency = val;
     },
     exchange_rate(val) {
-      // Convert to user friendly orientation when prop updates
-      this.internal_exchange_rate = val ? 1 / val : 1;
+      this.internal_exchange_rate = val || 1;
     },
   },
   methods: {
@@ -49,8 +48,7 @@ export default {
       this.$emit('update:selected_currency', val);
     },
     onExchangeChange() {
-      // Convert back to selected -> base orientation before emitting
-      const rate = this.internal_exchange_rate ? 1 / this.internal_exchange_rate : 1;
+      const rate = this.internal_exchange_rate || 1;
       this.$emit('update:exchange_rate', rate);
     },
   },
