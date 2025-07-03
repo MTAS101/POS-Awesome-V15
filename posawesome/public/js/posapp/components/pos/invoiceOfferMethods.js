@@ -548,7 +548,7 @@ export default {
       if (offer.discount_type === "Rate") {
         // offer.rate is always in base currency (PKR)
         new_item.base_rate = offer.rate;
-        if (this.selected_currency !== this.pos_profile.currency) {
+        if (this.selected_currency !== this.company_currency) {
           // If exchange rate is 300 PKR = 1 USD
           // Convert PKR to USD by dividing
           new_item.rate = this.flt(offer.rate / this.exchange_rate, this.currency_precision);
@@ -562,7 +562,7 @@ export default {
         new_item.base_discount_amount = base_discount;
         new_item.base_rate = this.flt(base_price - base_discount, this.currency_precision);
 
-        if (this.selected_currency !== this.pos_profile.currency) {
+        if (this.selected_currency !== this.company_currency) {
           new_item.discount_amount = this.flt(base_discount / this.exchange_rate, this.currency_precision);
           new_item.rate = this.flt(new_item.base_rate / this.exchange_rate, this.currency_precision);
         } else {
@@ -571,7 +571,7 @@ export default {
         }
       } else {
         // Use item's original rate
-        if (this.selected_currency !== this.pos_profile.currency) {
+        if (this.selected_currency !== this.company_currency) {
           new_item.base_rate = item.base_rate || (item.rate * this.exchange_rate);
           new_item.rate = item.rate;
         } else {
@@ -584,7 +584,7 @@ export default {
       if (offer.discount_type === "Discount Amount") {
         // offer.discount_amount is always in base currency (PKR)
         new_item.base_discount_amount = offer.discount_amount;
-        if (this.selected_currency !== this.pos_profile.currency) {
+        if (this.selected_currency !== this.company_currency) {
           // Convert PKR to USD by dividing
           new_item.discount_amount = this.flt(offer.discount_amount / this.exchange_rate, this.currency_precision);
         } else {
@@ -625,7 +625,7 @@ export default {
       } else {
         // item.rate is in base currency (PKR)
         new_item.base_price_list_rate = item.rate;
-        if (this.selected_currency !== this.pos_profile.currency) {
+        if (this.selected_currency !== this.company_currency) {
           // Convert PKR to USD by dividing
           new_item.price_list_rate = this.flt(item.rate / this.exchange_rate, this.currency_precision);
         } else {
@@ -685,7 +685,7 @@ export default {
               item.base_price_list_rate = base_offer_rate;
 
               // Convert to selected currency if needed
-              if (this.selected_currency !== this.pos_profile.currency) {
+              if (this.selected_currency !== this.company_currency) {
                 // If exchange rate is 285 PKR = 1 USD
                 // To convert PKR to USD: divide by exchange rate
                 item.rate = this.flt(base_offer_rate / this.exchange_rate, this.currency_precision);
@@ -715,7 +715,7 @@ export default {
               item.base_price_list_rate = base_price;
 
               // Convert to selected currency if needed
-              if (this.selected_currency !== this.pos_profile.currency) {
+              if (this.selected_currency !== this.company_currency) {
                 item.price_list_rate = this.flt(base_price / this.exchange_rate, this.currency_precision);
                 item.discount_amount = this.flt(base_discount / this.exchange_rate, this.currency_precision);
                 item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
@@ -783,7 +783,7 @@ export default {
             item.base_price_list_rate = this.flt(item.original_base_price_list_rate * cf, this.currency_precision);
 
             // Convert to selected currency
-            if (this.selected_currency !== this.pos_profile.currency) {
+            if (this.selected_currency !== this.company_currency) {
               item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
               item.price_list_rate = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
             } else {
