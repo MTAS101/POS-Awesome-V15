@@ -117,14 +117,24 @@ import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
 import invoiceComputed from "./invoiceComputed";
 import invoiceWatchers from "./invoiceWatchers";
-import itemMethods from "./invoiceItemMethods";
+import itemAddition from "./invoice-item/itemAddition";
+import batchSerial from "./invoice-item/batchSerial";
+import discounts from "./invoice-item/discounts";
+import stockUtils from "./invoice-item/stockUtils";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
+import { useInvoiceStore } from "../../stores/invoice.js";
+
 export default {
   name: 'POSInvoice',
   mixins: [format],
+  setup() {
+    const invoiceStore = useInvoiceStore();
+    return { invoiceStore };
+  },
+
   data() {
     return {
       // POS profile settings
@@ -186,15 +196,16 @@ export default {
   },
   computed: {
     ...invoiceComputed,
-    isDarkTheme() {
-      return this.$theme.current === 'dark';
-    }
+    
   },
 
 
   methods: {
     ...shortcutMethods,
-    ...itemMethods,
+    ...itemAddition,
+    ...batchSerial,
+    ...discounts,
+    ...stockUtils,
     ...offerMethods,
     initializeItemsHeaders() {
       // Define all available columns
@@ -294,15 +305,39 @@ export default {
       this.show_column_selector = false;
     },
 
-    saveColumnPreferences() {
+    async saveColumnPreferences() {
       try {
-        localStorage.setItem('posawesome_selected_columns', JSON.stringify(this.selected_columns));
+        await frappe.call({
+          method: 'posawesome.posawesome.api.preferences.save_user_preferences',
+          args: {
+            key: 'column_preferences',
+            prefs: JSON.stringify(this.selected_columns),
+          },
+        });
       } catch (e) {
         console.error('Failed to save column preferences:', e);
       }
+      try {
+        localStorage.setItem('posawesome_selected_columns', JSON.stringify(this.selected_columns));
+      } catch (e) {
+        console.error('Failed to save column preferences locally:', e);
+      }
     },
 
-    loadColumnPreferences() {
+    async loadColumnPreferences() {
+      try {
+        const r = await frappe.call({
+          method: 'posawesome.posawesome.api.preferences.load_user_preferences',
+          args: { key: 'column_preferences' },
+        });
+        if (r.message) {
+          this.selected_columns = r.message;
+          localStorage.setItem('posawesome_selected_columns', JSON.stringify(this.selected_columns));
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to load column preferences from server:', e);
+      }
       try {
         const saved = localStorage.getItem('posawesome_selected_columns');
         if (saved) {
@@ -760,6 +795,26 @@ export default {
   mounted() {
     // Load saved column preferences
     this.loadColumnPreferences();
+    const store = this.invoiceStore;
+    store.$onAction(({ name, args }) => {
+      if (name === 'addItem') {
+        this.add_item(args[0]);
+      } else if (name === 'setCustomer') {
+        this.customer = args[0];
+      } else if (name === 'setNewLine') {
+        this.new_line = args[0];
+      } else if (name === 'setSelectedColumns') {
+        this.selected_columns = args[0];
+      } else if (name === 'setItemSelectorSettings') {
+        const opts = args[0] || {};
+        if (typeof opts.hide_qty_decimals !== 'undefined') {
+          this.hide_qty_decimals = opts.hide_qty_decimals;
+        }
+        if (typeof opts.hide_zero_rate_items !== 'undefined') {
+          this.hide_zero_rate_items = opts.hide_zero_rate_items;
+        }
+      }
+    });
     this.eventBus.on("item-drag-start", (item) => {
       this.showDropFeedback(true);
     });
@@ -801,10 +856,6 @@ export default {
 
       this.fetch_price_lists();
       this.update_price_list();
-    });
-    this.eventBus.on("add_item", this.add_item);
-    this.eventBus.on("update_customer", (customer) => {
-      this.customer = customer;
     });
     this.eventBus.on("fetch_customer_details", () => {
       this.fetch_customer_details();
@@ -876,9 +927,6 @@ export default {
         customer: this.customer
       });
     });
-    this.eventBus.on("set_new_line", (data) => {
-      this.new_line = data;
-    });
     if (this.pos_profile.posa_allow_multi_currency) {
       this.fetch_available_currencies();
     }
@@ -899,8 +947,6 @@ export default {
   beforeUnmount() {
     // Existing cleanup
     this.eventBus.off("register_pos_profile");
-    this.eventBus.off("add_item");
-    this.eventBus.off("update_customer");
     this.eventBus.off("fetch_customer_details");
     this.eventBus.off("clear_invoice");
     // Cleanup reset_posting_date listener

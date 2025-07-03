@@ -248,9 +248,10 @@ import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
 import { getOpeningStorage, setOpeningStorage, initPromise, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline, getCustomerStorage } from "../../../offline/index.js";
 import { silentPrint } from "../../plugins/print.js";
+import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 
 export default {
-  mixins: [format],
+  mixins: [format, themeSettingsMixin],
   data: function () {
     return {
       dialog: false,
@@ -1036,11 +1037,8 @@ export default {
       });
 
       return flt(invoiceTotal - paymentTotal);
+      }
     },
-    isDarkTheme() {
-      return this.$theme.current === 'dark';
-    }
-  },
 
   created() {
     this.syncPendingPayments();

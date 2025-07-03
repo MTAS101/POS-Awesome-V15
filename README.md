@@ -60,6 +60,7 @@ After switching branches or pulling latest changes:
 33. Payments Reconciliation
 34. A lot more bug fixes from the version 14
 35. Offline invoices that fail to submit are saved as draft documents
+36. Column visibility and item selector settings are stored on the server and synced across devices while still working offline
 
 ### How to Install
 

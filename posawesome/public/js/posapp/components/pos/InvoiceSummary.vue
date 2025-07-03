@@ -133,7 +133,9 @@
 </template>
 
 <script>
+import { themeSettingsMixin } from '../../mixins/themeSettings.js';
 export default {
+  mixins: [themeSettingsMixin],
   props: {
     pos_profile: Object,
     total_qty: [Number, String],
@@ -159,24 +161,7 @@ export default {
     'open-returns',
     'print-draft',
     'show-payment'
-  ],
-  computed: {
-    isDarkTheme() {
-      return this.$theme?.current === 'dark';
-    },
-    hide_qty_decimals() {
-      try {
-        const saved = localStorage.getItem('posawesome_item_selector_settings');
-        if (saved) {
-          const opts = JSON.parse(saved);
-          return !!opts.hide_qty_decimals;
-        }
-      } catch (e) {
-        console.error('Failed to load item selector settings:', e);
-      }
-      return false;
-    }
-  }
+  ]
 }
 </script>
 

@@ -127,14 +127,21 @@ import ItemSettingsDialog from './ItemSettingsDialog.vue';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
+import { useInvoiceStore } from "../../stores/invoice.js";
+
+
 export default {
-  mixins: [format, responsiveMixin],
+  mixins: [format, responsiveMixin, themeSettingsMixin],
   components: {
     CameraScanner,
     ItemSearchBar,
     ItemCardList,
     ItemListTable,
     ItemSettingsDialog,
+  },
+  setup() {
+    const invoiceStore = useInvoiceStore();
+    return { invoiceStore };
   },
   data: () => ({
     pos_profile: "",
@@ -154,8 +161,6 @@ export default {
     couponsCount: 0,
     appliedCouponsCount: 0,
     customer_price_list: null,
-    customer: null,
-    new_line: false,
     qty: 1,
     refresh_interval: null,
     currentRequest: null,
@@ -171,6 +176,7 @@ export default {
     show_item_settings: false,
     hide_qty_decimals: false,
     hide_zero_rate_items: false,
+
     isDragging: false,
   }),
 
@@ -241,9 +247,6 @@ export default {
       }
       // No cache found; keep existing items without reloading from server
     }, 300),
-    new_line() {
-      this.eventBus.emit("set_new_line", this.new_line);
-    },
     filtered_items(new_value, old_value) {
       // Update item details if items changed
       if (
@@ -746,7 +749,7 @@ export default {
           }
           item.qty = qtyVal;
         }
-        this.eventBus.emit("add_item", item);
+        this.invoiceStore.addItem(item);
         this.qty = 1;
       }
     },
@@ -1394,6 +1397,26 @@ export default {
       return !Number.isInteger(value);
     },
 
+
+    toggleItemSettings() {
+      this.temp_hide_qty_decimals = this.hide_qty_decimals;
+      this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
+      this.show_item_settings = true;
+    },
+    cancelItemSettings() {
+      this.show_item_settings = false;
+    },
+    applyItemSettings() {
+      this.hide_qty_decimals = this.temp_hide_qty_decimals;
+      this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
+      this.invoiceStore.setItemSelectorSettings({
+        hide_qty_decimals: this.hide_qty_decimals,
+        hide_zero_rate_items: this.hide_zero_rate_items,
+      });
+      this.saveItemSettings();
+      this.show_item_settings = false;
+    },
+
     onDragStart(event, item) {
       this.isDragging = true;
       
@@ -1415,18 +1438,45 @@ export default {
       // Emit event to hide drop feedback
       this.eventBus.emit('item-drag-end');
     },
-    saveItemSettings() {
+    async saveItemSettings() {
+      const settings = {
+        hide_qty_decimals: this.hide_qty_decimals,
+        hide_zero_rate_items: this.hide_zero_rate_items,
+      };
       try {
-        const settings = { 
-          hide_qty_decimals: this.hide_qty_decimals,
-          hide_zero_rate_items: this.hide_zero_rate_items,
-        };
-        localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(settings));
+        await frappe.call({
+          method: 'posawesome.posawesome.api.preferences.save_user_preferences',
+          args: { key: 'item_selector_settings', prefs: JSON.stringify(settings) },
+        });
       } catch (e) {
         console.error('Failed to save item selector settings:', e);
       }
+      try {
+        localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(settings));
+      } catch (e) {
+        console.error('Failed to save item selector settings locally:', e);
+      }
     },
-    loadItemSettings() {
+    async loadItemSettings() {
+      try {
+        const r = await frappe.call({
+          method: 'posawesome.posawesome.api.preferences.load_user_preferences',
+          args: { key: 'item_selector_settings' },
+        });
+        if (r.message) {
+          const opts = r.message;
+          if (typeof opts.hide_qty_decimals === 'boolean') {
+            this.hide_qty_decimals = opts.hide_qty_decimals;
+          }
+          if (typeof opts.hide_zero_rate_items === 'boolean') {
+            this.hide_zero_rate_items = opts.hide_zero_rate_items;
+          }
+          localStorage.setItem('posawesome_item_selector_settings', JSON.stringify(opts));
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to load item selector settings from server:', e);
+      }
       try {
         const saved = localStorage.getItem('posawesome_item_selector_settings');
         if (saved) {
@@ -1437,6 +1487,7 @@ export default {
           if (typeof opts.hide_zero_rate_items === 'boolean') {
             this.hide_zero_rate_items = opts.hide_zero_rate_items;
           }
+          this.invoiceStore.setItemSelectorSettings(opts);
         }
       } catch (e) {
         console.error('Failed to load item selector settings:', e);
@@ -1617,11 +1668,40 @@ export default {
         this.qty = parsed;
       }, 200),
     },
-    isDarkTheme() {
-      return this.$theme.current === 'dark';
-    },
     active_price_list() {
       return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
+    },
+    customer: {
+      get() {
+        return this.invoiceStore.customer;
+      },
+      set(val) {
+        this.invoiceStore.setCustomer(val);
+      }
+    },
+    new_line: {
+      get() {
+        return this.invoiceStore.itemSelectorSettings.new_line;
+      },
+      set(val) {
+        this.invoiceStore.setNewLine(val);
+      }
+    },
+    hide_qty_decimals: {
+      get() {
+        return this.invoiceStore.itemSelectorSettings.hide_qty_decimals;
+      },
+      set(val) {
+        this.invoiceStore.setItemSelectorSettings({ hide_qty_decimals: val });
+      }
+    },
+    hide_zero_rate_items: {
+      get() {
+        return this.invoiceStore.itemSelectorSettings.hide_zero_rate_items;
+      },
+      set(val) {
+        this.invoiceStore.setItemSelectorSettings({ hide_zero_rate_items: val });
+      }
     },
   },
 
@@ -1674,9 +1754,6 @@ export default {
     });
     this.eventBus.on("update_customer_price_list", (data) => {
       this.customer_price_list = data;
-    });
-    this.eventBus.on("update_customer", (data) => {
-      this.customer = data;
     });
 
     // Refresh item quantities when connection to server is restored
@@ -1748,7 +1825,6 @@ export default {
     this.eventBus.off("update_offers_counters");
     this.eventBus.off("update_coupons_counters");
     this.eventBus.off("update_customer_price_list");
-    this.eventBus.off("update_customer");
   },
 };
 </script>
