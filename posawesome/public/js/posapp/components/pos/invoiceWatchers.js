@@ -78,8 +78,6 @@ export default {
             if (r.message) {
               // Store price list currency for later use
               this.price_list_currency = r.message;
-              // Notify item list about the currency change
-              this.eventBus.emit("update_price_list_currency", r.message);
               // Currency is selected manually in POS
             }
           },
