@@ -611,8 +611,8 @@ export default {
                 this.sync_exchange_rate();
                 const posting_backend = this.formatDateForBackend(this.posting_date_display);
                 if (this.exchange_rate_date && posting_backend !== this.exchange_rate_date) {
-                  this.eventBus.emit("show_message", {
-                    text: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
+                this.eventBus.emit("show_message", {
+                    title: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
                     color: "warning",
                   });
                 }
@@ -620,7 +620,7 @@ export default {
             } catch (error) {
               console.error("Error updating currency:", error);
               this.eventBus.emit("show_message", {
-                text: "Error updating currency",
+                title: "Error updating currency",
                 color: "error",
               });
             }
@@ -641,7 +641,7 @@ export default {
             const posting_backend = this.formatDateForBackend(this.posting_date_display);
             if (this.exchange_rate_date && posting_backend !== this.exchange_rate_date) {
               this.eventBus.emit("show_message", {
-                text: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
+                title: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
                 color: "warning",
               });
             }
@@ -649,7 +649,7 @@ export default {
         } catch (error) {
           console.error("Error updating currency:", error);
           this.eventBus.emit("show_message", {
-            text: "Error updating currency",
+            title: "Error updating currency",
             color: "error",
           });
         }
@@ -672,7 +672,7 @@ export default {
             const posting_backend = this.formatDateForBackend(this.posting_date_display);
             if (posting_backend !== this.exchange_rate_date) {
               this.eventBus.emit("show_message", {
-                text: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
+                title: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
                 color: "warning",
               });
             }
@@ -681,7 +681,7 @@ export default {
         } catch (error) {
           console.error("Error updating exchange rate:", error);
           this.eventBus.emit("show_message", {
-            text: "Error updating exchange rate",
+            title: "Error updating exchange rate",
             color: "error",
           });
         }
