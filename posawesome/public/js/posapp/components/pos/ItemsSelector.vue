@@ -169,7 +169,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
+import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache, clearPriceListCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
@@ -219,6 +219,7 @@ export default {
   watch: {
     customer: _.debounce(function () {
       if (this.pos_profile.posa_force_reload_items) {
+        clearPriceListCache();
         if (this.pos_profile.posa_smart_reload_mode) {
           // When limit search is enabled there may be no items yet.
           // Fallback to full reload if nothing is loaded
@@ -246,6 +247,7 @@ export default {
     }, 300),
     customer_price_list: _.debounce(function () {
       if (this.pos_profile.posa_force_reload_items) {
+        clearPriceListCache();
         if (this.pos_profile.posa_smart_reload_mode) {
           // When limit search is enabled there may be no items yet.
           // Fallback to full reload if nothing is loaded
