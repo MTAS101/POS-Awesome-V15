@@ -20,6 +20,21 @@ from posawesome.posawesome.api.utilities import (
 )  # Updated imports
 
 
+def get_latest_rate(from_currency: str, to_currency: str):
+    """Return the most recent Currency Exchange rate and its date."""
+    rate_doc = frappe.get_all(
+        "Currency Exchange",
+        filters={"from_currency": from_currency, "to_currency": to_currency},
+        fields=["exchange_rate", "date"],
+        order_by="date desc",
+        limit=1,
+    )
+    if rate_doc:
+        return flt(rate_doc[0].exchange_rate), rate_doc[0].date
+    rate = get_exchange_rate(from_currency, to_currency, nowdate())
+    return flt(rate), nowdate()
+
+
 @frappe.whitelist()
 def validate_return_items(original_invoice_name, return_items):
     """
@@ -93,19 +108,18 @@ def update_invoice(data):
         price_list_currency = price_list_currency or company_currency
 
         conversion_rate = 1
+        exchange_rate_date = invoice_doc.posting_date
         if invoice_doc.currency != company_currency:
-            conversion_rate = get_exchange_rate(
+            conversion_rate, exchange_rate_date = get_latest_rate(
                 invoice_doc.currency,
                 company_currency,
-                invoice_doc.posting_date,
             )
 
         plc_conversion_rate = 1
         if price_list_currency != invoice_doc.currency:
-            plc_conversion_rate = get_exchange_rate(
+            plc_conversion_rate, _ = get_latest_rate(
                 price_list_currency,
                 invoice_doc.currency,
-                invoice_doc.posting_date,
             )
 
         invoice_doc.conversion_rate = conversion_rate
@@ -138,6 +152,7 @@ def update_invoice(data):
         # Update data to be sent back to frontend
         data["conversion_rate"] = conversion_rate
         data["plc_conversion_rate"] = plc_conversion_rate
+        data["exchange_rate_date"] = exchange_rate_date
 
     invoice_doc.flags.ignore_permissions = True
     frappe.flags.ignore_account_permission = True
@@ -148,6 +163,7 @@ def update_invoice(data):
     response = invoice_doc.as_dict()
     response["conversion_rate"] = invoice_doc.conversion_rate
     response["plc_conversion_rate"] = invoice_doc.plc_conversion_rate
+    response["exchange_rate_date"] = exchange_rate_date
     return response
 
 
@@ -579,18 +595,17 @@ def get_available_currencies():
 
 @frappe.whitelist()
 def fetch_exchange_rate(currency: str, company: str, posting_date: str = None):
-    """Return exchange rate for the given currency against company's currency."""
-    posting_date = posting_date or nowdate()
+    """Return latest exchange rate and its date."""
     company_currency = frappe.get_cached_value("Company", company, "default_currency")
-    exchange_rate = get_exchange_rate(currency, company_currency, posting_date)
-    return exchange_rate
+    rate, date = get_latest_rate(currency, company_currency)
+    return {"exchange_rate": rate, "date": date}
 
 
 @frappe.whitelist()
 def fetch_exchange_rate_pair(from_currency: str, to_currency: str, posting_date: str = None):
-    """Return exchange rate between two currencies."""
-    posting_date = posting_date or nowdate()
-    return get_exchange_rate(from_currency, to_currency, posting_date)
+    """Return latest exchange rate between two currencies along with rate date."""
+    rate, date = get_latest_rate(from_currency, to_currency)
+    return {"exchange_rate": rate, "date": date}
 
 
 @frappe.whitelist()

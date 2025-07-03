@@ -164,6 +164,7 @@ export default {
       items_headers: [],
       selected_currency: "", // Currently selected currency
       exchange_rate: 1, // Current exchange rate
+      exchange_rate_date: "", // Date of fetched exchange rate
       available_currencies: [], // List of available currencies
       price_lists: [], // Available selling price lists
       selected_price_list: "", // Currently selected price list
@@ -601,13 +602,20 @@ export default {
                 method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
                 args: {
                   from_currency: baseCurrency,
-                  to_currency: this.selected_currency,
-                  posting_date: this.formatDateForBackend(this.posting_date_display)
+                  to_currency: this.selected_currency
                 },
               });
               if (r && r.message) {
-                this.exchange_rate = r.message;
+                this.exchange_rate = r.message.exchange_rate;
+                this.exchange_rate_date = r.message.date;
                 this.sync_exchange_rate();
+                const posting_backend = this.formatDateForBackend(this.posting_date_display);
+                if (this.exchange_rate_date && posting_backend !== this.exchange_rate_date) {
+                  this.eventBus.emit("show_message", {
+                    text: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
+                    color: "warning",
+                  });
+                }
               }
             } catch (error) {
               console.error("Error updating currency:", error);
@@ -628,7 +636,15 @@ export default {
           const response = await this.update_invoice(doc);
           if (response && response.conversion_rate) {
             this.exchange_rate = response.conversion_rate;
+            this.exchange_rate_date = response.exchange_rate_date;
             this.sync_exchange_rate();
+            const posting_backend = this.formatDateForBackend(this.posting_date_display);
+            if (this.exchange_rate_date && posting_backend !== this.exchange_rate_date) {
+              this.eventBus.emit("show_message", {
+                text: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
+                color: "warning",
+              });
+            }
           }
         } catch (error) {
           console.error("Error updating currency:", error);
@@ -650,7 +666,17 @@ export default {
         const doc = this.get_invoice_doc();
         doc.conversion_rate = this.exchange_rate;
         try {
-          await this.update_invoice(doc);
+          const resp = await this.update_invoice(doc);
+          if (resp && resp.exchange_rate_date) {
+            this.exchange_rate_date = resp.exchange_rate_date;
+            const posting_backend = this.formatDateForBackend(this.posting_date_display);
+            if (posting_backend !== this.exchange_rate_date) {
+              this.eventBus.emit("show_message", {
+                text: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
+                color: "warning",
+              });
+            }
+          }
           this.sync_exchange_rate();
         } catch (error) {
           console.error("Error updating exchange rate:", error);

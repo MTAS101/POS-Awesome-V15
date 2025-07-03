@@ -922,7 +922,7 @@ export default {
         return vm.invoice_doc;
       }
       frappe.call({
-      method: "posawesome.posawesome.api.invoices.update_invoice",
+        method: "posawesome.posawesome.api.invoices.update_invoice",
         args: {
           data: doc,
         },
@@ -930,6 +930,9 @@ export default {
         callback: function (r) {
           if (r.message) {
             vm.invoice_doc = r.message;
+            if (r.message.exchange_rate_date) {
+              vm.exchange_rate_date = r.message.exchange_rate_date;
+            }
           }
         },
       });
