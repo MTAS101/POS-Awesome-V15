@@ -78,7 +78,29 @@ export default {
             if (r.message) {
               // Store price list currency for later use
               this.price_list_currency = r.message;
-              // Currency is selected manually in POS
+
+              if (this.price_list_currency !== this.pos_profile.currency) {
+                frappe.call({
+                  method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
+                  args: {
+                    from_currency: this.price_list_currency,
+                    to_currency: this.pos_profile.currency,
+                    posting_date: this.formatDateForBackend(this.posting_date_display),
+                  },
+                  callback: (ex) => {
+                    const rate = ex && ex.message ? ex.message : 1;
+                    this.eventBus.emit("price_list_rate", {
+                      currency: this.price_list_currency,
+                      rate: rate,
+                    });
+                  },
+                });
+              } else {
+                this.eventBus.emit("price_list_rate", {
+                  currency: this.price_list_currency,
+                  rate: 1,
+                });
+              }
             }
           },
         });

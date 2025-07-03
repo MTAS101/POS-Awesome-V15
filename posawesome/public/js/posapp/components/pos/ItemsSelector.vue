@@ -206,6 +206,11 @@ export default {
     items_loaded: false,
     selected_currency: "",
     exchange_rate: 1,
+    company_currency: "",
+    price_list_currency: "",
+    // Exchange rate from the price list currency to the POS currency
+    // Updated via the "price_list_rate" event from Invoice.vue
+    price_list_exchange_rate: 1,
     prePopulateInProgress: false,
     itemWorker: null,
     items_request_token: 0,
@@ -487,6 +492,10 @@ export default {
           vm.loading = false;
           vm.items_loaded = true;
 
+          if (vm.pos_profile.posa_allow_multi_currency) {
+            vm.applyCurrencyConversionToItems();
+          }
+
           if (vm.items && vm.items.length > 0) {
             vm.prePopulateStockCache(vm.items);
             vm.update_items_details(vm.items);
@@ -517,6 +526,10 @@ export default {
         this.eventBus.emit("set_all_items", vm.items);
         vm.loading = false;
         vm.items_loaded = true;
+
+        if (vm.pos_profile.posa_allow_multi_currency) {
+          vm.applyCurrencyConversionToItems();
+        }
 
         if (vm.items && vm.items.length > 0) {
           await vm.prePopulateStockCache(vm.items);
@@ -574,6 +587,10 @@ export default {
               vm.eventBus.emit("set_all_items", vm.items);
               vm.loading = false;
               vm.items_loaded = true;
+
+              if (vm.pos_profile.posa_allow_multi_currency) {
+                vm.applyCurrencyConversionToItems();
+              }
               console.info("Items Loaded");
 
               // Pre-populate stock cache when items are freshly loaded
@@ -658,6 +675,10 @@ export default {
               vm.eventBus.emit("set_all_items", vm.items);
               vm.loading = false;
               vm.items_loaded = true;
+
+              if (vm.pos_profile.posa_allow_multi_currency) {
+                vm.applyCurrencyConversionToItems();
+              }
               savePriceListItems(vm.active_price_list, vm.items);
               console.info("Items Loaded");
 
@@ -1170,6 +1191,8 @@ export default {
       let base_rate;
       if (item.original_currency === base) {
         base_rate = item.original_rate;
+      } else if (item.original_currency === this.price_list_currency) {
+        base_rate = item.original_rate * this.price_list_exchange_rate;
       } else {
         base_rate = item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
       }
@@ -1712,6 +1735,11 @@ export default {
     this.eventBus.on("register_pos_profile", async (data) => {
       await initPromise;
       this.pos_profile = data.pos_profile;
+      if (data.company && data.company.default_currency) {
+        this.company_currency = data.company.default_currency;
+      } else {
+        this.company_currency = this.pos_profile.currency;
+      }
       if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
         await this.get_items(true);
       } else {
@@ -1738,6 +1766,11 @@ export default {
     });
     this.eventBus.on("update_customer", (data) => {
       this.customer = data;
+    });
+    this.eventBus.on("price_list_rate", (rateData) => {
+      this.price_list_currency = rateData.currency || this.price_list_currency;
+      this.price_list_exchange_rate = rateData.rate || 1;
+      this.applyCurrencyConversionToItems();
     });
 
     // Refresh item quantities when connection to server is restored
@@ -1810,6 +1843,7 @@ export default {
     this.eventBus.off("update_coupons_counters");
     this.eventBus.off("update_customer_price_list");
     this.eventBus.off("update_customer");
+    this.eventBus.off("price_list_rate");
   },
 };
 </script>
