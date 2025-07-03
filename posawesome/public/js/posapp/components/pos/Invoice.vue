@@ -299,15 +299,39 @@ export default {
       this.show_column_selector = false;
     },
 
-    saveColumnPreferences() {
+    async saveColumnPreferences() {
       try {
-        localStorage.setItem('posawesome_selected_columns', JSON.stringify(this.selected_columns));
+        await frappe.call({
+          method: 'posawesome.posawesome.api.preferences.save_user_preferences',
+          args: {
+            key: 'column_preferences',
+            prefs: JSON.stringify(this.selected_columns),
+          },
+        });
       } catch (e) {
         console.error('Failed to save column preferences:', e);
       }
+      try {
+        localStorage.setItem('posawesome_selected_columns', JSON.stringify(this.selected_columns));
+      } catch (e) {
+        console.error('Failed to save column preferences locally:', e);
+      }
     },
 
-    loadColumnPreferences() {
+    async loadColumnPreferences() {
+      try {
+        const r = await frappe.call({
+          method: 'posawesome.posawesome.api.preferences.load_user_preferences',
+          args: { key: 'column_preferences' },
+        });
+        if (r.message) {
+          this.selected_columns = r.message;
+          localStorage.setItem('posawesome_selected_columns', JSON.stringify(this.selected_columns));
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to load column preferences from server:', e);
+      }
       try {
         const saved = localStorage.getItem('posawesome_selected_columns');
         if (saved) {
