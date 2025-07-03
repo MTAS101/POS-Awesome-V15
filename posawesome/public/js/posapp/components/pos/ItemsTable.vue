@@ -8,6 +8,31 @@
       density="compact" hide-default-footer :single-expand="true" :header-props="headerProps"
       @update:expanded="$emit('update:expanded', $event)" :search="itemSearch">
 
+      <template #item="{ item, index }">
+        <tr
+          class="draggable-row"
+          draggable="true"
+          :aria-grabbed="draggedIndex === index"
+          role="row"
+          tabindex="0"
+          @dragstart="startDrag(index)"
+          @dragend="endDrag"
+          @dragover.prevent="onRowDragOver(index)"
+          @drop="onRowDrop(index)"
+          @keydown.up.prevent="moveRow(index, -1)"
+          @keydown.down.prevent="moveRow(index, 1)"
+        >
+          <td class="drag-handle-cell">
+            <v-icon class="drag-handle" aria-label="Drag to reorder item">mdi-drag</v-icon>
+          </td>
+          <td v-for="header in headers" :key="header.key">
+            <slot :name="`item.${header.key}`" :item="item">
+              {{ item[header.key] }}
+            </slot>
+          </td>
+        </tr>
+      </template>
+
       <!-- Quantity column -->
       <template v-slot:item.qty="{ item }">
         <div class="amount-value">
@@ -296,6 +321,40 @@ export default {
         console.error('Error parsing drag data:', error);
       }
     },
+
+    startDrag(index) {
+      this.draggedIndex = index;
+      this.isDragging = true;
+    },
+
+    endDrag() {
+      this.draggedIndex = null;
+      this.dragOverIndex = null;
+      this.isDragging = false;
+    },
+
+    onRowDragOver(index) {
+      this.dragOverIndex = index;
+    },
+
+    onRowDrop(index) {
+      if (this.draggedIndex === null) return;
+      this.reorderRows(this.draggedIndex, index);
+      this.endDrag();
+    },
+
+    moveRow(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= this.items.length) return;
+      this.reorderRows(index, newIndex);
+      this.draggedIndex = newIndex;
+    },
+
+    reorderRows(fromIndex, toIndex) {
+      const moved = this.items.splice(fromIndex, 1)[0];
+      this.items.splice(toIndex, 0, moved);
+      this.$emit('reorder-items', { fromIndex, toIndex });
+    },
   },
 };
 </script>
@@ -563,6 +622,11 @@ export default {
 
 .draggable-row:hover {
   background-color: rgba(0, 0, 0, 0.02);
+}
+
+.draggable-row:focus {
+  outline: 2px solid #1976d2;
+  outline-offset: -1px;
 }
 
 :deep(.dark-theme) .draggable-row:hover,
