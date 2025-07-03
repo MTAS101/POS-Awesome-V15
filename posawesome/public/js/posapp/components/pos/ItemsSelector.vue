@@ -1166,6 +1166,7 @@ export default {
           suffixKeyCodes: [],
           keyCodeMapper: function (oEvent) {
             oEvent.stopImmediatePropagation();
+            oEvent.preventDefault();
             return onScan.decodeKeyEvent(oEvent);
           },
           onScan: function (sCode) {
@@ -1197,8 +1198,9 @@ export default {
           this.enter_event();
         }
 
-        // clear search field for next scan
+        // clear search field for next scan and refocus input
         this.clearSearch();
+        this.$refs.debounce_search && this.$refs.debounce_search.focus();
       });
     },
     generateWordCombinations(inputString) {
@@ -1326,10 +1328,9 @@ export default {
         indicator: 'green'
       }, 3);
 
-      // Clear search after successful addition
-      setTimeout(() => {
-        this.clearSearch();
-      }, 1000);
+      // Clear search after successful addition and refocus input
+      this.clearSearch();
+      this.$refs.debounce_search && this.$refs.debounce_search.focus();
     },
     showMultipleItemsDialog(items, scannedCode) {
       // Create a dialog to let user choose from multiple matches
