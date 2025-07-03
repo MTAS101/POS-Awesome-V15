@@ -805,7 +805,7 @@ export default {
           const base_rate =
             item.original_currency === this.pos_profile.currency
               ? item.original_rate
-              : item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
+              : item.original_rate * (item.plc_conversion_rate || (1 / this.exchange_rate));
           item.base_rate = base_rate;
           item.base_price_list_rate = base_rate;
         }
@@ -1196,14 +1196,14 @@ export default {
       } else if (item.original_currency === this.price_list_currency) {
         base_rate = item.original_rate * this.price_list_exchange_rate;
       } else {
-        base_rate = item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
+        base_rate = item.original_rate * (item.plc_conversion_rate || (1 / this.exchange_rate));
       }
 
       if (this.selected_currency === base) {
         item.rate = this.flt(base_rate, this.currency_precision);
         item.currency = base;
       } else {
-        item.rate = this.flt(base_rate / this.exchange_rate, this.currency_precision);
+        item.rate = this.flt(base_rate * this.exchange_rate, this.currency_precision);
         item.currency = this.selected_currency;
       }
 
@@ -1456,10 +1456,10 @@ export default {
 
       if (this.selected_currency !== this.pos_profile.currency) {
         // item.rate currently in selected currency, convert back to base currency
-        return this.flt(item.rate * this.exchange_rate, 4);
+        return this.flt(item.rate / this.exchange_rate, 4);
       }
 
-      return this.flt(item.rate / this.exchange_rate, 4);
+      return this.flt(item.rate * this.exchange_rate, 4);
     },
     currencySymbol(currency) {
       return get_currency_symbol(currency);
@@ -1481,7 +1481,7 @@ export default {
     hasDecimalPrecision(value) {
       // Check if the value has any decimal precision when multiplied by exchange rate
       if (this.exchange_rate && this.exchange_rate !== 1) {
-        let convertedValue = value * this.exchange_rate;
+        let convertedValue = value / this.exchange_rate;
         return !Number.isInteger(convertedValue);
       }
       return !Number.isInteger(value);
