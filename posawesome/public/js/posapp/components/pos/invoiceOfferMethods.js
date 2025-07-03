@@ -618,18 +618,18 @@ export default {
 
       new_item.is_free_item = is_free ? 1 : 0;
 
-      // Set price list rate based on currency
+      // Set price list rate based on currency similar to invoice logic
       if (is_free) {
         new_item.base_price_list_rate = 0;
         new_item.price_list_rate = 0;
       } else {
-        // item.rate is in base currency (PKR)
-        new_item.base_price_list_rate = item.rate;
+        // item.rate is already in the currently selected currency
+        new_item.price_list_rate = item.rate;
+        // Determine base price list rate just like invoice items
         if (this.selected_currency !== this.pos_profile.currency) {
-          // Convert PKR to USD by dividing
-          new_item.price_list_rate = this.flt(item.rate / this.exchange_rate, this.currency_precision);
+          new_item.base_price_list_rate = this.flt(item.rate / this.exchange_rate, this.currency_precision);
         } else {
-          new_item.price_list_rate = item.rate;
+          new_item.base_price_list_rate = item.rate;
         }
       }
 
