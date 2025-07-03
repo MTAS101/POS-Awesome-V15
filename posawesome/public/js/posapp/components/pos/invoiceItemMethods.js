@@ -144,8 +144,8 @@ export default {
       // Setup base rates properly for multi-currency
       if (this.selected_currency !== this.pos_profile.currency) {
         // Store original base currency values
-        new_item.base_price_list_rate = item.rate * this.exchange_rate;
-        new_item.base_rate = item.rate * this.exchange_rate;
+        new_item.base_price_list_rate = item.rate / this.exchange_rate;
+        new_item.base_rate = item.rate / this.exchange_rate;
         new_item.base_discount_amount = 0;
       } else {
         // In base currency, base rates = displayed rates
@@ -780,18 +780,18 @@ export default {
           new_item.rate = flt(item.rate);  // Keep rate in USD
 
           // Use pre-stored base_rate if available, otherwise calculate
-          new_item.base_rate = item.base_rate || flt(item.rate * this.exchange_rate);
+          new_item.base_rate = item.base_rate || flt(item.rate / this.exchange_rate);
 
           new_item.price_list_rate = flt(item.price_list_rate);  // Keep price list rate in USD
-          new_item.base_price_list_rate = item.base_price_list_rate || flt(item.price_list_rate * this.exchange_rate);
+          new_item.base_price_list_rate = item.base_price_list_rate || flt(item.price_list_rate / this.exchange_rate);
 
           // Calculate amounts
           new_item.amount = flt(item.qty) * new_item.rate;  // Amount in USD
-          new_item.base_amount = new_item.amount * this.exchange_rate;  // Convert to PKR
+          new_item.base_amount = new_item.amount / this.exchange_rate;  // Convert to base currency
 
           // Handle discount amount
           new_item.discount_amount = flt(item.discount_amount);  // Keep discount in USD
-          new_item.base_discount_amount = item.base_discount_amount || flt(item.discount_amount * this.exchange_rate);
+          new_item.base_discount_amount = item.base_discount_amount || flt(item.discount_amount / this.exchange_rate);
         } else {
           // Same currency (base currency), make sure we use base rates if available
           new_item.rate = flt(item.rate);
@@ -1593,9 +1593,9 @@ export default {
 
           if (priceCurrency === this.selected_currency) {
             // Rate already in selected currency
-            item.base_price_list_rate = newRate * this.exchange_rate;
+            item.base_price_list_rate = newRate / this.exchange_rate;
             if (!item._manual_rate_set) {
-              item.base_rate = newRate * this.exchange_rate;
+              item.base_rate = newRate / this.exchange_rate;
             }
             item.price_list_rate = newRate;
             if (!item._manual_rate_set) {
@@ -1612,7 +1612,7 @@ export default {
 
             if (this.selected_currency !== this.pos_profile.currency) {
               const conv = this.exchange_rate || 1;
-              const convRate = this.flt(newRate / conv, this.currency_precision);
+              const convRate = this.flt(newRate * conv, this.currency_precision);
               if (newRate !== 0 || !item.price_list_rate) {
                 item.price_list_rate = convRate;
               }
@@ -1686,7 +1686,7 @@ export default {
         switch (fieldId) {
           case "rate":
             // Store base rate and convert to selected currency
-            item.base_rate = this.flt(newValue * this.exchange_rate, this.currency_precision);
+            item.base_rate = this.flt(newValue / this.exchange_rate, this.currency_precision);
             item.rate = newValue;
 
             // Calculate discount amount in selected currency
