@@ -170,7 +170,8 @@ export default {
       selected_columns: [], // Selected columns for items table
       temp_selected_columns: [], // Temporary array for column selection
       available_columns: [], // All available columns
-      show_column_selector: false // Column selector dialog visibility
+      show_column_selector: false, // Column selector dialog visibility
+      company_currency: "" // Company's base currency
     };
   },
 
@@ -592,28 +593,25 @@ export default {
     // Update currency and exchange rate when currency is changed
     async update_currency_and_rate() {
       if (this.selected_currency) {
-        // Always use POS Profile currency as the base currency
         const baseCurrency = this.pos_profile.currency;
+        const companyCurrency = this.company_currency || baseCurrency;
 
         if (!this.items.length) {
-          if (this.selected_currency === baseCurrency) {
+          if (this.selected_currency === companyCurrency) {
             this.exchange_rate = 1;
             this.sync_exchange_rate();
           } else {
             try {
               const r = await frappe.call({
-                method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
+                method: "posawesome.posawesome.api.invoices.fetch_exchange_rate",
                 args: {
-                  // Convert from POS Profile currency to selected currency
-                  from_currency: baseCurrency,
-                  to_currency: this.selected_currency,
+                  currency: this.selected_currency,
+                  company: this.pos_profile.company,
                   posting_date: this.formatDateForBackend(this.posting_date_display)
                 },
               });
               if (r && r.message) {
-                // API returns rate from baseCurrency to selected currency
-                // Convert to ERPNext expected orientation: selected -> base
-                this.exchange_rate = r.message ? 1 / r.message : 1;
+                this.exchange_rate = r.message;
                 this.sync_exchange_rate();
               }
             } catch (error) {
@@ -730,6 +728,11 @@ export default {
     // Register event listeners for POS profile, items, customer, offers, etc.
     this.eventBus.on("register_pos_profile", (data) => {
       this.pos_profile = data.pos_profile;
+      if (data.company && data.company.default_currency) {
+        this.company_currency = data.company.default_currency;
+      } else {
+        this.company_currency = this.pos_profile.currency;
+      }
       this.customer = data.pos_profile.customer;
       this.pos_opening_shift = data.pos_opening_shift;
       this.stock_settings = data.stock_settings;
