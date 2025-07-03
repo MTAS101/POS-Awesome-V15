@@ -527,12 +527,10 @@ export default {
           // When switching to another currency, convert from base rates
           console.log(`Converting rates for ${item.item_code} to ${this.selected_currency}`);
 
-          // If exchange rate is 285 PKR = 1 USD
-          // To convert PKR to USD: divide by exchange rate
-          // Example: 100 PKR / 285 = 0.35 USD
-          const converted_price = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
-          const converted_rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
-          const converted_discount = this.flt(item.base_discount_amount / this.exchange_rate, this.currency_precision);
+            // Convert base currency values to the selected currency
+            const converted_price = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
+            const converted_rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
+            const converted_discount = this.flt(item.base_discount_amount * this.exchange_rate, this.currency_precision);
 
           // Ensure we don't set values to 0 if they're just very small
           item.price_list_rate = converted_price < 0.000001 ? 0 : converted_price;

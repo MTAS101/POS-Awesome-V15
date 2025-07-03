@@ -1436,10 +1436,11 @@ export default {
               // Convert to selected currency if needed
               if (vm.selected_currency !== vm.pos_profile.currency) {
                 const exchange_rate = vm.exchange_rate || 1;
-                item.price_list_rate = vm.flt(item.base_price_list_rate / exchange_rate, vm.currency_precision);
+                // Convert base rates to the selected currency
+                item.price_list_rate = vm.flt(item.base_price_list_rate * exchange_rate, vm.currency_precision);
 
                 // In multi-currency mode, update the rate from base_rate
-                item.rate = vm.flt(item.base_rate / exchange_rate, vm.currency_precision);
+                item.rate = vm.flt(item.base_rate * exchange_rate, vm.currency_precision);
               } else {
                 // When in default currency, use base rates directly for price_list_rate
                 item.price_list_rate = item.base_price_list_rate;
@@ -1454,7 +1455,7 @@ export default {
               // For items with offers, only update price_list_rate
               if (vm.selected_currency !== vm.pos_profile.currency) {
                 const exchange_rate = vm.exchange_rate || 1;
-                item.price_list_rate = vm.flt(item.base_price_list_rate / exchange_rate, vm.currency_precision);
+                item.price_list_rate = vm.flt(item.base_price_list_rate * exchange_rate, vm.currency_precision);
               } else {
                 item.price_list_rate = item.base_price_list_rate;
               }
@@ -1781,11 +1782,9 @@ export default {
 
           // Convert to selected currency
           if (this.selected_currency !== this.pos_profile.currency) {
-            // If exchange rate is 300 PKR = 1 USD
-            // To convert PKR to USD: divide by exchange rate
-            // Example: 3000 PKR / 300 = 10 USD
-            item.price_list_rate = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
-            item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
+          // Convert base currency values to the selected currency
+          item.price_list_rate = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
+          item.rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
           } else {
             item.price_list_rate = item.base_price_list_rate;
             item.rate = item.base_rate;
@@ -1891,11 +1890,9 @@ export default {
 
           // Convert to selected currency
           if (this.selected_currency !== this.pos_profile.currency) {
-            // If exchange rate is 300 PKR = 1 USD
-            // To convert PKR to USD: divide by exchange rate
-            // Example: 3000 PKR / 300 = 10 USD
-            item.rate = this.flt(converted_rate / this.exchange_rate, this.currency_precision);
-            item.price_list_rate = item.rate;
+          // Convert base currency values using the current exchange rate
+          item.rate = this.flt(converted_rate * this.exchange_rate, this.currency_precision);
+          item.price_list_rate = item.rate;
           } else {
             item.rate = converted_rate;
             item.price_list_rate = converted_rate;
@@ -1923,9 +1920,9 @@ export default {
 
           // Convert to selected currency if needed
           if (this.selected_currency !== this.pos_profile.currency) {
-            item.price_list_rate = this.flt(updated_base_price / this.exchange_rate, this.currency_precision);
-            item.discount_amount = this.flt(base_discount / this.exchange_rate, this.currency_precision);
-            item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
+          item.price_list_rate = this.flt(updated_base_price * this.exchange_rate, this.currency_precision);
+          item.discount_amount = this.flt(base_discount * this.exchange_rate, this.currency_precision);
+          item.rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
           } else {
             item.price_list_rate = updated_base_price;
             item.discount_amount = base_discount;
@@ -1944,11 +1941,9 @@ export default {
 
         // Convert to selected currency
         if (this.selected_currency !== this.pos_profile.currency) {
-          // If exchange rate is 300 PKR = 1 USD
-          // To convert PKR to USD: divide by exchange rate
-          // Example: 3000 PKR / 300 = 10 USD
-          item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
-          item.price_list_rate = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
+          // Convert base currency values to the selected currency
+          item.rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
+          item.price_list_rate = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
         } else {
           item.rate = item.base_rate;
           item.price_list_rate = item.base_price_list_rate;
@@ -2044,9 +2039,8 @@ export default {
 
           // Convert batch price to selected currency if needed
           if (this.selected_currency !== this.pos_profile.currency) {
-            // If exchange rate is 285 PKR = 1 USD
-            // To convert PKR to USD: divide by exchange rate
-            item.batch_price = this.flt(batch_to_use.batch_price / this.exchange_rate, this.currency_precision);
+            // Convert base batch price using the current exchange rate
+            item.batch_price = this.flt(batch_to_use.batch_price * this.exchange_rate, this.currency_precision);
           } else {
             item.batch_price = batch_to_use.batch_price;
           }
