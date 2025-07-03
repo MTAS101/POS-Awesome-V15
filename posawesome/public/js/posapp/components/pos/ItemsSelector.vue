@@ -1181,6 +1181,8 @@ export default {
         item.rate = this.flt(base_rate / this.exchange_rate, this.currency_precision);
         item.currency = this.selected_currency;
       }
+
+      item.price_list_rate = item.rate;
     },
     scan_barcoud() {
       const vm = this;
