@@ -6,7 +6,8 @@
         @update:model-value="onCurrencyUpdate"></v-select>
     </v-col>
     <v-col cols="4" class="pb-2">
-      <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Exchange Rate')"
+      <v-text-field density="compact" variant="outlined" color="primary"
+        :label="'Price List ' + price_list_currency + ' to ' + internal_selected_currency"
         bg-color="white" hide-details v-model="internal_exchange_rate" :rules="[isNumber]"
         @change="onExchangeChange"></v-text-field>
     </v-col>
@@ -21,6 +22,7 @@ export default {
     exchange_rate: Number,
     available_currencies: Array,
     isNumber: Function,
+    price_list_currency: String,
   },
   data() {
     return {
