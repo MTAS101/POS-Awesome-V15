@@ -403,7 +403,7 @@ def get_items(
                                         }
                                     )
                 serial_no_data = []
-                if search_serial_no:
+                if search_serial_no or item.has_serial_no:
                     serial_no_data = frappe.get_all(
                         "Serial No",
                         filters={
