@@ -79,12 +79,14 @@ export default {
               // Store price list currency for later use
               this.price_list_currency = r.message;
 
-              if (this.price_list_currency !== this.pos_profile.currency) {
+              const targetCurrency = this.company_currency || this.pos_profile.currency;
+
+              if (this.price_list_currency !== targetCurrency) {
                 frappe.call({
                   method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
                   args: {
                     from_currency: this.price_list_currency,
-                    to_currency: this.pos_profile.currency,
+                    to_currency: targetCurrency,
                     posting_date: this.formatDateForBackend(this.posting_date_display),
                   },
                   callback: (ex) => {
