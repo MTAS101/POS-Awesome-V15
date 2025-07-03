@@ -1,4 +1,5 @@
 import Dexie from "dexie";
+import { checkLocalStorageUsage } from './offline/storage_monitor.js';
 
 // --- Dexie initialization ---------------------------------------------------
 const db = new Dexie("posawesome_offline");
@@ -137,13 +138,14 @@ function persist(key) {
                 .put({ key, value: memory[key] })
                 .catch((e) => console.error(`Failed to persist ${key}`, e));
 
-	if (typeof localStorage !== "undefined") {
-		try {
-			localStorage.setItem(`posa_${key}`, JSON.stringify(memory[key]));
-		} catch (err) {
-			console.error("Failed to persist", key, "to localStorage", err);
-		}
-	}
+        if (typeof localStorage !== "undefined") {
+                try {
+                        localStorage.setItem(`posa_${key}`, JSON.stringify(memory[key]));
+                        checkLocalStorageUsage();
+                } catch (err) {
+                        console.error("Failed to persist", key, "to localStorage", err);
+                }
+        }
 }
 
 // Reset cached invoices and customers after syncing
