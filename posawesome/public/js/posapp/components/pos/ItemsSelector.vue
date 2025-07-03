@@ -68,6 +68,9 @@
             <div fluid class="items-grid dynamic-scroll" ref="itemsContainer" v-if="items_view == 'card'"
               :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
               <v-card v-for="item in filtered_items" :key="item.item_code" hover class="dynamic-item-card"
+                :draggable="true"
+                @dragstart="onDragStart($event, item)"
+                @dragend="onDragEnd"
                 @click="add_item(item)">
                 <v-img :src="item.image ||
                         '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
@@ -98,20 +101,29 @@
                 :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }"
                 item-key="item_code" @click:row="click_item_row">
 
-                <template v-slot:item.rate="{ item }">
-                  <div>
-                    <div class="text-primary">{{ currencySymbol(item.currency || pos_profile.currency) }}
-                      {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}</div>
-                    <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
-                      class="text-success">
-                      {{ currencySymbol(selected_currency) }}
-                      {{ format_currency(getConvertedRate(item), selected_currency,
-                        ratePrecision(getConvertedRate(item))) }}
-                    </div>
-                  </div>
-                </template>
-                <template v-slot:item.actual_qty="{ item }">
-                  <span class="golden--text">{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) }}</span>
+                <template v-slot:item="{ item }">
+                  <tr :draggable="true" @dragstart="onDragStart($event, item)" @dragend="onDragEnd" @click="click_item_row($event, { item })">
+                    <td v-for="header in headers" :key="header.key">
+                      <template v-if="header.key === 'rate'">
+                        <div>
+                          <div class="text-primary">{{ currencySymbol(item.currency || pos_profile.currency) }}
+                            {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}</div>
+                          <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                            class="text-success">
+                            {{ currencySymbol(selected_currency) }}
+                            {{ format_currency(getConvertedRate(item), selected_currency,
+                              ratePrecision(getConvertedRate(item))) }}
+                          </div>
+                        </div>
+                      </template>
+                      <template v-else-if="header.key === 'actual_qty'">
+                        <span class="golden--text">{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) }}</span>
+                      </template>
+                      <template v-else>
+                        {{ item[header.key] }}
+                      </template>
+                    </td>
+                  </tr>
                 </template>
               </v-data-table-virtual>
             </div>
@@ -214,6 +226,7 @@ export default {
     temp_hide_qty_decimals: false,
     hide_zero_rate_items: false,
     temp_hide_zero_rate_items: false,
+    isDragging: false,
   }),
 
   watch: {
@@ -1449,6 +1462,27 @@ export default {
       this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
       this.saveItemSettings();
       this.show_item_settings = false;
+    },
+    onDragStart(event, item) {
+      this.isDragging = true;
+      
+      // Set drag data
+      event.dataTransfer.setData('application/json', JSON.stringify({
+        type: 'item-from-selector',
+        item: item
+      }));
+      
+      // Set drag effect
+      event.dataTransfer.effectAllowed = 'copy';
+      
+      // Emit event to show drop feedback in ItemsTable
+      this.eventBus.emit('item-drag-start', item);
+    },
+    onDragEnd(event) {
+      this.isDragging = false;
+      
+      // Emit event to hide drop feedback
+      this.eventBus.emit('item-drag-end');
     },
     saveItemSettings() {
       try {
