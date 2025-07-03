@@ -281,7 +281,9 @@ export default {
           return;
         }
       }
-      // No cache found; keep existing items without reloading from server
+      // No cache found - force a reload so prices are updated
+      this.items_loaded = false;
+      this.get_items(true);
     }, 300),
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
