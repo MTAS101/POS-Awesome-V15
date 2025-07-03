@@ -557,7 +557,7 @@ export default {
         }
       } else if (offer.discount_type === "Discount Percentage") {
         // Apply percentage discount on item's base rate
-        const base_price = item.base_rate || (item.rate / this.exchange_rate);
+        const base_price = item.base_rate || (item.rate * this.exchange_rate);
         const base_discount = this.flt((base_price * offer.discount_percentage) / 100, this.currency_precision);
         new_item.base_discount_amount = base_discount;
         new_item.base_rate = this.flt(base_price - base_discount, this.currency_precision);
@@ -572,7 +572,7 @@ export default {
       } else {
         // Use item's original rate
         if (this.selected_currency !== this.pos_profile.currency) {
-          new_item.base_rate = item.base_rate || (item.rate / this.exchange_rate);
+          new_item.base_rate = item.base_rate || (item.rate * this.exchange_rate);
           new_item.rate = item.rate;
         } else {
           new_item.base_rate = item.rate;
