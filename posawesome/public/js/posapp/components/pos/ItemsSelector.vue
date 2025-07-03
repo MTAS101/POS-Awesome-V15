@@ -993,10 +993,12 @@ export default {
             if (det.rate !== 0 || !item.rate) {
               item.rate = det.rate;
               item.price_list_rate = det.price_list_rate || det.rate;
-            }
-          }
 
-          if (!item.original_rate) {
+              // Reset original values when rate changes
+              item.original_rate = item.rate;
+              item.original_currency = item.currency || vm.pos_profile.currency;
+            }
+          } else if (!item.original_rate) {
             item.original_rate = item.rate;
             item.original_currency = item.currency || vm.pos_profile.currency;
           }
