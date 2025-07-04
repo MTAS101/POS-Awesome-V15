@@ -124,6 +124,7 @@ import discountMethods from "./invoice-item/discounts";
 import stockUtils from "./invoice-item/stockUtils";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
+import invoiceItemMethods from "./invoiceItemMethods";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
@@ -204,6 +205,7 @@ export default {
     ...discountMethods,
     ...stockUtils,
     ...offerMethods,
+    ...invoiceItemMethods,
     initializeItemsHeaders() {
       // Define all available columns
       this.available_columns = [
