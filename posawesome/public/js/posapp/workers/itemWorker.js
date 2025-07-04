@@ -3,19 +3,8 @@ importScripts('/assets/posawesome/js/libs/dexie.min.js');
 const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
 
-async function ensureDB() {
-        if (!db.isOpen()) {
-                try {
-                        await db.open();
-                } catch (err) {
-                        console.error("Worker failed to open DB", err);
-                }
-        }
-}
-
 async function persist(key, value) {
         try {
-                await ensureDB();
                 await db.table("keyval").put({ key, value });
         } catch (e) {
                 console.error("Worker persist failed", e);
@@ -34,9 +23,8 @@ self.onmessage = async (event) => {
         // when the worker is used for frequent persistence operations. Remove
         // the noisy log to keep the console clean.
 	const data = event.data || {};
-        if (data.type === "parse_and_cache") {
-                try {
-                        await ensureDB();
+	if (data.type === "parse_and_cache") {
+		try {
                         const parsed = JSON.parse(data.json);
                         const itemsRaw = parsed.message || parsed;
                         let items;
@@ -52,13 +40,13 @@ self.onmessage = async (event) => {
                                 self.postMessage({ type: "error", error: e.message });
                                 return;
                         }
-                        let cache = {};
-                        try {
-                                const stored = await db.table("keyval").get("price_list_cache");
-                                if (stored && stored.value) cache = stored.value;
-                        } catch (e) {
-                                console.error("Failed to read cache in worker", e);
-                        }
+			let cache = {};
+			try {
+				const stored = await db.table("keyval").get("price_list_cache");
+				if (stored && stored.value) cache = stored.value;
+			} catch (e) {
+				console.error("Failed to read cache in worker", e);
+			}
 			cache[data.priceList] = { items, timestamp: Date.now() };
 			await persist("price_list_cache", cache);
 			self.postMessage({ type: "parsed", items });
