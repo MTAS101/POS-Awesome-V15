@@ -550,8 +550,8 @@ export default {
         new_item.base_rate = offer.rate;
         if (this.selected_currency !== this.pos_profile.currency) {
           // If exchange rate is 300 PKR = 1 USD
-          // Convert PKR to USD by dividing
-          new_item.rate = this.flt(offer.rate / this.exchange_rate, this.currency_precision);
+          // Convert PKR to USD by multiplying
+          new_item.rate = this.flt(offer.rate * this.exchange_rate, this.currency_precision);
         } else {
           new_item.rate = offer.rate;
         }
@@ -563,8 +563,8 @@ export default {
         new_item.base_rate = this.flt(base_price - base_discount, this.currency_precision);
 
         if (this.selected_currency !== this.pos_profile.currency) {
-          new_item.discount_amount = this.flt(base_discount / this.exchange_rate, this.currency_precision);
-          new_item.rate = this.flt(new_item.base_rate / this.exchange_rate, this.currency_precision);
+          new_item.discount_amount = this.flt(base_discount * this.exchange_rate, this.currency_precision);
+          new_item.rate = this.flt(new_item.base_rate * this.exchange_rate, this.currency_precision);
         } else {
           new_item.discount_amount = base_discount;
           new_item.rate = new_item.base_rate;
@@ -585,8 +585,8 @@ export default {
         // offer.discount_amount is always in base currency (PKR)
         new_item.base_discount_amount = offer.discount_amount;
         if (this.selected_currency !== this.pos_profile.currency) {
-          // Convert PKR to USD by dividing
-          new_item.discount_amount = this.flt(offer.discount_amount / this.exchange_rate, this.currency_precision);
+          // Convert PKR to USD by multiplying
+          new_item.discount_amount = this.flt(offer.discount_amount * this.exchange_rate, this.currency_precision);
         } else {
           new_item.discount_amount = offer.discount_amount;
         }
@@ -627,7 +627,7 @@ export default {
         new_item.price_list_rate = item.rate;
         // Determine base price list rate just like invoice items
         if (this.selected_currency !== this.pos_profile.currency) {
-          new_item.base_price_list_rate = this.flt(item.rate / this.exchange_rate, this.currency_precision);
+          new_item.base_price_list_rate = this.flt(item.rate * this.exchange_rate, this.currency_precision);
         } else {
           new_item.base_price_list_rate = item.rate;
         }
@@ -687,8 +687,8 @@ export default {
               // Convert to selected currency if needed
               if (this.selected_currency !== this.pos_profile.currency) {
                 // If exchange rate is 285 PKR = 1 USD
-                // To convert PKR to USD: divide by exchange rate
-                item.rate = this.flt(base_offer_rate / this.exchange_rate, this.currency_precision);
+                // To convert PKR to USD multiply by exchange rate
+                item.rate = this.flt(base_offer_rate * this.exchange_rate, this.currency_precision);
                 item.price_list_rate = item.rate;
               } else {
                 item.rate = base_offer_rate;
@@ -716,9 +716,9 @@ export default {
 
               // Convert to selected currency if needed
               if (this.selected_currency !== this.pos_profile.currency) {
-                item.price_list_rate = this.flt(base_price / this.exchange_rate, this.currency_precision);
-                item.discount_amount = this.flt(base_discount / this.exchange_rate, this.currency_precision);
-                item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
+                item.price_list_rate = this.flt(base_price * this.exchange_rate, this.currency_precision);
+                item.discount_amount = this.flt(base_discount * this.exchange_rate, this.currency_precision);
+                item.rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
               } else {
                 item.price_list_rate = base_price;
                 item.discount_amount = base_discount;
@@ -784,8 +784,8 @@ export default {
 
             // Convert to selected currency
             if (this.selected_currency !== this.pos_profile.currency) {
-              item.rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
-              item.price_list_rate = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
+              item.rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
+              item.price_list_rate = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
             } else {
               item.rate = item.base_rate;
               item.price_list_rate = item.base_price_list_rate;
