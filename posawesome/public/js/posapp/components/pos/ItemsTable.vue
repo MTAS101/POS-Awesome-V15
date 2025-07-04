@@ -149,18 +149,18 @@
               <!-- Third row for serial/batch numbers if applicable -->
               <div class="form-row" v-if="item.has_serial_no || item.has_batch_no">
                 <div class="form-field" v-if="item.has_serial_no">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Serial Numbers')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    v-model="item.serial_no" @change="setSerialNo(item, $event.target.value)"
-                    :disabled="!!item.posa_is_replace"
-                    prepend-inner-icon="mdi-numeric"></v-text-field>
+                  <v-autocomplete density="compact" variant="outlined" color="primary" :label="frappe._('Serial Numbers')"
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details clearable
+                    v-model="item.serial_no" :items="item.serial_no_data" item-title="serial_no" item-value="serial_no"
+                    @update:model-value="setSerialNo(item, $event)" :disabled="!!item.posa_is_replace"
+                    prepend-inner-icon="mdi-numeric"></v-autocomplete>
                 </div>
                 <div class="form-field" v-if="item.has_batch_no">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Batch No')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    v-model="item.batch_no" @change="setBatchQty(item, $event.target.value)"
-                    :disabled="!!item.posa_is_replace"
-                    prepend-inner-icon="mdi-package-variant"></v-text-field>
+                  <v-autocomplete density="compact" variant="outlined" color="primary" :label="frappe._('Batch No')"
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details clearable
+                    v-model="item.batch_no" :items="item.batch_no_data" item-title="batch_no" item-value="batch_no"
+                    @update:model-value="setBatchQty(item, $event)" :disabled="!!item.posa_is_replace"
+                    prepend-inner-icon="mdi-package-variant"></v-autocomplete>
                 </div>
                 <div class="form-field" v-if="item.has_batch_no">
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Expiry Date')"
