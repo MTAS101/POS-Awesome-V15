@@ -973,10 +973,18 @@ export function toggleManualOffline() {
 }
 
 export async function clearAllCache() {
-        try {
-                if (db.isOpen()) {
-                        await db.close();
-                }
+       if (persistWorker) {
+               try {
+                       persistWorker.terminate();
+               } catch (e) {
+                       console.error('Failed to terminate persist worker', e);
+               }
+               persistWorker = null;
+       }
+       try {
+               if (db.isOpen()) {
+                       await db.close();
+               }
                 await Dexie.delete('posawesome_offline');
                 await db.open();
         } catch (e) {
