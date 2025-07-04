@@ -146,6 +146,7 @@ export default {
   font-weight: 500;
   font-size: 1rem;
   color: var(--text-primary, #333);
+  font-family: 'Roboto', sans-serif;
 }
 
 /* Styling for icons within the navigation drawer list items */
@@ -158,7 +159,9 @@ export default {
 .drawer-item-title {
   margin-left: 8px;
   font-weight: 500;
-  color: var(--text-primary, #333);
+  font-size: 0.95rem;
+  color: #000000 !important;
+  font-family: 'Roboto', sans-serif;
 }
 
 /* Hover effect for all list items in the navigation drawer */
@@ -189,17 +192,24 @@ export default {
 
 :deep(.dark-theme) .drawer-item-title,
 :deep(.v-theme--dark) .drawer-item-title {
-  color: var(--text-primary, #ffffff) !important;
+  color: #000000 !important;
+  font-weight: 500;
+  font-size: 0.95rem;
+  font-family: 'Roboto', sans-serif;
 }
 
 :deep(.dark-theme) .drawer-company,
 :deep(.v-theme--dark) .drawer-company {
   color: var(--text-primary, #ffffff) !important;
+  font-weight: 500;
+  font-size: 1rem;
+  font-family: 'Roboto', sans-serif;
 }
 
 :deep(.dark-theme) .drawer-icon,
 :deep(.v-theme--dark) .drawer-icon {
   color: var(--primary-light, #90caf9) !important;
+  font-size: 24px;
 }
 
 :deep(.dark-theme) .v-list-item:hover,
