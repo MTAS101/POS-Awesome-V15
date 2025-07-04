@@ -48,10 +48,10 @@
         </v-tooltip>
       </v-btn>
 
-      <!-- Display current JavaScript memory usage -->
+      <!-- Display local cache usage -->
       <v-chip color="primary" variant="outlined" class="memory-chip mx-1">
-        <v-icon start>mdi-memory</v-icon>
-        {{ memoryUsageText }}
+        <v-icon start>mdi-database</v-icon>
+        {{ cacheUsageText }}
       </v-chip>
 
       <v-menu offset-y :min-width="240" :close-on-content-click="false" location="bottom end" :offset="[0, 4]">
@@ -306,6 +306,7 @@
 // Import the Socket.IO client library for real-time server status monitoring.
 // This import is crucial for the server connectivity indicator.
 import { io } from 'socket.io-client';
+import Dexie from 'dexie';
 import { getPendingOfflineInvoiceCount, syncOfflineInvoices, isOffline, getLastSyncTotals, isManualOffline, setManualOffline, clearAllCache } from '../../offline.js';
 import OfflineInvoicesDialog from './OfflineInvoices.vue';
 import { silentPrint } from '../plugins/print.js';
@@ -358,8 +359,8 @@ export default {
           sortable: true,
         }
       ],
-      memoryUsageText: '0 MB', // Display text for memory usage
-      memoryInterval: null
+      cacheUsageText: '0 MB', // Display text for cache usage
+      cacheInterval: null
     };
   },
   computed: {
@@ -519,9 +520,9 @@ export default {
     // Initiates the WebSocket connection to monitor server health.
     this.initSocketConnection();
 
-    // Start memory usage monitoring
-    this.updateMemoryUsage();
-    this.memoryInterval = setInterval(this.updateMemoryUsage, 5000);
+    // Start cache usage monitoring
+    this.updateCacheUsage();
+    this.cacheInterval = setInterval(this.updateCacheUsage, 30000);
   },
   beforeDestroy() {
     // --- REMOVE NETWORK LISTENERS ---
@@ -533,9 +534,9 @@ export default {
     this.eventBus.off('pending_invoices_changed', this.updatePendingInvoices);
     // --- CLOSE SOCKET ---
     // Disconnect and clean up Socket.IO listeners to ensure proper resource management.
-    if (this.memoryInterval) {
-      clearInterval(this.memoryInterval);
-      this.memoryInterval = null;
+    if (this.cacheInterval) {
+      clearInterval(this.cacheInterval);
+      this.cacheInterval = null;
     }
 
     if (this.socket) {
@@ -548,21 +549,78 @@ export default {
   },
   methods: {
 
-    updateMemoryUsage() {
+    async getIndexedDBSize() {
       try {
-        if (performance && performance.memory) {
-          const { usedJSHeapSize, jsHeapSizeLimit } = performance.memory;
-          const used = (usedJSHeapSize / (1024 * 1024)).toFixed(1);
-          const limit = (jsHeapSizeLimit / (1024 * 1024)).toFixed(1);
-          this.memoryUsageText = `${used} / ${limit} MB`;
-        } else if (navigator.deviceMemory) {
-          this.memoryUsageText = `~${navigator.deviceMemory} GB`; 
-        } else {
-          this.memoryUsageText = 'N/A';
+        if (navigator.storage && navigator.storage.estimate) {
+          const estimate = await navigator.storage.estimate();
+          return estimate.usageDetails?.indexedDB || 0;
         }
+        const tempDb = new Dexie('posawesome_offline');
+        tempDb.version(1).stores({ keyval: '&key' });
+        const data = await tempDb.table('keyval').toArray();
+        let bytes = 0;
+        data.forEach((row) => {
+          bytes += new Blob([row.key]).size;
+          bytes += new Blob([JSON.stringify(row.value)]).size;
+        });
+        await tempDb.close();
+        return bytes;
       } catch (e) {
-        console.error('Failed to update memory usage', e);
-        this.memoryUsageText = 'N/A';
+        console.error('Failed to calculate IndexedDB size', e);
+        return 0;
+      }
+    },
+    async getItemWorkerCacheSize() {
+      try {
+        const tempDb = new Dexie('posawesome_offline');
+        tempDb.version(1).stores({ keyval: '&key' });
+        const record = await tempDb.table('keyval').get('price_list_cache');
+        await tempDb.close();
+        if (record && record.value) {
+          return new Blob([JSON.stringify(record.value)]).size;
+        }
+        return 0;
+      } catch (e) {
+        console.error('Failed to read worker cache size', e);
+        return 0;
+      }
+    },
+    async getServiceWorkerCacheSize() {
+      if (!('caches' in window)) return 0;
+      try {
+        const cacheNames = await caches.keys();
+        let total = 0;
+        for (const name of cacheNames) {
+          const cache = await caches.open(name);
+          const requests = await cache.keys();
+          for (const request of requests) {
+            const response = await cache.match(request);
+            if (response) {
+              const buffer = await response.clone().arrayBuffer();
+              total += buffer.byteLength;
+            }
+          }
+        }
+        return total;
+      } catch (e) {
+        console.error('Failed to compute service worker cache size', e);
+        return 0;
+      }
+    },
+    async updateCacheUsage() {
+      try {
+        const [idb, sw, worker] = await Promise.all([
+          this.getIndexedDBSize(),
+          this.getServiceWorkerCacheSize(),
+          this.getItemWorkerCacheSize()
+        ]);
+        const idbMB = (idb / (1024 * 1024)).toFixed(1);
+        const swMB = (sw / (1024 * 1024)).toFixed(1);
+        const workerMB = (worker / (1024 * 1024)).toFixed(1);
+        this.cacheUsageText = `IDB ${idbMB}MB | SW ${swMB}MB | W ${workerMB}MB`;
+      } catch (e) {
+        console.error('Failed to update cache usage', e);
+        this.cacheUsageText = 'N/A';
       }
     },
 
