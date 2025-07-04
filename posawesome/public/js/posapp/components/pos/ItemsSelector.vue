@@ -1154,7 +1154,7 @@ export default {
       item.base_rate = base_rate;
       item.base_price_list_rate = price_list_rate;
 
-      item.rate = this.flt(price_list_rate * (this.exchange_rate || 1), this.currency_precision);
+      item.rate = this.flt(price_list_rate / (this.exchange_rate || 1), this.currency_precision);
       item.currency = this.selected_currency;
       item.price_list_rate = item.rate;
     },
@@ -1418,9 +1418,9 @@ export default {
       return this.formatFloat(value, prec);
     },
     hasDecimalPrecision(value) {
-      // Check if the value has any decimal precision when multiplied by exchange rate
+      // Check if the value has any decimal precision when converted by exchange rate
       if (this.exchange_rate && this.exchange_rate !== 1) {
-        let convertedValue = value * this.exchange_rate;
+        let convertedValue = value / this.exchange_rate;
         return !Number.isInteger(convertedValue);
       }
       return !Number.isInteger(value);
