@@ -133,4 +133,5 @@ export default {
 
       // Force UI update
       this.$forceUpdate();
+    }
 };

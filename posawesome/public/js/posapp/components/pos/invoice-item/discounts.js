@@ -1,6 +1,4 @@
 export default {
-        this.$forceUpdate();
-      },
 
     // Update additional discount amount based on percentage
     update_discount_umount() {
