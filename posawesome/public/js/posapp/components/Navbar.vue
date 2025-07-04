@@ -48,11 +48,6 @@
         </v-tooltip>
       </v-btn>
 
-      <!-- Display current JavaScript memory usage -->
-      <v-chip color="primary" variant="outlined" class="memory-chip mx-1">
-        <v-icon start>mdi-memory</v-icon>
-        {{ memoryUsageText }}
-      </v-chip>
 
       <v-menu offset-y :min-width="240" :close-on-content-click="false" location="bottom end" :offset="[0, 4]">
         <template #activator="{ props }">
@@ -358,8 +353,6 @@ export default {
           sortable: true,
         }
       ],
-      memoryUsageText: '0 MB', // Display text for memory usage
-      memoryInterval: null
     };
   },
   computed: {
@@ -519,9 +512,6 @@ export default {
     // Initiates the WebSocket connection to monitor server health.
     this.initSocketConnection();
 
-    // Start memory usage monitoring
-    this.updateMemoryUsage();
-    this.memoryInterval = setInterval(this.updateMemoryUsage, 5000);
   },
   beforeDestroy() {
     // --- REMOVE NETWORK LISTENERS ---
@@ -533,10 +523,6 @@ export default {
     this.eventBus.off('pending_invoices_changed', this.updatePendingInvoices);
     // --- CLOSE SOCKET ---
     // Disconnect and clean up Socket.IO listeners to ensure proper resource management.
-    if (this.memoryInterval) {
-      clearInterval(this.memoryInterval);
-      this.memoryInterval = null;
-    }
 
     if (this.socket) {
       this.socket.off('connect'); // Remove 'connect' listener
@@ -548,23 +534,6 @@ export default {
   },
   methods: {
 
-    updateMemoryUsage() {
-      try {
-        if (performance && performance.memory) {
-          const { usedJSHeapSize, jsHeapSizeLimit } = performance.memory;
-          const used = (usedJSHeapSize / (1024 * 1024)).toFixed(1);
-          const limit = (jsHeapSizeLimit / (1024 * 1024)).toFixed(1);
-          this.memoryUsageText = `${used} / ${limit} MB`;
-        } else if (navigator.deviceMemory) {
-          this.memoryUsageText = `~${navigator.deviceMemory} GB`; 
-        } else {
-          this.memoryUsageText = 'N/A';
-        }
-      } catch (e) {
-        console.error('Failed to update memory usage', e);
-        this.memoryUsageText = 'N/A';
-      }
-    },
 
     /**
      * Initializes a Socket.IO connection, adapting the URL based on the environment:
@@ -1222,13 +1191,6 @@ export default {
 .profile-chip:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
-}
-
-/* Memory Usage Chip */
-.memory-chip {
-  font-weight: 500;
-  padding: 6px 12px;
-  border-radius: 20px;
 }
 
 /* Enhanced Status Section */
