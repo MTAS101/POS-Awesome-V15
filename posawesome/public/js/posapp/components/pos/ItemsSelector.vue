@@ -305,11 +305,10 @@ export default {
         this.update_items_details(new_value);
       }
     },
-    // Auto-trigger search when limit search is enabled and the query changes
+    // Automatically search and add item whenever the query changes
     first_search: _.debounce(function (val) {
-      if (this.pos_profile && this.pos_profile.pose_use_limit_search) {
-        this.search_onchange(val);
-      }
+      // Call without arguments so search_onchange treats it like an Enter key
+      this.search_onchange();
     }, 300),
 
     // Refresh item prices whenever the user changes currency
@@ -863,7 +862,12 @@ export default {
       const vm = this;
       const isManualSearch = typeof newSearchTerm === "string";
 
-      if (isManualSearch) vm.search = newSearchTerm;
+      if (isManualSearch) {
+        vm.search = newSearchTerm;
+      } else {
+        // When triggered automatically, use the current query
+        vm.search = vm.first_search;
+      }
 
       if (vm.pos_profile.pose_use_limit_search) {
         // Only trigger search when query length meets minimum threshold
