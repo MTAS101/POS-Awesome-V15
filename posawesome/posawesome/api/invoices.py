@@ -114,13 +114,25 @@ def update_invoice(data):
                 invoice_doc.currency,
                 company_currency,
             )
+            if not conversion_rate:
+                frappe.throw(
+                    _(
+                        "Unable to find exchange rate for {0} to {1}. Please create a Currency Exchange record manually"
+                    ).format(invoice_doc.currency, company_currency)
+                )
 
         plc_conversion_rate = 1
         if price_list_currency != invoice_doc.currency:
-            plc_conversion_rate, _ = get_latest_rate(
+            plc_conversion_rate, _ignored = get_latest_rate(
                 price_list_currency,
                 invoice_doc.currency,
             )
+            if not plc_conversion_rate:
+                frappe.throw(
+                    _(
+                        "Unable to find exchange rate for {0} to {1}. Please create a Currency Exchange record manually"
+                    ).format(price_list_currency, invoice_doc.currency)
+                )
 
         invoice_doc.conversion_rate = conversion_rate
         invoice_doc.plc_conversion_rate = plc_conversion_rate
