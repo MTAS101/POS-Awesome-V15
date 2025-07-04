@@ -854,12 +854,16 @@ export default {
         this.flags.serial_no = null;
         this.flags.batch_no = null;
         this.qty = 1;
+        // Clear search field after successfully adding an item
+        this.clearSearch();
         this.$refs.debounce_search.focus();
       }
     },
     search_onchange: _.debounce(function (newSearchTerm) {
       const vm = this;
-      if (newSearchTerm) vm.search = newSearchTerm;
+      const isManualSearch = typeof newSearchTerm === "string";
+
+      if (isManualSearch) vm.search = newSearchTerm;
 
       if (vm.pos_profile.pose_use_limit_search) {
         // Only trigger search when query length meets minimum threshold
@@ -879,6 +883,12 @@ export default {
             vm.update_items_details(vm.filtered_items);
           }, 300);
         }
+      }
+
+      if (!isManualSearch) {
+        // Clear search when triggered via Enter key (typically barcode scan)
+        vm.clearSearch();
+        vm.$refs.debounce_search && vm.$refs.debounce_search.focus();
       }
     }, 300),
     get_item_qty(first_search) {
