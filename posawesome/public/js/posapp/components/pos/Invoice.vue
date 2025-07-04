@@ -621,65 +621,48 @@ export default {
 
     // Update currency and exchange rate when currency is changed
     async update_currency_and_rate() {
-      if (this.selected_currency) {
-        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+      if (!this.selected_currency) return;
 
-        if (!this.items.length) {
-          if (this.selected_currency === baseCurrency) {
-            this.exchange_rate = 1;
-            this.sync_exchange_rate();
-          } else {
-            try {
-              const r = await frappe.call({
-                method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
-                args: {
-                  from_currency: baseCurrency,
-                  to_currency: this.selected_currency
-                },
-              });
-              if (r && r.message) {
-                this.exchange_rate = r.message.exchange_rate;
-                this.exchange_rate_date = r.message.date;
-                this.sync_exchange_rate();
-                const posting_backend = this.formatDateForBackend(this.posting_date_display);
-                if (this.exchange_rate_date && posting_backend !== this.exchange_rate_date) {
-                this.eventBus.emit("show_message", {
-                    title: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
-                    color: "warning",
-                  });
-                }
-              }
-            } catch (error) {
-              console.error("Error updating currency:", error);
-              this.eventBus.emit("show_message", {
-                title: "Error updating currency",
-                color: "error",
-              });
-            }
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+
+      // Always fetch the latest exchange rate for the selected currency
+      try {
+        if (this.selected_currency === baseCurrency) {
+          this.exchange_rate = 1;
+          this.exchange_rate_date = this.formatDateForBackend(this.posting_date_display);
+        } else {
+          const r = await frappe.call({
+            method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
+            args: {
+              from_currency: baseCurrency,
+              to_currency: this.selected_currency,
+            },
+          });
+          if (r && r.message) {
+            this.exchange_rate = r.message.exchange_rate;
+            this.exchange_rate_date = r.message.date;
           }
-          return;
         }
+      } catch (error) {
+        console.error("Error updating currency:", error);
+        this.eventBus.emit("show_message", {
+          title: "Error updating currency",
+          color: "error",
+        });
+      }
 
+      this.sync_exchange_rate();
+
+      // If items already exist, update the invoice on the server so that
+      // the document currency and rates remain consistent
+      if (this.items.length) {
         const doc = this.get_invoice_doc();
         doc.currency = this.selected_currency;
         doc.price_list_currency = baseCurrency;
-
         try {
-          const response = await this.update_invoice(doc);
-          if (response && response.conversion_rate) {
-            this.exchange_rate = response.conversion_rate;
-            this.exchange_rate_date = response.exchange_rate_date;
-            this.sync_exchange_rate();
-            const posting_backend = this.formatDateForBackend(this.posting_date_display);
-            if (this.exchange_rate_date && posting_backend !== this.exchange_rate_date) {
-              this.eventBus.emit("show_message", {
-                title: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
-                color: "warning",
-              });
-            }
-          }
+          await this.update_invoice(doc);
         } catch (error) {
-          console.error("Error updating currency:", error);
+          console.error("Error updating invoice currency:", error);
           this.eventBus.emit("show_message", {
             title: "Error updating currency",
             color: "error",
