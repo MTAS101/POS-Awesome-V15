@@ -984,29 +984,11 @@ export async function clearAllCache() {
         }
 
         if (typeof localStorage !== 'undefined') {
-                try {
-                        localStorage.clear();
-                } catch (e) {
-                        console.error('Failed to clear localStorage', e);
-                }
-        }
-
-        if (typeof caches !== 'undefined') {
-                try {
-                        const names = await caches.keys();
-                        await Promise.all(names.map((n) => caches.delete(n)));
-                } catch (e) {
-                        console.error('Failed to clear service worker caches', e);
-                }
-        }
-
-        if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
-                try {
-                        const regs = await navigator.serviceWorker.getRegistrations();
-                        await Promise.all(regs.map((reg) => reg.unregister()));
-                } catch (e) {
-                        console.error('Failed to unregister service workers', e);
-                }
+                Object.keys(localStorage).forEach((key) => {
+                        if (key.startsWith('posa_')) {
+                                localStorage.removeItem(key);
+                        }
+                });
         }
 
         memory.offline_invoices = [];
