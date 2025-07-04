@@ -1,4 +1,5 @@
 import { ref, computed, reactive } from 'vue'
+import { getCacheUsageEstimate } from '../../offline/index.js'
 
 export function useNavbar() {
   // State
@@ -55,25 +56,11 @@ export function useNavbar() {
   const updateCacheUsage = async () => {
     cacheState.loading = true
     try {
-      // Calculate cache usage
-      const estimate = await navigator.storage?.estimate?.()
-      if (estimate) {
-        const { usage = 0, quota = 0 } = estimate
-        cacheState.usage = quota > 0 ? Math.round((usage / quota) * 100) : 0
-        cacheState.details.total = usage
-      }
-      
-      // Get localStorage size
-      let localStorageSize = 0
-      for (let key in localStorage) {
-        if (localStorage.hasOwnProperty(key)) {
-          localStorageSize += localStorage[key].length + key.length
-        }
-      }
-      cacheState.details.localStorage = localStorageSize
-      
-      // IndexedDB size would be calculated separately
-      cacheState.details.indexedDB = (cacheState.details.total || 0) - localStorageSize
+      const usageData = await getCacheUsageEstimate()
+      cacheState.usage = usageData.percentage || 0
+      cacheState.details.total = usageData.total || 0
+      cacheState.details.localStorage = usageData.localStorage || 0
+      cacheState.details.indexedDB = usageData.indexedDB || 0
     } catch (error) {
       console.error('Failed to calculate cache usage:', error)
     } finally {

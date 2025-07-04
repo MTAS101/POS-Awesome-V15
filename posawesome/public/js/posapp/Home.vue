@@ -20,7 +20,7 @@
 import Navbar from './components/Navbar.vue';
 import POS from './components/pos/Pos.vue';
 import Payments from './components/payments/Pay.vue';
-import { getOpeningStorage } from '../offline/index.js';
+import { getOpeningStorage, getCacheUsageEstimate } from '../offline/index.js';
 
 export default {
   data: function () {
@@ -63,6 +63,7 @@ export default {
     this.initializeData();
     this.setupNetworkListeners();
     this.setupEventListeners();
+    this.handleRefreshCacheUsage();
   },
   methods: {
     setPage(page) {
@@ -399,12 +400,22 @@ export default {
     },
 
     handleRefreshCacheUsage() {
-      // Refresh cache usage data
       this.cacheUsageLoading = true;
-      // Add cache calculation logic here
-      setTimeout(() => {
-        this.cacheUsageLoading = false;
-      }, 1000);
+      getCacheUsageEstimate()
+        .then((usage) => {
+          this.cacheUsage = usage.percentage || 0;
+          this.cacheUsageDetails = {
+            total: usage.total || 0,
+            indexedDB: usage.indexedDB || 0,
+            localStorage: usage.localStorage || 0,
+          };
+        })
+        .catch((e) => {
+          console.error('Failed to refresh cache usage', e);
+        })
+        .finally(() => {
+          this.cacheUsageLoading = false;
+        });
     },
 
     handleUpdateAfterDelete() {
