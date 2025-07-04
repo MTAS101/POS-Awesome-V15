@@ -20,6 +20,21 @@ from posawesome.posawesome.api.utilities import (
 )  # Updated imports
 
 
+def get_latest_rate(from_currency: str, to_currency: str):
+    """Return the most recent Currency Exchange rate and its date."""
+    rate_doc = frappe.get_all(
+        "Currency Exchange",
+        filters={"from_currency": from_currency, "to_currency": to_currency},
+        fields=["exchange_rate", "date"],
+        order_by="date desc",
+        limit=1,
+    )
+    if rate_doc:
+        return flt(rate_doc[0].exchange_rate), rate_doc[0].date
+    rate = get_exchange_rate(from_currency, to_currency, nowdate())
+    return flt(rate), nowdate()
+
+
 @frappe.whitelist()
 def validate_return_items(original_invoice_name, return_items):
     """
@@ -76,6 +91,10 @@ def update_invoice(data):
             frappe.throw(validation.get("message"))
     selected_currency = data.get("currency")
     price_list_currency = data.get("price_list_currency")
+    if not price_list_currency and invoice_doc.get("selling_price_list"):
+        price_list_currency = frappe.db.get_value(
+            "Price List", invoice_doc.selling_price_list, "currency"
+        )
 
     # Set missing values first
     invoice_doc.set_missing_values()
@@ -83,48 +102,69 @@ def update_invoice(data):
     # Ensure selected currency is preserved after set_missing_values
     if selected_currency:
         invoice_doc.currency = selected_currency
-        # Get default conversion rate from ERPNext if currency is different from company currency
-        base_currency = price_list_currency or frappe.get_cached_value(
+        company_currency = frappe.get_cached_value(
             "Company", invoice_doc.company, "default_currency"
         )
+        price_list_currency = price_list_currency or company_currency
 
-        if invoice_doc.currency != base_currency:
-            # Get exchange rate from selected currency to base currency
-            exchange_rate = get_exchange_rate(
+        conversion_rate = 1
+        exchange_rate_date = invoice_doc.posting_date
+        if invoice_doc.currency != company_currency:
+            conversion_rate, exchange_rate_date = get_latest_rate(
                 invoice_doc.currency,
-                base_currency,
-                invoice_doc.posting_date
+                company_currency,
             )
-            invoice_doc.conversion_rate = exchange_rate
-            invoice_doc.plc_conversion_rate = exchange_rate
-            invoice_doc.price_list_currency = price_list_currency or selected_currency
+            if not conversion_rate:
+                frappe.throw(
+                    _(
+                        "Unable to find exchange rate for {0} to {1}. Please create a Currency Exchange record manually"
+                    ).format(invoice_doc.currency, company_currency)
+                )
 
-            # Update rates and amounts for all items using multiplication
-            for item in invoice_doc.items:
-                if item.price_list_rate:
-                    # If exchange rate is 285 PKR = 1 USD
-                    # To convert USD to PKR: multiply by exchange rate
-                    # Example: 0.35 USD * 285 = 100 PKR
-                    item.base_price_list_rate = flt(item.price_list_rate * exchange_rate, item.precision("base_price_list_rate"))
-                if item.rate:
-                    item.base_rate = flt(item.rate * exchange_rate, item.precision("base_rate"))
-                if item.amount:
-                    item.base_amount = flt(item.amount * exchange_rate, item.precision("base_amount"))
+        plc_conversion_rate = 1
+        if price_list_currency != invoice_doc.currency:
+            plc_conversion_rate, _ignored = get_latest_rate(
+                price_list_currency,
+                invoice_doc.currency,
+            )
+            if not plc_conversion_rate:
+                frappe.throw(
+                    _(
+                        "Unable to find exchange rate for {0} to {1}. Please create a Currency Exchange record manually"
+                    ).format(price_list_currency, invoice_doc.currency)
+                )
 
-            # Update payment amounts
-            for payment in invoice_doc.payments:
-                payment.base_amount = flt(payment.amount * exchange_rate, payment.precision("base_amount"))
+        invoice_doc.conversion_rate = conversion_rate
+        invoice_doc.plc_conversion_rate = plc_conversion_rate
+        invoice_doc.price_list_currency = price_list_currency
 
-            # Update invoice level amounts
-            invoice_doc.base_total = flt(invoice_doc.total * exchange_rate, invoice_doc.precision("base_total"))
-            invoice_doc.base_net_total = flt(invoice_doc.net_total * exchange_rate, invoice_doc.precision("base_net_total"))
-            invoice_doc.base_grand_total = flt(invoice_doc.grand_total * exchange_rate, invoice_doc.precision("base_grand_total"))
-            invoice_doc.base_rounded_total = flt(invoice_doc.rounded_total * exchange_rate, invoice_doc.precision("base_rounded_total"))
-            invoice_doc.base_in_words = money_in_words(invoice_doc.base_rounded_total, base_currency)
+        # Update rates and amounts for all items using multiplication
+        for item in invoice_doc.items:
+            if item.price_list_rate:
+                item.base_price_list_rate = flt(
+                    item.price_list_rate * (conversion_rate / plc_conversion_rate),
+                    item.precision("base_price_list_rate"),
+                )
+            if item.rate:
+                item.base_rate = flt(item.rate * conversion_rate, item.precision("base_rate"))
+            if item.amount:
+                item.base_amount = flt(item.amount * conversion_rate, item.precision("base_amount"))
 
-            # Update data to be sent back to frontend
-            data["conversion_rate"] = exchange_rate
-            data["plc_conversion_rate"] = exchange_rate
+        # Update payment amounts
+        for payment in invoice_doc.payments:
+            payment.base_amount = flt(payment.amount * conversion_rate, payment.precision("base_amount"))
+
+        # Update invoice level amounts
+        invoice_doc.base_total = flt(invoice_doc.total * conversion_rate, invoice_doc.precision("base_total"))
+        invoice_doc.base_net_total = flt(invoice_doc.net_total * conversion_rate, invoice_doc.precision("base_net_total"))
+        invoice_doc.base_grand_total = flt(invoice_doc.grand_total * conversion_rate, invoice_doc.precision("base_grand_total"))
+        invoice_doc.base_rounded_total = flt(invoice_doc.rounded_total * conversion_rate, invoice_doc.precision("base_rounded_total"))
+        invoice_doc.base_in_words = money_in_words(invoice_doc.base_rounded_total, company_currency)
+
+        # Update data to be sent back to frontend
+        data["conversion_rate"] = conversion_rate
+        data["plc_conversion_rate"] = plc_conversion_rate
+        data["exchange_rate_date"] = exchange_rate_date
 
     invoice_doc.flags.ignore_permissions = True
     frappe.flags.ignore_account_permission = True
@@ -134,7 +174,8 @@ def update_invoice(data):
     # Return both the invoice doc and the updated data
     response = invoice_doc.as_dict()
     response["conversion_rate"] = invoice_doc.conversion_rate
-    response["plc_conversion_rate"] = invoice_doc.conversion_rate
+    response["plc_conversion_rate"] = invoice_doc.plc_conversion_rate
+    response["exchange_rate_date"] = exchange_rate_date
     return response
 
 
@@ -566,18 +607,17 @@ def get_available_currencies():
 
 @frappe.whitelist()
 def fetch_exchange_rate(currency: str, company: str, posting_date: str = None):
-    """Return exchange rate for the given currency against company's currency."""
-    posting_date = posting_date or nowdate()
+    """Return latest exchange rate and its date."""
     company_currency = frappe.get_cached_value("Company", company, "default_currency")
-    exchange_rate = get_exchange_rate(currency, company_currency, posting_date)
-    return exchange_rate
+    rate, date = get_latest_rate(currency, company_currency)
+    return {"exchange_rate": rate, "date": date}
 
 
 @frappe.whitelist()
 def fetch_exchange_rate_pair(from_currency: str, to_currency: str, posting_date: str = None):
-    """Return exchange rate between two currencies."""
-    posting_date = posting_date or nowdate()
-    return get_exchange_rate(from_currency, to_currency, posting_date)
+    """Return latest exchange rate between two currencies along with rate date."""
+    rate, date = get_latest_rate(from_currency, to_currency)
+    return {"exchange_rate": rate, "date": date}
 
 
 @frappe.whitelist()

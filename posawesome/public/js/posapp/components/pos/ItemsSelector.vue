@@ -80,14 +80,16 @@
                 </v-img>
                 <v-card-text class="text--primary pa-1">
                   <div class="text-caption text-primary truncate">
-                    {{ currencySymbol(item.currency || pos_profile.currency) || "" }}
-                    {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}
+                    {{ currencySymbol(item.original_currency || pos_profile.currency) || "" }}
+                    {{ format_currency(item.base_price_list_rate || item.rate,
+                      item.original_currency || pos_profile.currency,
+                      ratePrecision(item.base_price_list_rate || item.rate)) }}
                   </div>
                   <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
                     class="text-caption text-success truncate">
                     {{ currencySymbol(selected_currency) || "" }}
-                    {{ format_currency(getConvertedRate(item), selected_currency,
-                      ratePrecision(getConvertedRate(item))) }}
+                    {{ format_currency(item.rate, selected_currency,
+                      ratePrecision(item.rate)) }}
                   </div>
                   <div class="text-caption golden--text truncate">
                     {{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) || 0 }}
@@ -101,29 +103,22 @@
                 :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }"
                 item-key="item_code" @click:row="click_item_row">
 
-                <template v-slot:item="{ item }">
-                  <tr :draggable="true" @dragstart="onDragStart($event, item)" @dragend="onDragEnd" @click="click_item_row($event, { item })">
-                    <td v-for="header in headers" :key="header.key">
-                      <template v-if="header.key === 'rate'">
-                        <div>
-                          <div class="text-primary">{{ currencySymbol(item.currency || pos_profile.currency) }}
-                            {{ format_currency(item.rate, item.currency || pos_profile.currency, ratePrecision(item.rate)) }}</div>
-                          <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
-                            class="text-success">
-                            {{ currencySymbol(selected_currency) }}
-                            {{ format_currency(getConvertedRate(item), selected_currency,
-                              ratePrecision(getConvertedRate(item))) }}
-                          </div>
-                        </div>
-                      </template>
-                      <template v-else-if="header.key === 'actual_qty'">
-                        <span class="golden--text">{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) }}</span>
-                      </template>
-                      <template v-else>
-                        {{ item[header.key] }}
-                      </template>
-                    </td>
-                  </tr>
+                <template v-slot:item.rate="{ item }">
+                  <div>
+                    <div class="text-primary">{{ currencySymbol(item.original_currency || pos_profile.currency) }}
+                      {{ format_currency(item.base_price_list_rate || item.rate,
+                        item.original_currency || pos_profile.currency,
+                        ratePrecision(item.base_price_list_rate || item.rate)) }}</div>
+                    <div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+                      class="text-success">
+                      {{ currencySymbol(selected_currency) }}
+                      {{ format_currency(item.rate, selected_currency,
+                        ratePrecision(item.rate)) }}
+                    </div>
+                  </div>
+                </template>
+                <template v-slot:item.actual_qty="{ item }">
+                  <span class="golden--text">{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) }}</span>
                 </template>
               </v-data-table-virtual>
             </div>
@@ -294,7 +289,9 @@ export default {
           return;
         }
       }
-      // No cache found; keep existing items without reloading from server
+      // No cache found - force a reload so prices are updated
+      this.items_loaded = false;
+      this.get_items(true);
     }, 300),
     new_line() {
       this.eventBus.emit("set_new_line", this.new_line);
@@ -1154,21 +1151,15 @@ export default {
         item.original_currency = item.currency || base;
       }
 
-      let base_rate;
-      if (item.original_currency === base) {
-        base_rate = item.original_rate;
-      } else {
-        base_rate = item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
-      }
+      // original_rate is in price list currency
+      const price_list_rate = item.original_rate;
+      const base_rate = price_list_rate * (item.plc_conversion_rate || 1);
 
-      if (this.selected_currency === base) {
-        item.rate = this.flt(base_rate, this.currency_precision);
-        item.currency = base;
-      } else {
-        item.rate = this.flt(base_rate / this.exchange_rate, this.currency_precision);
-        item.currency = this.selected_currency;
-      }
+      item.base_rate = base_rate;
+      item.base_price_list_rate = price_list_rate;
 
+      item.rate = this.flt(price_list_rate * (this.exchange_rate || 1), this.currency_precision);
+      item.currency = this.selected_currency;
       item.price_list_rate = item.rate;
     },
     scan_barcoud() {
@@ -1183,6 +1174,7 @@ export default {
           suffixKeyCodes: [],
           keyCodeMapper: function (oEvent) {
             oEvent.stopImmediatePropagation();
+            oEvent.preventDefault();
             return onScan.decodeKeyEvent(oEvent);
           },
           onScan: function (sCode) {
@@ -1214,8 +1206,9 @@ export default {
           this.enter_event();
         }
 
-        // clear search field for next scan
+        // clear search field for next scan and refocus input
         this.clearSearch();
+        this.$refs.debounce_search && this.$refs.debounce_search.focus();
       });
     },
     generateWordCombinations(inputString) {
@@ -1343,10 +1336,9 @@ export default {
         indicator: 'green'
       }, 3);
 
-      // Clear search after successful addition
-      setTimeout(() => {
-        this.clearSearch();
-      }, 1000);
+      // Clear search after successful addition and refocus input
+      this.clearSearch();
+      this.$refs.debounce_search && this.$refs.debounce_search.focus();
     },
     showMultipleItemsDialog(items, scannedCode) {
       // Create a dialog to let user choose from multiple matches
@@ -1412,17 +1404,6 @@ export default {
       this.trigger_onscan(scannedCode);
     },
 
-    getConvertedRate(item) {
-      if (!item.rate) return 0;
-      if (!this.exchange_rate) return item.rate;
-
-      if (this.selected_currency !== this.pos_profile.currency) {
-        // item.rate currently in selected currency, convert back to base currency
-        return this.flt(item.rate * this.exchange_rate, 4);
-      }
-
-      return this.flt(item.rate / this.exchange_rate, 4);
-    },
     currencySymbol(currency) {
       return get_currency_symbol(currency);
     },
@@ -1441,7 +1422,7 @@ export default {
       return this.formatFloat(value, prec);
     },
     hasDecimalPrecision(value) {
-      // Check if the value has any decimal precision when multiplied by exchange rate
+      // Check if the value has any decimal precision when converted by exchange rate
       if (this.exchange_rate && this.exchange_rate !== 1) {
         let convertedValue = value * this.exchange_rate;
         return !Number.isInteger(convertedValue);

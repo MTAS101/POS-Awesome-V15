@@ -48,6 +48,7 @@
         </v-tooltip>
       </v-btn>
 
+
       <v-menu offset-y :min-width="240" :close-on-content-click="false" location="bottom end" :offset="[0, 4]">
         <template #activator="{ props }">
           <v-btn v-bind="props" color="primary" variant="elevated" class="menu-btn-compact">
@@ -351,7 +352,7 @@ export default {
           align: 'center',
           sortable: true,
         }
-      ]
+      ],
     };
   },
   computed: {
@@ -510,6 +511,7 @@ export default {
     // --- SOCKET CONNECTION FOR SERVER STATUS ---
     // Initiates the WebSocket connection to monitor server health.
     this.initSocketConnection();
+
   },
   beforeDestroy() {
     // --- REMOVE NETWORK LISTENERS ---
@@ -521,6 +523,7 @@ export default {
     this.eventBus.off('pending_invoices_changed', this.updatePendingInvoices);
     // --- CLOSE SOCKET ---
     // Disconnect and clean up Socket.IO listeners to ensure proper resource management.
+
     if (this.socket) {
       this.socket.off('connect'); // Remove 'connect' listener
       this.socket.off('disconnect'); // Remove 'disconnect' listener
@@ -529,8 +532,8 @@ export default {
       this.socket = null; // Clear the socket instance to prevent stale references
     }
   },
-  methods: {
 
+    methods: {
     /**
      * Initializes a Socket.IO connection, adapting the URL based on the environment:
      * - Development: localhost / 127.0.0.1
@@ -1188,6 +1191,7 @@ export default {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
 }
+
 
 /* Enhanced Status Section */
 .status-section-enhanced {

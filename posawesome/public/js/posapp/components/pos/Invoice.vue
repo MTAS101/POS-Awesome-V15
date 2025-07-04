@@ -42,6 +42,7 @@
         <!-- Multi-Currency Section (Only if enabled in POS profile) -->
         <MultiCurrencyRow :pos_profile="pos_profile" :selected_currency="selected_currency"
           :exchange_rate="exchange_rate" :available_currencies="available_currencies" :isNumber="isNumber"
+          :price_list_currency="price_list_currency"
           @update:selected_currency="(val) => { selected_currency = val; update_currency(val); }"
           @update:exchange_rate="(val) => { exchange_rate = val; update_exchange_rate(); }" />
 
@@ -167,6 +168,7 @@ export default {
       items_headers: [],
       selected_currency: "", // Currently selected currency
       exchange_rate: 1, // Current exchange rate
+      exchange_rate_date: "", // Date of fetched exchange rate
       available_currencies: [], // List of available currencies
       price_lists: [], // Available selling price lists
       selected_price_list: "", // Currently selected price list
@@ -466,9 +468,23 @@ export default {
     },
 
     async fetch_price_lists() {
-      // POS Awesome now only uses the price list defined in the POS Profile.
-      // Avoid unnecessary server calls and set the list directly.
-      this.price_lists = [this.pos_profile.selling_price_list];
+      if (this.pos_profile.posa_enable_price_list_dropdown) {
+        try {
+          const r = await frappe.call({
+            method: "posawesome.posawesome.api.posapp.get_selling_price_lists",
+          });
+          if (r && r.message) {
+            this.price_lists = r.message.map((pl) => pl.name);
+          }
+        } catch (error) {
+          console.error("Failed fetching price lists", error);
+          this.price_lists = [this.pos_profile.selling_price_list];
+        }
+      } else {
+        // Fallback to the price list defined in the POS Profile
+        this.price_lists = [this.pos_profile.selling_price_list];
+      }
+
       if (!this.selected_price_list) {
         this.selected_price_list = this.pos_profile.selling_price_list;
       }
@@ -477,7 +493,7 @@ export default {
       try {
         const r = await frappe.call({
           method: "posawesome.posawesome.api.invoices.get_price_list_currency",
-          args: { price_list: this.selected_price_list }
+          args: { price_list: this.selected_price_list },
         });
         if (r && r.message) {
           this.price_list_currency = r.message;
@@ -543,12 +559,10 @@ export default {
           // When switching to another currency, convert from base rates
           console.log(`Converting rates for ${item.item_code} to ${this.selected_currency}`);
 
-          // If exchange rate is 285 PKR = 1 USD
-          // To convert PKR to USD: divide by exchange rate
-          // Example: 100 PKR / 285 = 0.35 USD
-          const converted_price = this.flt(item.base_price_list_rate / this.exchange_rate, this.currency_precision);
-          const converted_rate = this.flt(item.base_rate / this.exchange_rate, this.currency_precision);
-          const converted_discount = this.flt(item.base_discount_amount / this.exchange_rate, this.currency_precision);
+            // Convert base currency values to the selected currency
+            const converted_price = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
+            const converted_rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
+            const converted_discount = this.flt(item.base_discount_amount * this.exchange_rate, this.currency_precision);
 
           // Ensure we don't set values to 0 if they're just very small
           item.price_list_rate = converted_price < 0.000001 ? 0 : converted_price;
@@ -617,19 +631,26 @@ export default {
               const r = await frappe.call({
                 method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
                 args: {
-                  from_currency: this.selected_currency,
-                  to_currency: baseCurrency,
-                  posting_date: this.formatDateForBackend(this.posting_date_display)
+                  from_currency: baseCurrency,
+                  to_currency: this.selected_currency
                 },
               });
               if (r && r.message) {
-                this.exchange_rate = r.message;
+                this.exchange_rate = r.message.exchange_rate;
+                this.exchange_rate_date = r.message.date;
                 this.sync_exchange_rate();
+                const posting_backend = this.formatDateForBackend(this.posting_date_display);
+                if (this.exchange_rate_date && posting_backend !== this.exchange_rate_date) {
+                this.eventBus.emit("show_message", {
+                    title: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
+                    color: "warning",
+                  });
+                }
               }
             } catch (error) {
               console.error("Error updating currency:", error);
               this.eventBus.emit("show_message", {
-                text: "Error updating currency",
+                title: "Error updating currency",
                 color: "error",
               });
             }
@@ -645,12 +666,20 @@ export default {
           const response = await this.update_invoice(doc);
           if (response && response.conversion_rate) {
             this.exchange_rate = response.conversion_rate;
+            this.exchange_rate_date = response.exchange_rate_date;
             this.sync_exchange_rate();
+            const posting_backend = this.formatDateForBackend(this.posting_date_display);
+            if (this.exchange_rate_date && posting_backend !== this.exchange_rate_date) {
+              this.eventBus.emit("show_message", {
+                title: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
+                color: "warning",
+              });
+            }
           }
         } catch (error) {
           console.error("Error updating currency:", error);
           this.eventBus.emit("show_message", {
-            text: "Error updating currency",
+            title: "Error updating currency",
             color: "error",
           });
         }
@@ -667,12 +696,22 @@ export default {
         const doc = this.get_invoice_doc();
         doc.conversion_rate = this.exchange_rate;
         try {
-          await this.update_invoice(doc);
+          const resp = await this.update_invoice(doc);
+          if (resp && resp.exchange_rate_date) {
+            this.exchange_rate_date = resp.exchange_rate_date;
+            const posting_backend = this.formatDateForBackend(this.posting_date_display);
+            if (posting_backend !== this.exchange_rate_date) {
+              this.eventBus.emit("show_message", {
+                title: __("Exchange rate date " + this.exchange_rate_date + " differs from posting date " + posting_backend),
+                color: "warning",
+              });
+            }
+          }
           this.sync_exchange_rate();
         } catch (error) {
           console.error("Error updating exchange rate:", error);
           this.eventBus.emit("show_message", {
-            text: "Error updating exchange rate",
+            title: "Error updating exchange rate",
             color: "error",
           });
         }
