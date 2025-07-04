@@ -222,6 +222,8 @@ export default {
     hide_zero_rate_items: false,
     temp_hide_zero_rate_items: false,
     isDragging: false,
+    // Track if the current search was triggered by a scanner
+    search_from_scanner: false,
   }),
 
   watch: {
@@ -860,14 +862,15 @@ export default {
     },
     search_onchange: _.debounce(function (newSearchTerm) {
       const vm = this;
-      const isManualSearch = typeof newSearchTerm === "string";
 
-      if (isManualSearch) {
-        vm.search = newSearchTerm;
-      } else {
-        // When triggered automatically, use the current query
-        vm.search = vm.first_search;
-      }
+      // Determine the actual query string
+      const query = typeof newSearchTerm === "string"
+        ? newSearchTerm
+        : vm.first_search;
+
+      vm.search = query;
+
+      const fromScanner = vm.search_from_scanner;
 
       if (vm.pos_profile.pose_use_limit_search) {
         // Only trigger search when query length meets minimum threshold
@@ -889,10 +892,11 @@ export default {
         }
       }
 
-      if (!isManualSearch) {
-        // Clear search when triggered via Enter key (typically barcode scan)
+      // Clear the input only when triggered via scanner
+      if (fromScanner) {
         vm.clearSearch();
         vm.$refs.debounce_search && vm.$refs.debounce_search.focus();
+        vm.search_from_scanner = false;
       }
     }, 300),
     get_item_qty(first_search) {
@@ -1205,6 +1209,8 @@ export default {
       }
     },
     trigger_onscan(sCode) {
+      // indicate this search came from a scanner
+      this.search_from_scanner = true;
       // apply scanned code as search term
       this.first_search = sCode;
       this.search = sCode;
@@ -1279,6 +1285,9 @@ export default {
     },
     onBarcodeScanned(scannedCode) {
       console.log('Barcode scanned:', scannedCode);
+
+      // mark this search as coming from a scanner
+      this.search_from_scanner = true;
 
       // Clear any previous search
       this.search = '';
