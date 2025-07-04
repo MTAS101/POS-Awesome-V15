@@ -48,6 +48,11 @@ export default {
       cacheUsageDetails: { total: 0, indexedDB: 0, localStorage: 0 }
     };
   },
+  computed: {
+    isDark() {
+      return this.$theme?.current === 'dark';
+    }
+  },
   components: {
     Navbar,
     POS,
