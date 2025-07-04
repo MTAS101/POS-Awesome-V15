@@ -157,7 +157,7 @@ def get_customer_info(customer):
 
 @frappe.whitelist()
 def create_customer(
-    customer_id,
+    customer_id=None,
     customer_name,
     company,
     pos_profile_doc,
