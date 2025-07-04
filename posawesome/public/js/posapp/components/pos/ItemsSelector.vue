@@ -68,6 +68,9 @@
             <div fluid class="items-grid dynamic-scroll" ref="itemsContainer" v-if="items_view == 'card'"
               :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
               <v-card v-for="item in filtered_items" :key="item.item_code" hover class="dynamic-item-card"
+                :draggable="true"
+                @dragstart="onDragStart($event, item)"
+                @dragend="onDragEnd"
                 @click="add_item(item)">
                 <v-img :src="item.image ||
                         '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
@@ -218,6 +221,7 @@ export default {
     temp_hide_qty_decimals: false,
     hide_zero_rate_items: false,
     temp_hide_zero_rate_items: false,
+    isDragging: false,
   }),
 
   watch: {
@@ -1439,6 +1443,27 @@ export default {
       this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
       this.saveItemSettings();
       this.show_item_settings = false;
+    },
+    onDragStart(event, item) {
+      this.isDragging = true;
+      
+      // Set drag data
+      event.dataTransfer.setData('application/json', JSON.stringify({
+        type: 'item-from-selector',
+        item: item
+      }));
+      
+      // Set drag effect
+      event.dataTransfer.effectAllowed = 'copy';
+      
+      // Emit event to show drop feedback in ItemsTable
+      this.eventBus.emit('item-drag-start', item);
+    },
+    onDragEnd(event) {
+      this.isDragging = false;
+      
+      // Emit event to hide drop feedback
+      this.eventBus.emit('item-drag-end');
     },
     saveItemSettings() {
       try {
