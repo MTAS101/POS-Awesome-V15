@@ -371,9 +371,11 @@ export default {
       }
 
       const map = {};
-      cached.forEach(ci => { map[ci.item_code] = ci; });
+      cached.forEach((ci) => {
+        map[ci.item_code] = ci;
+      });
 
-      this.items.forEach(item => {
+      this.items.forEach((item) => {
         const ci = map[item.item_code];
         if (!ci) return;
 
@@ -399,7 +401,10 @@ export default {
 
           if (this.selected_currency !== this.pos_profile.currency) {
             const conv = this.exchange_rate || 1;
-            const convRate = this.flt(newRate * conv, this.currency_precision);
+            const convRate = this.flt(
+              newRate * conv,
+              this.currency_precision
+            );
             if (newRate !== 0 || !item.price_list_rate) {
               item.price_list_rate = convRate;
             }
@@ -414,9 +419,16 @@ export default {
               item.rate = newRate;
             }
           }
+        }
 
-        item.amount = this.flt(item.qty * item.rate, this.currency_precision);
-        item.base_amount = this.flt(item.qty * item.base_rate, this.currency_precision);
+        item.amount = this.flt(
+          item.qty * item.rate,
+          this.currency_precision
+        );
+        item.base_amount = this.flt(
+          item.qty * item.base_rate,
+          this.currency_precision
+        );
       });
 
       this.$forceUpdate();
