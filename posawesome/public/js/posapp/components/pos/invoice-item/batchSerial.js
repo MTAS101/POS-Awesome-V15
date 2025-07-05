@@ -77,7 +77,13 @@ export default {
           item.base_batch_price = batch_to_use.batch_price;
 
           // Convert batch price to selected currency if needed
-          if (this.selected_currency !== this.pos_profile.currency) {
+          if (
+            this.selected_currency !== this.pos_profile.currency &&
+            !(
+              this.pos_profile.posa_allow_multi_currency &&
+              item.original_currency === this.selected_currency
+            )
+          ) {
             // If exchange rate is 285 PKR = 1 USD
             // To convert PKR to USD: divide by exchange rate
             item.batch_price = this.flt(batch_to_use.batch_price / this.exchange_rate, this.currency_precision);
@@ -89,7 +95,13 @@ export default {
           item.base_price_list_rate = item.base_batch_price;
           item.base_rate = item.base_batch_price;
 
-          if (this.selected_currency !== this.pos_profile.currency) {
+          if (
+            this.selected_currency !== this.pos_profile.currency &&
+            !(
+              this.pos_profile.posa_allow_multi_currency &&
+              item.original_currency === this.selected_currency
+            )
+          ) {
             item.price_list_rate = item.batch_price;
             item.rate = item.batch_price;
           } else {
