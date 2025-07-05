@@ -625,7 +625,9 @@ export default {
 
       const priceListCurrency = this.price_list_currency;
       let baseCurrency = this.pos_profile.currency;
-      if (priceListCurrency && priceListCurrency !== this.selected_currency) {
+      // Use price list currency when available so that exchange rate is 1 when
+      // it matches the selected currency
+      if (priceListCurrency) {
         baseCurrency = priceListCurrency;
       }
 
