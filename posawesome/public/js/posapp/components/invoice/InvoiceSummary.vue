@@ -50,9 +50,9 @@
           <v-col cols="6">
             <v-btn
               block
+              color="accent"
               theme="dark"
               prepend-icon="mdi-content-save"
-              class="pos-action-btn primary-action-btn"
               @click="$emit('save-and-clear')"
             >
               {{ __('Save & Clear') }}
@@ -61,10 +61,11 @@
           <v-col cols="6">
             <v-btn
               block
+              color="warning"
               theme="dark"
               prepend-icon="mdi-file-document"
-              class="pos-action-btn primary-action-btn white-text-btn"
               @click="$emit('load-drafts')"
+              class="white-text-btn"
             >
               {{ __('Load Drafts') }}
             </v-btn>
@@ -72,9 +73,9 @@
           <v-col cols="6" v-if="pos_profile.custom_allow_select_sales_order == 1">
             <v-btn
               block
+              color="info"
               theme="dark"
               prepend-icon="mdi-book-search"
-              class="pos-action-btn primary-action-btn"
               @click="$emit('select-order')"
             >
               {{ __('Select S.O') }}
@@ -83,9 +84,9 @@
           <v-col cols="6">
             <v-btn
               block
+              color="error"
               theme="dark"
               prepend-icon="mdi-close-circle"
-              class="pos-action-btn cancel-action-btn"
               @click="$emit('cancel-sale')"
             >
               {{ __('Cancel Sale') }}
@@ -94,9 +95,9 @@
           <v-col cols="6" v-if="pos_profile.posa_allow_return == 1">
             <v-btn
               block
+              color="secondary"
               theme="dark"
               prepend-icon="mdi-backup-restore"
-              class="pos-action-btn primary-action-btn"
               @click="$emit('open-returns')"
             >
               {{ __('Sales Return') }}
@@ -105,9 +106,9 @@
           <v-col cols="6" v-if="pos_profile.posa_allow_print_draft_invoices">
             <v-btn
               block
+              color="primary"
               theme="dark"
               prepend-icon="mdi-printer"
-              class="pos-action-btn primary-action-btn"
               @click="$emit('print-draft')"
             >
               {{ __('Print Draft') }}
@@ -116,10 +117,10 @@
           <v-col cols="12">
             <v-btn
               block
+              color="success"
               theme="dark"
               size="large"
               prepend-icon="mdi-credit-card"
-              class="pos-action-btn submit-action-btn"
               @click="$emit('show-payment')"
             >
               {{ __('PAY') }}
