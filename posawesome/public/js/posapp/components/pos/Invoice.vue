@@ -552,16 +552,30 @@ export default {
 
         // Currency conversion logic
         if (this.selected_currency === this.pos_profile.currency) {
-          // When in base currency simply restore base values
+          // When switching back to default currency, restore from base rates
+          console.log(`Restoring rates for ${item.item_code} from base rates`);
+          item.price_list_rate = item.base_price_list_rate;
+          item.rate = item.base_rate;
+          item.discount_amount = item.base_discount_amount;
+        } else if (item.original_currency === this.selected_currency) {
+          // When selected currency matches the price list currency,
+          // no conversion should be applied
+          console.log(
+            `Using original currency rates for ${item.item_code}`
+          );
           item.price_list_rate = item.base_price_list_rate;
           item.rate = item.base_rate;
           item.discount_amount = item.base_discount_amount;
         } else {
-          // Always derive rates from base rates using the exchange rate
-          const converted_price = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
-          const converted_rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
-          const converted_discount = this.flt(item.base_discount_amount * this.exchange_rate, this.currency_precision);
+          // When switching to another currency, convert from base rates
+          console.log(`Converting rates for ${item.item_code} to ${this.selected_currency}`);
 
+            // Convert base currency values to the selected currency
+            const converted_price = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
+            const converted_rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
+            const converted_discount = this.flt(item.base_discount_amount * this.exchange_rate, this.currency_precision);
+
+          // Ensure we don't set values to 0 if they're just very small
           item.price_list_rate = converted_price < 0.000001 ? 0 : converted_price;
           item.rate = converted_rate < 0.000001 ? 0 : converted_rate;
           item.discount_amount = converted_discount < 0.000001 ? 0 : converted_discount;
