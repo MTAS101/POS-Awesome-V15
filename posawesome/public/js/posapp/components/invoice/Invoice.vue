@@ -109,27 +109,47 @@
 <script>
 
 import format from "../../format";
-import Customer from "./Customer.vue";
+import Customer from "../customer/Customer.vue";
 import DeliveryCharges from "./DeliveryCharges.vue";
 import PostingDateRow from "./PostingDateRow.vue";
 import MultiCurrencyRow from "./MultiCurrencyRow.vue";
 import CancelSaleDialog from "./CancelSaleDialog.vue";
 import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
-import invoiceComputed from "./invoiceComputed";
-import invoiceWatchers from "./invoiceWatchers";
-import itemAddition from "./invoice-item/itemAddition";
-import batchSerial from "./invoice-item/batchSerial";
-import discountMethods from "./invoice-item/discounts";
-import stockUtils from "./invoice-item/stockUtils";
-import offerMethods from "./invoiceOfferMethods";
-import shortcutMethods from "./invoiceShortcuts";
-import invoiceItemMethods from "./invoiceItemMethods";
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
+import { useBatchSerial } from "../../composables/useBatchSerial.js";
+import { useDiscounts } from "../../composables/useDiscounts.js";
+import { useItemOperations } from "../../composables/useItemOperations.js";
+import { useStockUtils } from "../../composables/useStockUtils.js";
+import { useInvoiceWatchers } from "../../composables/useInvoiceWatchers.js";
+import { useInvoiceCalculations } from "../../composables/useInvoiceCalculations.js";
+import { useOffers } from "../../composables/useOffers.js";
+import invoiceShortcuts from "../../mixins/invoiceShortcuts.js";
+import { responsiveMixin as responsive } from "../../mixins/responsive.js";
+
 
 export default {
-  name: 'POSInvoice',
-  mixins: [format],
+  name: 'Invoice',
+  mixins: [format, invoiceShortcuts, responsive],
+
+  setup() {
+    const batchSerial = useBatchSerial();
+    const discounts = useDiscounts();
+    const itemOperations = useItemOperations();
+    const stockUtils = useStockUtils();
+    const offers = useOffers();
+    const invoiceCalculations = useInvoiceCalculations();
+    const invoiceWatchers = useInvoiceWatchers();
+
+    return {
+      ...batchSerial,
+      ...discounts,
+      ...itemOperations,
+      ...stockUtils,
+      ...offers,
+      ...invoiceCalculations,
+      ...invoiceWatchers
+    };
+  },
   data() {
     return {
       // POS profile settings
@@ -191,7 +211,6 @@ export default {
     ItemsTable,
   },
   computed: {
-    ...invoiceComputed,
     isDarkTheme() {
       return this.$theme.current === 'dark';
     }
@@ -199,13 +218,6 @@ export default {
 
 
   methods: {
-    ...shortcutMethods,
-    ...itemAddition,
-    ...batchSerial,
-    ...discountMethods,
-    ...stockUtils,
-    ...offerMethods,
-    ...invoiceItemMethods,
     initializeItemsHeaders() {
       // Define all available columns
       this.available_columns = [
@@ -570,10 +582,10 @@ export default {
           // When switching to another currency, convert from base rates
           console.log(`Converting rates for ${item.item_code} to ${this.selected_currency}`);
 
-            // Convert base currency values to the selected currency
-            const converted_price = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
-            const converted_rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
-            const converted_discount = this.flt(item.base_discount_amount * this.exchange_rate, this.currency_precision);
+          // Convert base currency values to the selected currency
+          const converted_price = this.flt(item.base_price_list_rate * this.exchange_rate, this.currency_precision);
+          const converted_rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
+          const converted_discount = this.flt(item.base_discount_amount * this.exchange_rate, this.currency_precision);
 
           // Ensure we don't set values to 0 if they're just very small
           item.price_list_rate = converted_price < 0.000001 ? 0 : converted_price;
@@ -800,6 +812,39 @@ export default {
         item.idx = index + 1;
       });
     },
+
+    // Add this method to handle adding items to the invoice
+    add_item(item) {
+      // Check if item already exists in the invoice
+      const existing_item = this.items.find(inv_item => 
+        inv_item.item_code === item.item_code && 
+        inv_item.uom === item.uom &&
+        inv_item.rate === item.rate
+      );
+      
+      if (existing_item) {
+        // If item exists, increase quantity
+        existing_item.qty += item.qty || 1;
+        this.calcStockQty(existing_item, existing_item.qty);
+      } else {
+        // If new item, add to items array
+        const new_item = {
+          ...item,
+          posa_row_id: this.makeid(10), // Generate unique row ID
+          qty: item.qty || 1,
+          idx: this.items.length + 1
+        };
+        
+        // Calculate stock quantity
+        this.calcStockQty(new_item, new_item.qty);
+        
+        // Add to items array
+        this.items.push(new_item);
+      }
+      
+      // Force update to refresh the UI
+      this.$forceUpdate();
+    },
   },
 
   mounted() {
@@ -951,21 +996,9 @@ export default {
     // Cleanup reset_posting_date listener
     this.eventBus.off("reset_posting_date");
   },
-  // Register global keyboard shortcuts when component is created
-  created() {
-    document.addEventListener("keydown", this.shortOpenPayment.bind(this));
-    document.addEventListener("keydown", this.shortDeleteFirstItem.bind(this));
-    document.addEventListener("keydown", this.shortOpenFirstItem.bind(this));
-    document.addEventListener("keydown", this.shortSelectDiscount.bind(this));
+
+  watch: {
   },
-  // Remove global keyboard shortcuts when component is unmounted
-  unmounted() {
-    document.removeEventListener("keydown", this.shortOpenPayment);
-    document.removeEventListener("keydown", this.shortDeleteFirstItem);
-    document.removeEventListener("keydown", this.shortOpenFirstItem);
-    document.removeEventListener("keydown", this.shortSelectDiscount);
-  },
-  watch: invoiceWatchers,
 };
 </script>
 
@@ -1031,13 +1064,28 @@ export default {
 
 /* Dynamic padding for responsive layout */
 .dynamic-padding {
-  padding: var(--dynamic-xs) var(--dynamic-sm) var(--dynamic-xs) var(--dynamic-sm);
+  padding: calc(var(--dynamic-xs) * 0.75) calc(var(--dynamic-sm) * 0.75);
+  transition: padding 0.3s ease;
 }
 
-/* Responsive breakpoints */
+/* Responsive breakpoints with smaller padding values */
+@media (max-width: 1200px) {
+  .dynamic-padding {
+    padding: calc(var(--dynamic-xs) * 0.7) calc(var(--dynamic-xs) * 0.9);
+  }
+
+  .dynamic-padding .v-row {
+    margin: 0 -3px;
+  }
+
+  .dynamic-padding .v-col {
+    padding: 2px 3px;
+  }
+}
+
 @media (max-width: 768px) {
   .dynamic-padding {
-    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+    padding: calc(var(--dynamic-xs) * 0.6) calc(var(--dynamic-xs) * 0.8);
   }
 
   .dynamic-padding .v-row {
@@ -1045,13 +1093,13 @@ export default {
   }
 
   .dynamic-padding .v-col {
-    padding: 2px 4px;
+    padding: 2px 2px;
   }
 }
 
 @media (max-width: 480px) {
   .dynamic-padding {
-    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+    padding: calc(var(--dynamic-xs) * 0.5) calc(var(--dynamic-xs) * 0.6);
   }
 
   .dynamic-padding .v-row {
@@ -1059,7 +1107,7 @@ export default {
   }
 
   .dynamic-padding .v-col {
-    padding: 1px 2px;
+    padding: 1px 1px;
   }
 }
 

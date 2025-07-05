@@ -244,8 +244,8 @@
 <script>
 
 import format from "../../format";
-import Customer from "../pos/Customer.vue";
-import UpdateCustomer from "../pos/UpdateCustomer.vue";
+import Customer from "../customer/Customer.vue";
+import UpdateCustomer from "../customer/UpdateCustomer.vue";
 import { getOpeningStorage, setOpeningStorage, initPromise, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline, getCustomerStorage } from "../../../offline/index.js";
 import { silentPrint } from "../../plugins/print.js";
 
