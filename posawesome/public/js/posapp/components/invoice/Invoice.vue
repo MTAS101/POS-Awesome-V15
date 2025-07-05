@@ -812,6 +812,39 @@ export default {
         item.idx = index + 1;
       });
     },
+
+    // Add this method to handle adding items to the invoice
+    add_item(item) {
+      // Check if item already exists in the invoice
+      const existing_item = this.items.find(inv_item => 
+        inv_item.item_code === item.item_code && 
+        inv_item.uom === item.uom &&
+        inv_item.rate === item.rate
+      );
+      
+      if (existing_item) {
+        // If item exists, increase quantity
+        existing_item.qty += item.qty || 1;
+        this.calcStockQty(existing_item, existing_item.qty);
+      } else {
+        // If new item, add to items array
+        const new_item = {
+          ...item,
+          posa_row_id: this.makeid(10), // Generate unique row ID
+          qty: item.qty || 1,
+          idx: this.items.length + 1
+        };
+        
+        // Calculate stock quantity
+        this.calcStockQty(new_item, new_item.qty);
+        
+        // Add to items array
+        this.items.push(new_item);
+      }
+      
+      // Force update to refresh the UI
+      this.$forceUpdate();
+    },
   },
 
   mounted() {
@@ -1031,13 +1064,28 @@ export default {
 
 /* Dynamic padding for responsive layout */
 .dynamic-padding {
-  padding: var(--dynamic-xs) var(--dynamic-sm) var(--dynamic-xs) var(--dynamic-sm);
+  padding: calc(var(--dynamic-xs) * 0.75) calc(var(--dynamic-sm) * 0.75);
+  transition: padding 0.3s ease;
 }
 
-/* Responsive breakpoints */
+/* Responsive breakpoints with smaller padding values */
+@media (max-width: 1200px) {
+  .dynamic-padding {
+    padding: calc(var(--dynamic-xs) * 0.7) calc(var(--dynamic-xs) * 0.9);
+  }
+
+  .dynamic-padding .v-row {
+    margin: 0 -3px;
+  }
+
+  .dynamic-padding .v-col {
+    padding: 2px 3px;
+  }
+}
+
 @media (max-width: 768px) {
   .dynamic-padding {
-    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+    padding: calc(var(--dynamic-xs) * 0.6) calc(var(--dynamic-xs) * 0.8);
   }
 
   .dynamic-padding .v-row {
@@ -1045,13 +1093,13 @@ export default {
   }
 
   .dynamic-padding .v-col {
-    padding: 2px 4px;
+    padding: 2px 2px;
   }
 }
 
 @media (max-width: 480px) {
   .dynamic-padding {
-    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+    padding: calc(var(--dynamic-xs) * 0.5) calc(var(--dynamic-xs) * 0.6);
   }
 
   .dynamic-padding .v-row {
@@ -1059,7 +1107,7 @@ export default {
   }
 
   .dynamic-padding .v-col {
-    padding: 1px 2px;
+    padding: 1px 1px;
   }
 }
 
