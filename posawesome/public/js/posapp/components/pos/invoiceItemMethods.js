@@ -1424,11 +1424,16 @@ export default {
             // matches the POS Profile currency. This prevents manual or offer
             // adjusted rates from being reset whenever an item row is expanded.
             if (force_update || !item.base_rate) {
-              // Always store base rates from server in base currency
+              // Convert received rate to base currency when needed
               if (data.price_list_rate !== 0 || !item.base_price_list_rate) {
-                item.base_price_list_rate = data.price_list_rate;
+                const base_rate_value =
+                  vm.selected_currency !== vm.pos_profile.currency
+                    ? vm.flt(data.price_list_rate * (vm.exchange_rate || 1), vm.currency_precision)
+                    : data.price_list_rate;
+
+                item.base_price_list_rate = base_rate_value;
                 if (!item.posa_offer_applied) {
-                  item.base_rate = data.price_list_rate;
+                  item.base_rate = base_rate_value;
                 }
               }
             }
