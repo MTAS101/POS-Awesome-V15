@@ -543,10 +543,11 @@ export default {
             item.base_price_list_rate = item.price_list_rate;
             item.base_discount_amount = item.discount_amount || 0;
           } else {
-            // When in another currency, calculate base rates
-            item.base_rate = item.rate * this.exchange_rate;
-            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
-            item.base_discount_amount = (item.discount_amount || 0) * this.exchange_rate;
+            // When in another currency, store base rates by converting
+            // from the selected currency back to the default currency
+            item.base_rate = item.rate / this.exchange_rate;
+            item.base_price_list_rate = item.price_list_rate / this.exchange_rate;
+            item.base_discount_amount = (item.discount_amount || 0) / this.exchange_rate;
           }
         }
 
