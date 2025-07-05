@@ -1433,20 +1433,32 @@ export default {
 
             // Only update rates if no offer is applied
             if (!item.posa_offer_applied) {
-              // Convert to selected currency if needed
-              if (vm.selected_currency !== vm.pos_profile.currency) {
+              // Convert to selected currency only when base rates are stored in
+              // the POS Profile currency. If the original currency already
+              // matches the selected currency, no conversion should take place.
+              if (
+                vm.selected_currency !== vm.pos_profile.currency &&
+                item.original_currency !== vm.selected_currency
+              ) {
                 const exchange_rate = vm.exchange_rate || 1;
                 // Convert base rates to the selected currency
-                item.price_list_rate = vm.flt(item.base_price_list_rate * exchange_rate, vm.currency_precision);
+                item.price_list_rate = vm.flt(
+                  item.base_price_list_rate * exchange_rate,
+                  vm.currency_precision
+                );
 
                 // In multi-currency mode, update the rate from base_rate
-                item.rate = vm.flt(item.base_rate * exchange_rate, vm.currency_precision);
+                item.rate = vm.flt(
+                  item.base_rate * exchange_rate,
+                  vm.currency_precision
+                );
               } else {
-                // When in default currency, use base rates directly for price_list_rate
+                // When in default currency or when the item currency already
+                // matches the selected currency, use base rates directly
                 item.price_list_rate = item.base_price_list_rate;
 
-                // IMPORTANT: For default currency, only set rate if it's not already set
-                // This preserves manually entered rates
+                // IMPORTANT: For default currency, only set rate if it's not
+                // already set. This preserves manually entered rates
                 if (!item._manual_rate_set) {
                   item.rate = item.base_rate;
                 }
