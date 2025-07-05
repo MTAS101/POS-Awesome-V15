@@ -125,7 +125,7 @@ import { useInvoiceCalculations } from "../../composables/useInvoiceCalculations
 import { useOffers } from "../../composables/useOffers.js";
 import invoiceShortcuts from "../../mixins/invoiceShortcuts.js";
 import { responsiveMixin as responsive } from "../../mixins/responsive.js";
-import { getCachedPriceListItems } from "../../offline/index.js";
+import { getCachedPriceListItems } from "../../../offline/index.js";
 
 
 export default {
