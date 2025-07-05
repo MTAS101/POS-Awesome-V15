@@ -623,7 +623,11 @@ export default {
     async update_currency_and_rate() {
       if (!this.selected_currency) return;
 
-      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+      const priceListCurrency = this.price_list_currency;
+      let baseCurrency = this.pos_profile.currency;
+      if (priceListCurrency && priceListCurrency !== this.selected_currency) {
+        baseCurrency = priceListCurrency;
+      }
 
       // Always fetch the latest exchange rate for the selected currency
       try {
@@ -658,7 +662,7 @@ export default {
       if (this.items.length) {
         const doc = this.get_invoice_doc();
         doc.currency = this.selected_currency;
-        doc.price_list_currency = baseCurrency;
+        doc.price_list_currency = priceListCurrency || this.pos_profile.currency;
         try {
           await this.update_invoice(doc);
         } catch (error) {
