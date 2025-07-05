@@ -139,19 +139,13 @@ export default {
       new_item.price_list_rate = item.rate;
 
       // Setup base rates properly for multi-currency
-      if (
-        this.selected_currency !== this.pos_profile.currency &&
-        !(
-          this.pos_profile.posa_allow_multi_currency &&
-          item.original_currency === this.selected_currency
-        )
-      ) {
+      if (this.selected_currency !== this.pos_profile.currency) {
         // Store original base currency values
         new_item.base_price_list_rate = item.rate * this.exchange_rate;
         new_item.base_rate = item.rate * this.exchange_rate;
         new_item.base_discount_amount = 0;
       } else {
-        // When using base currency or when price list currency matches the selected currency
+        // In base currency, base rates = displayed rates
         new_item.base_price_list_rate = item.rate;
         new_item.base_rate = item.rate;
         new_item.base_discount_amount = 0;
