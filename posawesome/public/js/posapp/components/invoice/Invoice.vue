@@ -125,7 +125,6 @@ import { useInvoiceCalculations } from "../../composables/useInvoiceCalculations
 import { useOffers } from "../../composables/useOffers.js";
 import invoiceShortcuts from "../../mixins/invoiceShortcuts.js";
 import { responsiveMixin as responsive } from "../../mixins/responsive.js";
-import { getCachedPriceListItems } from "../../offline/index.js";
 
 
 export default {
@@ -334,92 +333,6 @@ export default {
       } catch (e) {
         console.error('Failed to load column preferences:', e);
       }
-    },
-
-    // Get price list for the current customer
-    get_price_list() {
-      let price_list = this.pos_profile.selling_price_list;
-      if (this.customer_info && this.pos_profile) {
-        const { customer_price_list, customer_group_price_list } = this.customer_info;
-        const pos_price_list = this.pos_profile.selling_price_list;
-        if (customer_price_list && customer_price_list != pos_price_list) {
-          price_list = customer_price_list;
-        } else if (customer_group_price_list && customer_group_price_list != pos_price_list) {
-          price_list = customer_group_price_list;
-        }
-      }
-      return price_list;
-    },
-
-    // Update selected price list and notify other components
-    update_price_list() {
-      const price_list = this.get_price_list();
-      if (price_list == this.pos_profile.selling_price_list) {
-        this.selected_price_list = this.pos_profile.selling_price_list;
-        this.eventBus.emit("update_customer_price_list", null);
-      } else {
-        this.selected_price_list = price_list;
-        this.eventBus.emit("update_customer_price_list", price_list);
-      }
-    },
-
-    // Apply cached price list rates to existing invoice items
-    apply_cached_price_list(price_list) {
-      const cached = getCachedPriceListItems(price_list);
-      if (!cached) {
-        return;
-      }
-
-      const map = {};
-      cached.forEach(ci => { map[ci.item_code] = ci; });
-
-      this.items.forEach(item => {
-        const ci = map[item.item_code];
-        if (!ci) return;
-
-        const newRate = ci.rate || ci.price_list_rate;
-        const priceCurrency = ci.currency || this.selected_currency;
-
-        if (priceCurrency === this.selected_currency) {
-          item.base_price_list_rate = newRate * this.exchange_rate;
-          if (!item._manual_rate_set) {
-            item.base_rate = newRate * this.exchange_rate;
-          }
-          item.price_list_rate = newRate;
-          if (!item._manual_rate_set) {
-            item.rate = newRate;
-          }
-        } else {
-          if (newRate !== 0 || !item.base_price_list_rate) {
-            item.base_price_list_rate = newRate;
-            if (!item._manual_rate_set) {
-              item.base_rate = newRate;
-            }
-          }
-
-          if (this.selected_currency !== this.pos_profile.currency) {
-            const conv = this.exchange_rate || 1;
-            const convRate = this.flt(newRate * conv, this.currency_precision);
-            if (newRate !== 0 || !item.price_list_rate) {
-              item.price_list_rate = convRate;
-            }
-            if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
-              item.rate = convRate;
-            }
-          } else {
-            if (newRate !== 0 || !item.price_list_rate) {
-              item.price_list_rate = newRate;
-            }
-            if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
-              item.rate = newRate;
-            }
-          }
-
-        item.amount = this.flt(item.qty * item.rate, this.currency_precision);
-        item.base_amount = this.flt(item.qty * item.base_rate, this.currency_precision);
-      });
-
-      this.$forceUpdate();
     },
     makeid(length) {
       let result = "";
