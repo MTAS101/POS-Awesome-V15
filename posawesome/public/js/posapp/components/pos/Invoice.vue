@@ -557,6 +557,15 @@ export default {
           item.price_list_rate = item.base_price_list_rate;
           item.rate = item.base_rate;
           item.discount_amount = item.base_discount_amount;
+        } else if (item.original_currency === this.selected_currency) {
+          // When selected currency matches the price list currency,
+          // no conversion should be applied
+          console.log(
+            `Using original currency rates for ${item.item_code}`
+          );
+          item.price_list_rate = item.base_price_list_rate;
+          item.rate = item.base_rate;
+          item.discount_amount = item.base_discount_amount;
         } else {
           // When switching to another currency, convert from base rates
           console.log(`Converting rates for ${item.item_code} to ${this.selected_currency}`);

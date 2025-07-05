@@ -1176,12 +1176,21 @@ export default {
 
       // original_rate is in price list currency
       const price_list_rate = item.original_rate;
+
+      // Determine base rate using available conversion info
       const base_rate = price_list_rate * (item.plc_conversion_rate || 1);
 
       item.base_rate = base_rate;
       item.base_price_list_rate = price_list_rate;
 
-      item.rate = this.flt(price_list_rate * (this.exchange_rate || 1), this.currency_precision);
+      // If the price list currency matches the selected currency,
+      // don't apply any conversion
+      const converted_rate =
+        item.original_currency === this.selected_currency
+          ? price_list_rate
+          : price_list_rate * (this.exchange_rate || 1);
+
+      item.rate = this.flt(converted_rate, this.currency_precision);
       item.currency = this.selected_currency;
       item.price_list_rate = item.rate;
     },
