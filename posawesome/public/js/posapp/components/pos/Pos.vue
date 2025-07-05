@@ -31,20 +31,21 @@
 
 <script>
 
-import ItemsSelector from '../items/ItemsSelector.vue';
-import Invoice from '../invoice/Invoice.vue';
-import OpeningDialog from '../dialogs/OpeningDialog.vue';
-import Payments from '../payment/Payments.vue';
-import PosOffers from '../offers/PosOffers.vue';
-import PosCoupons from '../offers/PosCoupons.vue';
-import Drafts from '../dialogs/Drafts.vue';
-import SalesOrders from '../dialogs/SalesOrders.vue';
-import ClosingDialog from '../dialogs/ClosingDialog.vue';
-import NewAddress from '../customer/NewAddress.vue';
-import Variants from '../items/Variants.vue';
-import Returns from '../dialogs/Returns.vue';
-import MpesaPayments from '../payment/Mpesa-Payments.vue';
+import ItemsSelector from './ItemsSelector.vue';
+import Invoice from './Invoice.vue';
+import OpeningDialog from './OpeningDialog.vue';
+import Payments from './Payments.vue';
+import PosOffers from './PosOffers.vue';
+import PosCoupons from './PosCoupons.vue';
+import Drafts from './Drafts.vue';
+import SalesOrders from "./SalesOrders.vue";
+import ClosingDialog from './ClosingDialog.vue';
+import NewAddress from './NewAddress.vue';
+import Variants from './Variants.vue';
+import Returns from './Returns.vue';
+import MpesaPayments from './Mpesa-Payments.vue';
 import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, clearOpeningStorage, initPromise } from '../../../offline/index.js';
+// Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline/index.js";
 import { responsiveMixin } from '../../mixins/responsive.js';
 
