@@ -863,12 +863,17 @@ export default {
     search_onchange: _.debounce(function (newSearchTerm) {
       const vm = this;
 
-      // Determine the actual query string
+      // Determine the actual query string and trim whitespace
       const query = typeof newSearchTerm === "string"
         ? newSearchTerm
         : vm.first_search;
 
-      vm.search = query;
+      vm.search = (query || "").trim();
+
+      if (!vm.search) {
+        vm.search_from_scanner = false;
+        return;
+      }
 
       const fromScanner = vm.search_from_scanner;
 
@@ -1522,7 +1527,7 @@ export default {
       return this.getItemsHeaders();
     },
     filtered_items() {
-      this.search = this.get_search(this.first_search);
+      this.search = this.get_search(this.first_search).trim();
       if (!this.pos_profile.pose_use_limit_search) {
         let filtred_list = [];
         let filtred_group_list = [];
@@ -1670,7 +1675,7 @@ export default {
         return this.first_search;
       },
       set: _.debounce(function (newValue) {
-        this.first_search = newValue;
+        this.first_search = (newValue || '').trim();
       }, 200),
     },
     debounce_qty: {
