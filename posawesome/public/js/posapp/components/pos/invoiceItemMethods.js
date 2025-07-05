@@ -1382,7 +1382,9 @@ export default {
             name: "New Sales Invoice 1",
             company: this.pos_profile.company,
             conversion_rate: 1,
-            currency: this.pos_profile.currency,
+            // Use currently selected currency when fetching item details
+            // so the server returns rates in the expected currency
+            currency: this.selected_currency || this.pos_profile.currency,
             qty: item.qty,
             price_list_rate: item.base_price_list_rate || item.price_list_rate,
             child_docname: "New Sales Invoice Item 1",
