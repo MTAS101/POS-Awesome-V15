@@ -41,14 +41,9 @@ export default {
         }
 
         // Convert price_list_rate to current currency for calculations
-        const converted_price_list_rate =
-          this.selected_currency !== this.pos_profile.currency &&
-          !(
-            this.pos_profile.posa_allow_multi_currency &&
-            item.original_currency === this.selected_currency
-          )
-            ? this.flt(item.price_list_rate / this.exchange_rate, this.currency_precision)
-            : item.price_list_rate;
+        const converted_price_list_rate = this.selected_currency !== this.pos_profile.currency ?
+          this.flt(item.price_list_rate / this.exchange_rate, this.currency_precision) :
+          item.price_list_rate;
 
         // Field-wise calculations
         switch (fieldId) {
@@ -153,13 +148,7 @@ export default {
           }
 
           // Convert to selected currency
-          if (
-            this.selected_currency !== this.pos_profile.currency &&
-            !(
-              this.pos_profile.posa_allow_multi_currency &&
-              item.original_currency === this.selected_currency
-            )
-          ) {
+          if (this.selected_currency !== this.pos_profile.currency) {
             // If exchange rate is 300 PKR = 1 USD
             // To convert PKR to USD: divide by exchange rate
             // Example: 3000 PKR / 300 = 10 USD
@@ -182,13 +171,7 @@ export default {
         item.rate = this.flt(price_list_rate - discount_amount, this.currency_precision);
 
         // Store base discount amount
-        if (
-          this.selected_currency !== this.pos_profile.currency &&
-          !(
-            this.pos_profile.posa_allow_multi_currency &&
-            item.original_currency === this.selected_currency
-          )
-        ) {
+        if (this.selected_currency !== this.pos_profile.currency) {
           // Convert discount amount back to base currency by multiplying with exchange rate
           item.base_discount_amount = this.flt(discount_amount * this.exchange_rate, this.currency_precision);
         } else {
@@ -198,13 +181,7 @@ export default {
 
       // Calculate amounts
       item.amount = this.flt(item.qty * item.rate, this.currency_precision);
-      if (
-        this.selected_currency !== this.pos_profile.currency &&
-        !(
-          this.pos_profile.posa_allow_multi_currency &&
-          item.original_currency === this.selected_currency
-        )
-      ) {
+      if (this.selected_currency !== this.pos_profile.currency) {
         // Convert amount back to base currency by multiplying with exchange rate
         item.base_amount = this.flt(item.amount * this.exchange_rate, this.currency_precision);
       } else {
