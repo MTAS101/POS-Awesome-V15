@@ -1178,7 +1178,15 @@ export default {
       const price_list_rate = item.original_rate;
 
       // Determine base rate using available conversion info
-      const base_rate = price_list_rate * (item.plc_conversion_rate || 1);
+      let base_rate;
+      if (
+        this.pos_profile.posa_allow_multi_currency &&
+        item.original_currency === this.selected_currency
+      ) {
+        base_rate = price_list_rate;
+      } else {
+        base_rate = price_list_rate * (item.plc_conversion_rate || 1);
+      }
 
       item.base_rate = base_rate;
       item.base_price_list_rate = price_list_rate;
