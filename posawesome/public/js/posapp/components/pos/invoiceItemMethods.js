@@ -1439,16 +1439,9 @@ export default {
 
             // Only update rates if no offer is applied
             if (!item.posa_offer_applied) {
+              // Convert to selected currency if needed
               const baseCurrency = vm.price_list_currency || vm.pos_profile.currency;
-
-              // If price list currency matches the selected currency, skip multiplication
-              if (vm.price_list_currency && vm.price_list_currency === vm.selected_currency) {
-                item.price_list_rate = item.base_price_list_rate;
-
-                if (!item._manual_rate_set) {
-                  item.rate = item.base_rate;
-                }
-              } else if (vm.selected_currency !== baseCurrency) {
+              if (vm.selected_currency !== baseCurrency) {
                 const exchange_rate = vm.exchange_rate || 1;
                 // Convert base rates to the selected currency
                 item.price_list_rate = vm.flt(item.base_price_list_rate * exchange_rate, vm.currency_precision);
@@ -1456,10 +1449,10 @@ export default {
                 // In multi-currency mode, update the rate from base_rate
                 item.rate = vm.flt(item.base_rate * exchange_rate, vm.currency_precision);
               } else {
-                // When in base currency, use base rates directly for price_list_rate
+                // When in default currency, use base rates directly for price_list_rate
                 item.price_list_rate = item.base_price_list_rate;
 
-                // IMPORTANT: Only set rate if it's not already set
+                // IMPORTANT: For default currency, only set rate if it's not already set
                 // This preserves manually entered rates
                 if (!item._manual_rate_set) {
                   item.rate = item.base_rate;
@@ -1468,10 +1461,7 @@ export default {
             } else {
               // For items with offers, only update price_list_rate
               const baseCurrency = vm.price_list_currency || vm.pos_profile.currency;
-
-              if (vm.price_list_currency && vm.price_list_currency === vm.selected_currency) {
-                item.price_list_rate = item.base_price_list_rate;
-              } else if (vm.selected_currency !== baseCurrency) {
+              if (vm.selected_currency !== baseCurrency) {
                 const exchange_rate = vm.exchange_rate || 1;
                 item.price_list_rate = vm.flt(item.base_price_list_rate * exchange_rate, vm.currency_precision);
               } else {
@@ -1607,10 +1597,9 @@ export default {
 
           if (priceCurrency === this.selected_currency) {
             // Rate already in selected currency
-            // Store base rates directly without conversion
-            item.base_price_list_rate = newRate;
+            item.base_price_list_rate = newRate / this.exchange_rate;
             if (!item._manual_rate_set) {
-              item.base_rate = newRate;
+              item.base_rate = newRate / this.exchange_rate;
             }
             item.price_list_rate = newRate;
             if (!item._manual_rate_set) {
