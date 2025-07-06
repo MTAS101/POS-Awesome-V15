@@ -6,11 +6,12 @@ export default defineConfig({
 	plugins: [vue()],
 	build: {
 		target: "esnext",
-		lib: {
-			entry: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
-			name: "PosAwesome",
-			fileName: "posawesome",
-		},
+                lib: {
+                        entry: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
+                        name: "PosAwesome",
+                        fileName: "posawesome.bundle",
+                        formats: ["es"],
+                },
 		outDir: "posawesome/public/dist/js",
 		emptyOutDir: true,
 		rollupOptions: {
