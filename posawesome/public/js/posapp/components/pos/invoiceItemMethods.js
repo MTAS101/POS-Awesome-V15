@@ -495,12 +495,13 @@ export default {
         (this.invoice_doc && this.invoice_doc.conversion_rate) ||
         this.exchange_rate ||
         1;
-      doc.plc_conversion_rate =
-        (this.invoice_doc && this.invoice_doc.plc_conversion_rate) ||
-        doc.conversion_rate;
 
       // Use actual price list currency if available
       doc.price_list_currency = this.price_list_currency || doc.currency;
+
+      doc.plc_conversion_rate =
+        (this.invoice_doc && this.invoice_doc.plc_conversion_rate) ||
+        (doc.price_list_currency === doc.currency ? 1 : doc.conversion_rate);
 
       // Other fields
       doc.campaign = doc.campaign || this.pos_profile.campaign;
