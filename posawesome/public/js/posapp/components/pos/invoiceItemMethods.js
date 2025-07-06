@@ -937,6 +937,18 @@ export default {
             vm.invoice_doc = r.message;
             if (r.message.exchange_rate_date) {
               vm.exchange_rate_date = r.message.exchange_rate_date;
+              const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
+              if (posting_backend !== vm.exchange_rate_date) {
+                vm.eventBus.emit("show_message", {
+                  title: __(
+                    "Exchange rate date " +
+                      vm.exchange_rate_date +
+                      " differs from posting date " +
+                      posting_backend
+                  ),
+                  color: "warning",
+                });
+              }
             }
           }
         },
@@ -961,6 +973,21 @@ export default {
         callback: function (r) {
           if (r.message) {
             vm.invoice_doc = r.message;
+            if (r.message.exchange_rate_date) {
+              vm.exchange_rate_date = r.message.exchange_rate_date;
+              const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
+              if (posting_backend !== vm.exchange_rate_date) {
+                vm.eventBus.emit("show_message", {
+                  title: __(
+                    "Exchange rate date " +
+                      vm.exchange_rate_date +
+                      " differs from posting date " +
+                      posting_backend
+                  ),
+                  color: "warning",
+                });
+              }
+            }
           }
         },
       });
