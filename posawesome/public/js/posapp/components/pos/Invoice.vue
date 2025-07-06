@@ -537,21 +537,23 @@ export default {
         // First ensure base rates exist for all items
         if (!item.base_rate) {
           console.log(`Setting base rates for ${item.item_code} for the first time`);
-          if (this.selected_currency === this.pos_profile.currency) {
+          const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+          if (this.selected_currency === baseCurrency) {
             // When in base currency, base rates = displayed rates
             item.base_rate = item.rate;
             item.base_price_list_rate = item.price_list_rate;
             item.base_discount_amount = item.discount_amount || 0;
           } else {
             // When in another currency, calculate base rates
-            item.base_rate = item.rate * this.exchange_rate;
-            item.base_price_list_rate = item.price_list_rate * this.exchange_rate;
-            item.base_discount_amount = (item.discount_amount || 0) * this.exchange_rate;
+            item.base_rate = item.rate / this.exchange_rate;
+            item.base_price_list_rate = item.price_list_rate / this.exchange_rate;
+            item.base_discount_amount = (item.discount_amount || 0) / this.exchange_rate;
           }
         }
 
         // Currency conversion logic
-        if (this.selected_currency === this.pos_profile.currency) {
+        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+        if (this.selected_currency === baseCurrency) {
           // When switching back to default currency, restore from base rates
           console.log(`Restoring rates for ${item.item_code} from base rates`);
           item.price_list_rate = item.base_price_list_rate;
@@ -740,8 +742,9 @@ export default {
         return this.flt(amount, this.currency_precision);
       }
       // If multi-currency is enabled and selected currency is different from base currency
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
       if (this.pos_profile.posa_allow_multi_currency &&
-        this.selected_currency !== this.pos_profile.currency) {
+        this.selected_currency !== baseCurrency) {
         // For multi-currency, just keep 2 decimal places without rounding to nearest integer
         return this.flt(amount, 2);
       }
