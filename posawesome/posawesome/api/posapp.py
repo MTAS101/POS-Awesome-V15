@@ -1401,10 +1401,10 @@ def get_stock_availability(item_code, warehouse):
 
 @frappe.whitelist()
 def create_customer(
-    customer_id,
     customer_name,
     company,
     pos_profile_doc,
+    customer_id=None,
     tax_id=None,
     mobile_no=None,
     email_id=None,
