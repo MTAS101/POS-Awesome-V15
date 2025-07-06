@@ -664,6 +664,13 @@ export default {
             this.exchange_rate = r.message.exchange_rate;
           }
         }
+      } catch (error) {
+        console.error("Error updating currency:", error);
+        this.eventBus.emit("show_message", {
+          title: "Error updating currency",
+          color: "error",
+        });
+      }
 
         // Selected currency to company currency rate
         if (this.selected_currency === companyCurrency) {
