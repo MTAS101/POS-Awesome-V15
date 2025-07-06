@@ -78,9 +78,10 @@ export {
 	getCachedOffers,
 	savePriceListItems,
 	getCachedPriceListItems,
-	clearPriceListCache,
-	saveItemDetailsCache,
-	getCachedItemDetails
+        clearPriceListCache,
+        saveItemDetailsCache,
+        getCachedItemDetails,
+        clearItemDetailsCache
 } from './items.js';
 
 // Customers exports

@@ -142,3 +142,27 @@ export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15
 		return { cached: [], missing: itemCodes };
 	}
 }
+
+export function clearItemDetailsCache(profileName, priceList) {
+       try {
+               if (!profileName) {
+                       memory.item_details_cache = {};
+                       persist("item_details_cache", memory.item_details_cache);
+                       return;
+               }
+
+               const cache = memory.item_details_cache || {};
+               if (cache[profileName]) {
+                       if (priceList) {
+                               delete cache[profileName][priceList];
+                       } else {
+                               delete cache[profileName];
+                       }
+               }
+
+               memory.item_details_cache = cache;
+               persist("item_details_cache", memory.item_details_cache);
+       } catch (e) {
+               console.error("Failed to clear item details cache", e);
+       }
+}

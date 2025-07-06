@@ -176,7 +176,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
+import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache, clearItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
@@ -1535,6 +1535,7 @@ export default {
     headers() {
       return this.getItemsHeaders();
     },
+    /* eslint-disable vue/no-side-effects-in-computed-properties, vue/no-async-in-computed-properties */
     filtered_items() {
       this.search = this.get_search(this.first_search).trim();
       if (!this.pos_profile.pose_use_limit_search) {
@@ -1679,6 +1680,7 @@ export default {
         return items_list;
       }
     },
+    /* eslint-enable vue/no-side-effects-in-computed-properties, vue/no-async-in-computed-properties */
     debounce_search: {
       get() {
         return this.first_search;
@@ -1786,6 +1788,9 @@ export default {
     this.eventBus.on("update_currency", (data) => {
       this.selected_currency = data.currency;
       this.exchange_rate = data.exchange_rate;
+
+      // Clear cached item details so fresh rates are fetched
+      clearItemDetailsCache(this.pos_profile.name, this.active_price_list);
 
       // Refresh visible item prices when currency changes
       this.applyCurrencyConversionToItems();
