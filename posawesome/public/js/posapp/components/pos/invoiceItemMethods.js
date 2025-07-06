@@ -493,7 +493,7 @@ export default {
       doc.currency = this.selected_currency || this.pos_profile.currency;
       doc.conversion_rate =
         (this.invoice_doc && this.invoice_doc.conversion_rate) ||
-        this.exchange_rate ||
+        this.conversion_rate ||
         1;
 
       // Use actual price list currency if available
@@ -501,7 +501,7 @@ export default {
 
       doc.plc_conversion_rate =
         (this.invoice_doc && this.invoice_doc.plc_conversion_rate) ||
-        (doc.price_list_currency === doc.currency ? 1 : doc.conversion_rate);
+        (doc.price_list_currency === doc.currency ? 1 : this.exchange_rate);
 
       // Other fields
       doc.campaign = doc.campaign || this.pos_profile.campaign;
@@ -623,7 +623,7 @@ export default {
 
       // Preserve the real price list currency
       doc.price_list_currency = this.price_list_currency || doc.currency;
-      doc.plc_conversion_rate = doc.conversion_rate;
+      doc.plc_conversion_rate = this.exchange_rate || doc.conversion_rate;
       doc.ignore_default_fields = 1;  // Add this to prevent default field updates
 
       // Add custom fields to track offer rates
@@ -889,7 +889,7 @@ export default {
           account: payment.account || "",
           type: payment.type || "Cash",
           currency: this.selected_currency || this.pos_profile.currency,
-          conversion_rate: this.exchange_rate || 1
+          conversion_rate: this.conversion_rate || 1
         });
 
         remaining_amount -= payment_amount;
@@ -1052,7 +1052,8 @@ export default {
 
         // Update invoice_doc with current currency info
         invoice_doc.currency = this.selected_currency || this.pos_profile.currency;
-        invoice_doc.conversion_rate = this.exchange_rate || 1;
+        invoice_doc.conversion_rate = this.conversion_rate || 1;
+        invoice_doc.plc_conversion_rate = this.exchange_rate || 1;
 
         // Preserve totals calculated on the server to ensure taxes are included
         // The process_invoice method already updates the invoice with taxes and
