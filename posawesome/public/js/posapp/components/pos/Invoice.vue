@@ -41,10 +41,12 @@
 
         <!-- Multi-Currency Section (Only if enabled in POS profile) -->
         <MultiCurrencyRow :pos_profile="pos_profile" :selected_currency="selected_currency"
-          :exchange_rate="exchange_rate" :available_currencies="available_currencies" :isNumber="isNumber"
+          :plc_conversion_rate="exchange_rate" :conversion_rate="conversion_rate"
+          :available_currencies="available_currencies" :isNumber="isNumber"
           :price_list_currency="price_list_currency"
           @update:selected_currency="(val) => { selected_currency = val; update_currency(val); }"
-          @update:exchange_rate="(val) => { exchange_rate = val; update_exchange_rate(); }" />
+          @update:plc_conversion_rate="(val) => { exchange_rate = val; update_exchange_rate(); }"
+          @update:conversion_rate="(val) => { conversion_rate = val; update_conversion_rate(); }" />
 
         <!-- Items Table Section (Main items list for invoice) -->
         <!-- Add this right before the ItemsTable component -->
@@ -169,6 +171,7 @@ export default {
       items_headers: [],
       selected_currency: "", // Currently selected currency
       exchange_rate: 1, // Current exchange rate
+      conversion_rate: 1, // Currency to company rate
       exchange_rate_date: "", // Date of fetched exchange rate
       available_currencies: [], // List of available currencies
       price_lists: [], // Available selling price lists
@@ -527,6 +530,14 @@ export default {
       this.update_item_rates();
     },
 
+    update_conversion_rate() {
+      if (!this.conversion_rate || this.conversion_rate <= 0) {
+        this.conversion_rate = 1;
+      }
+
+      this.sync_exchange_rate();
+    },
+
     update_item_rates() {
       console.log('Updating item rates with exchange rate:', this.exchange_rate);
 
@@ -634,30 +645,41 @@ export default {
     async update_currency_and_rate() {
       if (!this.selected_currency) return;
 
-      const priceListCurrency = this.price_list_currency;
-      let baseCurrency = this.pos_profile.currency;
-      // Use price list currency when available so that exchange rate is 1 when
-      // it matches the selected currency
-      if (priceListCurrency) {
-        baseCurrency = priceListCurrency;
-      }
+      const companyCurrency = this.pos_profile.currency;
+      const priceListCurrency = this.price_list_currency || companyCurrency;
 
-      // Always fetch the latest exchange rate for the selected currency
       try {
-        if (this.selected_currency === baseCurrency) {
+        // Price list currency to selected currency rate
+        if (this.selected_currency === priceListCurrency) {
           this.exchange_rate = 1;
-          this.exchange_rate_date = this.formatDateForBackend(this.posting_date_display);
         } else {
           const r = await frappe.call({
             method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
             args: {
-              from_currency: baseCurrency,
+              from_currency: priceListCurrency,
               to_currency: this.selected_currency,
             },
           });
           if (r && r.message) {
             this.exchange_rate = r.message.exchange_rate;
-            this.exchange_rate_date = r.message.date;
+          }
+        }
+
+        // Selected currency to company currency rate
+        if (this.selected_currency === companyCurrency) {
+          this.conversion_rate = 1;
+          this.exchange_rate_date = this.formatDateForBackend(this.posting_date_display);
+        } else {
+          const r2 = await frappe.call({
+            method: "posawesome.posawesome.api.invoices.fetch_exchange_rate_pair",
+            args: {
+              from_currency: this.selected_currency,
+              to_currency: companyCurrency,
+            },
+          });
+          if (r2 && r2.message) {
+            this.conversion_rate = r2.message.exchange_rate;
+            this.exchange_rate_date = r2.message.date;
           }
         }
       } catch (error) {
@@ -676,6 +698,8 @@ export default {
         const doc = this.get_invoice_doc();
         doc.currency = this.selected_currency;
         doc.price_list_currency = priceListCurrency || this.pos_profile.currency;
+        doc.conversion_rate = this.conversion_rate;
+        doc.plc_conversion_rate = this.exchange_rate;
         try {
           await this.update_invoice(doc);
         } catch (error) {
@@ -689,14 +713,15 @@ export default {
     },
 
     async update_exchange_rate_on_server() {
-      if (this.exchange_rate) {
+      if (this.conversion_rate) {
         if (!this.items.length) {
           this.sync_exchange_rate();
           return;
         }
 
         const doc = this.get_invoice_doc();
-        doc.conversion_rate = this.exchange_rate;
+        doc.conversion_rate = this.conversion_rate;
+        doc.plc_conversion_rate = this.exchange_rate;
         try {
           const resp = await this.update_invoice(doc);
           if (resp && resp.exchange_rate_date) {
@@ -724,11 +749,15 @@ export default {
       if (!this.exchange_rate || this.exchange_rate <= 0) {
         this.exchange_rate = 1;
       }
+      if (!this.conversion_rate || this.conversion_rate <= 0) {
+        this.conversion_rate = 1;
+      }
 
       // Emit currency update
       this.eventBus.emit("update_currency", {
         currency: this.selected_currency || this.pos_profile.currency,
-        exchange_rate: this.exchange_rate
+        exchange_rate: this.exchange_rate,
+        conversion_rate: this.conversion_rate
       });
 
       this.update_item_rates();
