@@ -537,8 +537,7 @@ export default {
         // First ensure base rates exist for all items
         if (!item.base_rate) {
           console.log(`Setting base rates for ${item.item_code} for the first time`);
-          const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-          if (this.selected_currency === baseCurrency) {
+          if (this.selected_currency === this.pos_profile.currency) {
             // When in base currency, base rates = displayed rates
             item.base_rate = item.rate;
             item.base_price_list_rate = item.price_list_rate;
@@ -552,8 +551,7 @@ export default {
         }
 
         // Currency conversion logic
-        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-        if (this.selected_currency === baseCurrency) {
+        if (this.selected_currency === this.pos_profile.currency) {
           // When switching back to default currency, restore from base rates
           console.log(`Restoring rates for ${item.item_code} from base rates`);
           item.price_list_rate = item.base_price_list_rate;
@@ -742,9 +740,8 @@ export default {
         return this.flt(amount, this.currency_precision);
       }
       // If multi-currency is enabled and selected currency is different from base currency
-      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
       if (this.pos_profile.posa_allow_multi_currency &&
-        this.selected_currency !== baseCurrency) {
+        this.selected_currency !== this.pos_profile.currency) {
         // For multi-currency, just keep 2 decimal places without rounding to nearest integer
         return this.flt(amount, 2);
       }
