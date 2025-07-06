@@ -1,10 +1,9 @@
 {
   "name": "posawesome",
-  "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "prebuild": "npm install"
+    "build": "vite build && cp posawesome/public/dist/js/posawesome.bundle.js posawesome/public/js/posawesome.bundle.js",
+    "prebuild": "yarn install"
   },
   "dependencies": {
     "@vuepic/vue-datepicker": "11.0.2",

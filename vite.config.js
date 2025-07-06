@@ -9,7 +9,7 @@ export default defineConfig({
                 lib: {
                         entry: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
                         name: "PosAwesome",
-                        fileName: "posawesome.bundle",
+                       fileName: () => "posawesome.bundle.js",
                         formats: ["es"],
                 },
 		outDir: "posawesome/public/dist/js",
