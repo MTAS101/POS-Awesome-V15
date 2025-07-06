@@ -139,7 +139,8 @@ export default {
       new_item.price_list_rate = item.rate;
 
       // Setup base rates properly for multi-currency
-      if (this.selected_currency !== this.pos_profile.currency) {
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+      if (this.selected_currency !== baseCurrency) {
         // Store original base currency values
         new_item.base_price_list_rate = item.rate * this.exchange_rate;
         new_item.base_rate = item.rate * this.exchange_rate;
