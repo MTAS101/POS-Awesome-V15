@@ -41,7 +41,8 @@ export default {
         }
 
         // Convert price_list_rate to current currency for calculations
-        const converted_price_list_rate = this.selected_currency !== this.pos_profile.currency ?
+        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+        const converted_price_list_rate = this.selected_currency !== baseCurrency ?
           this.flt(item.price_list_rate / this.exchange_rate, this.currency_precision) :
           item.price_list_rate;
 
@@ -49,7 +50,7 @@ export default {
         switch (fieldId) {
           case "rate":
             // Store base rate and convert to selected currency
-            item.base_rate = this.flt(newValue * this.exchange_rate, this.currency_precision);
+            item.base_rate = this.flt(newValue / this.exchange_rate, this.currency_precision);
             item.rate = newValue;
 
             // Calculate discount amount in selected currency
@@ -74,7 +75,7 @@ export default {
             console.log("[calc_prices] Input value (newValue after Math.min):", newValue);
 
             // Store base discount and convert to selected currency
-            item.base_discount_amount = this.flt(newValue * this.exchange_rate, this.currency_precision);
+            item.base_discount_amount = this.flt(newValue / this.exchange_rate, this.currency_precision);
             item.discount_amount = newValue;
             console.log("[calc_prices] Updated item.discount_amount:", item.discount_amount);
             console.log("[calc_prices] Updated item.base_discount_amount:", item.base_discount_amount);
@@ -148,7 +149,8 @@ export default {
           }
 
           // Convert to selected currency
-          if (this.selected_currency !== this.pos_profile.currency) {
+          const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+          if (this.selected_currency !== baseCurrency) {
             // If exchange rate is 300 PKR = 1 USD
             // To convert PKR to USD: divide by exchange rate
             // Example: 3000 PKR / 300 = 10 USD
@@ -171,9 +173,10 @@ export default {
         item.rate = this.flt(price_list_rate - discount_amount, this.currency_precision);
 
         // Store base discount amount
-        if (this.selected_currency !== this.pos_profile.currency) {
-          // Convert discount amount back to base currency by multiplying with exchange rate
-          item.base_discount_amount = this.flt(discount_amount * this.exchange_rate, this.currency_precision);
+        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+        if (this.selected_currency !== baseCurrency) {
+          // Convert discount amount back to base currency by dividing by exchange rate
+          item.base_discount_amount = this.flt(discount_amount / this.exchange_rate, this.currency_precision);
         } else {
           item.base_discount_amount = item.discount_amount;
         }
@@ -181,9 +184,10 @@ export default {
 
       // Calculate amounts
       item.amount = this.flt(item.qty * item.rate, this.currency_precision);
-      if (this.selected_currency !== this.pos_profile.currency) {
-        // Convert amount back to base currency by multiplying with exchange rate
-        item.base_amount = this.flt(item.amount * this.exchange_rate, this.currency_precision);
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+      if (this.selected_currency !== baseCurrency) {
+        // Convert amount back to base currency by dividing by exchange rate
+        item.base_amount = this.flt(item.amount / this.exchange_rate, this.currency_precision);
       } else {
         item.base_amount = item.amount;
       }
