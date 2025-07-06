@@ -680,6 +680,18 @@ export default {
           if (r2 && r2.message) {
             this.conversion_rate = r2.message.exchange_rate;
             this.exchange_rate_date = r2.message.date;
+            const posting_backend = this.formatDateForBackend(this.posting_date_display);
+            if (this.exchange_rate_date && posting_backend !== this.exchange_rate_date) {
+              this.eventBus.emit("show_message", {
+                title: __(
+                  "Exchange rate date " +
+                    this.exchange_rate_date +
+                    " differs from posting date " +
+                    posting_backend
+                ),
+                color: "warning",
+              });
+            }
           }
         }
       } catch (error) {
