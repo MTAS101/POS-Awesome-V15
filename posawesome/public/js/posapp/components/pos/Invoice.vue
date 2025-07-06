@@ -173,6 +173,7 @@ export default {
       exchange_rate: 1, // Current exchange rate
       conversion_rate: 1, // Currency to company rate
       exchange_rate_date: "", // Date of fetched exchange rate
+      company: null, // Company doc with default currency
       available_currencies: [], // List of available currencies
       price_lists: [], // Available selling price lists
       selected_price_list: "", // Currently selected price list
@@ -645,7 +646,7 @@ export default {
     async update_currency_and_rate() {
       if (!this.selected_currency) return;
 
-      const companyCurrency = this.pos_profile.currency;
+      const companyCurrency = (this.company && this.company.default_currency) || this.pos_profile.currency;
       const priceListCurrency = this.price_list_currency || companyCurrency;
 
       try {
@@ -664,13 +665,6 @@ export default {
             this.exchange_rate = r.message.exchange_rate;
           }
         }
-      } catch (error) {
-        console.error("Error updating currency:", error);
-        this.eventBus.emit("show_message", {
-          title: "Error updating currency",
-          color: "error",
-        });
-      }
 
         // Selected currency to company currency rate
         if (this.selected_currency === companyCurrency) {
@@ -866,6 +860,7 @@ export default {
     // Register event listeners for POS profile, items, customer, offers, etc.
     this.eventBus.on("register_pos_profile", (data) => {
       this.pos_profile = data.pos_profile;
+      this.company = data.company || null;
       this.customer = data.pos_profile.customer;
       this.pos_opening_shift = data.pos_opening_shift;
       this.stock_settings = data.stock_settings;
