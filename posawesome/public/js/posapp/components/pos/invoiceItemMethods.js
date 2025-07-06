@@ -1408,6 +1408,17 @@ export default {
         callback: function (r) {
           if (r.message) {
             const data = r.message;
+            // Ensure price list currency is synced from server response
+            if (data.price_list_currency) {
+              vm.price_list_currency = data.price_list_currency;
+            }
+
+            if (!item.original_currency) {
+              item.original_currency = data.price_list_currency || vm.price_list_currency || vm.selected_currency;
+            }
+            if (!item.original_rate) {
+              item.original_rate = data.price_list_rate;
+            }
             if (data.batch_no_data) {
               item.batch_no_data = data.batch_no_data;
             }
@@ -1439,29 +1450,37 @@ export default {
 
             // Only update rates if no offer is applied
             if (!item.posa_offer_applied) {
-              // Convert to selected currency if needed
-              const baseCurrency = vm.price_list_currency || vm.pos_profile.currency;
-              if (vm.selected_currency !== baseCurrency) {
+              const companyCurrency = vm.pos_profile.currency;
+              const baseCurrency = companyCurrency;
+
+              if (vm.selected_currency === vm.price_list_currency && vm.selected_currency !== companyCurrency) {
+                const conv = vm.conversion_rate || 1;
+                item.price_list_rate = vm.flt(item.base_price_list_rate / conv, vm.currency_precision);
+
+                if (!item._manual_rate_set) {
+                  item.rate = vm.flt(item.base_rate / conv, vm.currency_precision);
+                }
+              } else if (vm.selected_currency !== baseCurrency) {
                 const exchange_rate = vm.exchange_rate || 1;
-                // Convert base rates to the selected currency
                 item.price_list_rate = vm.flt(item.base_price_list_rate * exchange_rate, vm.currency_precision);
 
-                // In multi-currency mode, update the rate from base_rate
                 item.rate = vm.flt(item.base_rate * exchange_rate, vm.currency_precision);
               } else {
-                // When in default currency, use base rates directly for price_list_rate
                 item.price_list_rate = item.base_price_list_rate;
 
-                // IMPORTANT: For default currency, only set rate if it's not already set
-                // This preserves manually entered rates
                 if (!item._manual_rate_set) {
                   item.rate = item.base_rate;
                 }
               }
             } else {
               // For items with offers, only update price_list_rate
-              const baseCurrency = vm.price_list_currency || vm.pos_profile.currency;
-              if (vm.selected_currency !== baseCurrency) {
+              const companyCurrency = vm.pos_profile.currency;
+              const baseCurrency = companyCurrency;
+
+              if (vm.selected_currency === vm.price_list_currency && vm.selected_currency !== companyCurrency) {
+                const conv = vm.conversion_rate || 1;
+                item.price_list_rate = vm.flt(item.base_price_list_rate / conv, vm.currency_precision);
+              } else if (vm.selected_currency !== baseCurrency) {
                 const exchange_rate = vm.exchange_rate || 1;
                 item.price_list_rate = vm.flt(item.base_price_list_rate * exchange_rate, vm.currency_precision);
               } else {
@@ -1595,11 +1614,26 @@ export default {
           const newRate = ci.rate || ci.price_list_rate;
           const priceCurrency = ci.currency || this.selected_currency;
 
+          if (!item.original_currency) {
+            item.original_currency = priceCurrency;
+          }
+          if (!item.original_rate) {
+            item.original_rate = newRate;
+          }
+
           if (priceCurrency === this.selected_currency) {
-            // Rate already in selected currency
-            item.base_price_list_rate = newRate / this.exchange_rate;
-            if (!item._manual_rate_set) {
-              item.base_rate = newRate / this.exchange_rate;
+            const companyCurrency = this.pos_profile.currency;
+            if (priceCurrency !== companyCurrency) {
+              const conv = this.conversion_rate || 1;
+              item.base_price_list_rate = newRate * conv;
+              if (!item._manual_rate_set) {
+                item.base_rate = newRate * conv;
+              }
+            } else {
+              item.base_price_list_rate = newRate;
+              if (!item._manual_rate_set) {
+                item.base_rate = newRate;
+              }
             }
             item.price_list_rate = newRate;
             if (!item._manual_rate_set) {
@@ -1614,7 +1648,7 @@ export default {
               }
             }
 
-              const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+              const baseCurrency = this.pos_profile.currency;
               if (this.selected_currency !== baseCurrency) {
                 const conv = this.exchange_rate || 1;
               const convRate = this.flt(newRate * conv, this.currency_precision);
@@ -1624,7 +1658,7 @@ export default {
               if (!item._manual_rate_set && (newRate !== 0 || !item.rate)) {
                 item.rate = convRate;
               }
-            } else {
+              } else {
               if (newRate !== 0 || !item.price_list_rate) {
                 item.price_list_rate = newRate;
               }
