@@ -626,19 +626,3 @@ def get_price_list_currency(price_list: str) -> str:
     if not price_list:
         return None
     return frappe.db.get_value("Price List", price_list, "currency")
-
-
-@frappe.whitelist()
-def create_sales_order_only(invoice):
-    """Create a Sales Order from invoice data and discard the invoice."""
-    if isinstance(invoice, dict):
-        invoice = json.dumps(invoice)
-    invoice_doc = update_invoice(invoice)
-    invoice_name = invoice_doc.get("name")
-    sales_order_doc = make_sales_order(invoice_name)
-    sales_order_doc.flags.ignore_permissions = True
-    sales_order_doc.flags.ignore_account_permission = True
-    sales_order_doc.save()
-    sales_order_doc.submit()
-    frappe.delete_doc("Sales Invoice", invoice_name)
-    return sales_order_doc
