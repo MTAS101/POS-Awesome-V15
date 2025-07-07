@@ -835,12 +835,8 @@ export default {
         frappe.utils.play_sound("error");
         return;
       }
-      // Proceed to submit the document
-      if (this.invoiceType === 'Order' && this.pos_profile.posa_skip_invoice_on_order) {
-        this.submit_order_only(print);
-      } else {
-        this.submit_invoice(print);
-      }
+      // Proceed to submit the invoice
+      this.submit_invoice(print);
     },
     // Submit invoice to backend after all validations
     submit_invoice(print) {
@@ -955,36 +951,9 @@ export default {
           updateLocalStock(vm.invoice_doc.items || []);
           vm.addresses = [];
           vm.eventBus.emit("clear_invoice");
-      vm.eventBus.emit("reset_posting_date");
-      vm.back_to_invoice();
-      }
-      });
-    },
-
-    // Submit Sales Order without creating an invoice
-    submit_order_only(print) {
-      const vm = this;
-      frappe.call({
-        method: "posawesome.posawesome.api.invoices.create_sales_order_only",
-        args: {
-          invoice: this.invoice_doc,
-        },
-        callback: function(r) {
-          if (r.exc || !r.message) {
-            vm.eventBus.emit("show_message", {
-              title: __("Error creating Sales Order"),
-              color: "error",
-            });
-            return;
-          }
-          vm.eventBus.emit("show_message", {
-            title: __("Sales Order {0} Created", [r.message.name]),
-            color: "success",
-          });
-          vm.eventBus.emit("clear_invoice");
           vm.eventBus.emit("reset_posting_date");
           vm.back_to_invoice();
-        },
+        }
       });
     },
     // Set full amount for a payment method (or negative for returns)
