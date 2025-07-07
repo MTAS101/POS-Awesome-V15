@@ -323,6 +323,30 @@ def submit_invoice(invoice, data):
     return {"name": invoice_doc.name, "status": invoice_doc.docstatus}
 
 
+@frappe.whitelist()
+def submit_sales_order(invoice, data):
+    """Create and submit a Sales Order without keeping a Sales Invoice."""
+    data = json.loads(data)
+    invoice = json.loads(invoice)
+
+    created = update_invoice(json.dumps(invoice))
+    invoice_name = created.get("name")
+    invoice_doc = frappe.get_doc("Sales Invoice", invoice_name)
+
+    add_loyalty_point(invoice_doc)
+    sales_order_doc = make_sales_order(invoice_doc.name)
+    if sales_order_doc:
+        sales_order_doc.posa_notes = invoice_doc.posa_notes
+        sales_order_doc.flags.ignore_permissions = True
+        sales_order_doc.flags.ignore_account_permission = True
+        sales_order_doc.save()
+        sales_order_doc.submit()
+        update_coupon(invoice_doc, "used")
+
+    frappe.delete_doc("Sales Invoice", invoice_doc.name, force=1)
+    return {"name": sales_order_doc.name, "status": sales_order_doc.docstatus}
+
+
 def submit_in_background_job(kwargs):
     invoice = kwargs.get("invoice")
     invoice_doc = kwargs.get("invoice_doc")
