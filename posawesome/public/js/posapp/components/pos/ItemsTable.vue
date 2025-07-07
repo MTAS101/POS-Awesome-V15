@@ -163,10 +163,9 @@
                     prepend-inner-icon="mdi-package-variant"></v-autocomplete>
                 </div>
                 <div class="form-field" v-if="item.has_batch_no">
-                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Expiry Date')"
+                  <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Batch No Expiry Date')"
                     :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                    v-model="item.expiry_date" type="date" @change="validateDueDate(item, $event.target.value)"
-                    :disabled="!!item.posa_is_replace"
+                    v-model="item.batch_no_expiry_date" type="date" disabled
                     prepend-inner-icon="mdi-calendar"></v-text-field>
                 </div>
               </div>
@@ -224,7 +223,6 @@ export default {
     calcUom: Function,
     setSerialNo: Function,
     setBatchQty: Function,
-    validateDueDate: Function,
     removeItem: Function,
     subtractOne: Function,
     addOne: Function,

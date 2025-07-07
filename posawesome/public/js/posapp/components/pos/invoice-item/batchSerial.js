@@ -71,6 +71,7 @@ export default {
         item.batch_no = batch_to_use.batch_no;
         item.actual_batch_qty = batch_to_use.batch_qty;
         item.batch_no_expiry_date = batch_to_use.expiry_date;
+        item.expiry_date = batch_to_use.expiry_date;
 
         if (batch_to_use.batch_price) {
           // Store batch price in base currency
@@ -125,6 +126,7 @@ export default {
         item.batch_no = null;
         item.actual_batch_qty = null;
         item.batch_no_expiry_date = null;
+        item.expiry_date = null;
         item.batch_price = null;
         item.base_batch_price = null;
       }
