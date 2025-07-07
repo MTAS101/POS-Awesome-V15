@@ -117,6 +117,9 @@ export default {
     // Create a new item object with default and calculated fields
     get_new_item(item) {
       const new_item = { ...item };
+      if (!new_item.warehouse) {
+        new_item.warehouse = this.pos_profile.warehouse;
+      }
       if (!item.qty) {
         item.qty = 1;
       }
@@ -163,6 +166,7 @@ export default {
         new_item.item_uoms.push({ uom: new_item.stock_uom, conversion_factor: 1 });
       }
       new_item.actual_batch_qty = "";
+      new_item.batch_no_expiry_date = item.batch_no_expiry_date || null;
       new_item.conversion_factor = 1;
       new_item.posa_offers = JSON.stringify([]);
       new_item.posa_offer_applied = 0;
@@ -172,6 +176,10 @@ export default {
       new_item.posa_notes = "";
       new_item.posa_delivery_date = "";
       new_item.posa_row_id = this.makeid(20);
+      if (new_item.has_serial_no && !new_item.serial_no_selected) {
+        new_item.serial_no_selected = [];
+        new_item.serial_no_selected_count = 0;
+      }
       // Expand row if batch/serial required
       if (
         (!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) ||
@@ -1853,6 +1861,8 @@ export default {
         return;
       }
 
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+
       if (!item.posa_offer_applied) {
         if (item.price_list_rate) {
           // Always work with base rates first
@@ -1883,7 +1893,6 @@ export default {
         item.rate = this.flt(price_list_rate - discount_amount, this.currency_precision);
 
         // Store base discount amount
-        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
         if (this.selected_currency !== baseCurrency) {
           // Convert discount amount back to base currency by multiplying by exchange rate
           item.base_discount_amount = this.flt(discount_amount / this.exchange_rate, this.currency_precision);
@@ -1894,12 +1903,11 @@ export default {
 
       // Calculate amounts
         item.amount = this.flt(item.qty * item.rate, this.currency_precision);
-        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-      if (this.selected_currency !== baseCurrency) {
+        if (this.selected_currency !== baseCurrency) {
           // Convert amount back to base currency by dividing by exchange rate
           item.base_amount = this.flt(item.amount / this.exchange_rate, this.currency_precision);
         } else {
-        item.base_amount = item.amount;
+          item.base_amount = item.amount;
       }
 
       this.$forceUpdate();
@@ -1908,6 +1916,7 @@ export default {
     // Update UOM (unit of measure) for an item and recalculate prices
     calc_uom(item, value) {
       let new_uom = item.item_uoms.find((element) => element.uom == value);
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
 
       // try cached uoms when not found on item
       if (!new_uom) {
@@ -1972,7 +1981,6 @@ export default {
           item.base_price_list_rate = converted_rate;
 
           // Convert to selected currency
-          const baseCurrency = this.price_list_currency || this.pos_profile.currency;
           if (this.selected_currency !== baseCurrency) {
           // Convert base currency values using the current exchange rate
           item.rate = this.flt(converted_rate * this.exchange_rate, this.currency_precision);
@@ -2024,7 +2032,6 @@ export default {
         }
 
         // Convert to selected currency
-        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
         if (this.selected_currency !== baseCurrency) {
           // Convert base currency values to the selected currency
           item.rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
@@ -2064,6 +2071,7 @@ export default {
     // Set batch number for an item (and update batch data)
     set_batch_qty(item, value, update = true) {
       console.log('Setting batch quantity:', item, value);
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
       const existing_items = this.items.filter(
         (element) =>
           element.item_code == item.item_code &&

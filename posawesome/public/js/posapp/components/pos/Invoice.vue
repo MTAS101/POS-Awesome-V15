@@ -84,14 +84,38 @@
         </div>
 
         <!-- ItemsTable component with reorder event handler -->
-        <ItemsTable :headers="items_headers" :items="items" :expanded="expanded" :itemsPerPage="itemsPerPage"
-          :itemSearch="itemSearch" :pos_profile="pos_profile" :invoice_doc="invoice_doc" :invoiceType="invoiceType"
-          :displayCurrency="displayCurrency" :formatFloat="formatFloat" :formatCurrency="formatCurrency"
-          :currencySymbol="currencySymbol" :isNumber="isNumber" :setFormatedQty="setFormatedQty"
-          :calcStockQty="calc_stock_qty" :setFormatedCurrency="setFormatedCurrency" :calcPrices="calc_prices"
-          :calcUom="calc_uom" :removeItem="remove_item" :subtractOne="subtract_one" :addOne="add_one"
-          @update:expanded="expanded = $event" @reorder-items="handleItemReorder" @add-item-from-drag="handleItemDrop"
-          @show-drop-feedback="showDropFeedback" @item-dropped="showDropFeedback(false)" />
+        <ItemsTable
+          :headers="items_headers"
+          :items="items"
+          :expanded="expanded"
+          :itemsPerPage="itemsPerPage"
+          :itemSearch="itemSearch"
+          :pos_profile="pos_profile"
+          :invoice_doc="invoice_doc"
+          :invoiceType="invoiceType"
+          :displayCurrency="displayCurrency"
+          :formatFloat="formatFloat"
+          :formatCurrency="formatCurrency"
+          :currencySymbol="currencySymbol"
+          :isNumber="isNumber"
+          :setFormatedQty="setFormatedQty"
+          :calcStockQty="calc_stock_qty"
+          :setFormatedCurrency="setFormatedCurrency"
+          :calcPrices="calc_prices"
+          :calcUom="calc_uom"
+          :setSerialNo="set_serial_no"
+          :setBatchQty="set_batch_qty"
+          :validateDueDate="validate_due_date"
+          :removeItem="remove_item"
+          :subtractOne="subtract_one"
+          :addOne="add_one"
+          :toggleOffer="toggleOffer"
+          @update:expanded="expanded = $event"
+          @reorder-items="handleItemReorder"
+          @add-item-from-drag="handleItemDrop"
+          @show-drop-feedback="showDropFeedback"
+          @item-dropped="showDropFeedback(false)"
+        />
       </div>
     </v-card>
     <!-- Payment Section -->
