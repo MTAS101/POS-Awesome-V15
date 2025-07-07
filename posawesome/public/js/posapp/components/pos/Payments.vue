@@ -941,10 +941,18 @@ export default {
           vm.is_credit_return = false;
           vm.sales_person = "";
           vm.eventBus.emit("set_last_invoice", vm.invoice_doc.name);
-          vm.eventBus.emit("show_message", {
-            title: __("Invoice {0} is Submitted", [r.message.name]),
-            color: "success",
-          });
+          const docType = r.message.doctype || 'Sales Invoice';
+          if (docType === 'Sales Order') {
+            vm.eventBus.emit("show_message", {
+              title: __("Sales Order {0} Created", [r.message.name]),
+              color: "success",
+            });
+          } else {
+            vm.eventBus.emit("show_message", {
+              title: __("Invoice {0} is Submitted", [r.message.name]),
+              color: "success",
+            });
+          }
           frappe.utils.play_sound("submit");
           // Update local stock quantities immediately after successful
           // invoice submission so item availability reflects changes
