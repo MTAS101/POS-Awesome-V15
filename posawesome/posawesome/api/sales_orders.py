@@ -6,7 +6,7 @@ import json
 import frappe
 from erpnext.accounts.party import get_party_account
 from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
-from frappe.utils import nowdate
+from frappe.utils import getdate, nowdate
 
 
 @frappe.whitelist()
@@ -32,10 +32,37 @@ def search_orders(company, currency, order_name=None):
     return data
 
 
+def _map_delivery_dates(data):
+    """Ensure mandatory delivery_date fields are populated."""
+    def parse_date(value):
+        if not value:
+            return None
+        try:
+            return str(getdate(value))
+        except Exception:
+            return None
+
+    # Map order level delivery date
+    if not data.get("delivery_date") and data.get("posa_delivery_date"):
+        parsed = parse_date(data.get("posa_delivery_date"))
+        if parsed:
+            data["delivery_date"] = parsed
+
+    # Map item level delivery dates
+    for item in data.get("items", []):
+        if not item.get("delivery_date"):
+            delivery = item.get("posa_delivery_date") or data.get("delivery_date")
+            parsed = parse_date(delivery)
+            if parsed:
+                item["delivery_date"] = parsed
+
+
+
 @frappe.whitelist()
 def update_sales_order(data):
     """Create or update a Sales Order document."""
     data = json.loads(data)
+    _map_delivery_dates(data)
     if data.get("name") and frappe.db.exists("Sales Order", data.get("name")):
         so_doc = frappe.get_doc("Sales Order", data.get("name"))
         so_doc.update(data)
@@ -88,6 +115,7 @@ def _create_payment_entries(so_doc, payments):
 def submit_sales_order(order):
     """Submit sales order and create payment entries."""
     order = json.loads(order)
+    _map_delivery_dates(order)
     if order.get("name") and frappe.db.exists("Sales Order", order.get("name")):
         so_doc = frappe.get_doc("Sales Order", order.get("name"))
         so_doc.update(order)
