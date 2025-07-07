@@ -1846,6 +1846,8 @@ export default {
         return;
       }
 
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+
       if (!item.posa_offer_applied) {
         if (item.price_list_rate) {
           // Always work with base rates first
@@ -1876,7 +1878,6 @@ export default {
         item.rate = this.flt(price_list_rate - discount_amount, this.currency_precision);
 
         // Store base discount amount
-        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
         if (this.selected_currency !== baseCurrency) {
           // Convert discount amount back to base currency by multiplying by exchange rate
           item.base_discount_amount = this.flt(discount_amount / this.exchange_rate, this.currency_precision);
@@ -1887,12 +1888,11 @@ export default {
 
       // Calculate amounts
         item.amount = this.flt(item.qty * item.rate, this.currency_precision);
-        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-      if (this.selected_currency !== baseCurrency) {
+        if (this.selected_currency !== baseCurrency) {
           // Convert amount back to base currency by dividing by exchange rate
           item.base_amount = this.flt(item.amount / this.exchange_rate, this.currency_precision);
         } else {
-        item.base_amount = item.amount;
+          item.base_amount = item.amount;
       }
 
       this.$forceUpdate();
@@ -1901,6 +1901,7 @@ export default {
     // Update UOM (unit of measure) for an item and recalculate prices
     calc_uom(item, value) {
       let new_uom = item.item_uoms.find((element) => element.uom == value);
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
 
       // try cached uoms when not found on item
       if (!new_uom) {
@@ -1965,7 +1966,6 @@ export default {
           item.base_price_list_rate = converted_rate;
 
           // Convert to selected currency
-          const baseCurrency = this.price_list_currency || this.pos_profile.currency;
           if (this.selected_currency !== baseCurrency) {
           // Convert base currency values using the current exchange rate
           item.rate = this.flt(converted_rate * this.exchange_rate, this.currency_precision);
@@ -2017,7 +2017,6 @@ export default {
         }
 
         // Convert to selected currency
-        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
         if (this.selected_currency !== baseCurrency) {
           // Convert base currency values to the selected currency
           item.rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
@@ -2057,6 +2056,7 @@ export default {
     // Set batch number for an item (and update batch data)
     set_batch_qty(item, value, update = true) {
       console.log('Setting batch quantity:', item, value);
+      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
       const existing_items = this.items.filter(
         (element) =>
           element.item_code == item.item_code &&
