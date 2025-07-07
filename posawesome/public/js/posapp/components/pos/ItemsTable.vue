@@ -195,10 +195,20 @@
                 </div>
                 <div class="form-row">
                   <div class="form-field full-width">
-                    <v-autocomplete v-model="item.serial_no_selected" :items="item.serial_no_data" item-title="serial_no"
-                      variant="outlined" density="compact" chips color="primary" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field"
+                    <v-autocomplete
+                      v-model="item.serial_no_selected"
+                      :items="item.serial_no_data"
+                      item-title="serial_no"
+                      item-value="serial_no"
+                      variant="outlined"
+                      density="compact"
+                      chips
+                      color="primary"
+                      :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+                      class="dark-field"
                       :label="frappe._('Serial No')" multiple
-                      @update:model-value="setSerialNo(item)"></v-autocomplete>
+                      @update:model-value="setSerialNo(item)"
+                    ></v-autocomplete>
                   </div>
                 </div>
               </div>

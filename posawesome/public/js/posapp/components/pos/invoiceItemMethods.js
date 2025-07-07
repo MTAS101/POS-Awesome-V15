@@ -176,6 +176,10 @@ export default {
       new_item.posa_notes = "";
       new_item.posa_delivery_date = "";
       new_item.posa_row_id = this.makeid(20);
+      if (new_item.has_serial_no && !new_item.serial_no_selected) {
+        new_item.serial_no_selected = [];
+        new_item.serial_no_selected_count = 0;
+      }
       // Expand row if batch/serial required
       if (
         (!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) ||
