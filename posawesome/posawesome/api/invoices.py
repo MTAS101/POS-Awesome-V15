@@ -18,6 +18,7 @@ from posawesome.posawesome.api.utilities import (
     ensure_child_doctype,
     set_batch_nos_for_bundels,
 )  # Updated imports
+from posawesome.posawesome.api.invoice import make_sales_order
 
 
 def get_latest_rate(from_currency: str, to_currency: str):
@@ -276,6 +277,17 @@ def submit_invoice(invoice, data):
     frappe.flags.ignore_account_permission = True
     invoice_doc.posa_is_printed = 1
     invoice_doc.save()
+
+    if frappe.get_cached_value("POS Profile", invoice_doc.pos_profile, "posa_sales_order_only"):
+        sales_order_doc = make_sales_order(invoice_doc.name)
+        if sales_order_doc:
+            sales_order_doc.posa_notes = invoice_doc.posa_notes
+            sales_order_doc.flags.ignore_permissions = True
+            sales_order_doc.flags.ignore_account_permission = True
+            sales_order_doc.save()
+            sales_order_doc.submit()
+            frappe.delete_doc("Sales Invoice", invoice_doc.name, force=1)
+            return {"name": sales_order_doc.name, "doctype": "Sales Order"}
 
     if data.get("due_date"):
         frappe.db.set_value(
