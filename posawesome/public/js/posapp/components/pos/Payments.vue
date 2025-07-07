@@ -887,8 +887,12 @@ export default {
           return;
         }
       }
+      const submit_method =
+        this.pos_profile.posa_only_sales_order && this.invoiceType === "Order"
+          ? "posawesome.posawesome.api.invoices.submit_sales_order"
+          : "posawesome.posawesome.api.invoices.submit_invoice";
       frappe.call({
-        method: "posawesome.posawesome.api.invoices.submit_invoice",
+        method: submit_method,
         args: {
           data: data,
           invoice: this.invoice_doc,
@@ -941,8 +945,13 @@ export default {
           vm.is_credit_return = false;
           vm.sales_person = "";
           vm.eventBus.emit("set_last_invoice", vm.invoice_doc.name);
+          const msg =
+            submit_method ===
+            "posawesome.posawesome.api.invoices.submit_sales_order"
+              ? __("Sales Order {0} is Submitted", [r.message.name])
+              : __("Invoice {0} is Submitted", [r.message.name]);
           vm.eventBus.emit("show_message", {
-            title: __("Invoice {0} is Submitted", [r.message.name]),
+            title: msg,
             color: "success",
           });
           frappe.utils.play_sound("submit");
