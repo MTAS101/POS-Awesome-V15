@@ -5,7 +5,6 @@ DocType: POS Offer,Accounts User,Usuário de Contas
 Custom Field - label: Sales Invoice-posa_additional_notes_section,Additional Notes,Notas adicionais
 DocType: POS Closing Shift,Administrator,Administrador
 Custom Field - label: POS Profile-posa_allow_sales_order,Allow Create Sales Order,Permitir Criar Ordem de Vendas
-Custom Field - label: POS Profile-posa_sales_order_only,Create Sales Order Only,Criar apenas Ordem de Vendas
 Custom Field - label: POS Profile-posa_allow_credit_sale,Allow Credit Sale,Permitir Credito de Venda
 Custom Field - label: POS Profile-posa_allow_partial_payment,Allow Partial Payment,Permitir Pagamento Parcial
 Custom Field - label: POS Profile-posa_allow_return,Allow Return,Permitir Devolução
