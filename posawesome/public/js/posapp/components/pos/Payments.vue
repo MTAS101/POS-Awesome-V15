@@ -313,13 +313,13 @@
     <v-card flat class="cards mb-0 mt-3 py-0">
       <v-row align="start" no-gutters>
         <v-col cols="6">
-          <v-btn block size="large" color="primary" theme="dark" @click="submit" :loading="loading" :disabled="loading || vaildatPayment">
+          <v-btn block size="large" color="primary" theme="dark" @click="submit" :disabled="vaildatPayment">
             {{ __("Submit") }}
           </v-btn>
         </v-col>
         <v-col cols="6" class="pl-1">
           <v-btn block size="large" color="success" theme="dark" @click="submit(undefined, false, true)"
-            :loading="loading" :disabled="loading || vaildatPayment">
+            :disabled="vaildatPayment">
             {{ __("Submit & Print") }}
           </v-btn>
         </v-col>
@@ -836,7 +836,6 @@ export default {
         return;
       }
       // Proceed to submit the invoice
-      this.loading = true;
       this.submit_invoice(print);
     },
     // Submit invoice to backend after all validations
@@ -879,14 +878,12 @@ export default {
           vm.eventBus.emit("clear_invoice");
           vm.eventBus.emit("reset_posting_date");
           vm.back_to_invoice();
-          vm.loading = false;
           return;
         } catch (error) {
           vm.eventBus.emit("show_message", {
             title: __("Cannot Save Offline Invoice: ") + (error.message || __("Unknown error")),
             color: "error"
           });
-          vm.loading = false;
           return;
         }
       }
@@ -930,7 +927,6 @@ export default {
                 color: "error",
               });
             }
-            vm.loading = false;
             return;
           }
           if (!r.message) {
@@ -938,7 +934,6 @@ export default {
               title: __("Error submitting invoice: No response from server"),
               color: "error",
             });
-            vm.loading = false;
             return;
           }
           if (print) {
@@ -965,7 +960,6 @@ export default {
           vm.eventBus.emit("clear_invoice");
           vm.eventBus.emit("reset_posting_date");
           vm.back_to_invoice();
-          vm.loading = false;
         }
       });
     },
