@@ -2057,7 +2057,6 @@ export default {
     // Set batch number for an item (and update batch data)
     set_batch_qty(item, value, update = true) {
       console.log('Setting batch quantity:', item, value);
-      const baseCurrency = this.price_list_currency || this.pos_profile.currency;
       const existing_items = this.items.filter(
         (element) =>
           element.item_code == item.item_code &&
