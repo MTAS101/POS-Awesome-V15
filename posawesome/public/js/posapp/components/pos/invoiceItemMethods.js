@@ -2051,6 +2051,19 @@ export default {
       }
     },
 
+    // Update serial numbers selection for an item
+    update_serial_no(item, value) {
+      if (!item) return;
+      if (Array.isArray(value)) {
+        item.serial_no_selected = value;
+      } else if (value) {
+        item.serial_no_selected = [value];
+      } else {
+        item.serial_no_selected = [];
+      }
+      this.set_serial_no(item);
+    },
+
     // Set batch number for an item (and update batch data)
     set_batch_qty(item, value, update = true) {
       console.log('Setting batch quantity:', item, value);

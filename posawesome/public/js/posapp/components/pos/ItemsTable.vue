@@ -150,8 +150,8 @@
               <div class="form-row" v-if="item.has_serial_no || item.has_batch_no">
                 <div class="form-field" v-if="item.has_serial_no">
                   <v-autocomplete density="compact" variant="outlined" color="primary" :label="frappe._('Serial Numbers')"
-                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details clearable
-                    v-model="item.serial_no" :items="item.serial_no_data" item-title="serial_no" item-value="serial_no"
+                    :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details clearable multiple chips
+                    v-model="item.serial_no_selected" :items="item.serial_no_data" item-title="serial_no" item-value="serial_no"
                     @update:model-value="setSerialNo(item, $event)" :disabled="!!item.posa_is_replace"
                     prepend-inner-icon="mdi-numeric"></v-autocomplete>
                 </div>

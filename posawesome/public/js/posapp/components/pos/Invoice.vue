@@ -90,6 +90,7 @@
           :currencySymbol="currencySymbol" :isNumber="isNumber" :setFormatedQty="setFormatedQty"
           :calcStockQty="calc_stock_qty" :setFormatedCurrency="setFormatedCurrency" :calcPrices="calc_prices"
           :calcUom="calc_uom" :removeItem="remove_item" :subtractOne="subtract_one" :addOne="add_one"
+          :setSerialNo="update_serial_no" :setBatchQty="set_batch_qty"
           @update:expanded="expanded = $event" @reorder-items="handleItemReorder" @add-item-from-drag="handleItemDrop"
           @show-drop-feedback="showDropFeedback" @item-dropped="showDropFeedback(false)" />
       </div>
