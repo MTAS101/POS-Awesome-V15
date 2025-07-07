@@ -888,10 +888,14 @@ export default {
         }
       }
       frappe.call({
-        method: "posawesome.posawesome.api.invoices.submit_invoice",
+        method:
+          this.invoiceType === "Order" && this.pos_profile.posa_create_only_sales_order
+            ? "posawesome.posawesome.api.sales_orders.submit_sales_order"
+            : "posawesome.posawesome.api.invoices.submit_invoice",
         args: {
           data: data,
           invoice: this.invoice_doc,
+          order: this.invoice_doc,
         },
         callback: function (r) {
           if (r.exc) {
@@ -942,7 +946,10 @@ export default {
           vm.sales_person = "";
           vm.eventBus.emit("set_last_invoice", vm.invoice_doc.name);
           vm.eventBus.emit("show_message", {
-            title: __("Invoice {0} is Submitted", [r.message.name]),
+            title:
+              vm.invoiceType === "Order" && vm.pos_profile.posa_create_only_sales_order
+                ? __("Sales Order {0} is Submitted", [r.message.name])
+                : __("Invoice {0} is Submitted", [r.message.name]),
             color: "success",
           });
           frappe.utils.play_sound("submit");
