@@ -121,7 +121,7 @@
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Rate')"
                     :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                     :model-value="formatCurrency(item.rate)" @change="[
-                      setFormatedCurrency(item, 'rate', $event.target.value),
+                      setFormatedCurrency(item, 'rate', null, false, $event),
                       calcPrices(item)
                     ]" :disabled="!!item.posa_is_replace || !!item.posa_offer_applied"
                     prepend-inner-icon="mdi-currency-usd"></v-text-field>
@@ -130,7 +130,7 @@
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Discount %')"
                     :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                     :model-value="formatFloat(item.discount_percentage || 0)" @change="[
-                      setFormatedCurrency(item, 'discount_percentage', $event.target.value),
+                      setFormatedCurrency(item, 'discount_percentage', null, false, $event),
                       calcPrices(item)
                     ]" :disabled="!!item.posa_is_replace || !!item.posa_offer_applied"
                     prepend-inner-icon="mdi-percent"></v-text-field>
@@ -139,7 +139,7 @@
                   <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Discount Amount')"
                     :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
                     :model-value="formatCurrency(item.discount_amount || 0)" @change="[
-                      setFormatedCurrency(item, 'discount_amount', $event.target.value),
+                      setFormatedCurrency(item, 'discount_amount', null, false, $event),
                       calcPrices(item)
                     ]" :disabled="!!item.posa_is_replace || !!item.posa_offer_applied"
                     prepend-inner-icon="mdi-tag-minus"></v-text-field>
