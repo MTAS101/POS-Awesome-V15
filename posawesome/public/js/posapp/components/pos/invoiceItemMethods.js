@@ -117,6 +117,9 @@ export default {
     // Create a new item object with default and calculated fields
     get_new_item(item) {
       const new_item = { ...item };
+      if (!new_item.warehouse) {
+        new_item.warehouse = this.pos_profile.warehouse;
+      }
       if (!item.qty) {
         item.qty = 1;
       }
