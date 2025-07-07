@@ -23,7 +23,6 @@ from .customers import (
 from .invoices import (
     update_invoice,
     submit_invoice,
-    submit_sales_order,
     delete_invoice,
     get_draft_invoices,
     search_invoices_for_return,
