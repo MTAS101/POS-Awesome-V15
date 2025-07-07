@@ -483,7 +483,11 @@ export default {
       }
 
       // Always set these fields first
-      doc.doctype = "Sales Invoice";
+      if (this.invoiceType === "Order" && this.pos_profile.posa_create_only_sales_order) {
+        doc.doctype = "Sales Order";
+      } else {
+        doc.doctype = "Sales Invoice";
+      }
       doc.is_pos = 1;
       doc.ignore_pricing_rule = 1;
       doc.company = doc.company || this.pos_profile.company;
@@ -927,7 +931,10 @@ export default {
         return vm.invoice_doc;
       }
       frappe.call({
-        method: "posawesome.posawesome.api.invoices.update_invoice",
+        method:
+          doc.doctype === "Sales Order" && this.pos_profile.posa_create_only_sales_order
+            ? "posawesome.posawesome.api.sales_orders.update_sales_order"
+            : "posawesome.posawesome.api.invoices.update_invoice",
         args: {
           data: doc,
         },
@@ -1064,7 +1071,10 @@ export default {
         }
 
         let invoice_doc;
-        if (this.invoice_doc.doctype == "Sales Order") {
+        if (
+          this.invoice_doc.doctype == "Sales Order" &&
+          !this.pos_profile.posa_create_only_sales_order
+        ) {
           console.log('Processing Sales Order payment');
           invoice_doc = await this.process_invoice_from_order();
         } else {
