@@ -449,3 +449,10 @@
   pointer-events: none;
 }
 
+/* Allow manual resizing for POS panels */
+.resizable {
+  resize: vertical;
+  overflow: auto;
+  min-height: 100px;
+}
+
