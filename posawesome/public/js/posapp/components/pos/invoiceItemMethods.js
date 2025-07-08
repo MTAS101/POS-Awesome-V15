@@ -626,7 +626,7 @@ export default {
       // Add offer details
       doc.posa_offers = this.posa_offers;
       doc.posa_coupons = this.posa_coupons;
-      doc.posa_delivery_charges = this.selected_delivery_charge.name;
+      doc.posa_delivery_charges = this.selected_delivery_charge?.name || null;
       doc.posa_delivery_charges_rate = this.delivery_charges_rate || 0;
       doc.posting_date = this.formatDateForBackend(this.posting_date_display);
 
