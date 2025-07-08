@@ -25,31 +25,31 @@ export const memory = {
 	manual_offline: false,
 };
 
-// Initialize memory from IndexedDB
-(async () => {
+// Initialize memory from IndexedDB and expose a promise for consumers
+export const memoryInitPromise = (async () => {
         try {
                 await checkDbHealth();
                 for (const key of Object.keys(memory)) {
-			const stored = await db.table("keyval").get(key);
-			if (stored && stored.value !== undefined) {
-				memory[key] = stored.value;
-				continue;
-			}
-			if (typeof localStorage !== "undefined") {
-				const ls = localStorage.getItem(`posa_${key}`);
-				if (ls) {
-					try {
-						memory[key] = JSON.parse(ls);
-						continue;
-					} catch (err) {
-						console.error("Failed to parse localStorage for", key, err);
-					}
-				}
-			}
-		}
-	} catch (e) {
-		console.error("Failed to initialize memory from DB", e);
-	}
+                        const stored = await db.table("keyval").get(key);
+                        if (stored && stored.value !== undefined) {
+                                memory[key] = stored.value;
+                                continue;
+                        }
+                        if (typeof localStorage !== "undefined") {
+                                const ls = localStorage.getItem(`posa_${key}`);
+                                if (ls) {
+                                        try {
+                                                memory[key] = JSON.parse(ls);
+                                                continue;
+                                        } catch (err) {
+                                                console.error("Failed to parse localStorage for", key, err);
+                                        }
+                                }
+                        }
+                }
+        } catch (e) {
+                console.error("Failed to initialize memory from DB", e);
+        }
 })();
 
 // Reset cached invoices and customers after syncing
