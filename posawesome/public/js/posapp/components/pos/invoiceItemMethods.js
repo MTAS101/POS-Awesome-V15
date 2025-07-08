@@ -499,6 +499,13 @@ export default {
       } else {
         doc.doctype = "Sales Invoice";
       }
+
+      if (
+        doc.doctype === "Sales Invoice" &&
+        this.invoice_doc.doctype === "Sales Order"
+      ) {
+        delete doc.name;
+      }
       doc.is_pos = 1;
       doc.ignore_pricing_rule = 1;
       doc.company = doc.company || this.pos_profile.company;
