@@ -1089,7 +1089,7 @@ export default {
           invoice_doc = this.get_invoice_doc();
         } else if (
           this.invoice_doc.doctype == "Sales Order" &&
-          !this.pos_profile.posa_create_only_sales_order
+          this.invoiceType === "Invoice"
         ) {
           console.log('Processing Sales Order payment');
           invoice_doc = await this.process_invoice_from_order();
