@@ -335,6 +335,54 @@ body {
   background-color: var(--field-bg);
 }
 
+/* ===== SLEEK FIELD STYLES ===== */
+.v-autocomplete,
+.v-text-field,
+.v-select,
+.v-combobox {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.v-autocomplete .v-field,
+.v-text-field .v-field,
+.v-select .v-field,
+.v-combobox .v-field {
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+  background-color: var(--field-bg);
+}
+
+.v-autocomplete:hover .v-field,
+.v-text-field:hover .v-field,
+.v-select:hover .v-field,
+.v-combobox:hover .v-field {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.v-autocomplete input,
+.v-autocomplete .v-field__input,
+.v-autocomplete .v-label,
+.v-text-field input,
+.v-text-field .v-field__input,
+.v-text-field .v-label,
+.v-select input,
+.v-select .v-field__input,
+.v-select .v-label,
+.v-combobox input,
+.v-combobox .v-field__input,
+.v-combobox .v-label {
+  color: var(--text-primary);
+}
+
+.v-autocomplete .v-field__overlay,
+.v-text-field .v-field__overlay,
+.v-select .v-field__overlay,
+.v-combobox .v-field__overlay {
+  background-color: var(--field-bg);
+}
+
 /* ===== DIALOG STYLES ===== */
 .dialog-actions-container {
   background: linear-gradient(135deg, var(--dialog-bg-start) 0%, var(--dialog-bg-end) 100%);
