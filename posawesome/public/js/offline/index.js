@@ -11,10 +11,11 @@ export {
 
 // Cache exports
 export {
-	memory,
-	getItemsStorage,
-	setItemsStorage,
-	getCustomerStorage,
+        memory,
+        memoryInitPromise,
+        getItemsStorage,
+        setItemsStorage,
+        getCustomerStorage,
 	setCustomerStorage,
 	getSalesPersonsStorage,
 	setSalesPersonsStorage,

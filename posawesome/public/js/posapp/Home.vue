@@ -27,6 +27,8 @@ import {
   queueHealthCheck,
   purgeOldQueueEntries,
   MAX_QUEUE_ITEMS,
+  initPromise,
+  memoryInitPromise,
   toggleManualOffline,
   isManualOffline,
 } from '../offline/index.js';
@@ -80,7 +82,9 @@ export default {
       this.page = page;
     },
 
-    initializeData() {
+    async initializeData() {
+      await initPromise;
+      await memoryInitPromise;
       checkDbHealth().catch(() => {});
       // Load POS profile from cache or storage
       const openingData = getOpeningStorage();
@@ -104,6 +108,11 @@ export default {
 
       // Initialize manual offline state from cached value
       this.manualOffline = isManualOffline();
+      if (this.manualOffline) {
+        this.networkOnline = false;
+        this.serverOnline = false;
+        window.serverOnline = false;
+      }
     },
 
     setupNetworkListeners() {
@@ -458,6 +467,13 @@ export default {
     handleToggleOffline() {
       toggleManualOffline();
       this.manualOffline = isManualOffline();
+      if (this.manualOffline) {
+        this.networkOnline = false;
+        this.serverOnline = false;
+        window.serverOnline = false;
+      } else {
+        this.checkNetworkConnectivity();
+      }
     },
 
     handleToggleTheme() {
