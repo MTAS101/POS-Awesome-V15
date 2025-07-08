@@ -19,8 +19,8 @@
           </v-col>
           <!-- Invoice Type Selection (Only shown if sales orders are allowed) -->
           <v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-4">
-            <v-select density="compact" hide-details variant="outlined" color="primary"
-              :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" :items="invoiceTypes"
+            <v-select density="compact" hide-details variant="solo" color="primary"
+              :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" :items="invoiceTypes"
               :label="frappe._('Type')" v-model="invoiceType" :disabled="invoiceType == 'Return'"></v-select>
           </v-col>
         </v-row>

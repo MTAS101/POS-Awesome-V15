@@ -8,20 +8,20 @@
         auto-apply
         :placeholder="frappe._('Posting Date')"
         :dark="isDarkTheme"
-        class="dark-field"
+        class="dark-field sleek-field"
         @update:model-value="onUpdate"
       />
     </v-col>
     <v-col v-if="pos_profile.posa_enable_price_list_dropdown" cols="6" class="pb-2 d-flex align-center">
       <v-select
         density="comfortable"
-        variant="outlined"
+        variant="solo"
         color="primary"
         :items="priceLists"
         :label="frappe._('Price List')"
         v-model="internal_price_list"
         hide-details
-        class="flex-grow-1"
+        class="flex-grow-1 sleek-field"
         @update:model-value="onPriceListUpdate"
       />
       <div
