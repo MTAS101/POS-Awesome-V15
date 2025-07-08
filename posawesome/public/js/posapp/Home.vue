@@ -20,7 +20,16 @@
 import Navbar from './components/Navbar.vue';
 import POS from './components/pos/Pos.vue';
 import Payments from './components/payments/Pay.vue';
-import { getOpeningStorage, getCacheUsageEstimate, checkDbHealth, queueHealthCheck, purgeOldQueueEntries, MAX_QUEUE_ITEMS } from '../offline/index.js';
+import {
+  getOpeningStorage,
+  getCacheUsageEstimate,
+  checkDbHealth,
+  queueHealthCheck,
+  purgeOldQueueEntries,
+  MAX_QUEUE_ITEMS,
+  toggleManualOffline,
+  isManualOffline,
+} from '../offline/index.js';
 import { silentPrint } from './plugins/print.js';
 
 export default {
@@ -92,6 +101,9 @@ export default {
 
       // Check if running on IP host
       this.isIpHost = /^\d+\.\d+\.\d+\.\d+/.test(window.location.hostname);
+
+      // Initialize manual offline state from cached value
+      this.manualOffline = isManualOffline();
     },
 
     setupNetworkListeners() {
@@ -444,7 +456,8 @@ export default {
     },
 
     handleToggleOffline() {
-      this.manualOffline = !this.manualOffline;
+      toggleManualOffline();
+      this.manualOffline = isManualOffline();
     },
 
     handleToggleTheme() {
