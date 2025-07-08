@@ -1101,13 +1101,15 @@ export default {
 
 /* Dynamic padding for responsive layout */
 .dynamic-padding {
-  padding: var(--dynamic-xs) var(--dynamic-sm) var(--dynamic-xs) var(--dynamic-sm);
+  /* Uniform spacing for better alignment */
+  padding: var(--dynamic-sm);
 }
 
 /* Responsive breakpoints */
 @media (max-width: 768px) {
   .dynamic-padding {
-    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+    /* Smaller uniform padding on tablets */
+    padding: var(--dynamic-xs);
   }
 
   .dynamic-padding .v-row {
@@ -1121,7 +1123,7 @@ export default {
 
 @media (max-width: 480px) {
   .dynamic-padding {
-    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+    padding: var(--dynamic-xs);
   }
 
   .dynamic-padding .v-row {

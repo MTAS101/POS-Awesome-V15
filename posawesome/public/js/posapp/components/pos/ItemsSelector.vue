@@ -1848,7 +1848,8 @@ export default {
 }
 
 .dynamic-padding {
-  padding: var(--dynamic-xs) var(--dynamic-sm) var(--dynamic-xs) var(--dynamic-sm);
+  /* Equal spacing on all sides for consistent alignment */
+  padding: var(--dynamic-sm);
 }
 
 .dynamic-scroll {
@@ -1939,7 +1940,8 @@ export default {
 /* Responsive breakpoints */
 @media (max-width: 768px) {
   .dynamic-padding {
-    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+    /* Reduce spacing uniformly on smaller screens */
+    padding: var(--dynamic-xs);
   }
 
   .dynamic-spacing-sm {
@@ -1954,7 +1956,7 @@ export default {
 
 @media (max-width: 480px) {
   .dynamic-padding {
-    padding: var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs) var(--dynamic-xs);
+    padding: var(--dynamic-xs);
   }
 
   .cards {
