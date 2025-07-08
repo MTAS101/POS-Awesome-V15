@@ -6,8 +6,8 @@
 
     <!-- Main Invoice Card (contains all invoice content) -->
     <v-card
-      :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)', backgroundColor: isDarkTheme ? '#121212' : '' }"
-      :class="['cards my-0 py-0 mt-3', isDarkTheme ? '' : 'bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]">
+      :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)', backgroundColor: isDarkTheme ? '#121212' : '', resize: 'vertical', overflow: 'auto' }"
+      :class="['cards my-0 py-0 mt-3 resizable', isDarkTheme ? '' : 'bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]">
 
       <!-- Dynamic padding wrapper -->
       <div class="dynamic-padding">

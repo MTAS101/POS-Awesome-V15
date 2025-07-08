@@ -1,7 +1,7 @@
 <template>
   <v-card
-    :class="['cards mb-0 mt-3 py-2 px-3 rounded-lg', isDarkTheme ? '' : 'bg-grey-lighten-4']"
-    :style="isDarkTheme ? 'background-color:#1E1E1E' : ''"
+    :class="['cards mb-0 mt-3 py-2 px-3 rounded-lg resizable', isDarkTheme ? '' : 'bg-grey-lighten-4']"
+    :style="(isDarkTheme ? 'background-color:#1E1E1E;' : '') + 'resize: vertical; overflow: auto;'"
   >
     <v-row dense>
       <!-- Summary Info -->

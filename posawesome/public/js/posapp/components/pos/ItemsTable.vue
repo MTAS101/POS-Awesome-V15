@@ -1,6 +1,6 @@
 <template>
   <div class="my-0 py-0 overflow-y-auto items-table-container"
-    :style="{ height: 'calc(var(--container-height) - 80px)', maxHeight: 'calc(var(--container-height) - 80px)' }"
+    :style="{ height: 'calc(100% - 80px)', maxHeight: 'calc(100% - 80px)' }"
     @dragover="onDragOverFromSelector($event)" @drop="onDropFromSelector($event)" @dragenter="onDragEnterFromSelector"
     @dragleave="onDragLeaveFromSelector">
     <v-data-table-virtual :headers="headers" :items="items" :theme="$theme.current" :expanded="expanded" show-expand

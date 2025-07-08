@@ -1,7 +1,7 @@
 <template>
   <div :style="responsiveStyles">
-    <v-card :class="['selection mx-auto my-0 py-0 mt-3 dynamic-card', isDarkTheme ? '' : 'bg-grey-lighten-5']"
-      :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'], backgroundColor: isDarkTheme ? '#121212' : '' }">
+    <v-card :class="['selection mx-auto my-0 py-0 mt-3 dynamic-card resizable', isDarkTheme ? '' : 'bg-grey-lighten-5']"
+      :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'], backgroundColor: isDarkTheme ? '#121212' : '', resize: 'vertical', overflow: 'auto' }">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
       <v-overlay :model-value="loading" class="align-center justify-center" absolute>
@@ -66,7 +66,7 @@
           </v-col>
           <v-col cols="12" class="pt-0 mt-0">
             <div fluid class="items-grid dynamic-scroll" ref="itemsContainer" v-if="items_view == 'card'"
-              :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }">
+              :style="{ maxHeight: 'calc(100% - 80px)' }">
               <v-card v-for="item in filtered_items" :key="item.item_code" hover class="dynamic-item-card"
                 :draggable="true"
                 @dragstart="onDragStart($event, item)"
@@ -100,7 +100,7 @@
             </div>
             <div v-else>
               <v-data-table-virtual :headers="headers" :items="filtered_items" class="sleek-data-table overflow-y-auto"
-                :style="{ maxHeight: 'calc(' + responsiveStyles['--container-height'] + ' - 80px)' }"
+                :style="{ maxHeight: 'calc(100% - 80px)' }"
                 item-key="item_code" @click:row="click_item_row">
 
                 <template v-slot:item.rate="{ item }">
@@ -126,7 +126,7 @@
         </v-row>
       </div>
     </v-card>
-    <v-card class="cards mb-0 mt-3 dynamic-padding">
+    <v-card class="cards mb-0 mt-3 dynamic-padding resizable" style="resize: vertical; overflow: auto;">
       <v-row no-gutters align="center" justify="center" class="dynamic-spacing-sm">
         <v-col cols="12" class="mb-2">
           <v-select :items="items_group" :label="frappe._('Items Group')" density="compact" variant="solo" hide-details
