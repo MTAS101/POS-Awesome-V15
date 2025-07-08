@@ -1,13 +1,13 @@
 <template>
   <div class="pa-0">
-    <v-card :class="['selection mx-auto pa-1 my-0 py-0 mt-3', isDarkTheme ? '' : 'bg-grey-lighten-5']"
+    <v-card :class="['selection mx-auto pa-1 my-0 mt-3', isDarkTheme ? '' : 'bg-grey-lighten-5']"
       :style="isDarkTheme ? 'background-color:#1E1E1E' : ''" style="max-height: 68vh; height: 68vh">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
-      <div class="overflow-y-auto px-2 pt-2" style="max-height: 67vh">
+      <div class="overflow-y-auto pa-2" style="max-height: 67vh">
 
         <!-- Payment Summary (Paid, To Be Paid, Change) -->
-        <v-row v-if="invoice_doc" class="px-1 py-0" dense>
+        <v-row v-if="invoice_doc" class="pa-1" dense>
           <v-col cols="7">
             <v-text-field variant="outlined" color="primary" :label="frappe._('Paid Amount')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
@@ -43,7 +43,7 @@
 
         <!-- Payment Inputs (All Payment Methods) -->
         <div v-if="is_cashback">
-          <v-row class="payments px-1 py-0" v-for="(payment, index) in invoice_doc.payments" :key="payment.name">
+          <v-row class="payments pa-1" v-for="(payment, index) in invoice_doc.payments" :key="payment.name">
             <v-col cols="6" v-if="!is_mpesa_c2b_payment(payment)">
               <v-text-field density="compact" variant="outlined" color="primary"
                 :label="frappe._(payment.mode_of_payment)" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
@@ -81,7 +81,7 @@
         </div>
 
         <!-- Loyalty Points Redemption -->
-        <v-row class="payments px-1 py-0" v-if="invoice_doc && available_points_amount > 0 && !invoice_doc.is_return">
+        <v-row class="payments pa-1" v-if="invoice_doc && available_points_amount > 0 && !invoice_doc.is_return">
           <v-col cols="7">
             <v-text-field density="compact" variant="outlined" color="primary"
               :label="frappe._('Redeem Loyalty Points')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
@@ -98,7 +98,7 @@
         </v-row>
 
         <!-- Customer Credit Redemption -->
-        <v-row class="payments px-1 py-0"
+        <v-row class="payments pa-1"
           v-if="invoice_doc && available_customer_credit > 0 && !invoice_doc.is_return && redeem_customer_credit">
           <v-col cols="7">
             <v-text-field density="compact" variant="outlined" color="primary"
@@ -118,7 +118,7 @@
         <v-divider></v-divider>
 
         <!-- Invoice Totals (Net, Tax, Total, Discount, Grand, Rounded) -->
-        <v-row class="px-1 py-0">
+        <v-row class="pa-1">
           <v-col cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Net Total')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field"
@@ -218,7 +218,7 @@
         <!-- Customer Purchase Order (if enabled in POS profile) -->
         <div v-if="pos_profile.posa_allow_customer_purchase_order">
           <v-divider></v-divider>
-          <v-row class="px-1 py-0" justify="center" align="start">
+          <v-row class="pa-1" justify="center" align="start">
             <v-col cols="6">
               <v-text-field v-model="invoice_doc.po_no" :label="frappe._('Purchase Order')" variant="outlined"
                 density="compact" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" clearable
@@ -236,19 +236,19 @@
         <v-divider></v-divider>
 
         <!-- Switches for Write Off and Credit Sale -->
-        <v-row class="px-1 py-0" align="start" no-gutters>
+        <v-row class="pa-1" align="start" no-gutters>
           <v-col cols="6" v-if="pos_profile.posa_allow_write_off_change && credit_change > 0 && !invoice_doc.is_return">
             <v-switch v-model="is_write_off_change" flat :label="frappe._('Write Off Difference Amount')"
-              class="my-0 py-0"></v-switch>
+              class="my-0 pa-1"></v-switch>
           </v-col>
           <v-col cols="6" v-if="pos_profile.posa_allow_credit_sale && !invoice_doc.is_return">
             <v-switch v-model="is_credit_sale" :label="frappe._('Credit Sale?')"></v-switch>
           </v-col>
           <v-col cols="6" v-if="invoice_doc.is_return && pos_profile.use_cashback">
-            <v-switch v-model="is_cashback" flat :label="frappe._('Cashback?')" class="my-0 py-0"></v-switch>
+            <v-switch v-model="is_cashback" flat :label="frappe._('Cashback?')" class="my-0 pa-1"></v-switch>
           </v-col>
           <v-col cols="6" v-if="invoice_doc.is_return">
-            <v-switch v-model="is_credit_return" flat :label="frappe._('Credit Return?')" class="my-0 py-0"></v-switch>
+            <v-switch v-model="is_credit_return" flat :label="frappe._('Credit Return?')" class="my-0 pa-1"></v-switch>
           </v-col>
           <v-col cols="6" v-if="is_credit_sale">
             <VueDatePicker v-model="new_credit_due_date" model-type="format" format="dd-MM-yyyy" :min-date="new Date()"
@@ -264,7 +264,7 @@
             </div>
           </v-col>
           <v-col cols="6" v-if="!invoice_doc.is_return && pos_profile.use_customer_credit">
-            <v-switch v-model="redeem_customer_credit" flat :label="frappe._('Use Customer Credit')" class="my-0 py-0"
+            <v-switch v-model="redeem_customer_credit" flat :label="frappe._('Use Customer Credit')" class="my-0 pa-1"
               @change="get_available_credit(redeem_customer_credit)"></v-switch>
           </v-col>
         </v-row>
@@ -310,7 +310,7 @@
     </v-card>
 
     <!-- Action Buttons -->
-    <v-card flat class="cards mb-0 mt-3 py-0">
+    <v-card flat class="cards mb-0 mt-3 pa-0">
       <v-row align="start" no-gutters>
         <v-col cols="6">
           <v-btn block size="large" color="primary" theme="dark" @click="submit" :loading="loading" :disabled="loading || vaildatPayment">
