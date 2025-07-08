@@ -335,6 +335,33 @@ body {
   background-color: var(--field-bg);
 }
 
+/* ===== SLEEK FIELD STYLES ===== */
+.sleek-field {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sleek-field .v-field {
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+  background-color: var(--field-bg);
+}
+
+.sleek-field:hover .v-field {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.sleek-field input,
+.sleek-field .v-field__input,
+.sleek-field .v-label {
+  color: var(--text-primary);
+}
+
+.sleek-field .v-field__overlay {
+  background-color: var(--field-bg);
+}
+
 /* ===== DIALOG STYLES ===== */
 .dialog-actions-container {
   background: linear-gradient(135deg, var(--dialog-bg-start) 0%, var(--dialog-bg-end) 100%);

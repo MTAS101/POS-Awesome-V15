@@ -1,21 +1,21 @@
 <template>
   <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_multi_currency">
     <v-col cols="4" class="pb-2">
-      <v-select density="compact" variant="outlined" color="primary" :label="frappe._('Currency')"
-        :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+      <v-select density="compact" variant="solo" color="primary" :label="frappe._('Currency')"
+        :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
         v-model="internal_selected_currency" :items="available_currencies"
         @update:model-value="onCurrencyUpdate"></v-select>
     </v-col>
     <v-col cols="4" class="pb-2">
-      <v-text-field density="compact" variant="outlined" color="primary"
+      <v-text-field density="compact" variant="solo" color="primary"
         :label="'Price List ' + price_list_currency + ' to ' + internal_selected_currency"
-        :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+        :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
         v-model="internal_plc_rate" :rules="[isNumber]"
         @change="onPlcRateChange"></v-text-field>
     </v-col>
     <v-col cols="4" class="pb-2">
-      <v-text-field density="compact" variant="outlined" color="primary"
-        :label="frappe._('Conversion Rate')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+      <v-text-field density="compact" variant="solo" color="primary"
+        :label="frappe._('Conversion Rate')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
         v-model="internal_conversion_rate" :rules="[isNumber]"
         @change="onConversionChange"></v-text-field>
     </v-col>
