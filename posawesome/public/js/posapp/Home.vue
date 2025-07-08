@@ -106,6 +106,7 @@ export default {
       window.addEventListener('offline', () => {
         this.networkOnline = false;
         this.serverOnline = false;
+        window.serverOnline = false;
         console.log('Network: Offline');
         this.$forceUpdate();
       });
@@ -176,11 +177,13 @@ export default {
         if (isConnected) {
           this.networkOnline = true;
           this.serverOnline = true;
+          window.serverOnline = true;
           this.serverConnecting = false;
           console.log('Network: Connected');
         } else {
           this.networkOnline = navigator.onLine;
           this.serverOnline = false;
+          window.serverOnline = false;
           this.serverConnecting = false;
           console.log('Network: Disconnected');
         }
@@ -192,6 +195,7 @@ export default {
         console.warn('Network connectivity check failed:', error);
         this.networkOnline = navigator.onLine;
         this.serverOnline = false;
+        window.serverOnline = false;
         this.serverConnecting = false;
         this.$forceUpdate();
       }
@@ -356,6 +360,7 @@ export default {
       if (frappe.realtime) {
         frappe.realtime.on('connect', () => {
           this.serverOnline = true;
+          window.serverOnline = true;
           this.serverConnecting = false;
           console.log('Server: Connected via WebSocket');
           this.$forceUpdate();
@@ -363,6 +368,7 @@ export default {
 
         frappe.realtime.on('disconnect', () => {
           this.serverOnline = false;
+          window.serverOnline = false;
           this.serverConnecting = false;
           console.log('Server: Disconnected from WebSocket');
           // Trigger connectivity check to verify if it's just WebSocket or full network
@@ -377,6 +383,7 @@ export default {
 
         frappe.realtime.on('reconnect', () => {
           console.log('Server: Reconnected to WebSocket');
+          window.serverOnline = true;
           this.checkNetworkConnectivity();
         });
       }
