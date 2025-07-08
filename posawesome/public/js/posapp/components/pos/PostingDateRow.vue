@@ -135,4 +135,24 @@ export default {
   background-color: #1E1E1E !important;
   color: #fff !important;
 }
+
+/* Sleek design for VueDatePicker */
+:deep(.sleek-field) .dp__input_wrap {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+:deep(.sleek-field) .dp__input {
+  width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.3s ease;
+  background-color: var(--field-bg);
+  color: var(--text-primary);
+  padding: 10px 12px;
+}
+
+:deep(.sleek-field:hover) .dp__input {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
 </style>
