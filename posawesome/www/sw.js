@@ -1,4 +1,15 @@
 const CACHE_NAME = 'posawesome-cache-v1';
+const MAX_CACHE_ITEMS = 1000;
+
+async function enforceCacheLimit(cache) {
+  const keys = await cache.keys();
+  if (keys.length > MAX_CACHE_ITEMS) {
+    const excess = keys.length - MAX_CACHE_ITEMS;
+    for (let i = 0; i < excess; i++) {
+      await cache.delete(keys[i]);
+    }
+  }
+}
 
 self.addEventListener('install', event => {
   self.skipWaiting();
@@ -27,6 +38,7 @@ self.addEventListener('install', event => {
           console.warn('SW install failed to fetch', url, err);
         }
       }));
+      await enforceCacheLimit(cache);
     })()
   );
 });
@@ -38,6 +50,8 @@ self.addEventListener('activate', event => {
       await Promise.all(
         keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       );
+      const cache = await caches.open(CACHE_NAME);
+      await enforceCacheLimit(cache);
       await self.clients.claim();
     })()
   );
@@ -78,6 +92,7 @@ self.addEventListener('fetch', event => {
             const clone = resp.clone();
             const cache = await caches.open(CACHE_NAME);
             await cache.put(event.request, clone);
+            await enforceCacheLimit(cache);
           } catch (e) {
             console.warn('SW cache put failed', e);
           }

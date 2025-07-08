@@ -1,5 +1,8 @@
 import { db, persist, checkDbHealth } from './core.js';
+import { getAllByCursor } from './db-utils.js';
 import Dexie from 'dexie';
+
+export const MAX_QUEUE_ITEMS = 1000;
 
 // Memory cache object
 export const memory = {
@@ -153,7 +156,29 @@ export function setManualOffline(state) {
 }
 
 export function toggleManualOffline() {
-	setManualOffline(!memory.manual_offline);
+        setManualOffline(!memory.manual_offline);
+}
+
+export function queueHealthCheck(limit = MAX_QUEUE_ITEMS) {
+        const inv = (memory.offline_invoices || []).length > limit;
+        const cus = (memory.offline_customers || []).length > limit;
+        const pay = (memory.offline_payments || []).length > limit;
+        return inv || cus || pay;
+}
+
+export function purgeOldQueueEntries(limit = MAX_QUEUE_ITEMS) {
+        if (Array.isArray(memory.offline_invoices) && memory.offline_invoices.length > limit) {
+                memory.offline_invoices.splice(0, memory.offline_invoices.length - limit);
+                persist("offline_invoices", memory.offline_invoices);
+        }
+        if (Array.isArray(memory.offline_customers) && memory.offline_customers.length > limit) {
+                memory.offline_customers.splice(0, memory.offline_customers.length - limit);
+                persist("offline_customers", memory.offline_customers);
+        }
+        if (Array.isArray(memory.offline_payments) && memory.offline_payments.length > limit) {
+                memory.offline_payments.splice(0, memory.offline_payments.length - limit);
+                persist("offline_payments", memory.offline_payments);
+        }
 }
 
 export async function clearAllCache() {
@@ -214,12 +239,12 @@ export async function getCacheUsageEstimate() {
       }
     }
 
-    // Estimate IndexedDB size
+    // Estimate IndexedDB size using cursor to avoid loading everything in memory
     let indexedDBSize = 0;
     try {
       if (db.isOpen()) {
-        const allItems = await db.table("keyval").toArray();
-        indexedDBSize = allItems.reduce((size, item) => {
+        const entries = await getAllByCursor('keyval');
+        indexedDBSize = entries.reduce((size, item) => {
           const itemSize = JSON.stringify(item).length * 2; // UTF-16 characters are 2 bytes each
           return size + itemSize;
         }, 0);

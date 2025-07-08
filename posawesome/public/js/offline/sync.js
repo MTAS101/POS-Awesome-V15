@@ -1,4 +1,4 @@
-import { memory, resetOfflineState, setLastSyncTotals } from './cache.js';
+import { memory, resetOfflineState, setLastSyncTotals, MAX_QUEUE_ITEMS } from './cache.js';
 import { persist } from './core.js';
 import { updateLocalStock } from './stock.js';
 
@@ -23,6 +23,9 @@ export function saveOfflineInvoice(entry) {
     }
 
     entries.push(cleanEntry);
+    if (entries.length > MAX_QUEUE_ITEMS) {
+        entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
+    }
     memory.offline_invoices = entries;
     persist(key, memory.offline_invoices);
 
@@ -103,6 +106,9 @@ export function saveOfflinePayment(entry) {
         throw e;
     }
     entries.push(cleanEntry);
+    if (entries.length > MAX_QUEUE_ITEMS) {
+        entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
+    }
     memory.offline_payments = entries;
     persist(key, memory.offline_payments);
 }
@@ -140,6 +146,9 @@ export function saveOfflineCustomer(entry) {
         throw e;
     }
     entries.push(cleanEntry);
+    if (entries.length > MAX_QUEUE_ITEMS) {
+        entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
+    }
     memory.offline_customers = entries;
     persist(key, memory.offline_customers);
 }
