@@ -400,6 +400,11 @@ export default {
   transition: all 0.3s ease;
 }
 
+/* Ensure items table can scroll when many rows exist */
+.items-table-container {
+  overflow-y: auto;
+}
+
 /* Table wrapper styling */
 .modern-items-table :deep(.v-data-table__wrapper),
 .modern-items-table :deep(.v-table__wrapper) {
