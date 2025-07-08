@@ -8,7 +8,7 @@
         auto-apply
         :placeholder="frappe._('Posting Date')"
         :dark="isDarkTheme"
-        class="dark-field sleek-field"
+        class="dark-field sleek-field posting-date-input"
         @update:model-value="onUpdate"
       />
     </v-col>
@@ -154,5 +154,21 @@ export default {
 
 :deep(.sleek-field:hover) .dp__input {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+/* Align calendar icon to the right, before the clear icon */
+.posting-date-input :deep(.dp__input_icon) {
+  inset-inline-start: auto;
+  inset-inline-end: 30px;
+}
+
+/* Remove extra left padding added for left icon placement */
+.posting-date-input :deep(.dp__input_icon_pad) {
+  padding-inline-start: 12px;
+}
+
+/* Increase right padding to accommodate both icons */
+.posting-date-input :deep(.dp__input) {
+  padding-right: calc(30px + var(--dp-input-icon-padding));
 }
 </style>
