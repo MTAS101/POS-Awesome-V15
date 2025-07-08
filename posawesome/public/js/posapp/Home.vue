@@ -21,6 +21,7 @@ import Navbar from './components/Navbar.vue';
 import POS from './components/pos/Pos.vue';
 import Payments from './components/payments/Pay.vue';
 import { getOpeningStorage, getCacheUsageEstimate, checkDbHealth, queueHealthCheck, purgeOldQueueEntries, MAX_QUEUE_ITEMS } from '../offline/index.js';
+import { silentPrint } from './plugins/print.js';
 
 export default {
   data: function () {
@@ -339,6 +340,16 @@ export default {
         this.eventBus.on('register_pos_profile', (data) => {
           this.posProfile = data.pos_profile || {};
         });
+
+        // Track last submitted invoice id
+        this.eventBus.on('set_last_invoice', (invoiceId) => {
+          this.lastInvoiceId = invoiceId;
+        });
+
+        // Allow other components to trigger printing
+        this.eventBus.on('print_last_invoice', () => {
+          this.handlePrintLastInvoice();
+        });
       }
 
       // Enhanced server connection status listeners
@@ -389,8 +400,35 @@ export default {
     },
 
     handlePrintLastInvoice() {
-      // Handle print last invoice
-      this.eventBus.emit('print_last_invoice');
+      if (!this.lastInvoiceId) {
+        return;
+      }
+
+      const print_format =
+        this.posProfile.print_format_for_online || this.posProfile.print_format;
+      const letter_head = this.posProfile.letter_head || 0;
+      const url =
+        frappe.urllib.get_base_url() +
+        '/printview?doctype=Sales%20Invoice&name=' +
+        this.lastInvoiceId +
+        '&trigger_print=1' +
+        '&format=' +
+        print_format +
+        '&no_letterhead=' +
+        letter_head;
+
+      if (this.posProfile.posa_silent_print) {
+        silentPrint(url);
+      } else {
+        const printWindow = window.open(url, 'Print');
+        printWindow.addEventListener(
+          'load',
+          function () {
+            printWindow.print();
+          },
+          { once: true }
+        );
+      }
     },
 
     handleSyncInvoices() {
