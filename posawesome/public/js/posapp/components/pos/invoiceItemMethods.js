@@ -207,6 +207,9 @@ export default {
       // Reset posting date to today
       this.posting_date = frappe.datetime.nowdate();
 
+      // Reset price list to default
+      this.update_price_list();
+
       // Always reset to default customer after invoice
       this.customer = this.pos_profile.customer;
 
