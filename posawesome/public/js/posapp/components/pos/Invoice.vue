@@ -49,12 +49,13 @@
           @update:conversion_rate="(val) => { conversion_rate = val; update_conversion_rate(); }" />
 
         <!-- Items Table Section (Main items list for invoice) -->
-        <!-- Add this right before the ItemsTable component -->
-        <div class="column-selector-container">
-          <v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-cog-outline"
-            @click="toggleColumnSelection" class="column-selector-btn">
-            {{ __('Columns') }}
-          </v-btn>
+        <div class="items-table-wrapper">
+          <!-- Column selector button moved outside the table -->
+          <div class="column-selector-container">
+            <v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-cog-outline"
+              @click="toggleColumnSelection" class="column-selector-btn">
+              {{ __('Columns') }}
+            </v-btn>
 
           <v-dialog v-model="show_column_selector" max-width="500px">
             <v-card>
@@ -81,14 +82,14 @@
               </v-card-actions>
             </v-card>
           </v-dialog>
-        </div>
+          </div>
 
-        <!-- ItemsTable component with reorder event handler -->
-        <ItemsTable
-          :headers="items_headers"
-          :items="items"
-          :expanded="expanded"
-          :itemsPerPage="itemsPerPage"
+          <!-- ItemsTable component with reorder event handler -->
+          <ItemsTable
+            :headers="items_headers"
+            :items="items"
+            :expanded="expanded"
+            :itemsPerPage="itemsPerPage"
           :itemSearch="itemSearch"
           :pos_profile="pos_profile"
           :invoice_doc="invoice_doc"
@@ -116,6 +117,7 @@
           @show-drop-feedback="showDropFeedback"
           @item-dropped="showDropFeedback(false)"
         />
+        </div>
       </div>
     </v-card>
     <!-- Payment Section -->
@@ -1141,6 +1143,10 @@ export default {
   padding: 8px 16px;
   background-color: var(--surface-secondary);
   border-radius: 8px 8px 0 0;
+  position: absolute;
+  top: 0;
+  right: 0;
+  transform: translateY(-100%);
 }
 
 :deep(.dark-theme) .column-selector-container,
@@ -1150,6 +1156,10 @@ export default {
 
 .column-selector-btn {
   font-size: 0.875rem;
+}
+
+.items-table-wrapper {
+  position: relative;
 }
 
 /* New styles for improved column switches */
@@ -1169,5 +1179,4 @@ export default {
 :deep(.column-switch .v-label) {
   opacity: 0.9;
   font-size: 0.95rem;
-}
-</style>
+}</style>
