@@ -489,12 +489,15 @@ export default {
 
 <style scoped>
 .container1 {
-  height: 100vh;
+  /* Use dynamic viewport units for better mobile support */
+  height: 100dvh;
+  max-height: 100dvh;
   overflow: hidden;
 }
 
 .main-content {
-  height: 100vh;
+  /* Fill the available height of the container */
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -509,6 +512,7 @@ export default {
 :deep(.v-main__wrap) {
   display: flex;
   flex-direction: column;
+  min-height: 100%;
   height: 100%;
 }
 </style>
