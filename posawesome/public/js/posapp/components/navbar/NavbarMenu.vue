@@ -1,5 +1,5 @@
 <template>
-  <v-menu offset-y :min-width="240" :close-on-content-click="false" location="bottom end" :offset="[0, 4]">
+  <v-menu offset-y :min-width="240" :close-on-content-click="true" location="bottom end" :offset="[0, 4]">
     <template #activator="{ props }">
       <v-btn v-bind="props" color="primary" variant="elevated" class="menu-btn-compact">
         {{ __('Menu') }}
