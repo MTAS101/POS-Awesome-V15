@@ -2,10 +2,11 @@
 
 // Core exports
 export {
-	db,
-	initPromise,
-	persist,
-	addToPersistQueue
+        db,
+        initPromise,
+        persist,
+        addToPersistQueue,
+        checkDbHealth
 } from './core.js';
 
 // Cache exports

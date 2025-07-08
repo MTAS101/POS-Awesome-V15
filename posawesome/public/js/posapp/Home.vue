@@ -20,7 +20,7 @@
 import Navbar from './components/Navbar.vue';
 import POS from './components/pos/Pos.vue';
 import Payments from './components/payments/Pay.vue';
-import { getOpeningStorage, getCacheUsageEstimate } from '../offline/index.js';
+import { getOpeningStorage, getCacheUsageEstimate, checkDbHealth } from '../offline/index.js';
 
 export default {
   data: function () {
@@ -71,6 +71,7 @@ export default {
     },
 
     initializeData() {
+      checkDbHealth().catch(() => {});
       // Load POS profile from cache or storage
       const openingData = getOpeningStorage();
       if (openingData && openingData.pos_profile) {

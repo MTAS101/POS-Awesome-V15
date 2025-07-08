@@ -4,6 +4,25 @@ import Dexie from "dexie";
 export const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
 
+export async function checkDbHealth() {
+    try {
+        await db.table('keyval').get('health_check');
+        return true;
+    } catch (e) {
+        console.error('IndexedDB health check failed', e);
+        try {
+            if (db.isOpen()) {
+                await db.close();
+            }
+            await Dexie.delete('posawesome_offline');
+            await db.open();
+        } catch (re) {
+            console.error('Failed to recover IndexedDB', re);
+        }
+        return false;
+    }
+}
+
 let persistWorker = null;
 
 if (typeof Worker !== "undefined") {
@@ -43,6 +62,8 @@ function flushPersistQueue() {
 }
 
 export function persist(key, value) {
+        // Run health check in background; ignore errors
+        checkDbHealth().catch(() => {});
         if (persistWorker) {
                 let cleanValue = value;
                 try {

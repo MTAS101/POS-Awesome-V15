@@ -176,7 +176,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
+import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, checkDbHealth, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
@@ -433,6 +433,7 @@ export default {
     },
     async get_items(force_server = false) {
       await initPromise;
+      await checkDbHealth();
       const request_token = ++this.items_request_token;
       if (!this.pos_profile) {
         console.error("No POS Profile");
@@ -1737,6 +1738,7 @@ export default {
     this.$nextTick(function () { });
     this.eventBus.on("register_pos_profile", async (data) => {
       await initPromise;
+      await checkDbHealth();
       this.pos_profile = data.pos_profile;
       if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
         await this.get_items(true);
