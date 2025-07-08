@@ -27,6 +27,7 @@ import {
   queueHealthCheck,
   purgeOldQueueEntries,
   MAX_QUEUE_ITEMS,
+  initPromise,
   toggleManualOffline,
   isManualOffline,
 } from '../offline/index.js';
@@ -80,7 +81,8 @@ export default {
       this.page = page;
     },
 
-    initializeData() {
+    async initializeData() {
+      await initPromise;
       checkDbHealth().catch(() => {});
       // Load POS profile from cache or storage
       const openingData = getOpeningStorage();
