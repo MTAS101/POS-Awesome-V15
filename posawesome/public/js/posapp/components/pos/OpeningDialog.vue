@@ -75,7 +75,7 @@
 
 <script>
 import format from '../../format';
-import { getOpeningDialogStorage, setOpeningDialogStorage, setOpeningStorage, initPromise } from '../../../offline/index.js';
+import { getOpeningDialogStorage, setOpeningDialogStorage, setOpeningStorage, initPromise, checkDbHealth } from '../../../offline/index.js';
 
 export default {
   mixins: [format],
@@ -153,6 +153,7 @@ export default {
     async get_opening_dialog_data() {
       const vm = this;
       await initPromise;
+      await checkDbHealth();
 
       // Load cached data first for offline usage
       const cached = getOpeningDialogStorage();

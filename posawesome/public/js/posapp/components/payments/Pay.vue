@@ -246,7 +246,7 @@
 import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
-import { getOpeningStorage, setOpeningStorage, initPromise, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline, getCustomerStorage } from "../../../offline/index.js";
+import { getOpeningStorage, setOpeningStorage, initPromise, checkDbHealth, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline, getCustomerStorage } from "../../../offline/index.js";
 import { silentPrint } from "../../plugins/print.js";
 
 export default {
@@ -410,6 +410,7 @@ export default {
     async check_opening_entry() {
       var vm = this;
       await initPromise;
+      await checkDbHealth();
       return frappe
         .call("posawesome.posawesome.api.shifts.check_opening_shift", {
           user: frappe.session.user,
