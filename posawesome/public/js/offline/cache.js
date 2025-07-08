@@ -1,4 +1,5 @@
 import { db, persist, checkDbHealth } from './core.js';
+import Dexie from 'dexie';
 
 // Memory cache object
 export const memory = {
