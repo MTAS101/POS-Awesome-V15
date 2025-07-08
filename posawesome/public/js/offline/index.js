@@ -24,13 +24,16 @@ export {
 	getOpeningDialogStorage,
 	setOpeningDialogStorage,
 	setLastSyncTotals,
-	getLastSyncTotals,
-	isManualOffline,
-	setManualOffline,
-	toggleManualOffline,
-	resetOfflineState,
-	clearAllCache,
-	getCacheUsageEstimate
+        getLastSyncTotals,
+        isManualOffline,
+        setManualOffline,
+        toggleManualOffline,
+        queueHealthCheck,
+        purgeOldQueueEntries,
+        MAX_QUEUE_ITEMS,
+        resetOfflineState,
+        clearAllCache,
+        getCacheUsageEstimate
 } from './cache.js';
 
 // Stock exports

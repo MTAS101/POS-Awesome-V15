@@ -1,4 +1,5 @@
 import Dexie from "dexie";
+import { withWriteLock } from './db-utils.js';
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
@@ -79,9 +80,11 @@ export function persist(key, value) {
                 return;
         }
 
-        db.table("keyval")
-                .put({ key, value })
-                .catch((e) => console.error(`Failed to persist ${key}`, e));
+        withWriteLock(() =>
+                db.table("keyval")
+                        .put({ key, value })
+                        .catch((e) => console.error(`Failed to persist ${key}`, e))
+        );
 
         if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
                 try {

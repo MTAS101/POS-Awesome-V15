@@ -20,7 +20,7 @@
 import Navbar from './components/Navbar.vue';
 import POS from './components/pos/Pos.vue';
 import Payments from './components/payments/Pay.vue';
-import { getOpeningStorage, getCacheUsageEstimate, checkDbHealth } from '../offline/index.js';
+import { getOpeningStorage, getCacheUsageEstimate, checkDbHealth, queueHealthCheck, purgeOldQueueEntries, MAX_QUEUE_ITEMS } from '../offline/index.js';
 
 export default {
   data: function () {
@@ -77,6 +77,17 @@ export default {
       if (openingData && openingData.pos_profile) {
         this.posProfile = openingData.pos_profile;
       }
+
+      if (queueHealthCheck()) {
+        alert('Offline queue is too large. Old entries will be purged.');
+        purgeOldQueueEntries();
+      }
+
+      getCacheUsageEstimate().then((usage) => {
+        if (usage.percentage > 90) {
+          alert('Local cache nearing capacity. Consider going online to sync.');
+        }
+      }).catch(() => {});
 
       // Check if running on IP host
       this.isIpHost = /^\d+\.\d+\.\d+\.\d+/.test(window.location.hostname);
