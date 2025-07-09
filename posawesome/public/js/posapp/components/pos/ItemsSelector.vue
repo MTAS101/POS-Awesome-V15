@@ -1,7 +1,7 @@
 <template>
   <div :style="responsiveStyles">
     <v-card :class="['selection mx-auto my-0 py-0 mt-3 dynamic-card resizable', isDarkTheme ? '' : 'bg-grey-lighten-5']"
-      :style="{ minHeight: responsiveStyles['--container-height'], backgroundColor: isDarkTheme ? '#121212' : '', resize: 'vertical', overflow: 'auto' }">
+      :style="{ height: responsiveStyles['--container-height'], maxHeight: responsiveStyles['--container-height'], backgroundColor: isDarkTheme ? '#121212' : '', resize: 'vertical', overflow: 'auto' }">
       <v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
         color="info"></v-progress-linear>
       <v-overlay :model-value="loading" class="align-center justify-center" absolute>
@@ -322,16 +322,16 @@ export default {
     exchange_rate() {
       this.applyCurrencyConversionToItems();
     },
-    containerWidth(val) {
-      this.adjustItemsPerPage(val, this.containerHeight);
+    windowWidth(val) {
+      this.adjustItemsPerPage(val, this.windowHeight);
     },
-    containerHeight(val) {
-      this.adjustItemsPerPage(this.containerWidth, val);
+    windowHeight(val) {
+      this.adjustItemsPerPage(this.windowWidth, val);
     },
   },
 
   methods: {
-    adjustItemsPerPage(width, height = this.containerHeight) {
+    adjustItemsPerPage(width, height = this.windowHeight) {
       const cardWidth = 200; // approximate width of each item card
       const cardHeight = 160; // approximate height including margins
       const containerHeight = height * 0.68; // card container is ~68% of viewport
@@ -1812,7 +1812,7 @@ export default {
   mounted() {
     this.scan_barcoud();
     // grid layout adjusts automatically with CSS, set items per page based on device size
-    this.adjustItemsPerPage(this.containerWidth, this.containerHeight);
+    this.adjustItemsPerPage(this.windowWidth, this.windowHeight);
   },
 
   beforeUnmount() {
