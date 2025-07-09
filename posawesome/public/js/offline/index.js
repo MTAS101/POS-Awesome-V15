@@ -86,16 +86,9 @@ export {
 	savePriceListItems,
 	getCachedPriceListItems,
 	clearPriceListCache,
-        saveItemDetailsCache,
-        getCachedItemDetails
+	saveItemDetailsCache,
+	getCachedItemDetails
 } from './items.js';
-
-// Taxes exports
-export {
-        saveTaxesCache,
-        getCachedTaxes,
-        calculateOfflineTaxes
-} from './taxes.js';
 
 // Customers exports
 export {
