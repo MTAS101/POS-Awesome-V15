@@ -1678,12 +1678,9 @@ export default {
           }
         });
 
-        // Force request quantity update for filtered items
-        if (final_filtered_list.length > 0) {
-          setTimeout(() => {
-            this.update_items_details(final_filtered_list);
-          }, 100);
-        }
+        // Item details will be refreshed via watchers when the filtered
+        // list length changes. Removing the automatic call here prevents
+        // redundant requests each time this computed property re-evaluates.
 
         return final_filtered_list;
       } else {
