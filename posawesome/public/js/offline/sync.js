@@ -10,6 +10,34 @@ export function saveOfflineInvoice(entry) {
 
     const key = "offline_invoices";
     const entries = memory.offline_invoices;
+
+    // Apply cached tax template if invoice lacks taxes
+    if (entry.invoice && (!entry.invoice.taxes || !entry.invoice.taxes.length)) {
+        const template = memory.tax_template || [];
+        if (template.length) {
+            const netTotal = parseFloat(entry.invoice.total || entry.invoice.net_total || 0);
+            let taxSum = 0;
+            const taxes = template.map(tax => {
+                const rate = parseFloat(tax.rate) || 0;
+                const amt = (netTotal * rate) / 100;
+                taxSum += amt;
+                return {
+                    account_head: tax.account_head,
+                    charge_type: tax.charge_type || "On Net Total",
+                    description: tax.description,
+                    rate: rate,
+                    tax_amount: amt,
+                    total: netTotal + amt,
+                    base_tax_amount: amt,
+                    base_total: netTotal + amt,
+                };
+            });
+            entry.invoice.taxes = taxes;
+            entry.invoice.total_taxes_and_charges = taxSum;
+            entry.invoice.grand_total = (entry.invoice.total || netTotal) + taxSum;
+            entry.invoice.rounded_total = entry.invoice.grand_total;
+        }
+    }
     // Clone the entry before storing to strip Vue reactivity
     // and other non-serializable properties. IndexedDB only
     // supports structured cloneable data, so reactive proxies
