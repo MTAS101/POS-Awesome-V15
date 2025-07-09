@@ -20,10 +20,9 @@ export const memory = {
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
 	sales_persons_storage: [],
-        price_list_cache: {},
-        item_details_cache: {},
-        tax_template: [],
-        manual_offline: false,
+	price_list_cache: {},
+	item_details_cache: {},
+	manual_offline: false,
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
@@ -130,28 +129,12 @@ export function getOpeningDialogStorage() {
 }
 
 export function setOpeningDialogStorage(data) {
-        try {
-                memory.opening_dialog_storage = JSON.parse(JSON.stringify(data));
-                persist("opening_dialog_storage", memory.opening_dialog_storage);
-        } catch (e) {
-                console.error("Failed to set opening dialog storage", e);
-        }
-}
-
-export function setTaxTemplate(taxes) {
-        try {
-                const clean = Array.isArray(taxes)
-                        ? JSON.parse(JSON.stringify(taxes))
-                        : [];
-                memory.tax_template = clean;
-                persist("tax_template", memory.tax_template);
-        } catch (e) {
-                console.error("Failed to set tax template", e);
-        }
-}
-
-export function getTaxTemplate() {
-        return memory.tax_template || [];
+	try {
+		memory.opening_dialog_storage = JSON.parse(JSON.stringify(data));
+		persist("opening_dialog_storage", memory.opening_dialog_storage);
+	} catch (e) {
+		console.error("Failed to set opening dialog storage", e);
+	}
 }
 
 export function setLastSyncTotals(totals) {
