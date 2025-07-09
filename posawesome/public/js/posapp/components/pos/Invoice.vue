@@ -1068,6 +1068,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: nowrap;
 }
 
 /* Style for balance value text */

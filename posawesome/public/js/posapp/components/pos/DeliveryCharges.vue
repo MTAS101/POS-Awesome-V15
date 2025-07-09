@@ -1,6 +1,10 @@
 <template>
-  <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_use_delivery_charges">
-    <v-col cols="8" class="pb-0 mb-0 pr-0 pt-0">
+  <v-row
+    align="center"
+    class="items px-3 py-2 mt-0"
+    v-if="pos_profile.posa_use_delivery_charges"
+  >
+    <v-col cols="12" sm="8" class="pb-0 mb-0 pr-0 pt-0">
       <v-autocomplete density="compact" clearable auto-select-first variant="solo" color="primary"
         :label="frappe._('Delivery Charges')" v-model="internal_selected_delivery_charge" :items="delivery_charges"
         item-title="name" item-value="name" return-object
@@ -16,7 +20,7 @@
         </template>
       </v-autocomplete>
     </v-col>
-    <v-col cols="4" class="pb-0 mb-0 pt-0">
+    <v-col cols="12" sm="4" class="pb-0 mb-0 pt-0">
       <v-text-field density="compact" variant="solo" color="primary"
         :label="frappe._('Delivery Charges Rate')"
         :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
