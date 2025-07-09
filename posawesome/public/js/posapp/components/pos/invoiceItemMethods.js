@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs } from "../../../offline/index.js";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers } from "../../../offline/index.js";
 
 export default {
 
@@ -1607,31 +1607,62 @@ export default {
     // Fetch customer details (info, price list, etc)
     async fetch_customer_details() {
       var vm = this;
-      if (this.customer) {
+      if (!this.customer) return;
+
+      if (isOffline()) {
         try {
-          const r = await frappe.call({
-          method: "posawesome.posawesome.api.customers.get_customer_info",
-            args: {
-              customer: vm.customer,
-            },
-          });
-          const message = r.message;
-          if (!r.exc) {
-            vm.customer_info = {
-              ...message,
-            };
+          const cached = (getCustomerStorage() || []).find(
+            (c) => c.name === vm.customer || c.customer_name === vm.customer
+          );
+          if (cached) {
+            vm.customer_info = { ...cached };
+            if (vm.pos_profile.posa_force_reload_items && cached.customer_price_list) {
+              vm.selected_price_list = cached.customer_price_list;
+              vm.eventBus.emit("update_customer_price_list", cached.customer_price_list);
+              vm.apply_cached_price_list(cached.customer_price_list);
+            }
+            return;
           }
-          // When force reload is enabled, automatically switch to the
-          // customer's default price list so that item rates are fetched
-          // correctly from the server.
-          if (vm.pos_profile.posa_force_reload_items && message.customer_price_list) {
-            vm.selected_price_list = message.customer_price_list;
-            vm.eventBus.emit("update_customer_price_list", message.customer_price_list);
-            vm.apply_cached_price_list(message.customer_price_list);
+          const queued = (getOfflineCustomers() || [])
+            .map((e) => e.args)
+            .find((c) => c.customer_name === vm.customer);
+          if (queued) {
+            vm.customer_info = { ...queued, name: queued.customer_name };
+            if (vm.pos_profile.posa_force_reload_items && queued.customer_price_list) {
+              vm.selected_price_list = queued.customer_price_list;
+              vm.eventBus.emit("update_customer_price_list", queued.customer_price_list);
+              vm.apply_cached_price_list(queued.customer_price_list);
+            }
+            return;
           }
         } catch (error) {
-          console.error("Failed to fetch customer details", error);
+          console.error("Failed to fetch cached customer", error);
         }
+      }
+
+      try {
+        const r = await frappe.call({
+          method: "posawesome.posawesome.api.customers.get_customer_info",
+          args: {
+            customer: vm.customer,
+          },
+        });
+        const message = r.message;
+        if (!r.exc) {
+          vm.customer_info = {
+            ...message,
+          };
+        }
+        // When force reload is enabled, automatically switch to the
+        // customer's default price list so that item rates are fetched
+        // correctly from the server.
+        if (vm.pos_profile.posa_force_reload_items && message.customer_price_list) {
+          vm.selected_price_list = message.customer_price_list;
+          vm.eventBus.emit("update_customer_price_list", message.customer_price_list);
+          vm.apply_cached_price_list(message.customer_price_list);
+        }
+      } catch (error) {
+        console.error("Failed to fetch customer details", error);
       }
     },
 

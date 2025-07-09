@@ -246,7 +246,7 @@
 import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
-import { getOpeningStorage, setOpeningStorage, initPromise, checkDbHealth, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline, getCustomerStorage } from "../../../offline/index.js";
+import { getOpeningStorage, setOpeningStorage, initPromise, checkDbHealth, saveOfflinePayment, syncOfflinePayments, getPendingOfflinePaymentCount, isOffline, getCustomerStorage, getOfflineCustomers } from "../../../offline/index.js";
 import { silentPrint } from "../../plugins/print.js";
 
 export default {
@@ -514,18 +514,20 @@ export default {
       // When offline, attempt to load details from cached customers
       if (isOffline()) {
         try {
-          const r = await frappe.call({
-            method: "posawesome.posawesome.api.customers.get_customer_info",
-            args: {
-              customer: vm.customer_name,
-            },
-          });
-          const message = r.message;
-          if (!r.exc) {
-            vm.customer_info = {
-              ...message,
-            };
-
+          const cached = (getCustomerStorage() || []).find(
+            (c) => c.name === vm.customer_name || c.customer_name === vm.customer_name
+          );
+          if (cached) {
+            vm.customer_info = { ...cached };
+            vm.set_mpesa_search_params();
+            vm.eventBus.emit("set_customer_info_to_edit", vm.customer_info);
+            return;
+          }
+          const queued = (getOfflineCustomers() || [])
+            .map((e) => e.args)
+            .find((c) => c.customer_name === vm.customer_name);
+          if (queued) {
+            vm.customer_info = { ...queued, name: queued.customer_name };
             vm.set_mpesa_search_params();
             vm.eventBus.emit("set_customer_info_to_edit", vm.customer_info);
           }
