@@ -128,7 +128,7 @@
           <v-col cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Tax and Charges')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-              :value="formatCurrency(computedTaxesAndCharges, displayCurrency)" readonly
+              :value="formatCurrency(invoice_doc.total_taxes_and_charges, displayCurrency)" readonly
               :prefix="currencySymbol()" persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
@@ -393,7 +393,6 @@ import {
   getSalesPersonsStorage,
   setSalesPersonsStorage,
   updateLocalStock,
-  getTaxInclusiveSetting,
 
 } from "../../../offline/index.js";
 
@@ -537,17 +536,6 @@ export default {
     // Display formatted difference payment
     diff_payment_display() {
       return this.formatCurrency(this.diff_payment, this.displayCurrency);
-    },
-    // Calculate taxes based on net total when tax inclusive is disabled
-    computedTaxesAndCharges() {
-      if (!this.invoice_doc) return 0;
-      const inclusive = getTaxInclusiveSetting();
-      if (!inclusive) {
-        const grand = parseFloat(this.invoice_doc.grand_total || 0);
-        const net = parseFloat(this.invoice_doc.net_total || 0);
-        return this.flt(grand - net, this.currency_precision);
-      }
-      return this.invoice_doc.total_taxes_and_charges || 0;
     },
     // Calculate available loyalty points amount in selected currency
     available_points_amount() {
