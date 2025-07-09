@@ -31,6 +31,10 @@ import {
   memoryInitPromise,
   toggleManualOffline,
   isManualOffline,
+  syncOfflineInvoices,
+  getPendingOfflineInvoiceCount,
+  isOffline,
+  getLastSyncTotals,
 } from '../offline/index.js';
 import { silentPrint } from './plugins/print.js';
 
@@ -65,6 +69,20 @@ export default {
       return this.$theme?.current === 'dark';
     }
   },
+  watch: {
+    networkOnline(newVal, oldVal) {
+      if (newVal && !oldVal) {
+        this.eventBus.emit('network-online');
+        this.handleSyncInvoices();
+      }
+    },
+    serverOnline(newVal, oldVal) {
+      if (newVal && !oldVal) {
+        this.eventBus.emit('server-online');
+        this.handleSyncInvoices();
+      }
+    }
+  },
   components: {
     Navbar,
     POS,
@@ -96,6 +114,9 @@ export default {
         alert('Offline queue is too large. Old entries will be purged.');
         purgeOldQueueEntries();
       }
+
+      this.pendingInvoices = getPendingOfflineInvoiceCount();
+      this.syncTotals = getLastSyncTotals();
 
       getCacheUsageEstimate().then((usage) => {
         if (usage.percentage > 90) {
@@ -375,6 +396,11 @@ export default {
         this.eventBus.on('print_last_invoice', () => {
           this.handlePrintLastInvoice();
         });
+
+        // Manual trigger to sync offline invoices
+        this.eventBus.on('sync_invoices', () => {
+          this.handleSyncInvoices();
+        });
       }
 
       // Enhanced server connection status listeners
@@ -459,9 +485,34 @@ export default {
       }
     },
 
-    handleSyncInvoices() {
-      // Handle sync invoices
-      this.eventBus.emit('sync_invoices');
+    async handleSyncInvoices() {
+      const pending = getPendingOfflineInvoiceCount();
+      if (pending) {
+        this.eventBus.emit('show_message', {
+          title: `${pending} invoice${pending > 1 ? 's' : ''} pending for sync`,
+          color: 'warning',
+        });
+      }
+      if (isOffline()) {
+        return;
+      }
+      const result = await syncOfflineInvoices();
+      if (result && (result.synced || result.drafted)) {
+        if (result.synced) {
+          this.eventBus.emit('show_message', {
+            title: `${result.synced} offline invoice${result.synced > 1 ? 's' : ''} synced`,
+            color: 'success',
+          });
+        }
+        if (result.drafted) {
+          this.eventBus.emit('show_message', {
+            title: `${result.drafted} offline invoice${result.drafted > 1 ? 's' : ''} saved as draft`,
+            color: 'warning',
+          });
+        }
+      }
+      this.pendingInvoices = getPendingOfflineInvoiceCount();
+      this.syncTotals = result || this.syncTotals;
     },
 
     handleToggleOffline() {
