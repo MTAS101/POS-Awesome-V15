@@ -600,12 +600,6 @@ export default {
         });
       }
 
-      // Compute tax totals when offline data lacks them
-      if (!doc.total_taxes_and_charges && Array.isArray(doc.taxes) && doc.taxes.length) {
-        doc.total_taxes_and_charges = doc.taxes.reduce((sum, t) => sum + flt(t.tax_amount), 0);
-        doc.base_total_taxes_and_charges = doc.total_taxes_and_charges * (this.exchange_rate || 1);
-      }
-
       // Handle return specific fields
       if (isReturn) {
         if (this.invoice_doc.return_against) {
