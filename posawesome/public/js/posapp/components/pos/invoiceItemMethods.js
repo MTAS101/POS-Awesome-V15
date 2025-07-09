@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers, saveTaxesCache, getCachedTaxes, calculateOfflineTaxes, getTaxInclusiveSetting } from "../../../offline/index.js";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers } from "../../../offline/index.js";
 
 export default {
 
@@ -936,12 +936,9 @@ export default {
     update_invoice(doc) {
       var vm = this;
       if (isOffline()) {
-        // When offline, merge locally and calculate taxes from cache
+        // When offline, simply merge the passed doc with the current invoice_doc
+        // to allow offline invoice creation without server calls
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
-        const cached = getCachedTaxes(vm.pos_profile.name);
-        if (cached) {
-          calculateOfflineTaxes(vm.invoice_doc, cached, getTaxInclusiveSetting());
-        }
         return vm.invoice_doc;
       }
       frappe.call({
@@ -956,9 +953,6 @@ export default {
         callback: function (r) {
           if (r.message) {
             vm.invoice_doc = r.message;
-            if (r.message.taxes) {
-              saveTaxesCache(vm.pos_profile.name, r.message.taxes);
-            }
             if (r.message.exchange_rate_date) {
               vm.exchange_rate_date = r.message.exchange_rate_date;
               const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
@@ -984,12 +978,8 @@ export default {
     update_invoice_from_order(doc) {
       var vm = this;
       if (isOffline()) {
-        // Offline mode - merge doc locally and apply cached taxes
+        // Offline mode - merge doc locally without server update
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
-        const cached = getCachedTaxes(vm.pos_profile.name);
-        if (cached) {
-          calculateOfflineTaxes(vm.invoice_doc, cached, getTaxInclusiveSetting());
-        }
         return vm.invoice_doc;
       }
       frappe.call({
@@ -1001,9 +991,6 @@ export default {
         callback: function (r) {
           if (r.message) {
             vm.invoice_doc = r.message;
-            if (r.message.taxes) {
-              saveTaxesCache(vm.pos_profile.name, r.message.taxes);
-            }
             if (r.message.exchange_rate_date) {
               vm.exchange_rate_date = r.message.exchange_rate_date;
               const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
