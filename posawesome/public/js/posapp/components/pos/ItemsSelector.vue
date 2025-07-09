@@ -40,6 +40,11 @@
                 @click="toggleItemSettings" class="settings-btn">
                 {{ __('Settings') }}
               </v-btn>
+              <v-spacer></v-spacer>
+              <v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-refresh"
+                @click="forceReloadItems" class="settings-btn">
+                {{ __('Reload Items') }}
+              </v-btn>
 
               <v-dialog v-model="show_item_settings" max-width="400px">
                 <v-card>
@@ -444,6 +449,10 @@ export default {
     },
     show_coupons() {
       this.eventBus.emit("show_coupons", "true");
+    },
+    forceReloadItems() {
+      this.items_loaded = false;
+      this.get_items(true);
     },
     async get_items(force_server = false) {
       await initPromise;
@@ -1782,6 +1791,12 @@ export default {
       this.customer = data;
     });
 
+    // Manually trigger a full item reload when requested
+    this.eventBus.on("force_reload_items", async () => {
+      this.items_loaded = false;
+      await this.get_items(true);
+    });
+
     // Refresh item quantities when connection to server is restored
     this.eventBus.on("server-online", async () => {
       if (this.items && this.items.length > 0) {
@@ -1853,6 +1868,7 @@ export default {
     this.eventBus.off("update_coupons_counters");
     this.eventBus.off("update_customer_price_list");
     this.eventBus.off("update_customer");
+    this.eventBus.off("force_reload_items");
   },
 };
 </script>

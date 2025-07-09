@@ -502,6 +502,7 @@ export default {
         .finally(() => {
           this.cacheUsageLoading = false;
         });
+
     },
 
     handleUpdateAfterDelete() {
