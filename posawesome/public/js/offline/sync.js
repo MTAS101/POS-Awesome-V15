@@ -267,7 +267,7 @@ export async function syncOfflineCustomers() {
     for (const cust of customers) {
         try {
             const result = await frappe.call({
-                method: "posawesome.posawesome.api.customer.create_customer",
+                method: "posawesome.posawesome.api.customers.create_customer",
                 args: cust.args,
             });
             synced++;
