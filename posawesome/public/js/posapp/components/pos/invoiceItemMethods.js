@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers } from "../../../offline/index.js";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers, getTaxTemplate } from "../../../offline/index.js";
 
 export default {
 
@@ -932,6 +932,44 @@ export default {
       return this.flt(amount * this.exchange_rate, this.currency_precision);
     },
 
+    // Compute taxes locally when offline using cached tax template
+    computeOfflineTaxes(doc) {
+      const template = getTaxTemplate() || [];
+      if (!template.length) {
+        doc.taxes = [];
+        doc.total_taxes_and_charges = 0;
+        doc.grand_total = doc.total || doc.net_total || 0;
+        doc.rounded_total = doc.grand_total;
+        return;
+      }
+      const isInclusive = this.pos_profile && this.pos_profile.posa_tax_inclusive;
+      const total = parseFloat(doc.total || doc.net_total || 0);
+      let netTotal = total;
+      if (isInclusive) {
+        const totalRate = template.reduce((sum, t) => sum + (parseFloat(t.rate) || 0), 0);
+        netTotal = total / (1 + totalRate / 100);
+      }
+      let taxSum = 0;
+      doc.taxes = template.map(tax => {
+        const rate = parseFloat(tax.rate) || 0;
+        const amt = (netTotal * rate) / 100;
+        taxSum += amt;
+        return {
+          account_head: tax.account_head,
+          charge_type: tax.charge_type || "On Net Total",
+          description: tax.description,
+          rate: rate,
+          tax_amount: amt,
+          total: isInclusive ? total : netTotal + amt,
+          base_tax_amount: amt,
+          base_total: isInclusive ? total : netTotal + amt,
+        };
+      });
+      doc.total_taxes_and_charges = taxSum;
+      doc.grand_total = isInclusive ? total : netTotal + taxSum;
+      doc.rounded_total = doc.grand_total;
+    },
+
     // Update invoice in backend
     update_invoice(doc) {
       var vm = this;
@@ -939,6 +977,7 @@ export default {
         // When offline, simply merge the passed doc with the current invoice_doc
         // to allow offline invoice creation without server calls
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
+        vm.computeOfflineTaxes(vm.invoice_doc);
         return vm.invoice_doc;
       }
       frappe.call({
@@ -980,6 +1019,7 @@ export default {
       if (isOffline()) {
         // Offline mode - merge doc locally without server update
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
+        vm.computeOfflineTaxes(vm.invoice_doc);
         return vm.invoice_doc;
       }
       frappe.call({
