@@ -323,17 +323,21 @@ export default {
       this.applyCurrencyConversionToItems();
     },
     windowWidth(val) {
-      this.adjustItemsPerPage(val);
+      this.adjustItemsPerPage(val, this.windowHeight);
+    },
+    windowHeight(val) {
+      this.adjustItemsPerPage(this.windowWidth, val);
     },
   },
 
   methods: {
-    adjustItemsPerPage(width) {
-      if (width <= 1024) {
-        this.itemsPerPage = 10;
-      } else {
-        this.itemsPerPage = 50;
-      }
+    adjustItemsPerPage(width, height = this.windowHeight) {
+      const cardWidth = 200; // approximate width of each item card
+      const cardHeight = 160; // approximate height including margins
+      const containerHeight = height * 0.68; // card container is ~68% of viewport
+      const columns = Math.max(1, Math.floor(width / cardWidth));
+      const rows = Math.max(1, Math.floor(containerHeight / cardHeight));
+      this.itemsPerPage = columns * rows;
     },
     refreshPricesForVisibleItems() {
       const vm = this;
@@ -1807,8 +1811,8 @@ export default {
 
   mounted() {
     this.scan_barcoud();
-    // grid layout adjusts automatically with CSS, set items per page based on device width
-    this.adjustItemsPerPage(this.windowWidth);
+    // grid layout adjusts automatically with CSS, set items per page based on device size
+    this.adjustItemsPerPage(this.windowWidth, this.windowHeight);
   },
 
   beforeUnmount() {
