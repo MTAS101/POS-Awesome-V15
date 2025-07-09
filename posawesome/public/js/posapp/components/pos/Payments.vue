@@ -621,31 +621,6 @@ export default {
         });
       }
     },
-    // Watch invoice totals and update taxes when tax inclusive is disabled
-    invoice_doc: {
-      deep: true,
-      handler(newVal) {
-        if (!newVal) return;
-
-        const cacheKey = 'posa_tax_inclusive';
-        let inclusive = false;
-        const cached = localStorage.getItem(cacheKey);
-        if (cached !== null) {
-          try {
-            inclusive = JSON.parse(cached);
-          } catch (e) {
-            inclusive = false;
-          }
-        }
-
-        if (!inclusive && newVal.grand_total !== undefined && newVal.total !== undefined) {
-          const computedTax = this.flt(newVal.grand_total - newVal.total, this.currency_precision);
-          if (newVal.total_taxes_and_charges !== computedTax) {
-            newVal.total_taxes_and_charges = computedTax;
-          }
-        }
-      }
-    },
     // Watch sales_person to update sales_team
     sales_person(newVal) {
       if (newVal) {
