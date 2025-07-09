@@ -1161,6 +1161,7 @@ export default {
 
 .items-table-wrapper {
   position: relative;
+  margin-top: var(--dynamic-xl);
 }
 
 /* New styles for improved column switches */
@@ -1179,5 +1180,4 @@ export default {
 
 :deep(.column-switch .v-label) {
   opacity: 0.9;
-  font-size: 0.95rem;
-}</style>
+  font-size: 0.95rem;}</style>
