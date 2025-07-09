@@ -468,6 +468,26 @@ body {
   }
 }
 
+/* Tablet specific tweaks */
+@media (max-width: 1024px) {
+  :root {
+    --container-height: 80vh;
+    --card-height: 65vh;
+  }
+}
+
+/* Mobile specific tweaks */
+@media (max-width: 480px) {
+  :root {
+    --container-height: 85vh;
+    --card-height: 70vh;
+  }
+
+  .pos-action-btn {
+    font-size: 0.875rem;
+  }
+}
+
 /* ===== UTILITY CLASSES ===== */
 .border-bottom {
   border-bottom: 1px solid var(--dialog-border);
