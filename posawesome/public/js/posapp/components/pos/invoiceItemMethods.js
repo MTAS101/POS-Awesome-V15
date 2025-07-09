@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers } from "../../../offline/index.js";
+import { isOffline, getTaxInclusiveSetting, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers } from "../../../offline/index.js";
 
 export default {
 
@@ -683,6 +683,11 @@ export default {
             payment.base_amount = -Math.abs(payment.base_amount);
           }
         });
+      }
+
+      // Recalculate taxes locally when offline using cached settings
+      if (isOffline()) {
+        this.recalculate_offline_taxes(doc);
       }
 
       return doc;
@@ -2229,4 +2234,44 @@ export default {
       // Force UI update
       this.$forceUpdate();
     },
-};
+
+    // Recalculate taxes when offline using cached tax settings
+    recalculate_offline_taxes(doc) {
+      if (!doc || !Array.isArray(doc.taxes)) {
+        doc.total_taxes_and_charges = 0;
+        return;
+      }
+
+      const taxInclusive = getTaxInclusiveSetting();
+      const baseAmount = doc.net_total || 0;
+      let totalTax = 0;
+
+      doc.taxes.forEach((tax) => {
+        let amount = 0;
+        if (tax.charge_type === 'Actual') {
+          amount = this.flt(tax.tax_amount || 0, this.currency_precision);
+        } else {
+          const rate = this.flt(tax.rate || 0, this.float_precision);
+          amount = this.flt(baseAmount * rate / 100, this.currency_precision);
+          tax.tax_amount = amount;
+          tax.base_tax_amount = amount * (doc.conversion_rate || 1);
+        }
+        totalTax += amount;
+      });
+
+      doc.total_taxes_and_charges = totalTax;
+      if (!taxInclusive) {
+        doc.grand_total = this.flt(baseAmount + totalTax, this.currency_precision);
+      } else {
+        doc.grand_total = this.flt(baseAmount, this.currency_precision);
+      }
+      doc.base_grand_total = this.flt(doc.grand_total * (doc.conversion_rate || 1), this.currency_precision);
+
+      if (this.pos_profile.disable_rounded_total) {
+        doc.rounded_total = this.flt(doc.grand_total, this.currency_precision);
+        doc.base_rounded_total = this.flt(doc.base_grand_total, this.currency_precision);
+      } else {
+        doc.rounded_total = this.roundAmount(doc.grand_total);
+        doc.base_rounded_total = this.roundAmount(doc.base_grand_total);
+      }
+    },};
