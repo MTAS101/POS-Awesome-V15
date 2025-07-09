@@ -21,8 +21,9 @@ export const memory = {
 	opening_dialog_storage: null,
 	sales_persons_storage: [],
 	price_list_cache: {},
-	item_details_cache: {},
-	manual_offline: false,
+        item_details_cache: {},
+        tax_inclusive: false,
+        manual_offline: false,
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
@@ -143,7 +144,16 @@ export function setLastSyncTotals(totals) {
 }
 
 export function getLastSyncTotals() {
-	return memory.pos_last_sync_totals;
+        return memory.pos_last_sync_totals;
+}
+
+export function getTaxInclusiveSetting() {
+        return !!memory.tax_inclusive;
+}
+
+export function setTaxInclusiveSetting(value) {
+        memory.tax_inclusive = !!value;
+        persist("tax_inclusive", memory.tax_inclusive);
 }
 
 export function isManualOffline() {
@@ -215,9 +225,10 @@ export async function clearAllCache() {
 	memory.pos_opening_storage = null;
 	memory.opening_dialog_storage = null;
 	memory.sales_persons_storage = [];
-	memory.price_list_cache = {};
-	memory.item_details_cache = {};
-	memory.manual_offline = false;
+        memory.price_list_cache = {};
+        memory.item_details_cache = {};
+        memory.tax_inclusive = false;
+        memory.manual_offline = false;
 }
 
 /**
