@@ -92,7 +92,7 @@
           <v-col cols="5">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('You can redeem up to')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-              :value="formatFloat(available_points_amount)" :prefix="currencySymbol(invoice_doc.currency)"
+              :model-value="formatFloat(available_points_amount)" :prefix="currencySymbol(invoice_doc.currency)"
               readonly></v-text-field>
           </v-col>
         </v-row>
@@ -110,7 +110,7 @@
           <v-col cols="5">
             <v-text-field density="compact" variant="outlined" color="primary"
               :label="frappe._('You can redeem credit up to')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
-              class="dark-field" hide-details :value="formatCurrency(available_customer_credit)"
+              class="dark-field" hide-details :model-value="formatCurrency(available_customer_credit)"
               :prefix="currencySymbol(invoice_doc.currency)" readonly></v-text-field>
           </v-col>
         </v-row>
@@ -122,43 +122,43 @@
           <v-col cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Net Total')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field"
-              :value="formatCurrency(invoice_doc.net_total, displayCurrency)" readonly :prefix="currencySymbol()"
+              :model-value="formatCurrency(invoice_doc.net_total, displayCurrency)" readonly :prefix="currencySymbol()"
               persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Tax and Charges')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-              :value="formatCurrency(invoice_doc.total_taxes_and_charges, displayCurrency)" readonly
+              :model-value="formatCurrency(calculated_taxes, displayCurrency)" readonly
               :prefix="currencySymbol()" persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Total Amount')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-              :value="formatCurrency(invoice_doc.total, displayCurrency)" readonly :prefix="currencySymbol()"
+              :model-value="formatCurrency(invoice_doc.total, displayCurrency)" readonly :prefix="currencySymbol()"
               persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="diff_label"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-              :value="formatCurrency(diff_payment, displayCurrency)" readonly :prefix="currencySymbol()"
+              :model-value="formatCurrency(diff_payment, displayCurrency)" readonly :prefix="currencySymbol()"
               persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Discount Amount')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-              :value="formatCurrency(invoice_doc.discount_amount)" readonly
+              :model-value="formatCurrency(invoice_doc.discount_amount)" readonly
               :prefix="currencySymbol(invoice_doc.currency)" persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Grand Total')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-              :value="formatCurrency(invoice_doc.grand_total)" readonly :prefix="currencySymbol(invoice_doc.currency)"
+              :model-value="formatCurrency(invoice_doc.grand_total)" readonly :prefix="currencySymbol(invoice_doc.currency)"
               persistent-placeholder></v-text-field>
           </v-col>
           <v-col v-if="invoice_doc.rounded_total" cols="6">
             <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Rounded Total')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-              :value="formatCurrency(invoice_doc.rounded_total)" readonly :prefix="currencySymbol(invoice_doc.currency)"
+              :model-value="formatCurrency(invoice_doc.rounded_total)" readonly :prefix="currencySymbol(invoice_doc.currency)"
               persistent-placeholder></v-text-field>
           </v-col>
 
@@ -176,7 +176,7 @@
               append-icon="mdi-plus" @click:append="new_address">
               <template v-slot:item="{ item }">
                 <v-list-item>
-                  <v-list-item-content>
+                  
                     <v-list-item-title class="text-primary text-subtitle-1">
                       <div v-html="item.address_title"></div>
                     </v-list-item-title>
@@ -201,7 +201,7 @@
                     <v-list-item-subtitle v-if="item.address_type">
                       <div v-html="item.address_type"></div>
                     </v-list-item-subtitle>
-                  </v-list-item-content>
+                  
                 </v-list-item>
               </template>
             </v-autocomplete>
@@ -265,7 +265,7 @@
           </v-col>
           <v-col cols="6" v-if="!invoice_doc.is_return && pos_profile.use_customer_credit">
             <v-switch v-model="redeem_customer_credit" flat :label="frappe._('Use Customer Credit')" class="my-0 pa-1"
-              @change="get_available_credit(redeem_customer_credit)"></v-switch>
+              @update:model-value="get_available_credit(redeem_customer_credit)"></v-switch>
           </v-col>
         </v-row>
 
@@ -278,7 +278,7 @@
             <v-col cols="4">
               <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Available Credit')"
                 :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
-                :value="formatCurrency(row.total_credit)" readonly
+                :model-value="formatCurrency(row.total_credit)" readonly
                 :prefix="currencySymbol(invoice_doc.currency)"></v-text-field>
             </v-col>
             <v-col cols="4">
@@ -555,6 +555,25 @@ export default {
     // Calculate total available customer credit
     available_customer_credit() {
       return this.customer_credit_dict.reduce((total, row) => total + this.flt(row.total_credit), 0);
+    },
+    // Determine if taxes are included in item price based on cached setting
+    tax_inclusive() {
+      try {
+        const cached = localStorage.getItem('posa_tax_inclusive');
+        return cached ? JSON.parse(cached) : false;
+      } catch (e) {
+        return false;
+      }
+    },
+    // Calculate taxes for display when not inclusive
+    calculated_taxes() {
+      if (!this.invoice_doc) return 0;
+      if (this.tax_inclusive) {
+        return this.invoice_doc.total_taxes_and_charges || 0;
+      }
+      const grand = this.flt(this.invoice_doc.grand_total, this.currency_precision);
+      const net = this.flt(this.invoice_doc.net_total, this.currency_precision);
+      return this.flt(grand - net, this.currency_precision);
     },
     // Validate if payment can be submitted
     vaildatPayment() {
