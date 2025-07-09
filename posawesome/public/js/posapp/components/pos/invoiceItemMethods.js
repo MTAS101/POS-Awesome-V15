@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers } from "../../../offline/index.js";
+import {isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers, getCachedTaxes, saveTaxes, getTaxInclusiveSetting } from "../../../offline/index.js";
 
 export default {
 
@@ -555,14 +555,73 @@ export default {
 
       // Calculate grand total with correct sign for returns
       let grandTotal = this.subtotal;
+      let taxes = [];
+      let totalTaxes = 0;
 
-      // Add taxes to grand total
-      if (this.invoice_doc && this.invoice_doc.taxes) {
-        this.invoice_doc.taxes.forEach(tax => {
+      if (isOffline()) {
+        taxes = getCachedTaxes(this.pos_profile.name);
+        if (!taxes.length && this.invoice_doc && this.invoice_doc.taxes) {
+          saveTaxes(this.pos_profile.name, this.invoice_doc.taxes);
+          taxes = this.invoice_doc.taxes;
+        }
+
+        if (taxes.length) {
+          const taxInclusive = getTaxInclusiveSetting();
+          const percentSum = taxes
+            .filter(t => t.charge_type !== 'Actual')
+            .reduce((s, t) => s + flt(t.rate), 0);
+          let netTotal = doc.total - flt(this.additional_discount);
+          let base = netTotal;
+          if (taxInclusive) {
+            base = netTotal / (1 + percentSum / 100);
+          }
+
+          taxes = taxes.map(t => {
+            let amt = 0;
+            if (t.charge_type === 'Actual') {
+              amt = flt(t.tax_amount || t.rate || 0);
+            } else {
+              amt = flt(base * flt(t.rate) / 100);
+            }
+            totalTaxes += amt;
+            return {
+              account_head: t.account_head,
+              charge_type: t.charge_type || 'On Net Total',
+              description: t.description,
+              rate: t.rate,
+              tax_amount: amt,
+              total: base,
+              included_in_print_rate: taxInclusive ? 1 : 0,
+              base_tax_amount: amt * (this.exchange_rate || 1),
+              base_total: base * (this.exchange_rate || 1)
+            };
+          });
+
+          grandTotal = taxInclusive ? netTotal + totalTaxes : base + totalTaxes;
+          doc.net_total = base;
+          doc.base_net_total = base * (this.exchange_rate || 1);
+          doc.total_taxes_and_charges = totalTaxes;
+          doc.base_total_taxes_and_charges = totalTaxes * (this.exchange_rate || 1);
+        }
+      } else if (this.invoice_doc && this.invoice_doc.taxes) {
+        taxes = this.invoice_doc.taxes.map(tax => {
           if (tax.tax_amount) {
             grandTotal += flt(tax.tax_amount);
+            totalTaxes += flt(tax.tax_amount);
           }
+          return {
+            account_head: tax.account_head,
+            charge_type: tax.charge_type || 'On Net Total',
+            description: tax.description,
+            rate: tax.rate,
+            tax_amount: tax.tax_amount,
+            total: tax.total,
+            base_tax_amount: tax.tax_amount * (this.exchange_rate || 1),
+            base_total: tax.total * (this.exchange_rate || 1)
+          };
         });
+        doc.total_taxes_and_charges = totalTaxes;
+        doc.base_total_taxes_and_charges = totalTaxes * (this.exchange_rate || 1);
       }
 
       if (isReturn && grandTotal > 0) grandTotal = -Math.abs(grandTotal);
@@ -583,22 +642,8 @@ export default {
       doc.posa_pos_opening_shift = this.pos_opening_shift.name;
       doc.payments = this.get_payments();
 
-      // Copy existing taxes if available
-      doc.taxes = [];
-      if (this.invoice_doc && this.invoice_doc.taxes) {
-        doc.taxes = this.invoice_doc.taxes.map(tax => {
-          return {
-            account_head: tax.account_head,
-            charge_type: tax.charge_type || "On Net Total",
-            description: tax.description,
-            rate: tax.rate,
-            tax_amount: tax.tax_amount,
-            total: tax.total,
-            base_tax_amount: tax.tax_amount * (this.exchange_rate || 1),
-            base_total: tax.total * (this.exchange_rate || 1)
-          };
-        });
-      }
+      // Attach calculated taxes
+      doc.taxes = taxes;
 
       // Handle return specific fields
       if (isReturn) {
@@ -953,6 +998,9 @@ export default {
         callback: function (r) {
           if (r.message) {
             vm.invoice_doc = r.message;
+            if (r.message.taxes) {
+              saveTaxes(vm.pos_profile.name, r.message.taxes);
+            }
             if (r.message.exchange_rate_date) {
               vm.exchange_rate_date = r.message.exchange_rate_date;
               const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
@@ -991,6 +1039,9 @@ export default {
         callback: function (r) {
           if (r.message) {
             vm.invoice_doc = r.message;
+            if (r.message.taxes) {
+              saveTaxes(vm.pos_profile.name, r.message.taxes);
+            }
             if (r.message.exchange_rate_date) {
               vm.exchange_rate_date = r.message.exchange_rate_date;
               const posting_backend = vm.formatDateForBackend(vm.posting_date_display);

@@ -79,16 +79,22 @@ export {
 
 // Items exports
 export {
-	saveItemUOMs,
-	getItemUOMs,
-	saveOffers,
-	getCachedOffers,
-	savePriceListItems,
-	getCachedPriceListItems,
-	clearPriceListCache,
-	saveItemDetailsCache,
-	getCachedItemDetails
+        saveItemUOMs,
+        getItemUOMs,
+        saveOffers,
+        getCachedOffers,
+        savePriceListItems,
+        getCachedPriceListItems,
+        clearPriceListCache,
+        saveItemDetailsCache,
+        getCachedItemDetails
 } from './items.js';
+
+// Taxes exports
+export {
+        saveTaxes,
+        getCachedTaxes
+} from './taxes.js';
 
 // Customers exports
 export {
