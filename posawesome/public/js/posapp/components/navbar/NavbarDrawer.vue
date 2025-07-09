@@ -233,10 +233,21 @@ export default {
   .drawer-custom {
     width: 280px !important;
   }
-  
+
   :deep(.dark-theme) .drawer-custom,
   :deep(.v-theme--dark) .drawer-custom {
     background-color: var(--surface-primary, #1e1e1e) !important;
   }
 }
-</style>
+
+/* Completely hide the sidebar on very small screens */
+@media (max-width: 600px) {
+  .drawer-custom {
+    display: none !important;
+  }
+
+  :deep(.dark-theme) .drawer-custom,
+  :deep(.v-theme--dark) .drawer-custom {
+    display: none !important;
+  }
+}</style>
