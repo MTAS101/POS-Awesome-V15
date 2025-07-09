@@ -556,13 +556,26 @@ export default {
       // Calculate grand total with correct sign for returns
       let grandTotal = this.subtotal;
 
-      // Add taxes to grand total
+      // Handle taxes considering Tax Inclusive setting
+      const isTaxInclusive = this.pos_profile.posa_tax_inclusive;
+      let totalTax = 0;
       if (this.invoice_doc && this.invoice_doc.taxes) {
         this.invoice_doc.taxes.forEach(tax => {
-          if (tax.tax_amount) {
-            grandTotal += flt(tax.tax_amount);
+          const rate = flt(tax.rate);
+          const tax_amount = rate ? flt(grandTotal * rate / 100) : flt(tax.tax_amount);
+          totalTax += tax_amount;
+          if (!isTaxInclusive) {
+            grandTotal += tax_amount;
           }
+          tax.tax_amount = tax_amount;
         });
+      }
+
+      if (isTaxInclusive) {
+        doc.total_taxes_and_charges = totalTax;
+        doc.base_total_taxes_and_charges = totalTax * (this.exchange_rate || 1);
+        doc.net_total = flt(total - totalTax);
+        doc.base_net_total = doc.net_total * (this.exchange_rate || 1);
       }
 
       if (isReturn && grandTotal > 0) grandTotal = -Math.abs(grandTotal);
