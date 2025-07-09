@@ -1,6 +1,6 @@
 <template>
   <v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_change_posting_date">
-    <v-col cols="4" class="pb-2">
+    <v-col cols="12" sm="4" class="pb-2">
       <VueDatePicker
         v-model="internal_posting_date_display"
         model-type="format"
@@ -12,7 +12,7 @@
         @update:model-value="onUpdate"
       />
     </v-col>
-    <v-col v-if="pos_profile.posa_enable_price_list_dropdown" cols="6" class="pb-2 d-flex align-center">
+    <v-col v-if="pos_profile.posa_enable_price_list_dropdown" cols="12" sm="6" class="pb-2 d-flex align-center">
       <v-select
         density="comfortable"
         variant="solo"
@@ -34,7 +34,7 @@
     </v-col>
     <v-col
       v-else-if="pos_profile.posa_show_customer_balance"
-      cols="8"
+      cols="12" sm="8"
       class="pb-2 d-flex align-center"
     >
       <div class="balance-field">
