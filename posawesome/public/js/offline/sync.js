@@ -2,6 +2,9 @@ import { memory, resetOfflineState, setLastSyncTotals, MAX_QUEUE_ITEMS } from '.
 import { persist } from './core.js';
 import { updateLocalStock } from './stock.js';
 
+// Flag to avoid concurrent invoice syncs which can cause duplicate submissions
+let invoiceSyncInProgress = false;
+
 export function saveOfflineInvoice(entry) {
     // Validate that invoice has items before saving
     if (!entry.invoice || !Array.isArray(entry.invoice.items) || !entry.invoice.items.length) {
@@ -182,21 +185,27 @@ export function clearOfflineCustomers() {
 
 // Add sync function to clear local cache when invoices are successfully synced
 export async function syncOfflineInvoices() {
-    // Ensure any offline customers are synced first so that invoices
-    // referencing them do not fail during submission
-    await syncOfflineCustomers();
+    // Prevent concurrent syncs which can lead to duplicate submissions
+    if (invoiceSyncInProgress) {
+        return { pending: getPendingOfflineInvoiceCount(), synced: 0, drafted: 0 };
+    }
+    invoiceSyncInProgress = true;
+    try {
+        // Ensure any offline customers are synced first so that invoices
+        // referencing them do not fail during submission
+        await syncOfflineCustomers();
 
     const invoices = getOfflineInvoices();
-    if (!invoices.length) {
-        // No invoices to sync; clear last totals to avoid repeated messages
-        const totals = { pending: 0, synced: 0, drafted: 0 };
-        setLastSyncTotals(totals);
-        return totals;
-    }
-    if (isOffline()) {
-        // When offline just return the pending count without attempting a sync
-        return { pending: invoices.length, synced: 0, drafted: 0 };
-    }
+        if (!invoices.length) {
+            // No invoices to sync; clear last totals to avoid repeated messages
+            const totals = { pending: 0, synced: 0, drafted: 0 };
+            setLastSyncTotals(totals);
+            return totals;
+        }
+        if (isOffline()) {
+            // When offline just return the pending count without attempting a sync
+            return { pending: invoices.length, synced: 0, drafted: 0 };
+        }
 
     const failures = [];
     let synced = 0;
@@ -249,7 +258,10 @@ export async function syncOfflineInvoices() {
         // Clear totals so success message only shows once
         setLastSyncTotals({ pending: 0, synced: 0, drafted: 0 });
     }
-    return totals;
+        return totals;
+    } finally {
+        invoiceSyncInProgress = false;
+    }
 }
 
 export async function syncOfflineCustomers() {
