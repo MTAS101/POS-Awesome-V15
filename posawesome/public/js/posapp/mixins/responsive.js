@@ -1,10 +1,11 @@
 export const responsiveMixin = {
   data() {
     return {
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      baseWidth: window.innerWidth, // Automatically set to current width
-      baseHeight: window.innerHeight, // Automatically set to current height
+      windowWidth: 0,
+      windowHeight: 0,
+      baseWidth: 0,
+      baseHeight: 0,
+      resizeObserver: null,
     }
   },
   
@@ -72,18 +73,33 @@ export const responsiveMixin = {
   },
   
   mounted() {
+    // Set the initial base dimensions from the component element
+    const rect = this.$el.getBoundingClientRect();
+    this.baseWidth = rect.width || window.innerWidth;
+    this.baseHeight = rect.height || window.innerHeight;
     this.handleResize();
+
     window.addEventListener('resize', this.handleResize);
+
+    // Observe size changes on the component itself to support manual resizing
+    if (window.ResizeObserver) {
+      this.resizeObserver = new ResizeObserver(this.handleResize);
+      this.resizeObserver.observe(this.$el);
+    }
   },
   
   beforeUnmount() {
     window.removeEventListener('resize', this.handleResize);
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
   },
   
   methods: {
     handleResize() {
-      this.windowWidth = window.innerWidth;
-      this.windowHeight = window.innerHeight;
+      const rect = this.$el.getBoundingClientRect();
+      this.windowWidth = rect.width || window.innerWidth;
+      this.windowHeight = rect.height || window.innerHeight;
     }
-  }
-};
+  }};
