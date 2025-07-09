@@ -502,6 +502,11 @@ export default {
         .finally(() => {
           this.cacheUsageLoading = false;
         });
+
+      // Also trigger a manual reload of items across the app
+      if (this.eventBus) {
+        this.eventBus.emit('force_reload_items');
+      }
     },
 
     handleUpdateAfterDelete() {
