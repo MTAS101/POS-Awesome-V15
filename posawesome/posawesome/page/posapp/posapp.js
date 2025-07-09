@@ -18,13 +18,6 @@ frappe.pages['posapp'].on_page_load = async function (wrapper) {
         $("head").append("<link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>");
         $("head").append("<link rel='preload' href='https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900' as='style'>");
         $("head").append("<link rel='stylesheet' href='https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900'>");
-        // Inject viewport meta for better mobile scaling
-        if ($("meta[name='viewport']").length === 0) {
-                $("head").append("<meta name='viewport' content='width=device-width, initial-scale=1'>");
-        }
-
-        // Load responsive stylesheet to handle mobile and tablet breakpoints
-        $("head").append("<link href='/assets/posawesome/css/responsive.css' rel='stylesheet'>");
 	
         // Listen for POS Profile registration
         frappe.realtime.on('pos_profile_registered', () => {
