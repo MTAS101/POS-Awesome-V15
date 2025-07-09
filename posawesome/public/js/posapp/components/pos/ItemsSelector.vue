@@ -322,9 +322,19 @@ export default {
     exchange_rate() {
       this.applyCurrencyConversionToItems();
     },
+    windowWidth(val) {
+      this.adjustItemsPerPage(val);
+    },
   },
 
   methods: {
+    adjustItemsPerPage(width) {
+      if (width <= 1024) {
+        this.itemsPerPage = 10;
+      } else {
+        this.itemsPerPage = 50;
+      }
+    },
     refreshPricesForVisibleItems() {
       const vm = this;
       if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -1797,7 +1807,8 @@ export default {
 
   mounted() {
     this.scan_barcoud();
-    // grid layout adjusts automatically with CSS, no width tracking needed
+    // grid layout adjusts automatically with CSS, set items per page based on device width
+    this.adjustItemsPerPage(this.windowWidth);
   },
 
   beforeUnmount() {
