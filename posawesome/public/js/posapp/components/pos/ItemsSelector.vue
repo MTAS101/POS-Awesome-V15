@@ -1782,6 +1782,12 @@ export default {
       this.customer = data;
     });
 
+    // Manually trigger a full item reload when requested
+    this.eventBus.on("force_reload_items", async () => {
+      this.items_loaded = false;
+      await this.get_items(true);
+    });
+
     // Refresh item quantities when connection to server is restored
     this.eventBus.on("server-online", async () => {
       if (this.items && this.items.length > 0) {
@@ -1853,6 +1859,7 @@ export default {
     this.eventBus.off("update_coupons_counters");
     this.eventBus.off("update_customer_price_list");
     this.eventBus.off("update_customer");
+    this.eventBus.off("force_reload_items");
   },
 };
 </script>
