@@ -939,6 +939,11 @@ export default {
         // When offline, simply merge the passed doc with the current invoice_doc
         // to allow offline invoice creation without server calls
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
+        if (vm.pos_profile.posa_tax_inclusive) {
+          const tax = flt(vm.invoice_doc.total_taxes_and_charges || 0);
+          vm.invoice_doc.total = vm.invoice_doc.grand_total;
+          vm.invoice_doc.net_total = flt(vm.invoice_doc.grand_total - tax, vm.currency_precision);
+        }
         return vm.invoice_doc;
       }
       frappe.call({
@@ -953,6 +958,11 @@ export default {
         callback: function (r) {
           if (r.message) {
             vm.invoice_doc = r.message;
+            if (vm.pos_profile.posa_tax_inclusive) {
+              const tax = flt(vm.invoice_doc.total_taxes_and_charges || 0);
+              vm.invoice_doc.total = vm.invoice_doc.grand_total;
+              vm.invoice_doc.net_total = flt(vm.invoice_doc.grand_total - tax, vm.currency_precision);
+            }
             if (r.message.exchange_rate_date) {
               vm.exchange_rate_date = r.message.exchange_rate_date;
               const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
