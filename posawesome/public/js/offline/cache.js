@@ -23,7 +23,6 @@ export const memory = {
         price_list_cache: {},
         item_details_cache: {},
         tax_template: [],
-        tax_inclusive: false,
         manual_offline: false,
 };
 
@@ -139,22 +138,16 @@ export function setOpeningDialogStorage(data) {
         }
 }
 
-export function setTaxTemplate(taxes, inclusive = false) {
+export function setTaxTemplate(taxes) {
         try {
                 const clean = Array.isArray(taxes)
                         ? JSON.parse(JSON.stringify(taxes))
                         : [];
                 memory.tax_template = clean;
-                memory.tax_inclusive = !!inclusive;
                 persist("tax_template", memory.tax_template);
-                persist("tax_inclusive", memory.tax_inclusive);
         } catch (e) {
                 console.error("Failed to set tax template", e);
         }
-}
-
-export function getTaxInclusive() {
-        return memory.tax_inclusive || false;
 }
 
 export function getTaxTemplate() {
@@ -239,10 +232,9 @@ export async function clearAllCache() {
 	memory.pos_opening_storage = null;
 	memory.opening_dialog_storage = null;
 	memory.sales_persons_storage = [];
-        memory.price_list_cache = {};
-        memory.item_details_cache = {};
-        memory.tax_inclusive = false;
-        memory.manual_offline = false;
+	memory.price_list_cache = {};
+	memory.item_details_cache = {};
+	memory.manual_offline = false;
 }
 
 /**
