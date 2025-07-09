@@ -1,4 +1,4 @@
-import { memory, resetOfflineState, setLastSyncTotals, MAX_QUEUE_ITEMS } from './cache.js';
+import { memory, resetOfflineState, setLastSyncTotals, MAX_QUEUE_ITEMS, getTaxInclusive } from './cache.js';
 import { persist } from './core.js';
 import { updateLocalStock } from './stock.js';
 
@@ -15,11 +15,17 @@ export function saveOfflineInvoice(entry) {
     if (entry.invoice && (!entry.invoice.taxes || !entry.invoice.taxes.length)) {
         const template = memory.tax_template || [];
         if (template.length) {
-            const netTotal = parseFloat(entry.invoice.total || entry.invoice.net_total || 0);
+            const inclusive = getTaxInclusive();
+            const baseTotal = parseFloat(entry.invoice.total || entry.invoice.net_total || 0);
             let taxSum = 0;
             const taxes = template.map(tax => {
                 const rate = parseFloat(tax.rate) || 0;
-                const amt = (netTotal * rate) / 100;
+                let amt = 0;
+                if (inclusive) {
+                    amt = (baseTotal * rate) / (100 + rate);
+                } else {
+                    amt = (baseTotal * rate) / 100;
+                }
                 taxSum += amt;
                 return {
                     account_head: tax.account_head,
@@ -27,14 +33,19 @@ export function saveOfflineInvoice(entry) {
                     description: tax.description,
                     rate: rate,
                     tax_amount: amt,
-                    total: netTotal + amt,
+                    total: inclusive ? baseTotal : baseTotal + amt,
                     base_tax_amount: amt,
-                    base_total: netTotal + amt,
+                    base_total: inclusive ? baseTotal : baseTotal + amt,
                 };
             });
             entry.invoice.taxes = taxes;
             entry.invoice.total_taxes_and_charges = taxSum;
-            entry.invoice.grand_total = (entry.invoice.total || netTotal) + taxSum;
+            if (inclusive) {
+                entry.invoice.net_total = baseTotal - taxSum;
+                entry.invoice.grand_total = baseTotal;
+            } else {
+                entry.invoice.grand_total = baseTotal + taxSum;
+            }
             entry.invoice.rounded_total = entry.invoice.grand_total;
         }
     }

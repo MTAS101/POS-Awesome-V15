@@ -26,6 +26,7 @@ export {
         setOpeningDialogStorage,
         setTaxTemplate,
         getTaxTemplate,
+        getTaxInclusive,
         setLastSyncTotals,
         getLastSyncTotals,
         isManualOffline,
