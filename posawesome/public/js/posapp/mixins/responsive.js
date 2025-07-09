@@ -5,6 +5,8 @@ export const responsiveMixin = {
       windowHeight: window.innerHeight,
       baseWidth: window.innerWidth, // Automatically set to current width
       baseHeight: window.innerHeight, // Automatically set to current height
+      resizeObserver: null,
+      resizableBaseSizes: new Map(),
     }
   },
   
@@ -74,16 +76,62 @@ export const responsiveMixin = {
   mounted() {
     this.handleResize();
     window.addEventListener('resize', this.handleResize);
+    this.$nextTick(this.observeResizableElements);
   },
   
   beforeUnmount() {
     window.removeEventListener('resize', this.handleResize);
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
   },
   
   methods: {
     handleResize() {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
+    },
+
+    observeResizableElements() {
+      const elements = this.$el.querySelectorAll('.resizable');
+      if (!elements.length) return;
+
+      this.resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          this.updateResizableElement(entry.target, entry.contentRect);
+        }
+      });
+
+      elements.forEach(el => {
+        this.resizableBaseSizes.set(el, {
+          width: el.offsetWidth,
+          height: el.offsetHeight,
+        });
+        this.resizeObserver.observe(el);
+      });
+    },
+
+    updateResizableElement(el, rect) {
+      const base = this.resizableBaseSizes.get(el);
+      if (!base) return;
+      const scaleWidth = rect.width / base.width;
+      const scaleHeight = rect.height / base.height;
+      const scale = ((scaleWidth + scaleHeight) / 2);
+
+      const baseSpacing = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
+      const dynamic = {
+        xs: Math.max(2, Math.round(baseSpacing.xs * scale)),
+        sm: Math.max(4, Math.round(baseSpacing.sm * scale)),
+        md: Math.max(8, Math.round(baseSpacing.md * scale)),
+        lg: Math.max(12, Math.round(baseSpacing.lg * scale)),
+        xl: Math.max(16, Math.round(baseSpacing.xl * scale)),
+      };
+
+      el.style.setProperty('--font-scale', scale.toFixed(2));
+      el.style.setProperty('--dynamic-xs', `${dynamic.xs}px`);
+      el.style.setProperty('--dynamic-sm', `${dynamic.sm}px`);
+      el.style.setProperty('--dynamic-md', `${dynamic.md}px`);
+      el.style.setProperty('--dynamic-lg', `${dynamic.lg}px`);
+      el.style.setProperty('--dynamic-xl', `${dynamic.xl}px`);
     }
-  }
-};
+  }};
