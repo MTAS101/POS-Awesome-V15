@@ -22,6 +22,7 @@ export const memory = {
 	sales_persons_storage: [],
 	price_list_cache: {},
         item_details_cache: {},
+        taxes_cache: {},
         tax_inclusive: false,
         manual_offline: false,
 };
@@ -227,6 +228,7 @@ export async function clearAllCache() {
 	memory.sales_persons_storage = [];
         memory.price_list_cache = {};
         memory.item_details_cache = {};
+        memory.taxes_cache = {};
         memory.tax_inclusive = false;
         memory.manual_offline = false;
 }
