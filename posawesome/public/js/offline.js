@@ -32,8 +32,9 @@ const memory = {
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
 	sales_persons_storage: [],
-	price_list_cache: {},
-	item_details_cache: {},
+        price_list_cache: {},
+        item_details_cache: {},
+        tax_inclusive: false,
         manual_offline: false,
 };
 
@@ -389,7 +390,16 @@ export function setLastSyncTotals(totals) {
 }
 
 export function getLastSyncTotals() {
-	return memory.pos_last_sync_totals;
+        return memory.pos_last_sync_totals;
+}
+
+export function getTaxInclusiveSetting() {
+        return !!memory.tax_inclusive;
+}
+
+export function setTaxInclusiveSetting(value) {
+        memory.tax_inclusive = !!value;
+        persist("tax_inclusive");
 }
 
 // Add sync function to clear local cache when invoices are successfully synced
@@ -1019,5 +1029,6 @@ export async function clearAllCache() {
         memory.sales_persons_storage = [];
         memory.price_list_cache = {};
         memory.item_details_cache = {};
+        memory.tax_inclusive = false;
         memory.manual_offline = false;
 }
