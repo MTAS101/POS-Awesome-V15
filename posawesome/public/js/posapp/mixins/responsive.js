@@ -1,20 +1,21 @@
 export const responsiveMixin = {
   data() {
     return {
-      windowWidth: window.innerWidth,
-      windowHeight: window.innerHeight,
-      baseWidth: window.innerWidth, // Automatically set to current width
-      baseHeight: window.innerHeight, // Automatically set to current height
-    }
+      containerWidth: 0,
+      containerHeight: 0,
+      baseWidth: 0,
+      baseHeight: 0,
+      resizeObserver: null,
+    };
   },
   
   computed: {
     // Dynamic scaling factors
     widthScale() {
-      return this.windowWidth / this.baseWidth;
+      return this.containerWidth / this.baseWidth;
     },
     heightScale() {
-      return this.windowHeight / this.baseHeight;
+      return this.containerHeight / this.baseHeight;
     },
     averageScale() {
       return (this.widthScale + this.heightScale) / 2;
@@ -44,10 +45,10 @@ export const responsiveMixin = {
       // Calculate responsive card height based on screen size and available space
       let cardHeightVh;
       
-      if (this.windowWidth <= 480) {
+      if (this.containerWidth <= 480) {
         // Mobile: smaller height to accommodate touch interface
         cardHeightVh = Math.round(45 * this.heightScale);
-      } else if (this.windowWidth <= 768) {
+      } else if (this.containerWidth <= 768) {
         // Tablet: medium height
         cardHeightVh = Math.round(55 * this.heightScale);
       } else {
@@ -72,18 +73,31 @@ export const responsiveMixin = {
   },
   
   mounted() {
-    this.handleResize();
-    window.addEventListener('resize', this.handleResize);
+    this.initResizeObserver();
   },
-  
+
   beforeUnmount() {
-    window.removeEventListener('resize', this.handleResize);
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+    }
   },
   
   methods: {
-    handleResize() {
-      this.windowWidth = window.innerWidth;
-      this.windowHeight = window.innerHeight;
+    initResizeObserver() {
+      const el = this.$el || document.body;
+      const rect = el.getBoundingClientRect();
+      this.containerWidth = rect.width;
+      this.containerHeight = rect.height;
+      this.baseWidth = rect.width;
+      this.baseHeight = rect.height;
+      this.resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) {
+          if (entry.contentRect) {
+            this.containerWidth = entry.contentRect.width;
+            this.containerHeight = entry.contentRect.height;
+          }
+        }
+      });
+      this.resizeObserver.observe(el);
     }
-  }
-};
+  }};
