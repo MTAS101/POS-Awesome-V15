@@ -20,9 +20,8 @@ export const memory = {
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
 	sales_persons_storage: [],
-        price_list_cache: {},
+	price_list_cache: {},
         item_details_cache: {},
-        tax_template_cache: {},
         tax_inclusive: false,
         manual_offline: false,
 };
@@ -131,34 +130,12 @@ export function getOpeningDialogStorage() {
 }
 
 export function setOpeningDialogStorage(data) {
-        try {
-                memory.opening_dialog_storage = JSON.parse(JSON.stringify(data));
-                persist("opening_dialog_storage", memory.opening_dialog_storage);
-        } catch (e) {
-                console.error("Failed to set opening dialog storage", e);
-        }
-}
-
-export function getTaxTemplate(name) {
-        try {
-                const cache = memory.tax_template_cache || {};
-                return cache[name] || null;
-        } catch (e) {
-                console.error("Failed to get cached tax template", e);
-                return null;
-        }
-}
-
-export function setTaxTemplate(name, doc) {
-        try {
-                const cache = memory.tax_template_cache || {};
-                const cleanDoc = JSON.parse(JSON.stringify(doc));
-                cache[name] = cleanDoc;
-                memory.tax_template_cache = cache;
-                persist("tax_template_cache", memory.tax_template_cache);
-        } catch (e) {
-                console.error("Failed to cache tax template", e);
-        }
+	try {
+		memory.opening_dialog_storage = JSON.parse(JSON.stringify(data));
+		persist("opening_dialog_storage", memory.opening_dialog_storage);
+	} catch (e) {
+		console.error("Failed to set opening dialog storage", e);
+	}
 }
 
 export function setLastSyncTotals(totals) {
@@ -247,10 +224,9 @@ export async function clearAllCache() {
 	memory.customer_storage = [];
 	memory.pos_opening_storage = null;
 	memory.opening_dialog_storage = null;
-        memory.sales_persons_storage = [];
+	memory.sales_persons_storage = [];
         memory.price_list_cache = {};
         memory.item_details_cache = {};
-        memory.tax_template_cache = {};
         memory.tax_inclusive = false;
         memory.manual_offline = false;
 }
