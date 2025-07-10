@@ -2,6 +2,15 @@
 frappe.pages['posapp'].on_page_load = async function (wrapper) {
         await setupLanguage();
 
+        if (!(frappe.PosApp && frappe.PosApp.posapp)) {
+                console.error(
+                        'frappe.PosApp.posapp is undefined. ' +
+                        'Ensure that "/assets/posawesome/frontend/main.js" exists ' +
+                        'and that you ran `yarn build && bench build --app posawesome`.'
+                );
+                return;
+        }
+
         var page = frappe.ui.make_app_page({
                 parent: wrapper,
                 title: 'POS Awesome',
