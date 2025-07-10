@@ -27,7 +27,16 @@ export default defineConfig({
         // Output compiled assets to the Frappe app's public directory
         outDir: '../posawesome/public/frontend',
         emptyOutDir: true,
-        sourcemap: true
+        sourcemap: true,
+        rollupOptions: {
+            output: {
+                // Keep a stable filename so hooks.py and the service worker
+                // can reference the built file consistently
+                entryFileNames: 'main.js',
+                chunkFileNames: 'assets/[name]-[hash].js',
+                assetFileNames: 'assets/[name]-[hash][extname]',
+            }
+        }
     },
     server: {
         port: 8080,
