@@ -4,6 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig({
+    root: __dirname,
     plugins: [
         vue(),
         VitePWA({
@@ -11,7 +12,10 @@ export default defineConfig({
             strategies: 'injectManifest',
             srcDir: 'src',
             filename: 'sw.js',
-            injectRegister: null
+            injectRegister: null,
+            injectManifest: {
+                injectionPoint: null
+            }
         })
     ],
     resolve: {
