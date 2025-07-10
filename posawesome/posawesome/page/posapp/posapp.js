@@ -22,8 +22,7 @@ frappe.pages['posapp'].on_page_load = async function (wrapper) {
         // Listen for POS Profile registration
         frappe.realtime.on('pos_profile_registered', () => {
                 const update_totals_based_on_tax_inclusive = () => {
-                        console.log("Updating totals based on tax inclusive settings");
-                        const posProfile = this.page.$PosApp.pos_profile;
+                       const posProfile = this.page.$PosApp.pos_profile;
 
 			if (!posProfile) {
 				console.error("POS Profile is not set.");
@@ -38,13 +37,11 @@ frappe.pages['posapp'].on_page_load = async function (wrapper) {
                                 const grandTotalField = document.getElementById('input-v-29');
 
                                 if (totalAmountField && grandTotalField) {
-                                        if (taxInclusive) {
-                                                totalAmountField.value = grandTotalField.value;
-                                                console.log('Total amount copied from grand total:', grandTotalField.value);
-                                        } else {
-                                                totalAmountField.value = '';
-                                                console.log('Total amount cleared because checkbox is unchecked.');
-                                        }
+                                       if (taxInclusive) {
+                                               totalAmountField.value = grandTotalField.value;
+                                       } else {
+                                               totalAmountField.value = '';
+                                       }
                                 } else {
                                         console.error('Could not find total amount or grand total field by ID.');
                                 }
