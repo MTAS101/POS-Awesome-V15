@@ -22,8 +22,7 @@ frappe.pages['posapp'].on_page_load = async function (wrapper) {
         // Listen for POS Profile registration
         frappe.realtime.on('pos_profile_registered', () => {
                 const update_totals_based_on_tax_inclusive = () => {
-                        console.log("Updating totals based on tax inclusive settings");
-                        const posProfile = this.page.$PosApp.pos_profile;
+                       const posProfile = this.page.$PosApp.pos_profile;
 
 			if (!posProfile) {
 				console.error("POS Profile is not set.");
@@ -38,13 +37,11 @@ frappe.pages['posapp'].on_page_load = async function (wrapper) {
                                 const grandTotalField = document.getElementById('input-v-29');
 
                                 if (totalAmountField && grandTotalField) {
-                                        if (taxInclusive) {
-                                                totalAmountField.value = grandTotalField.value;
-                                                console.log('Total amount copied from grand total:', grandTotalField.value);
-                                        } else {
-                                                totalAmountField.value = '';
-                                                console.log('Total amount cleared because checkbox is unchecked.');
-                                        }
+                                       if (taxInclusive) {
+                                               totalAmountField.value = grandTotalField.value;
+                                       } else {
+                                               totalAmountField.value = '';
+                                       }
                                 } else {
                                         console.error('Could not find total amount or grand total field by ID.');
                                 }
@@ -52,7 +49,13 @@ frappe.pages['posapp'].on_page_load = async function (wrapper) {
 
                         if (cachedValue !== null) {
                                 try {
-                                        applySetting(JSON.parse(cachedValue));
+                                        const val = JSON.parse(cachedValue);
+                                        applySetting(val);
+                                        import('/assets/posawesome/js/offline/index.js').then(m => {
+                                                if (m && m.setTaxInclusiveSetting) {
+                                                        m.setTaxInclusiveSetting(val);
+                                                }
+                                        }).catch(() => {});
                                         return;
                                 } catch (e) {
                                         console.warn('Failed to parse cached tax inclusive value', e);
@@ -68,18 +71,23 @@ frappe.pages['posapp'].on_page_load = async function (wrapper) {
                                 },
                                 callback: function(response) {
                                         if (response.message !== undefined) {
-                                                const posa_tax_inclusive = response.message;
-                                                try {
-                                                        localStorage.setItem(cacheKey, JSON.stringify(posa_tax_inclusive));
-                                                } catch (err) {
-                                                        console.warn('Failed to cache tax inclusive setting', err);
-                                                }
-                                                applySetting(posa_tax_inclusive);
-                                        } else {
-                                                console.error('Error fetching POS Profile or POS Profile not found.');
-                                        }
-                                }
-                        });
+                                               const posa_tax_inclusive = response.message;
+                                               try {
+                                                       localStorage.setItem(cacheKey, JSON.stringify(posa_tax_inclusive));
+                                               } catch (err) {
+                                                       console.warn('Failed to cache tax inclusive setting', err);
+                                               }
+                                               applySetting(posa_tax_inclusive);
+                                               import('/assets/posawesome/js/offline/index.js').then(m => {
+                                                       if (m && m.setTaxInclusiveSetting) {
+                                                               m.setTaxInclusiveSetting(posa_tax_inclusive);
+                                                       }
+                                               }).catch(() => {});
+                                       } else {
+                                               console.error('Error fetching POS Profile or POS Profile not found.');
+                                       }
+                               }
+                       });
                 };
 
                 update_totals_based_on_tax_inclusive();
