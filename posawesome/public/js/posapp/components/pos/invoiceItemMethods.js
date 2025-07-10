@@ -939,7 +939,6 @@ export default {
         // When offline, simply merge the passed doc with the current invoice_doc
         // to allow offline invoice creation without server calls
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
-        vm.compute_offline_taxes(vm.invoice_doc);
         return vm.invoice_doc;
       }
       frappe.call({
@@ -981,7 +980,6 @@ export default {
       if (isOffline()) {
         // Offline mode - merge doc locally without server update
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
-        vm.compute_offline_taxes(vm.invoice_doc);
         return vm.invoice_doc;
       }
       frappe.call({
@@ -2231,57 +2229,4 @@ export default {
       // Force UI update
       this.$forceUpdate();
     },
-
-    // Compute taxes client-side when working offline
-    compute_offline_taxes(doc) {
-      if (!this.pos_profile || !Array.isArray(this.pos_profile.taxes)) {
-        doc.taxes = [];
-        doc.total_taxes_and_charges = 0;
-        return doc;
-      }
-
-      const taxes = [];
-      let total_tax = 0;
-      const net_total = flt(doc.total || 0);
-
-      this.pos_profile.taxes.forEach((row) => {
-        const rate = flt(row.rate || 0);
-        let tax_amount = 0;
-        if (row.charge_type === 'Actual') {
-          tax_amount = flt(row.tax_amount || 0);
-        } else {
-          tax_amount = flt(net_total * rate / 100);
-        }
-        const total_after_tax = flt(net_total + tax_amount);
-        taxes.push({
-          account_head: row.account_head,
-          charge_type: row.charge_type || 'On Net Total',
-          description: row.description,
-          rate: rate,
-          tax_amount: tax_amount,
-          total: total_after_tax,
-          base_tax_amount: flt(tax_amount * (this.exchange_rate || 1)),
-          base_total: flt(total_after_tax * (this.exchange_rate || 1))
-        });
-        total_tax += tax_amount;
-      });
-
-      doc.taxes = taxes;
-      doc.total_taxes_and_charges = flt(total_tax);
-
-      const taxInclusive = this.pos_profile.posa_tax_inclusive;
-      const grandTotal = taxInclusive ? net_total : net_total + total_tax;
-      doc.grand_total = grandTotal;
-      doc.base_grand_total = grandTotal * (this.exchange_rate || 1);
-
-      if (this.pos_profile.disable_rounded_total) {
-        doc.rounded_total = flt(grandTotal, this.currency_precision);
-        doc.base_rounded_total = flt(doc.base_grand_total, this.currency_precision);
-      } else {
-        doc.rounded_total = this.roundAmount(grandTotal);
-        doc.base_rounded_total = this.roundAmount(doc.base_grand_total);
-      }
-
-      return doc;
-    },
-  };
+};
