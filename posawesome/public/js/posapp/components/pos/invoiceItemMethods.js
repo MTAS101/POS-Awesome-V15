@@ -939,9 +939,6 @@ export default {
         // When offline, simply merge the passed doc with the current invoice_doc
         // to allow offline invoice creation without server calls
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
-        if (!vm.pos_profile.posa_tax_inclusive) {
-          vm.recalculate_offline_taxes(vm.invoice_doc);
-        }
         return vm.invoice_doc;
       }
       frappe.call({
@@ -983,9 +980,6 @@ export default {
       if (isOffline()) {
         // Offline mode - merge doc locally without server update
         vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
-        if (!vm.pos_profile.posa_tax_inclusive) {
-          vm.recalculate_offline_taxes(vm.invoice_doc);
-        }
         return vm.invoice_doc;
       }
       frappe.call({
@@ -1016,41 +1010,6 @@ export default {
         },
       });
       return this.invoice_doc;
-    },
-
-    recalculate_offline_taxes(doc) {
-      try {
-        const conv = this.exchange_rate || 1;
-        const items = Array.isArray(doc.items) ? doc.items : [];
-        const net = items.reduce((t, it) => t + this.flt(it.amount || 0), 0);
-        doc.total = net;
-        doc.net_total = net;
-        doc.base_total = net * conv;
-        doc.base_net_total = net * conv;
-
-        let totalTaxes = 0;
-        (doc.taxes || []).forEach((tax) => {
-          const rate = this.flt(tax.rate || 0);
-          const taxAmt = this.flt((net * rate) / 100, this.currency_precision);
-          tax.tax_amount = taxAmt;
-          tax.base_tax_amount = taxAmt * conv;
-          totalTaxes += taxAmt;
-        });
-
-        doc.total_taxes_and_charges = totalTaxes;
-        doc.grand_total = net + totalTaxes;
-        doc.base_grand_total = (net + totalTaxes) * conv;
-
-        if (this.pos_profile.disable_rounded_total) {
-          doc.rounded_total = this.flt(doc.grand_total, this.currency_precision);
-          doc.base_rounded_total = this.flt(doc.base_grand_total, this.currency_precision);
-        } else {
-          doc.rounded_total = this.roundAmount(doc.grand_total);
-          doc.base_rounded_total = this.roundAmount(doc.base_grand_total);
-        }
-      } catch (e) {
-        console.error('Failed to recalc offline taxes', e);
-      }
     },
 
     // Process and save invoice (handles update or create)
