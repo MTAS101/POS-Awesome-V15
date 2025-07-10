@@ -72,10 +72,12 @@ The Vue frontend is built using Vite. Its configuration file is located at
 
 1. `bench get-app --branch Version-15 https://github.com/defendicon/POS-Awesome-V15`
 2. `bench setup requirements`
-3. `bench build --app posawesome`
-4. `bench restart`
-5. `bench --site [your.site.name] install-app posawesome`
-6. `bench --site [your.site.name] migrate`
+3. `cd apps/posawesome && yarn install && cd ../..`
+4. `yarn build`
+5. `bench build --app posawesome`
+6. `bench restart`
+7. `bench --site [your.site.name] install-app posawesome`
+8. `bench --site [your.site.name] migrate`
 
 ---
 
