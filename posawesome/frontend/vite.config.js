@@ -25,7 +25,11 @@ export default defineConfig({
     },
     build: {
         // Output compiled assets to the Frappe app's public directory
-        outDir: '../posawesome/public/frontend',
+        // The compiled assets should end up in the app's "public" folder
+        // Using a relative path of "../public/frontend" keeps a single
+        // "posawesome/public" directory instead of creating a nested
+        // "posawesome/posawesome/public" tree.
+        outDir: '../public/frontend',
         emptyOutDir: true,
         sourcemap: true,
         rollupOptions: {
