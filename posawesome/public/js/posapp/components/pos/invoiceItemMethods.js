@@ -533,7 +533,7 @@ export default {
       doc.items = items;
 
       // Calculate totals in selected currency ensuring negative values for returns
-      let total = this.Total;
+      let total = this.subtotal;
       if (isReturn && total > 0) total = -Math.abs(total);
 
       doc.total = total;
@@ -589,11 +589,9 @@ export default {
             if (row.charge_type === 'Actual') {
               tax_amount = flt(row.tax_amount || 0);
             } else if (inclusive) {
-              tax_amount = flt(doc.total * flt(row.rate) / 100);
+              tax_amount = flt(grandTotal * flt(row.rate) / 100);
             } else {
               tax_amount = flt(doc.net_total * flt(row.rate) / 100);
-            }
-            if (!inclusive) {
               runningTotal += tax_amount;
             }
             totalTax += tax_amount;
@@ -610,9 +608,10 @@ export default {
             });
           });
           if (inclusive) {
-            doc.net_total = doc.total - totalTax;
+            doc.total = grandTotal;
+            doc.base_total = grandTotal * (this.exchange_rate || 1);
+            doc.net_total = grandTotal - totalTax;
             doc.base_net_total = doc.net_total * (this.exchange_rate || 1);
-            grandTotal = doc.total;
           } else {
             grandTotal = runningTotal;
           }
@@ -636,7 +635,7 @@ export default {
 
       // Add POS specific fields
       doc.posa_pos_opening_shift = this.pos_opening_shift.name;
-      doc.payments = this.get_payments();
+      doc.payments = this.get_payments(grandTotal);
 
       // Handle return specific fields
       if (isReturn) {
@@ -789,7 +788,7 @@ export default {
       doc.items = newItems;
       doc.update_stock = 1;
       doc.is_pos = 1;
-      doc.payments = this.get_payments();
+      doc.payments = this.get_payments(doc.grand_total || this.subtotal);
       return doc;
     },
 
@@ -910,10 +909,9 @@ export default {
     },
 
     // Prepare payments array for invoice doc
-    get_payments() {
+    get_payments(total_amount = this.subtotal) {
       const payments = [];
-      // Use this.subtotal which is already in selected currency and includes all calculations
-      const total_amount = this.subtotal;
+      // total_amount represents the amount to be paid in selected currency
       let remaining_amount = total_amount;
 
       this.pos_profile.payments.forEach((payment, index) => {
@@ -1205,7 +1203,7 @@ export default {
         }
 
         // Get payments with correct sign (positive/negative)
-        invoice_doc.payments = this.get_payments();
+        invoice_doc.payments = this.get_payments(invoice_doc.grand_total || this.subtotal);
         console.log('Final payment data:', invoice_doc.payments);
 
         // Double-check return invoice payments are negative
