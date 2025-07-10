@@ -15,8 +15,9 @@ After switching branches or pulling latest changes:
 2. git pull
 3. yarn install
 4. cd ../..
-5. bench build --app posawesome
-6. bench --site your.site migrate
+5. yarn build
+6. bench build --app posawesome
+7. bench --site your.site migrate
    - If the build exits with code 143, verify that your system has enough RAM or swap space.
    - You can also try building the app in smaller parts to reduce memory usage.
 
@@ -72,7 +73,6 @@ The Vue frontend is built using Vite. Its configuration file is located at
 1. `bench get-app --branch Version-15 https://github.com/defendicon/POS-Awesome-V15`
 2. `bench setup requirements`
 3. `bench build --app posawesome`
-   - The build uses the Vite configuration at `posawesome/frontend/vite.config.js`.
 4. `bench restart`
 5. `bench --site [your.site.name] install-app posawesome`
 6. `bench --site [your.site.name] migrate`
