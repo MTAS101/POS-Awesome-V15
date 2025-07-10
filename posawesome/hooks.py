@@ -18,7 +18,7 @@ app_license = "GPLv3"
 # app_include_css = "/assets/posawesome/css/posawesome.css"
 # app_include_js = "/assets/posawesome/frontend/posawesome.js"
 app_include_js = [
-    "frontend/main.js"  # output file produced by vite build
+    "/assets/posawesome/frontend/main.js",  # output file produced by vite build
 ]
 
 # include js, css files in header of web template
