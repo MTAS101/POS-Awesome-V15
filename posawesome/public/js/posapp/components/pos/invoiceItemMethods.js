@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers, getTaxTemplate, getTaxInclusiveSetting } from "../../../offline/index.js";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers } from "../../../offline/index.js";
 
 export default {
 
@@ -556,53 +556,13 @@ export default {
       // Calculate grand total with correct sign for returns
       let grandTotal = this.subtotal;
 
-      // Prepare taxes array
-      doc.taxes = [];
+      // Add taxes to grand total
       if (this.invoice_doc && this.invoice_doc.taxes) {
         this.invoice_doc.taxes.forEach(tax => {
           if (tax.tax_amount) {
             grandTotal += flt(tax.tax_amount);
           }
-          doc.taxes.push({
-            account_head: tax.account_head,
-            charge_type: tax.charge_type || "On Net Total",
-            description: tax.description,
-            rate: tax.rate,
-            included_in_print_rate: tax.included_in_print_rate || 0,
-            tax_amount: tax.tax_amount,
-            total: tax.total,
-            base_tax_amount: tax.tax_amount * (this.exchange_rate || 1),
-            base_total: tax.total * (this.exchange_rate || 1)
-          });
         });
-      } else if (isOffline()) {
-        const tmpl = getTaxTemplate(this.pos_profile.taxes_and_charges);
-        if (tmpl && Array.isArray(tmpl.taxes)) {
-          let runningTotal = grandTotal;
-          tmpl.taxes.forEach(row => {
-            let tax_amount = 0;
-            if (row.charge_type === 'Actual') {
-              tax_amount = flt(row.tax_amount || 0);
-            } else {
-              tax_amount = flt(doc.net_total * flt(row.rate) / 100);
-            }
-            if (!getTaxInclusiveSetting()) {
-              runningTotal += tax_amount;
-            }
-            doc.taxes.push({
-              account_head: row.account_head,
-              charge_type: row.charge_type || 'On Net Total',
-              description: row.description,
-              rate: row.rate,
-              included_in_print_rate: getTaxInclusiveSetting() ? 1 : 0,
-              tax_amount: tax_amount,
-              total: runningTotal,
-              base_tax_amount: tax_amount * (this.exchange_rate || 1),
-              base_total: runningTotal * (this.exchange_rate || 1)
-            });
-          });
-          grandTotal = runningTotal;
-        }
       }
 
       if (isReturn && grandTotal > 0) grandTotal = -Math.abs(grandTotal);
@@ -622,6 +582,23 @@ export default {
       // Add POS specific fields
       doc.posa_pos_opening_shift = this.pos_opening_shift.name;
       doc.payments = this.get_payments();
+
+      // Copy existing taxes if available
+      doc.taxes = [];
+      if (this.invoice_doc && this.invoice_doc.taxes) {
+        doc.taxes = this.invoice_doc.taxes.map(tax => {
+          return {
+            account_head: tax.account_head,
+            charge_type: tax.charge_type || "On Net Total",
+            description: tax.description,
+            rate: tax.rate,
+            tax_amount: tax.tax_amount,
+            total: tax.total,
+            base_tax_amount: tax.tax_amount * (this.exchange_rate || 1),
+            base_total: tax.total * (this.exchange_rate || 1)
+          };
+        });
+      }
 
       // Handle return specific fields
       if (isReturn) {

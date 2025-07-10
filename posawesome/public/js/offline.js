@@ -34,7 +34,6 @@ const memory = {
 	sales_persons_storage: [],
         price_list_cache: {},
         item_details_cache: {},
-        tax_template_cache: {},
         tax_inclusive: false,
         manual_offline: false,
 };
@@ -403,28 +402,6 @@ export function setTaxInclusiveSetting(value) {
         persist("tax_inclusive");
 }
 
-export function saveTaxTemplate(name, doc) {
-        try {
-                const cache = memory.tax_template_cache || {};
-                const cleanDoc = JSON.parse(JSON.stringify(doc));
-                cache[name] = cleanDoc;
-                memory.tax_template_cache = cache;
-                persist("tax_template_cache");
-        } catch (e) {
-                console.error("Failed to cache tax template", e);
-        }
-}
-
-export function getCachedTaxTemplate(name) {
-        try {
-                const cache = memory.tax_template_cache || {};
-                return cache[name] || null;
-        } catch (e) {
-                console.error("Failed to get cached tax template", e);
-                return null;
-        }
-}
-
 // Add sync function to clear local cache when invoices are successfully synced
 export async function syncOfflineInvoices() {
         // Prevent concurrent syncs which can lead to duplicate submissions
@@ -764,48 +741,25 @@ export function saveItemDetailsCache(profileName, priceList, items) {
 }
 
 export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15 * 60 * 1000) {
-        try {
-                const cache = memory.item_details_cache || {};
-                const priceCache = cache[profileName]?.[priceList] || {};
-                const now = Date.now();
-                const cached = [];
-                const missing = [];
-                itemCodes.forEach((code) => {
-                        const entry = priceCache[code];
-                        if (entry && now - entry.timestamp < ttl) {
-                                cached.push(entry.data);
-                        } else {
-                                missing.push(code);
-                        }
-                });
-                return { cached, missing };
-        } catch (e) {
-                console.error("Failed to get cached item details", e);
-                return { cached: [], missing: itemCodes };
-        }
-}
-
-// Tax template caching functions
-export function saveTaxTemplate(name, doc) {
-        try {
-                const cache = memory.tax_template_cache || {};
-                const cleanDoc = JSON.parse(JSON.stringify(doc));
-                cache[name] = cleanDoc;
-                memory.tax_template_cache = cache;
-                persist("tax_template_cache");
-        } catch (e) {
-                console.error("Failed to cache tax template", e);
-        }
-}
-
-export function getCachedTaxTemplate(name) {
-        try {
-                const cache = memory.tax_template_cache || {};
-                return cache[name] || null;
-        } catch (e) {
-                console.error("Failed to get cached tax template", e);
-                return null;
-        }
+	try {
+		const cache = memory.item_details_cache || {};
+		const priceCache = cache[profileName]?.[priceList] || {};
+		const now = Date.now();
+		const cached = [];
+		const missing = [];
+		itemCodes.forEach((code) => {
+			const entry = priceCache[code];
+			if (entry && now - entry.timestamp < ttl) {
+				cached.push(entry.data);
+			} else {
+				missing.push(code);
+			}
+		});
+		return { cached, missing };
+	} catch (e) {
+		console.error("Failed to get cached item details", e);
+		return { cached: [], missing: itemCodes };
+	}
 }
 
 // Local stock management functions
@@ -1075,7 +1029,6 @@ export async function clearAllCache() {
         memory.sales_persons_storage = [];
         memory.price_list_cache = {};
         memory.item_details_cache = {};
-        memory.tax_template_cache = {};
         memory.tax_inclusive = false;
         memory.manual_offline = false;
 }
