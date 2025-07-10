@@ -533,7 +533,7 @@ export default {
       doc.items = items;
 
       // Calculate totals in selected currency ensuring negative values for returns
-      let total = this.subtotal;
+      let total = this.Total;
       if (isReturn && total > 0) total = -Math.abs(total);
 
       doc.total = total;
@@ -585,12 +585,13 @@ export default {
           let runningTotal = grandTotal;
           let totalTax = 0;
           tmpl.taxes.forEach(row => {
-            let tax_amount;
+            let tax_amount = 0;
             if (row.charge_type === 'Actual') {
               tax_amount = flt(row.tax_amount || 0);
+            } else if (inclusive) {
+              tax_amount = flt(doc.total * flt(row.rate) / 100);
             } else {
-              const base = inclusive ? grandTotal : doc.net_total;
-              tax_amount = flt(base * flt(row.rate) / 100);
+              tax_amount = flt(doc.net_total * flt(row.rate) / 100);
             }
             if (!inclusive) {
               runningTotal += tax_amount;
@@ -609,10 +610,9 @@ export default {
             });
           });
           if (inclusive) {
-            doc.total = grandTotal;
-            doc.base_total = grandTotal * (this.exchange_rate || 1);
-            doc.net_total = grandTotal - totalTax;
+            doc.net_total = doc.total - totalTax;
             doc.base_net_total = doc.net_total * (this.exchange_rate || 1);
+            grandTotal = doc.total;
           } else {
             grandTotal = runningTotal;
           }
