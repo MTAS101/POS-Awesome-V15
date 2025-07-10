@@ -1,4 +1,4 @@
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers, getTaxInclusiveSetting } from "../../../offline/index.js";
+import { isOffline, saveCustomerBalance, getCachedCustomerBalance, getCachedPriceListItems, getItemUOMs, getCustomerStorage, getOfflineCustomers } from "../../../offline/index.js";
 
 export default {
 
@@ -553,19 +553,16 @@ export default {
 
       doc.additional_discount_percentage = discountPercentage;
 
-      // Prepare taxes and calculate amounts when offline
-      let taxes = [];
-      if (this.invoice_doc && this.invoice_doc.taxes) {
-        taxes = this.invoice_doc.taxes.map(t => ({ ...t }));
-      }
-
-      // Calculate taxes locally if needed
-      const totalTax = this.calculateOfflineTaxes(taxes);
-
       // Calculate grand total with correct sign for returns
       let grandTotal = this.subtotal;
-      if (!getTaxInclusiveSetting()) {
-        grandTotal += totalTax;
+
+      // Add taxes to grand total
+      if (this.invoice_doc && this.invoice_doc.taxes) {
+        this.invoice_doc.taxes.forEach(tax => {
+          if (tax.tax_amount) {
+            grandTotal += flt(tax.tax_amount);
+          }
+        });
       }
 
       if (isReturn && grandTotal > 0) grandTotal = -Math.abs(grandTotal);
@@ -586,10 +583,22 @@ export default {
       doc.posa_pos_opening_shift = this.pos_opening_shift.name;
       doc.payments = this.get_payments();
 
-      // Use calculated taxes
-      doc.taxes = taxes;
-      doc.total_taxes_and_charges = totalTax;
-      doc.base_total_taxes_and_charges = totalTax * (this.exchange_rate || 1);
+      // Copy existing taxes if available
+      doc.taxes = [];
+      if (this.invoice_doc && this.invoice_doc.taxes) {
+        doc.taxes = this.invoice_doc.taxes.map(tax => {
+          return {
+            account_head: tax.account_head,
+            charge_type: tax.charge_type || "On Net Total",
+            description: tax.description,
+            rate: tax.rate,
+            tax_amount: tax.tax_amount,
+            total: tax.total,
+            base_tax_amount: tax.tax_amount * (this.exchange_rate || 1),
+            base_total: tax.total * (this.exchange_rate || 1)
+          };
+        });
+      }
 
       // Handle return specific fields
       if (isReturn) {
@@ -2214,40 +2223,10 @@ export default {
         item.base_batch_price = null;
       }
 
-  // Update batch_no_data
-  item.batch_no_data = batch_no_data;
+      // Update batch_no_data
+      item.batch_no_data = batch_no_data;
 
-  // Force UI update
-  this.$forceUpdate();
-  },
-
-  // Calculate taxes locally when working offline
-  calculateOfflineTaxes(taxes) {
-    if (!Array.isArray(taxes) || !taxes.length) {
-      return 0;
-    }
-
-    const taxInclusive = getTaxInclusiveSetting();
-    let totalTax = 0;
-    const baseAmount = this.subtotal;
-
-    taxes.forEach(tax => {
-      const rate = parseFloat(tax.rate) || 0;
-      if (tax.charge_type === 'Actual') {
-        tax.tax_amount = this.flt(tax.tax_amount || 0, this.currency_precision);
-      } else {
-        tax.tax_amount = this.flt(baseAmount * rate / 100, this.currency_precision);
-      }
-
-      tax.total = tax.tax_amount;
-      tax.base_tax_amount = this.flt(tax.tax_amount * (this.exchange_rate || 1), this.currency_precision);
-      tax.base_total = tax.base_tax_amount;
-
-      if (!taxInclusive) {
-        totalTax += tax.tax_amount;
-      }
-    });
-
-    return totalTax;
-  },
+      // Force UI update
+      this.$forceUpdate();
+    },
 };
