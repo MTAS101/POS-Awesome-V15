@@ -18,12 +18,12 @@ self.addEventListener('install', event => {
       const cache = await caches.open(CACHE_NAME);
       const resources = [
         '/app/posapp',
-        '/assets/posawesome/js/posawesome.bundle.js',
+        '/assets/posawesome/frontend/main.js',
 
-        '/assets/posawesome/js/offline/index.js',
+        '/assets/posawesome/frontend/offline/index.js',
 
-        '/assets/posawesome/js/posapp/workers/itemWorker.js',
-        '/assets/posawesome/js/libs/dexie.min.js',
+        '/assets/posawesome/frontend/workers/itemWorker.js',
+        '/assets/posawesome/frontend/libs/dexie.min.js',
 
         '/manifest.json',
         '/offline.html'
