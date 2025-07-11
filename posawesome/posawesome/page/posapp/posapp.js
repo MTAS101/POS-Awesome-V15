@@ -51,12 +51,10 @@ frappe.pages['posapp'].on_page_load = async function (wrapper) {
                         };
 
                         const fetchAndCache = () => {
-                                frappe.call({
-                                method: 'frappe.get_cached_value',
+                        frappe.call({
+                                method: 'posawesome.posawesome.api.utilities.get_pos_profile_tax_inclusive',
                                 args: {
-                                        doctype: 'POS Profile',
-                                        name: posProfile,
-                                        fieldname: 'posa_tax_inclusive'
+                                        pos_profile: posProfile,
                                 },
                                 callback: function(response) {
                                         if (response.message !== undefined) {

@@ -569,11 +569,9 @@ export default {
       }
       try {
         const r = await frappe.call({
-          method: 'frappe.get_cached_value',
+          method: 'posawesome.posawesome.api.utilities.get_pos_profile_tax_inclusive',
           args: {
-            doctype: 'POS Profile',
-            name: this.posProfile.name,
-            fieldname: 'posa_tax_inclusive'
+            pos_profile: this.posProfile.name,
           }
         });
         if (r.message !== undefined) {
