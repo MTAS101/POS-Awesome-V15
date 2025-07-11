@@ -6,8 +6,11 @@
 
     <!-- Main Invoice Card (contains all invoice content) -->
     <v-card
-      :style="{ height: 'var(--container-height)', maxHeight: 'var(--container-height)', backgroundColor: isDarkTheme ? '#121212' : '', resize: 'vertical', overflow: 'auto' }"
-      :class="['cards my-0 py-0 mt-3 resizable', isDarkTheme ? '' : 'bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]">
+      ref="invoiceCard"
+      :style="{ height: invoiceHeight || 'var(--container-height)', maxHeight: invoiceHeight || 'var(--container-height)', backgroundColor: isDarkTheme ? '#121212' : '', resize: 'vertical', overflow: 'auto' }"
+      :class="['cards my-0 py-0 mt-3 resizable', isDarkTheme ? '' : 'bg-grey-lighten-5', { 'return-mode': isReturnInvoice }]"
+      @mouseup="saveInvoiceHeight"
+      @touchend="saveInvoiceHeight">
 
       <!-- Dynamic padding wrapper -->
       <div class="dynamic-padding">
@@ -207,7 +210,8 @@ export default {
       selected_columns: [], // Selected columns for items table
       temp_selected_columns: [], // Temporary array for column selection
       available_columns: [], // All available columns
-      show_column_selector: false // Column selector dialog visibility
+      show_column_selector: false, // Column selector dialog visibility
+      invoiceHeight: null
     };
   },
 
@@ -350,6 +354,31 @@ export default {
         }
       } catch (e) {
         console.error('Failed to load column preferences:', e);
+      }
+    },
+
+    saveInvoiceHeight() {
+      if (this.$refs.invoiceCard) {
+        this.invoiceHeight = this.$refs.invoiceCard.clientHeight + 'px';
+        try {
+          localStorage.setItem('posawesome_invoice_height', this.invoiceHeight);
+        } catch (e) {
+          console.error('Failed to save invoice height:', e);
+        }
+      }
+    },
+
+    loadInvoiceHeight() {
+      try {
+        const saved = localStorage.getItem('posawesome_invoice_height');
+        if (saved) {
+          this.invoiceHeight = saved;
+        } else {
+          this.invoiceHeight = getComputedStyle(document.documentElement).getPropertyValue('--container-height') || '68vh';
+        }
+      } catch (e) {
+        console.error('Failed to load invoice height:', e);
+        this.invoiceHeight = getComputedStyle(document.documentElement).getPropertyValue('--container-height') || '68vh';
       }
     },
     makeid(length) {
@@ -876,6 +905,8 @@ export default {
   mounted() {
     // Load saved column preferences
     this.loadColumnPreferences();
+    // Restore saved invoice height
+    this.loadInvoiceHeight();
     this.eventBus.on("item-drag-start", (item) => {
       this.showDropFeedback(true);
     });
