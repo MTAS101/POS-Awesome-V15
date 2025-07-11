@@ -261,6 +261,12 @@ body {
   background-color: var(--surface-secondary);
 }
 
+/* Keep cards dark in dark theme */
+:root.dark-theme .cards,
+.v-theme--dark .cards {
+  background-color: #121212;
+}
+
 /* ===== COMMON TABLE STYLES ===== */
 .pos-table {
   border-radius: var(--border-radius-lg);
