@@ -60,6 +60,7 @@
         <v-checkbox-btn v-model="item.posa_is_offer" class="center" @change="toggleOffer(item)"></v-checkbox-btn>
       </template>
 
+
       <!-- Expanded row content using Vuetify's built-in system -->
       <template v-slot:expanded-row="{ item }">
         <td :colspan="headers.length" class="ma-0 pa-0">
@@ -73,7 +74,6 @@
                   <span class="action-label">{{ __('Remove') }}</span>
                 </v-btn>
               </div>
-
               <div class="action-button-group">
                 <v-btn :disabled="!!item.posa_is_replace" size="large" color="warning" variant="tonal"
                   class="item-action-btn minus-btn" @click.stop="subtractOne(item)">
@@ -114,7 +114,7 @@
                     prepend-inner-icon="mdi-weight"></v-select>
                 </div>
               </div>
-              
+
               <!-- Second row of fields -->
               <div class="form-row">
                 <div class="form-field">
@@ -257,7 +257,7 @@
                   </div>
                 </div>
               </div>
-              
+
               <!-- Fourth row for warehouse and other details -->
               <div class="form-row">
                 <div class="form-field">
