@@ -408,6 +408,11 @@ export default {
         this.eventBus.on('sync_invoices', () => {
           this.handleSyncInvoices();
         });
+
+        // Update pending invoice count when other modules emit the change
+        this.eventBus.on('pending_invoices_changed', (count) => {
+          this.pendingInvoices = count;
+        });
       }
 
       // Enhanced server connection status listeners
@@ -456,8 +461,8 @@ export default {
     },
 
     handleCloseShift() {
-      // Emit to POS component
-      this.eventBus.emit('close_shift');
+      // Trigger POS closing dialog via event bus
+      this.eventBus.emit('open_closing_dialog');
     },
 
     handlePrintLastInvoice() {
@@ -604,6 +609,11 @@ export default {
         $('.navbar.navbar-default.navbar-fixed-top').remove();
       });
     },
+  },
+  beforeUnmount() {
+    if (this.eventBus) {
+      this.eventBus.off('pending_invoices_changed');
+    }
   },
   created: function () {
     setTimeout(() => {
