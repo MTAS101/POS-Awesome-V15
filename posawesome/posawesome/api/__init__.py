@@ -52,5 +52,6 @@ from .utilities import (
     get_selling_price_lists,
     get_translation_dict,
     get_version,
+    get_pos_profile_tax_inclusive,
 )
 
