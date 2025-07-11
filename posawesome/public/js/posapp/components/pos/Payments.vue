@@ -254,8 +254,8 @@
           <v-col cols="6" v-if="is_credit_sale">
             <VueDatePicker v-model="new_credit_due_date" model-type="format" format="dd-MM-yyyy" :min-date="new Date()"
               auto-apply :dark="isDarkTheme" class="dark-field sleek-field" @update:model-value="update_credit_due_date()" />
-            <v-text-field class="mt-2" density="compact" variant="solo" type="number" min="0" max="365"
-              v-model.number="credit_due_days" :label="frappe._('Days until due')" hide-details
+            <v-text-field class="mt-2 dark-field sleek-field" density="compact" variant="solo" type="number" min="0" max="365"
+              :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" v-model.number="credit_due_days" :label="frappe._('Days until due')" hide-details
               @change="applyDuePreset(credit_due_days)"></v-text-field>
             <div class="mt-1">
               <v-chip v-for="d in credit_due_presets" :key="d" size="small" class="ma-1" variant="solo"
@@ -340,6 +340,7 @@
         <v-card-text class="pa-0">
           <v-container>
             <v-text-field density="compact" variant="solo" type="number" min="0" max="365"
+              class="dark-field sleek-field" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
               v-model.number="custom_days_value" :label="frappe._('Days')" hide-details></v-text-field>
           </v-container>
         </v-card-text>

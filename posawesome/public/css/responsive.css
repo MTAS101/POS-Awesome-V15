@@ -57,7 +57,7 @@
   --table-row-hover: rgba(25, 118, 210, 0.05);
   
   /* Form field colors */
-  --field-bg: #ffffff;
+  --field-bg: var(--surface-secondary);
   --field-border: #e0e0e0;
   --field-focus: rgba(25, 118, 210, 0.1);
 }
@@ -112,7 +112,7 @@ body {
   --table-row-hover: rgba(187, 134, 252, 0.1);
   
   /* Form field colors */
-  --field-bg: #1E1E1E;
+  --field-bg: var(--surface-secondary);
   --field-border: #373737;
   --field-focus: rgba(187, 134, 252, 0.1);
 }
@@ -333,6 +333,16 @@ body {
 
 .pos-form-field .v-field__overlay {
   background-color: var(--field-bg);
+}
+
+/* Background color for fields to match item selector */
+.dark-field {
+  background-color: var(--surface-secondary) !important;
+}
+
+:root.dark-theme .dark-field,
+.v-theme--dark .dark-field {
+  background-color: #1E1E1E !important;
 }
 
 /* ===== SLEEK FIELD STYLES ===== */

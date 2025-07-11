@@ -29,7 +29,7 @@
             </v-row>
             <v-row align="center" no-gutters class="mb-1">
               <v-col md="4" cols="12">
-                <v-select density="compact" variant="outlined" hide-details clearable
+                <v-select density="compact" variant="outlined" hide-details clearable class="dark-field"
                   :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" v-model="pos_profile_search" :items="pos_profiles_list"
                   item-value="name" label="Select POS Profile"></v-select>
               </v-col>
@@ -123,12 +123,12 @@
             <v-row align="center" no-gutters class="mb-1">
               <v-col md="4" cols="12" class="mr-1">
                 <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Search by Name')"
-                  :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" hide-details v-model="mpesa_search_name"
+                  :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" hide-details class="dark-field" v-model="mpesa_search_name"
                   clearable></v-text-field>
               </v-col>
               <v-col md="4" cols="12" class="mr-1">
                 <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Search by Mobile')"
-                  :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" hide-details v-model="mpesa_search_mobile"
+                  :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" hide-details class="dark-field" v-model="mpesa_search_mobile"
                   clearable></v-text-field>
               </v-col>
               <v-col> </v-col>
