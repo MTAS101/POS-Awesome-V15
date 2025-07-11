@@ -44,9 +44,9 @@ import NewAddress from './NewAddress.vue';
 import Variants from './Variants.vue';
 import Returns from './Returns.vue';
 import MpesaPayments from './Mpesa-Payments.vue';
-import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, clearOpeningStorage, initPromise } from '../../../offline.js';
+import { getCachedOffers, saveOffers, getOpeningStorage, setOpeningStorage, clearOpeningStorage, initPromise, checkDbHealth, setTaxTemplate } from '../../../offline/index.js';
 // Import the cache cleanup function
-import { clearExpiredCustomerBalances } from "../../../offline.js";
+import { clearExpiredCustomerBalances } from "../../../offline/index.js";
 import { responsiveMixin } from '../../mixins/responsive.js';
 
 export default {
@@ -82,8 +82,9 @@ export default {
   methods: {
     async check_opening_entry() {
       await initPromise;
+      await checkDbHealth();
       return frappe
-        .call('posawesome.posawesome.api.posapp.check_opening_shift', {
+        .call('posawesome.posawesome.api.shifts.check_opening_shift', {
           user: frappe.session.user,
         })
         .then((r) => {
@@ -91,6 +92,20 @@ export default {
             this.pos_profile = r.message.pos_profile;
             this.pos_opening_shift = r.message.pos_opening_shift;
             this.get_offers(this.pos_profile.name);
+            if (this.pos_profile.taxes_and_charges) {
+              frappe.call({
+                method: 'frappe.client.get',
+                args: {
+                  doctype: 'Sales Taxes and Charges Template',
+                  name: this.pos_profile.taxes_and_charges
+                },
+                callback: (res) => {
+                  if (res.message) {
+                    setTaxTemplate(this.pos_profile.taxes_and_charges, res.message);
+                  }
+                }
+              });
+            }
             this.eventBus.emit('register_pos_profile', r.message);
             this.eventBus.emit('set_company', r.message.company);
             try {
@@ -198,7 +213,7 @@ export default {
       }
 
       return frappe
-        .call('posawesome.posawesome.api.posapp.get_offers', {
+        .call('posawesome.posawesome.api.offers.get_offers', {
           profile: pos_profile,
         })
         .then((r) => {

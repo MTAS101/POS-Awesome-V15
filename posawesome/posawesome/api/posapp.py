@@ -44,7 +44,6 @@ def ensure_child_doctype(doc, table_field, child_doctype):
 @frappe.whitelist()
 def get_opening_dialog_data():
     data = {}
-    data["companies"] = frappe.get_list("Company", limit_page_length=0, order_by="name")
     
     # Get only POS Profiles where current user is defined in POS Profile User table
     pos_profiles_data = frappe.db.sql("""
@@ -56,6 +55,13 @@ def get_opening_dialog_data():
     """, frappe.session.user, as_dict=1)
     
     data["pos_profiles_data"] = pos_profiles_data
+
+    # Derive companies from accessible POS Profiles
+    company_names = []
+    for profile in pos_profiles_data:
+        if profile.company and profile.company not in company_names:
+            company_names.append(profile.company)
+    data["companies"] = [{"name": c} for c in company_names]
 
     pos_profiles_list = []
     for i in data["pos_profiles_data"]:
@@ -260,49 +266,90 @@ def get_items(
 
         result = []
 
-        items_data = frappe.db.sql(
-            """
-            SELECT
-                name AS item_code,
-                item_name,
-                description,
-                stock_uom,
-                image,
-                is_stock_item,
-                has_variants,
-                variant_of,
-                item_group,
-                idx as idx,
-                has_batch_no,
-                has_serial_no,
-                max_discount,
-                brand
-            FROM
-                `tabItem`
-            WHERE
-                disabled = 0
-                    AND is_sales_item = 1
-                    AND is_fixed_asset = 0
-                    {condition}
-            ORDER BY
-                item_name asc
-            {limit}
-                """.format(
-                condition=condition,
-                limit=limit_clause
-            ),
-            as_dict=1,
+        # Build ORM filters
+        filters = {
+            "disabled": 0,
+            "is_sales_item": 1,
+            "is_fixed_asset": 0
+        }
+        
+        # Add item group filter
+        item_groups = get_item_groups(pos_profile.get("name"))
+        if item_groups:
+            filters["item_group"] = ["in", item_groups]
+        
+        # Add search conditions
+        or_filters = []
+        if use_limit_search and search_value:
+            data = search_serial_or_batch_or_barcode_number(
+                search_value, search_serial_no
+            )
+            item_code = data.get("item_code") if data.get("item_code") else search_value
+            
+            or_filters = [
+                ["name", "like", f"%{item_code}%"],
+                ["item_name", "like", f"%{item_code}%"]
+            ]
+            
+            # Check for exact barcode match
+            if data.get("item_code"):
+                filters["name"] = data.get("item_code")
+                or_filters = []
+        
+        if item_group:
+            filters["item_group"] = ["like", f"%{item_group}%"]
+        
+        if not posa_show_template_items:
+            filters["has_variants"] = 0
+        
+        # Determine limit
+        limit_page_length = None
+        limit_start = None
+        
+        if limit is not None:
+            limit_page_length = limit
+            if offset:
+                limit_start = offset
+        elif use_limit_search:
+            limit_page_length = search_limit
+            if pos_profile.get("posa_force_reload_items") and search_value:
+                limit_page_length = None
+        
+        items_data = frappe.get_all(
+            "Item",
+            filters=filters,
+            or_filters=or_filters if or_filters else None,
+            fields=[
+                "name as item_code",
+                "item_name",
+                "description", 
+                "stock_uom",
+                "image",
+                "is_stock_item",
+                "has_variants",
+                "variant_of",
+                "item_group",
+                "idx",
+                "has_batch_no",
+                "has_serial_no",
+                "max_discount",
+                "brand"
+            ],
+            limit_start=limit_start,
+            limit_page_length=limit_page_length,
+            order_by="item_name asc"
         )
 
         if items_data:
             items = [d.item_code for d in items_data]
+            price_list_currency = frappe.db.get_value("Price List", price_list, "currency")
             item_prices_data = frappe.get_all(
                 "Item Price",
                 fields=["item_code", "price_list_rate", "currency", "uom"],
                 filters={
                     "price_list": price_list,
                     "item_code": ["in", items],
-                    "currency": pos_profile.get("currency"),
+                    "currency": price_list_currency or pos_profile.get("currency"),
                     "selling": 1,
                     "valid_from": ["<=", today],
                     "customer": ["in", ["", None, customer]],
@@ -334,7 +381,7 @@ def get_items(
                     fields=["barcode", "posa_uom"],
                 )
                 batch_no_data = []
-                if search_batch_no:
+                if search_batch_no or item.has_batch_no:
                     batch_list = get_batch_qty(warehouse=warehouse, item_code=item_code)
                     if batch_list:
                         for batch in batch_list:
@@ -356,7 +403,7 @@ def get_items(
                                         }
                                     )
                 serial_no_data = []
-                if search_serial_no:
+                if search_serial_no or item.has_serial_no:
                     serial_no_data = frappe.get_all(
                         "Serial No",
                         filters={
@@ -401,6 +448,7 @@ def get_items(
                         {
                             "rate": item_price.get("price_list_rate") or 0,
                             "currency": item_price.get("currency")
+                            or price_list_currency
                             or pos_profile.get("currency"),
                             "item_barcode": item_barcode or [],
                             "actual_qty": item_stock_qty or 0,
@@ -460,14 +508,12 @@ def get_root_of(doctype):
 
 @frappe.whitelist()
 def get_items_groups():
-    return frappe.db.sql(
-        """
-        select name 
-        from `tabItem Group`
-        where is_group = 0
-        order by name
-        LIMIT 0, 200 """,
-        as_dict=1,
+    return frappe.get_all(
+        "Item Group",
+        filters={"is_group": 0},
+        fields=["name"],
+        limit_page_length=200,
+        order_by="name"
     )
 
 
@@ -490,12 +536,14 @@ def get_customer_groups(pos_profile):
 
 def get_child_nodes(group_type, root):
     lft, rgt = frappe.db.get_value(group_type, root, ["lft", "rgt"])
-    return frappe.db.sql(
-        """ Select name, lft, rgt from `tab{tab}` where
-			lft >= {lft} and rgt <= {rgt} order by lft""".format(
-            tab=group_type, lft=lft, rgt=rgt
-        ),
-        as_dict=1,
+    return frappe.get_all(
+        group_type,
+        filters={
+            "lft": [">=", lft],
+            "rgt": ["<=", rgt]
+        },
+        fields=["name", "lft", "rgt"],
+        order_by="lft"
     )
 
 
@@ -521,18 +569,17 @@ def get_customer_names(pos_profile):
 
     def _get_customer_names(pos_profile):
         pos_profile = json.loads(pos_profile)
-        condition = ""
-        condition += get_customer_group_condition(pos_profile)
-        customers = frappe.db.sql(
-            """
-            SELECT name, mobile_no, email_id, tax_id, customer_name, primary_address
-            FROM `tabCustomer`
-            WHERE {0}
-            ORDER by name
-            """.format(
-                condition
-            ),
-            as_dict=1,
+        filters = {"disabled": 0}
+        
+        customer_groups = get_customer_groups(pos_profile)
+        if customer_groups:
+            filters["customer_group"] = ["in", customer_groups]
+        
+        customers = frappe.get_all(
+            "Customer",
+            filters=filters,
+            fields=["name", "mobile_no", "email_id", "tax_id", "customer_name", "primary_address"],
+            order_by="name"
         )
         return customers
 
@@ -655,42 +702,88 @@ def update_invoice(data):
         # Get default conversion rate from ERPNext if currency is different from company currency
         if invoice_doc.currency != frappe.get_cached_value("Company", invoice_doc.company, "default_currency"):
             company_currency = frappe.get_cached_value("Company", invoice_doc.company, "default_currency")
-            # Get exchange rate from selected currency to base currency
-            exchange_rate = get_exchange_rate(
-                invoice_doc.currency,
-                company_currency,
-                invoice_doc.posting_date
-            )
-            invoice_doc.conversion_rate = exchange_rate
-            invoice_doc.plc_conversion_rate = exchange_rate
-            invoice_doc.price_list_currency = selected_currency
 
-            # Update rates and amounts for all items using multiplication
+            # Determine price list currency
+            price_list_currency = data.get("price_list_currency")
+            if not price_list_currency and invoice_doc.get("selling_price_list"):
+                price_list_currency = frappe.db.get_value(
+                    "Price List", invoice_doc.selling_price_list, "currency"
+                )
+            if not price_list_currency:
+                price_list_currency = company_currency
+
+            conversion_rate = 1
+            if invoice_doc.currency != company_currency:
+                conversion_rate = get_exchange_rate(
+                    invoice_doc.currency,
+                    company_currency,
+                    invoice_doc.posting_date,
+                )
+
+            plc_conversion_rate = 1
+            if price_list_currency != invoice_doc.currency:
+                plc_conversion_rate = get_exchange_rate(
+                    price_list_currency,
+                    invoice_doc.currency,
+                    invoice_doc.posting_date,
+                )
+
+            invoice_doc.conversion_rate = conversion_rate
+            invoice_doc.plc_conversion_rate = plc_conversion_rate
+            invoice_doc.price_list_currency = price_list_currency
+
+            # Update rates and amounts for all items using division
             for item in invoice_doc.items:
                 if item.price_list_rate:
                     # If exchange rate is 285 PKR = 1 USD
-                    # To convert USD to PKR: multiply by exchange rate
-                    # Example: 0.35 USD * 285 = 100 PKR
-                    item.base_price_list_rate = flt(item.price_list_rate * exchange_rate, item.precision("base_price_list_rate"))
+                    # To convert PKR to USD: divide by exchange rate
+                    # Example: 100 PKR / 285 = 0.35 USD
+                    item.base_price_list_rate = flt(
+                        item.price_list_rate * (conversion_rate / plc_conversion_rate),
+                        item.precision("base_price_list_rate"),
+                    )
                 if item.rate:
-                    item.base_rate = flt(item.rate * exchange_rate, item.precision("base_rate"))
+                    item.base_rate = flt(item.rate * conversion_rate, item.precision("base_rate"))
                 if item.amount:
-                    item.base_amount = flt(item.amount * exchange_rate, item.precision("base_amount"))
+                    item.base_amount = flt(item.amount * conversion_rate, item.precision("base_amount"))
 
             # Update payment amounts
             for payment in invoice_doc.payments:
-                payment.base_amount = flt(payment.amount * exchange_rate, payment.precision("base_amount"))
+                payment.base_amount = flt(payment.amount * conversion_rate, payment.precision("base_amount"))
 
             # Update invoice level amounts
-            invoice_doc.base_total = flt(invoice_doc.total * exchange_rate, invoice_doc.precision("base_total"))
-            invoice_doc.base_net_total = flt(invoice_doc.net_total * exchange_rate, invoice_doc.precision("base_net_total"))
-            invoice_doc.base_grand_total = flt(invoice_doc.grand_total * exchange_rate, invoice_doc.precision("base_grand_total"))
-            invoice_doc.base_rounded_total = flt(invoice_doc.rounded_total * exchange_rate, invoice_doc.precision("base_rounded_total"))
+            invoice_doc.base_total = flt(invoice_doc.total * conversion_rate, invoice_doc.precision("base_total"))
+            invoice_doc.base_net_total = flt(invoice_doc.net_total * conversion_rate, invoice_doc.precision("base_net_total"))
+            invoice_doc.base_grand_total = flt(invoice_doc.grand_total * conversion_rate, invoice_doc.precision("base_grand_total"))
+            invoice_doc.base_rounded_total = flt(invoice_doc.rounded_total * conversion_rate, invoice_doc.precision("base_rounded_total"))
             invoice_doc.base_in_words = money_in_words(invoice_doc.base_rounded_total, invoice_doc.company_currency)
 
             # Update data to be sent back to frontend
-            data["conversion_rate"] = exchange_rate
-            data["plc_conversion_rate"] = exchange_rate
+
+            data["conversion_rate"] = conversion_rate
+            data["plc_conversion_rate"] = plc_conversion_rate
+
+    allow_zero_rated_items = frappe.get_cached_value(
+        "POS Profile", invoice_doc.pos_profile, "posa_allow_zero_rated_items"
+    )
+    for item in invoice_doc.items:
+        if not item.rate or item.rate == 0:
+            if allow_zero_rated_items:
+                item.price_list_rate = 0.00
+                item.is_free_item = 1
+            else:
+                frappe.throw(_("Rate cannot be zero for item {0}").format(item.item_code))
+        else:
+            item.is_free_item = 0
+
+        add_taxes_from_tax_template(item, invoice_doc)
+
+    if frappe.get_cached_value(
+        "POS Profile", invoice_doc.pos_profile, "posa_tax_inclusive"
+    ):
+        if invoice_doc.get("taxes"):
+            for tax in invoice_doc.taxes:
+                tax.included_in_print_rate = 1
 
     invoice_doc.flags.ignore_permissions = True
     frappe.flags.ignore_account_permission = True
@@ -700,7 +793,7 @@ def update_invoice(data):
     # Return both the invoice doc and the updated data
     response = invoice_doc.as_dict()
     response["conversion_rate"] = invoice_doc.conversion_rate
-    response["plc_conversion_rate"] = invoice_doc.conversion_rate
+    response["plc_conversion_rate"] = invoice_doc.plc_conversion_rate
     return response
 
 
@@ -1114,13 +1207,14 @@ def get_items_details(pos_profile, items_data, price_list=None):
 
         item_codes = [item.get("item_code") for item in items_data]
 
+        price_list_currency = frappe.db.get_value("Price List", price_list, "currency")
         item_prices_data = frappe.get_all(
             "Item Price",
             fields=["item_code", "price_list_rate", "currency", "uom"],
             filters={
                 "price_list": price_list,
                 "item_code": ["in", item_codes],
-                "currency": pos_profile.get("currency"),
+                "currency": price_list_currency or pos_profile.get("currency"),
                 "selling": 1,
                 "valid_from": ["<=", today],
             },
@@ -1220,6 +1314,9 @@ def get_items_details(pos_profile, items_data, price_list=None):
                         "has_serial_no": has_serial_no,
                         "rate": item_price.get("price_list_rate") or 0,
                         "price_list_rate": item_price.get("price_list_rate") or 0,
+                        "currency": item_price.get("currency")
+                        or price_list_currency
+                        or pos_profile.get("currency"),
                     }
                 )
 
@@ -1258,6 +1355,17 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
                                 "manufacturing_date": batch_doc.manufacturing_date,
                             }
                         )
+    serial_no_data = []
+    if warehouse and item.get("has_serial_no"):
+        serial_no_data = frappe.get_all(
+            "Serial No",
+            filters={
+                "item_code": item_code,
+                "status": "Active",
+                "warehouse": warehouse,
+            },
+            fields=["name as serial_no"],
+        )
 
     item["selling_price_list"] = price_list
 
@@ -1271,6 +1379,7 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
         res["actual_qty"] = get_stock_availability(item_code, warehouse)
     res["max_discount"] = max_discount
     res["batch_no_data"] = batch_no_data
+    res["serial_no_data"] = serial_no_data
     
     # Add UOMs data directly from item document
     uoms = frappe.get_all(
@@ -1315,10 +1424,10 @@ def get_stock_availability(item_code, warehouse):
 
 @frappe.whitelist()
 def create_customer(
-    customer_id,
     customer_name,
     company,
     pos_profile_doc,
+    customer_id=None,
     tax_id=None,
     mobile_no=None,
     email_id=None,

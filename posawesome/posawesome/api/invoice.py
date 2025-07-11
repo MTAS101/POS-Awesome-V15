@@ -9,7 +9,7 @@ from frappe import _
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt, add_days
 from posawesome.posawesome.doctype.pos_coupon.pos_coupon import update_coupon_code_count
-from posawesome.posawesome.api.posapp import get_company_domain
+from posawesome.posawesome.api.utilities import get_company_domain  # Updated import
 from posawesome.posawesome.doctype.delivery_charges.delivery_charges import (
     get_applicable_delivery_charges,
 )
@@ -20,6 +20,7 @@ def validate(doc, method):
     set_patient(doc)
     auto_set_delivery_charges(doc)
     calc_delivery_charges(doc)
+    apply_tax_inclusive(doc)
 
 
 def before_submit(doc, method):
@@ -242,6 +243,30 @@ def calc_delivery_charges(doc):
         calculate_taxes_and_totals = True
 
     if calculate_taxes_and_totals:
+        doc.calculate_taxes_and_totals()
+
+
+def apply_tax_inclusive(doc):
+    """Mark taxes as inclusive based on POS Profile setting."""
+    if not doc.pos_profile:
+        return
+    try:
+        tax_inclusive = frappe.get_cached_value(
+            "POS Profile", doc.pos_profile, "posa_tax_inclusive"
+        )
+    except Exception:
+        tax_inclusive = 0
+
+    if not tax_inclusive:
+        return
+
+    has_changes = False
+    for tax in doc.get("taxes", []):
+        if not tax.included_in_print_rate:
+            tax.included_in_print_rate = 1
+            has_changes = True
+
+    if has_changes:
         doc.calculate_taxes_and_totals()
 
 
