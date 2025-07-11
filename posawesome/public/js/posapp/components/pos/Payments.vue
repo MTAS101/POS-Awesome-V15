@@ -10,13 +10,13 @@
         <!-- Payment Summary (Paid, To Be Paid, Change) -->
         <v-row v-if="invoice_doc" class="pa-1" dense>
           <v-col cols="7">
-            <v-text-field variant="outlined" color="primary" :label="frappe._('Paid Amount')"
+            <v-text-field variant="solo" color="primary" :label="frappe._('Paid Amount')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               v-model="total_payments_display" readonly :prefix="currencySymbol(invoice_doc.currency)" density="compact"
               @click="showPaidAmount"></v-text-field>
           </v-col>
           <v-col cols="5">
-            <v-text-field variant="outlined" color="primary" label="To Be Paid"
+            <v-text-field variant="solo" color="primary" label="To Be Paid"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               v-model="diff_payment_display" :prefix="currencySymbol(invoice_doc.currency)" density="compact"
               @focus="showDiffPayment" persistent-placeholder></v-text-field>
@@ -24,7 +24,7 @@
 
           <!-- Paid Change (if applicable) -->
           <v-col cols="7" v-if="credit_change > 0 && !invoice_doc.is_return">
-            <v-text-field variant="outlined" color="primary" :label="frappe._('Paid Change')"
+            <v-text-field variant="solo" color="primary" :label="frappe._('Paid Change')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field"
               :model-value="formatCurrency(paid_change)" :prefix="currencySymbol(invoice_doc.currency)"
               :rules="paid_change_rules" density="compact" readonly type="text" @click="showPaidChange"></v-text-field>
@@ -32,7 +32,7 @@
 
           <!-- Credit Change (if applicable) -->
           <v-col cols="5" v-if="credit_change > 0 && !invoice_doc.is_return">
-            <v-text-field variant="outlined" color="primary" :label="frappe._('Credit Change')"
+            <v-text-field variant="solo" color="primary" :label="frappe._('Credit Change')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field"
               :model-value="formatCurrency(credit_change)" :prefix="currencySymbol(invoice_doc.currency)"
               density="compact" type="text"
@@ -46,7 +46,7 @@
           <div v-if="is_cashback">
             <v-row class="payments pa-1" v-for="payment in invoice_doc.payments" :key="payment.name">
             <v-col cols="6" v-if="!is_mpesa_c2b_payment(payment)">
-              <v-text-field density="compact" variant="outlined" color="primary"
+              <v-text-field density="compact" variant="solo" color="primary"
                 :label="frappe._(payment.mode_of_payment)" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
                 class="dark-field sleek-field" hide-details :model-value="formatCurrency(payment.amount)"
                 @change="setFormatedCurrency(payment, 'amount', null, false, $event)" :rules="[
@@ -84,14 +84,14 @@
         <!-- Loyalty Points Redemption -->
         <v-row class="payments pa-1" v-if="invoice_doc && available_points_amount > 0 && !invoice_doc.is_return">
           <v-col cols="7">
-            <v-text-field density="compact" variant="outlined" color="primary"
+            <v-text-field density="compact" variant="solo" color="primary"
               :label="frappe._('Redeem Loyalty Points')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
               class="dark-field sleek-field" hide-details :model-value="formatCurrency(loyalty_amount)" type="text"
               @change="setFormatedCurrency(this, 'loyalty_amount', null, false, $event)"
               :prefix="currencySymbol(invoice_doc.currency)"></v-text-field>
           </v-col>
           <v-col cols="5">
-            <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('You can redeem up to')"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('You can redeem up to')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               :model-value="formatFloat(available_points_amount)" :prefix="currencySymbol(invoice_doc.currency)"
               readonly></v-text-field>
@@ -102,14 +102,14 @@
         <v-row class="payments pa-1"
           v-if="invoice_doc && available_customer_credit > 0 && !invoice_doc.is_return && redeem_customer_credit">
           <v-col cols="7">
-            <v-text-field density="compact" variant="outlined" color="primary"
+            <v-text-field density="compact" variant="solo" color="primary"
               :label="frappe._('Redeemed Customer Credit')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
               class="dark-field sleek-field" hide-details :model-value="formatCurrency(redeemed_customer_credit)" type="text"
               @change="setFormatedCurrency(this, 'redeemed_customer_credit', null, false, $event)"
               :prefix="currencySymbol(invoice_doc.currency)" readonly></v-text-field>
           </v-col>
           <v-col cols="5">
-            <v-text-field density="compact" variant="outlined" color="primary"
+            <v-text-field density="compact" variant="solo" color="primary"
               :label="frappe._('You can redeem credit up to')" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
               class="dark-field sleek-field" hide-details :model-value="formatCurrency(available_customer_credit)"
               :prefix="currencySymbol(invoice_doc.currency)" readonly></v-text-field>
@@ -121,43 +121,43 @@
         <!-- Invoice Totals (Net, Tax, Total, Discount, Grand, Rounded) -->
         <v-row class="pa-1">
           <v-col cols="6">
-            <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Net Total')"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Net Total')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field"
               :model-value="formatCurrency(invoice_doc.net_total, displayCurrency)" readonly :prefix="currencySymbol()"
               persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
-            <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Tax and Charges')"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Tax and Charges')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               :model-value="formatCurrency(invoice_doc.total_taxes_and_charges, displayCurrency)" readonly
               :prefix="currencySymbol()" persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
-            <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Total Amount')"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Total Amount')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               :model-value="formatCurrency(invoice_doc.total, displayCurrency)" readonly :prefix="currencySymbol()"
               persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
-            <v-text-field density="compact" variant="outlined" color="primary" :label="diff_label"
+            <v-text-field density="compact" variant="solo" color="primary" :label="diff_label"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               :model-value="formatCurrency(diff_payment, displayCurrency)" readonly :prefix="currencySymbol()"
               persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
-            <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Discount Amount')"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Discount Amount')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               :model-value="formatCurrency(invoice_doc.discount_amount)" readonly
               :prefix="currencySymbol(invoice_doc.currency)" persistent-placeholder></v-text-field>
           </v-col>
           <v-col cols="6">
-            <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Grand Total')"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Grand Total')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               :model-value="formatCurrency(invoice_doc.grand_total)" readonly :prefix="currencySymbol(invoice_doc.currency)"
               persistent-placeholder></v-text-field>
           </v-col>
           <v-col v-if="invoice_doc.rounded_total" cols="6">
-            <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Rounded Total')"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Rounded Total')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               :model-value="formatCurrency(invoice_doc.rounded_total)" readonly :prefix="currencySymbol(invoice_doc.currency)"
               persistent-placeholder></v-text-field>
@@ -170,7 +170,7 @@
           </v-col>
           <!-- Shipping Address Selection (if delivery date is set) -->
           <v-col cols="12" v-if="invoice_doc.posa_delivery_date">
-            <v-autocomplete density="compact" clearable auto-select-first variant="outlined" color="primary"
+            <v-autocomplete density="compact" clearable auto-select-first variant="solo" color="primary"
               :label="frappe._('Address')" v-model="invoice_doc.shipping_address_name" :items="addresses"
               item-title="address_title" item-value="name" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
               class="dark-field sleek-field" no-data-text="Address not found" hide-details :customFilter="addressFilter"
@@ -210,7 +210,7 @@
 
           <!-- Additional Notes (if enabled in POS profile) -->
           <v-col cols="12" v-if="pos_profile.posa_display_additional_notes">
-            <v-textarea class="pa-0 dark-field sleek-field" variant="outlined" density="compact"
+            <v-textarea class="pa-0 dark-field sleek-field" variant="solo" density="compact"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" clearable color="primary" auto-grow rows="2"
               :label="frappe._('Additional Notes')" v-model="invoice_doc.posa_notes"></v-textarea>
           </v-col>
@@ -221,7 +221,7 @@
           <v-divider></v-divider>
           <v-row class="pa-1" justify="center" align="start">
             <v-col cols="6">
-              <v-text-field v-model="invoice_doc.po_no" :label="frappe._('Purchase Order')" variant="outlined"
+              <v-text-field v-model="invoice_doc.po_no" :label="frappe._('Purchase Order')" variant="solo"
                 density="compact" :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" clearable
                 color="primary" hide-details></v-text-field>
             </v-col>
@@ -229,7 +229,7 @@
               <VueDatePicker v-model="new_po_date" model-type="format" format="dd-MM-yyyy" :min-date="new Date()"
                 auto-apply :dark="isDarkTheme" class="dark-field sleek-field" @update:model-value="update_po_date()" />
               <v-text-field v-model="invoice_doc.po_date" :label="frappe._('Purchase Order Date')" readonly
-                variant="outlined" density="compact" hide-details color="primary"></v-text-field>
+                variant="solo" density="compact" hide-details color="primary"></v-text-field>
             </v-col>
           </v-row>
         </div>
@@ -254,11 +254,11 @@
           <v-col cols="6" v-if="is_credit_sale">
             <VueDatePicker v-model="new_credit_due_date" model-type="format" format="dd-MM-yyyy" :min-date="new Date()"
               auto-apply :dark="isDarkTheme" class="dark-field sleek-field" @update:model-value="update_credit_due_date()" />
-            <v-text-field class="mt-2" density="compact" variant="outlined" type="number" min="0" max="365"
+            <v-text-field class="mt-2" density="compact" variant="solo" type="number" min="0" max="365"
               v-model.number="credit_due_days" :label="frappe._('Days until due')" hide-details
               @change="applyDuePreset(credit_due_days)"></v-text-field>
             <div class="mt-1">
-              <v-chip v-for="d in credit_due_presets" :key="d" size="small" class="ma-1" variant="outlined"
+              <v-chip v-for="d in credit_due_presets" :key="d" size="small" class="ma-1" variant="solo"
                 color="primary" @click="applyDuePreset(d)">
                 {{ d }} {{ frappe._('days') }}
               </v-chip>
@@ -277,13 +277,13 @@
               <div class="pa-2 py-3">{{ row.credit_origin }}</div>
             </v-col>
             <v-col cols="4">
-              <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Available Credit')"
+              <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Available Credit')"
                 :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
                 :model-value="formatCurrency(row.total_credit)" readonly
                 :prefix="currencySymbol(invoice_doc.currency)"></v-text-field>
             </v-col>
             <v-col cols="4">
-              <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Redeem Credit')"
+              <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Redeem Credit')"
                 :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details type="text"
                 :model-value="formatCurrency(row.credit_to_redeem)"
                 @change="setFormatedCurrency(row, 'credit_to_redeem', null, false, $event)"
@@ -301,7 +301,7 @@
               sales_persons.length }}
               sales persons found</p>
             <p v-else class="mt-1 mb-1 text-subtitle-2 text-red">No sales persons found</p>
-            <v-select density="compact" clearable variant="outlined" color="primary" :label="frappe._('Sales Person')"
+            <v-select density="compact" clearable variant="solo" color="primary" :label="frappe._('Sales Person')"
               v-model="sales_person" :items="sales_persons" item-title="title" item-value="value"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field"
               :no-data-text="__('Sales Person not found')" hide-details :disabled="readonly"></v-select>
@@ -339,7 +339,7 @@
         </v-card-title>
         <v-card-text class="pa-0">
           <v-container>
-            <v-text-field density="compact" variant="outlined" type="number" min="0" max="365"
+            <v-text-field density="compact" variant="solo" type="number" min="0" max="365"
               v-model.number="custom_days_value" :label="frappe._('Days')" hide-details></v-text-field>
           </v-container>
         </v-card-text>
@@ -364,7 +364,7 @@
         </v-card-title>
         <v-card-text class="pa-0">
           <v-container>
-            <v-text-field density="compact" variant="outlined" color="primary" :label="frappe._('Mobile Number')"
+            <v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Mobile Number')"
               :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field" hide-details
               v-model="invoice_doc.contact_mobile" type="number"></v-text-field>
           </v-container>
@@ -1598,5 +1598,35 @@ export default {
 
 .cards {
   background-color: var(--surface-secondary) !important;
+}
+
+/* Dark mode styling for input fields */
+:deep(.dark-theme) .dark-field,
+:deep(.v-theme--dark) .dark-field,
+::v-deep(.dark-theme) .dark-field,
+::v-deep(.v-theme--dark) .dark-field {
+  background-color: #1E1E1E !important;
+}
+
+:deep(.dark-theme) .dark-field :deep(.v-field__input),
+:deep(.v-theme--dark) .dark-field :deep(.v-field__input),
+:deep(.dark-theme) .dark-field :deep(input),
+:deep(.v-theme--dark) .dark-field :deep(input),
+:deep(.dark-theme) .dark-field :deep(.v-label),
+:deep(.v-theme--dark) .dark-field :deep(.v-label),
+::v-deep(.dark-theme) .dark-field .v-field__input,
+::v-deep(.v-theme--dark) .dark-field .v-field__input,
+::v-deep(.dark-theme) .dark-field input,
+::v-deep(.v-theme--dark) .dark-field input,
+::v-deep(.dark-theme) .dark-field .v-label,
+::v-deep(.v-theme--dark) .dark-field .v-label {
+  color: #fff !important;
+}
+
+:deep(.dark-theme) .dark-field :deep(.v-field__overlay),
+:deep(.v-theme--dark) .dark-field :deep(.v-field__overlay),
+::v-deep(.dark-theme) .dark-field .v-field__overlay,
+::v-deep(.v-theme--dark) .dark-field .v-field__overlay {
+  background-color: #1E1E1E !important;
 }
 </style>
