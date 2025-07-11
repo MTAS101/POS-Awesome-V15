@@ -5,6 +5,8 @@
 
 #### An open-source Point of Sale for [Erpnext](https://github.com/frappe/erpnext) using [Vue.js](https://github.com/vuejs/vue) and [Vuetify](https://github.com/vuetifyjs/vuetify) (VERSION 15 Support)
 
+This version ships with a Vite-based build system inspired by Frappe HRMS.
+
 ---
 
 ### Update Instructions
@@ -14,9 +16,10 @@ After switching branches or pulling latest changes:
 1. cd apps/posawesome
 2. git pull
 3. yarn install
-4. cd ../..
-5. bench build --app posawesome
-6. bench --site your.site migrate
+4. yarn build  # compile frontend assets with Vite
+5. cd ../..
+6. bench build --app posawesome  # uses Vite for frontend assets
+7. bench --site your.site migrate
    - If the build exits with code 143, verify that your system has enough RAM or swap space.
    - You can also try building the app in smaller parts to reduce memory usage.
 
@@ -67,7 +70,7 @@ After switching branches or pulling latest changes:
 
 1. `bench get-app --branch Version-15 https://github.com/defendicon/POS-Awesome-V15`
 2. `bench setup requirements`
-3. `bench build --app posawesome`
+3. `bench build --app posawesome`  # builds assets with Vite
 4. `bench restart`
 5. `bench --site [your.site.name] install-app posawesome`
 6. `bench --site [your.site.name] migrate`
