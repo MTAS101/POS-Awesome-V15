@@ -633,7 +633,7 @@ export default {
 .currency-display {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .currency-symbol {
@@ -644,7 +644,7 @@ export default {
 
 .amount-value {
   font-weight: 500;
-  text-align: right;
+  text-align: left;
 }
 
 /* Drag and drop styles */
