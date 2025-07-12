@@ -705,7 +705,6 @@ export default {
         return;
       }
 
-
       // Check if we have selected invoices
       if (this.selected_invoices.length == 0) {
         this.isSubmitting = false;
@@ -717,7 +716,6 @@ export default {
       let total_payments = this.total_selected_payments +
         this.total_selected_mpesa_payments +
         this.total_payment_methods;
-
 
       if (total_payments <= 0) {
         this.isSubmitting = false;
@@ -797,7 +795,6 @@ export default {
         return;
       }
 
-
       // Check if we have selected invoices
       if (this.selected_invoices.length == 0) {
         this.isSubmitting = false;
@@ -809,7 +806,6 @@ export default {
       let total_payments = this.total_selected_payments +
         this.total_selected_mpesa_payments +
         this.total_payment_methods;
-
 
       if (total_payments <= 0) {
         this.isSubmitting = false;

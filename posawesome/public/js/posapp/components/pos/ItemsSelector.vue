@@ -550,7 +550,6 @@ export default {
         }
         return;
       }
-      // Removed noisy debug log
 
       if (this.itemWorker) {
 
@@ -579,6 +578,7 @@ export default {
           const text = await res.text();
           // console.log(text)
           this.itemWorker.onmessage = async (ev) => {
+            console.log("trying to load items6")
             if (this.items_request_token !== request_token) return;
             if (ev.data.type === "parsed") {
               const parsed = ev.data.items;
