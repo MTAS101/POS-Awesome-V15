@@ -32,7 +32,8 @@
                   <template v-slot:item.closing_amount="props">
                     <v-text-field v-model="props.item.closing_amount" :rules="[max25chars]" :label="frappe._('Edit')"
                       single-line counter type="number" density="compact" variant="outlined" color="primary"
-                      bg-color="white" hide-details :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
+                      :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" hide-details
+                      :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
                   </template>
                   <template v-slot:item.difference="{ item }">
                     {{ currencySymbol(pos_profile.currency) }}
@@ -105,6 +106,11 @@ export default {
     pagination: {},
   }),
   watch: {},
+  computed: {
+    isDarkTheme() {
+      return this.$theme?.current === 'dark';
+    }
+  },
 
   methods: {
     close_dialog() {
@@ -149,8 +155,8 @@ export default {
 <style scoped>
 /* Enhanced Header Styles */
 .closing-header {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-bottom: 1px solid #e0e0e0;
+  background: linear-gradient(135deg, var(--dialog-bg-start) 0%, var(--dialog-bg-end) 100%);
+  border-bottom: 1px solid var(--dialog-border);
   padding: 24px !important;
 }
 
@@ -183,24 +189,24 @@ export default {
 .header-title {
   font-size: 1.5rem;
   font-weight: 600;
-  color: #1a1a1a;
+  color: var(--text-primary);
   margin: 0 0 4px 0;
   line-height: 1.2;
 }
 
 .header-subtitle {
   font-size: 0.95rem;
-  color: #666;
+  color: var(--text-secondary);
   margin: 0;
   font-weight: 400;
 }
 
 .header-divider {
-  border-color: #e0e0e0;
+  border-color: var(--dialog-border);
 }
 
 .white-background {
-  background-color: #ffffff;
+  background-color: var(--surface-primary);
 }
 
 .table-header {
@@ -208,14 +214,14 @@ export default {
 }
 
 .white-table {
-  background-color: white;
-  border: 1px solid #e0e0e0;
+  background-color: var(--surface-primary);
+  border: 1px solid var(--dialog-border);
 }
 
 /* Action Buttons */
 .dialog-actions-container {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-top: 1px solid #e0e0e0;
+  background: linear-gradient(135deg, var(--dialog-bg-start) 0%, var(--dialog-bg-end) 100%);
+  border-top: 1px solid var(--dialog-border);
   padding: 16px 24px;
   gap: 12px;
 }
