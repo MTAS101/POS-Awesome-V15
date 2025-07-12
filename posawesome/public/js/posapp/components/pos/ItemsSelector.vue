@@ -470,6 +470,7 @@ export default {
       const vm = this;
       this.loading = true;
 
+      // Removed noisy debug log
       let search = this.get_search(this.first_search);
       let gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
       let sr = search || "";
@@ -488,6 +489,7 @@ export default {
         this.loading = false;
         return;
       }
+      // Removed noisy debug log
 
       // Attempt to load cached items for the current price list
       if (

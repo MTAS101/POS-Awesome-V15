@@ -60,7 +60,6 @@
         <v-checkbox-btn v-model="item.posa_is_offer" class="center" @change="toggleOffer(item)"></v-checkbox-btn>
       </template>
 
-
       <!-- Expanded row content using Vuetify's built-in system -->
       <template v-slot:expanded-row="{ item }">
         <td :colspan="headers.length" class="ma-0 pa-0">
@@ -114,7 +113,7 @@
                     prepend-inner-icon="mdi-weight"></v-select>
                 </div>
               </div>
-
+              
               <!-- Second row of fields -->
               <div class="form-row">
                 <div class="form-field">
@@ -633,7 +632,7 @@ export default {
 .currency-display {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .currency-symbol {
@@ -644,7 +643,7 @@ export default {
 
 .amount-value {
   font-weight: 500;
-  text-align: right;
+  text-align: left;
 }
 
 /* Drag and drop styles */

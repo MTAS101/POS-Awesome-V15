@@ -172,7 +172,6 @@ export default {
       // Force reactivity update
       this.$forceUpdate()
     },
-    
     handleNavClick() {
       this.drawer = !this.drawer;
       this.$emit('nav-click');
