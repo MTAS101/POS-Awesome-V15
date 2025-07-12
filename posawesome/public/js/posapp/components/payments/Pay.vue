@@ -273,7 +273,7 @@ export default {
       pos_profiles_list: [],
       pos_profile_search: "",
       payment_methods_list: [],
-      mpesa_searchname: "",
+      mpesa_search_name: "",
       mpesa_search_mobile: "",
       invoices_headers: [
         {
