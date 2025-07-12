@@ -245,7 +245,7 @@ export default {
       this.available_columns = [
         { title: __('Name'), align: 'start', sortable: true, key: 'item_name', required: true },
         { title: __('QTY'), key: 'qty', align: 'start', required: true },
-        { title: __('UOM'), key: 'uom', align: 'center', required: false },
+        { title: __('UOM'), key: 'uom', align: 'start', required: false },
         { title: __('Rate'), key: 'rate', align: 'start', required: true },
         { title: __('Discount %'), key: 'discount_value', align: 'start', required: false },
         { title: __('Discount Amount'), key: 'discount_amount', align: 'start', required: false },
