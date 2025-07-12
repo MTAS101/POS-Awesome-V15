@@ -608,4 +608,36 @@ export default {
   opacity: 0.6;
   transform: none;
 }
+
+/* Dark theme overrides */
+:deep(.dark-theme) .opening-dialog-card,
+:deep(.v-theme--dark) .opening-dialog-card,
+::v-deep(.dark-theme) .opening-dialog-card,
+::v-deep(.v-theme--dark) .opening-dialog-card {
+  background: #1E1E1E !important;
+}
+
+:deep(.dark-theme) .opening-dialog-header,
+:deep(.v-theme--dark) .opening-dialog-header,
+::v-deep(.dark-theme) .opening-dialog-header,
+::v-deep(.v-theme--dark) .opening-dialog-header {
+  background: #1E1E1E !important;
+  color: #fff !important;
+  border-bottom: 1px solid #373737;
+}
+
+:deep(.dark-theme) .opening-dialog-content,
+:deep(.v-theme--dark) .opening-dialog-content,
+::v-deep(.dark-theme) .opening-dialog-content,
+::v-deep(.v-theme--dark) .opening-dialog-content {
+  background: #1E1E1E !important;
+}
+
+:deep(.dark-theme) .dialog-actions-container,
+:deep(.v-theme--dark) .dialog-actions-container,
+::v-deep(.dark-theme) .dialog-actions-container,
+::v-deep(.v-theme--dark) .dialog-actions-container {
+  background: #1E1E1E !important;
+  border-top: 1px solid #373737;
+}
 </style>

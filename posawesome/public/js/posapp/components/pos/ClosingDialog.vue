@@ -268,6 +268,45 @@ export default {
   transform: none;
 }
 
+/* Dark theme overrides */
+:deep(.dark-theme) .closing-dialog-card,
+:deep(.v-theme--dark) .closing-dialog-card,
+::v-deep(.dark-theme) .closing-dialog-card,
+::v-deep(.v-theme--dark) .closing-dialog-card {
+  background: #1E1E1E !important;
+}
+
+:deep(.dark-theme) .closing-header,
+:deep(.v-theme--dark) .closing-header,
+::v-deep(.dark-theme) .closing-header,
+::v-deep(.v-theme--dark) .closing-header {
+  background: #1E1E1E !important;
+  color: #fff !important;
+  border-bottom: 1px solid #373737;
+}
+
+:deep(.dark-theme) .white-background,
+:deep(.v-theme--dark) .white-background,
+::v-deep(.dark-theme) .white-background,
+::v-deep(.v-theme--dark) .white-background {
+  background-color: #1E1E1E !important;
+}
+
+:deep(.dark-theme) .white-table,
+:deep(.v-theme--dark) .white-table,
+::v-deep(.dark-theme) .white-table,
+::v-deep(.v-theme--dark) .white-table {
+  background-color: #1E1E1E !important;
+}
+
+:deep(.dark-theme) .dialog-actions-container,
+:deep(.v-theme--dark) .dialog-actions-container,
+::v-deep(.dark-theme) .dialog-actions-container,
+::v-deep(.v-theme--dark) .dialog-actions-container {
+  background: #1E1E1E !important;
+  border-top: 1px solid #373737;
+}
+
 /* And the responsive section: */
 @media (max-width: 768px) {
   .dialog-actions-container {
