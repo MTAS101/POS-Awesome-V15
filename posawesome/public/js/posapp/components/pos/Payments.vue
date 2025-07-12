@@ -624,6 +624,17 @@ export default {
         });
       }
     },
+    // Recalculate total redeemed credit whenever credit entries change
+    customer_credit_dict: {
+      handler(newVal) {
+        const total = newVal.reduce(
+          (sum, row) => sum + this.flt(row.credit_to_redeem || 0),
+          0
+        );
+        this.redeemed_customer_credit = this.flt(total, this.currency_precision);
+      },
+      deep: true,
+    },
     // Watch sales_person to update sales_team
     sales_person(newVal) {
       if (newVal) {
