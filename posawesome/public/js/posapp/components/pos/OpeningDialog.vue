@@ -237,8 +237,8 @@ export default {
 .opening-dialog-card {
   border-radius: 16px;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--dialog-bg-start) 0%, var(--dialog-bg-end) 100%);
-  border: 1px solid var(--dialog-border);
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid rgba(25, 118, 210, 0.1);
   transition: all 0.3s ease;
   max-height: 90vh;
   display: flex;
@@ -247,10 +247,10 @@ export default {
 
 /* Header Section - White Background with Blue Text */
 .opening-dialog-header {
-  background: var(--surface-primary);
+  background: white;
   color: #1976d2;
   padding: 16px 24px;
-  border-bottom: 2px solid var(--dialog-border);
+  border-bottom: 2px solid rgba(25, 118, 210, 0.1);
   flex-shrink: 0;
 }
 
@@ -284,7 +284,7 @@ export default {
   font-weight: 600;
   margin: 0;
   line-height: 1.2;
-  color: var(--text-primary);
+  color: #1976d2;
 }
 
 .header-subtitle {
@@ -292,13 +292,13 @@ export default {
   opacity: 0.8;
   margin: 2px 0 0 0;
   line-height: 1.3;
-  color: var(--text-secondary);
+  color: #1976d2;
 }
 
 /* Content Section - Optimized for minimal scrolling */
 .opening-dialog-content {
   padding: 20px 24px;
-  background: var(--surface-primary);
+  background: white;
   flex: 1;
   overflow-y: auto;
 }
@@ -353,10 +353,10 @@ export default {
 }
 
 .enhanced-table-compact :deep(th) {
-  background: var(--surface-secondary);
-  color: var(--text-primary);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e3f2fd 100%);
+  color: #1976d2;
   font-weight: 600;
-  border-bottom: 1px solid var(--dialog-border);
+  border-bottom: 1px solid rgba(25, 118, 210, 0.1);
   padding: 8px 12px;
 }
 
@@ -563,8 +563,8 @@ export default {
 
 /* Action buttons with improved naming and styling */
 .dialog-actions-container {
-  background: linear-gradient(135deg, var(--dialog-bg-start) 0%, var(--dialog-bg-end) 100%);
-  border-top: 1px solid var(--dialog-border);
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-top: 1px solid #e0e0e0;
   padding: 16px 24px;
   gap: 12px;
 }
