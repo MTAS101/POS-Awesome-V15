@@ -32,7 +32,8 @@
                   <template v-slot:item.closing_amount="props">
                     <v-text-field v-model="props.item.closing_amount" :rules="[max25chars]" :label="frappe._('Edit')"
                       single-line counter type="number" density="compact" variant="outlined" color="primary"
-                      bg-color="white" hide-details :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
+                      :bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field" hide-details
+                      :prefix="currencySymbol(pos_profile.currency)"></v-text-field>
                   </template>
                   <template v-slot:item.difference="{ item }">
                     {{ currencySymbol(pos_profile.currency) }}
@@ -113,6 +114,12 @@ export default {
     submit_dialog() {
       this.eventBus.emit('submit_closing_pos', this.dialog_data);
       this.closingDialog = false;
+    },
+  },
+
+  computed: {
+    isDarkTheme() {
+      return this.$theme.current === 'dark';
     },
   },
 
