@@ -73,7 +73,6 @@
                   <span class="action-label">{{ __('Remove') }}</span>
                 </v-btn>
               </div>
-
               <div class="action-button-group">
                 <v-btn :disabled="!!item.posa_is_replace" size="large" color="warning" variant="tonal"
                   class="item-action-btn minus-btn" @click.stop="subtractOne(item)">
@@ -257,7 +256,7 @@
                   </div>
                 </div>
               </div>
-              
+
               <!-- Fourth row for warehouse and other details -->
               <div class="form-row">
                 <div class="form-field">
