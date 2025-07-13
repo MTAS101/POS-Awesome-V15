@@ -1,5 +1,5 @@
-import { memory } from './cache.js';
-import { persist } from './core.js';
+import { memory } from "./cache.js";
+import { persist } from "./core.js";
 
 // Modify initializeStockCache function to set the flag
 export async function initializeStockCache(items, pos_profile) {

@@ -11,7 +11,7 @@ import Home from "./Home.vue";
 
 // Expose Dexie globally for libraries that expect a global Dexie instance
 if (typeof window !== "undefined" && !window.Dexie) {
-    window.Dexie = Dexie;
+	window.Dexie = Dexie;
 }
 
 frappe.provide("frappe.PosApp");

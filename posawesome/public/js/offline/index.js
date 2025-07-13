@@ -1,45 +1,39 @@
 // Main entry point - re-exports all functions for backward compatibility
 
 // Core exports
-export {
-        db,
-        initPromise,
-        persist,
-        addToPersistQueue,
-        checkDbHealth
-} from './core.js';
+export { db, initPromise, persist, addToPersistQueue, checkDbHealth } from "./core.js";
 
 // Cache exports
 export {
-        memory,
-        memoryInitPromise,
-        getItemsStorage,
-        setItemsStorage,
-        getCustomerStorage,
+	memory,
+	memoryInitPromise,
+	getItemsStorage,
+	setItemsStorage,
+	getCustomerStorage,
 	setCustomerStorage,
 	getSalesPersonsStorage,
 	setSalesPersonsStorage,
 	getOpeningStorage,
 	setOpeningStorage,
 	clearOpeningStorage,
-        getOpeningDialogStorage,
-        setOpeningDialogStorage,
-        getTaxTemplate,
-        setTaxTemplate,
-        setLastSyncTotals,
-        getLastSyncTotals,
-        getTaxInclusiveSetting,
-        setTaxInclusiveSetting,
-        isManualOffline,
-        setManualOffline,
-        toggleManualOffline,
-        queueHealthCheck,
-        purgeOldQueueEntries,
-        MAX_QUEUE_ITEMS,
-        resetOfflineState,
-        clearAllCache,
-        getCacheUsageEstimate
-} from './cache.js';
+	getOpeningDialogStorage,
+	setOpeningDialogStorage,
+	getTaxTemplate,
+	setTaxTemplate,
+	setLastSyncTotals,
+	getLastSyncTotals,
+	getTaxInclusiveSetting,
+	setTaxInclusiveSetting,
+	isManualOffline,
+	setManualOffline,
+	toggleManualOffline,
+	queueHealthCheck,
+	purgeOldQueueEntries,
+	MAX_QUEUE_ITEMS,
+	resetOfflineState,
+	clearAllCache,
+	getCacheUsageEstimate,
+} from "./cache.js";
 
 // Stock exports
 export {
@@ -54,8 +48,8 @@ export {
 	getLocalStockCache,
 	setLocalStockCache,
 	fetchItemStockQuantities,
-	updateLocalStockWithActualQuantities
-} from './stock.js';
+	updateLocalStockWithActualQuantities,
+} from "./stock.js";
 
 // Sync exports
 export {
@@ -76,8 +70,8 @@ export {
 	clearOfflineCustomers,
 	syncOfflineInvoices,
 	syncOfflineCustomers,
-	syncOfflinePayments
-} from './sync.js';
+	syncOfflinePayments,
+} from "./sync.js";
 
 // Items exports
 export {
@@ -89,14 +83,13 @@ export {
 	getCachedPriceListItems,
 	clearPriceListCache,
 	saveItemDetailsCache,
-	getCachedItemDetails
-} from './items.js';
+	getCachedItemDetails,
+} from "./items.js";
 
 // Customers exports
 export {
-        saveCustomerBalance,
-        getCachedCustomerBalance,
-        clearCustomerBalanceCache,
-        clearExpiredCustomerBalances
-} from './customers.js';
-
+	saveCustomerBalance,
+	getCachedCustomerBalance,
+	clearCustomerBalanceCache,
+	clearExpiredCustomerBalances,
+} from "./customers.js";
