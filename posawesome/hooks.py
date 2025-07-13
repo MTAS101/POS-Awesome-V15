@@ -17,8 +17,14 @@ app_license = "GPLv3"
 # ------------------
 
 # include js, css files in header of desk.html
-app_include_js  = ["posawesome.bundle.js"]
-app_include_css = ["posawesome.css"]
+# stop Desk from injecting broken hashed files
+app_include_js  = []
+app_include_css = []
+
+# serve a dedicated loader page for the SPA
+website_route_rules = [
+    {"from_route": "/app/posapp", "to_route": "pos_app_loader"}
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/posawesome/posawesome.css"
