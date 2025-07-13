@@ -1,6 +1,6 @@
 import Dexie from "dexie";
 import { withWriteLock } from './db-utils.js';
-import ItemWorkerURL from "../posapp/workers/itemWorker.js?worker";
+import ItemWorkerURL from "../workers/itemWorker.js?worker";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");

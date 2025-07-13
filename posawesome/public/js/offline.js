@@ -1,5 +1,5 @@
 import Dexie from "dexie";
-import ItemWorkerURL from "./posapp/workers/itemWorker.js?worker";
+import ItemWorkerURL from "./workers/itemWorker.js?worker";
 
 // --- Dexie initialization ---------------------------------------------------
 const db = new Dexie("posawesome_offline");

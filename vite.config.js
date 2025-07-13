@@ -6,30 +6,19 @@ import frappeVueStyle from './frappe-vue-style.vite.js';
 export default defineConfig({
         plugins: [frappeVueStyle(), vue()],
        build: {
-               target: "esnext",
-               outDir: "posawesome/public/js",
+               outDir: 'posawesome/public/js',
                cssCodeSplit: true,
-               lib: {
-                       entry: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
-                       name: "PosAwesome",
-                       fileName: () => "posawesome.bundle.js",
-                       formats: ["es", "umd"],
-               },
-               emptyOutDir: true,
                rollupOptions: {
-                        external: ["socket.io-client", "dexie"],
+                        input: 'posawesome/public/js/posawesome.bundle.js',
                         output: {
-                                assetFileNames: () => "posawesome.css",
-                                globals: {
-                                        "socket.io-client": "io",
-                                        dexie: "Dexie",
-                                },
-                        },
-                },
+                                entryFileNames: 'posawesome.bundle.js',
+                                assetFileNames: 'posawesome.css'
+                        }
+                }
        },
-	resolve: {
-		alias: {
-			"@": resolve(__dirname, "posawesome/public/js"),
-		},
-	},
+        resolve: {
+                alias: {
+                        "@": resolve(__dirname, "posawesome/public/js"),
+                },
+        },
 });
