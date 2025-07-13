@@ -1,6 +1,8 @@
 import Dexie from "dexie";
 import { withWriteLock } from './db-utils.js';
-import ItemWorkerURL from "../workers/itemWorker.js?worker";
+// Build a URL for the worker script so the application does not rely on
+// the `?worker` suffix being handled by the server.
+const ItemWorkerURL = new URL('../workers/itemWorker.js', import.meta.url);
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
