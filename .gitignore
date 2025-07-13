@@ -8,3 +8,4 @@ node_modules
 posawesome/public/dist
 /posawesome/public/css/posapp
 /dist
+posawesome/public/js/offline.js
