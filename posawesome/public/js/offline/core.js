@@ -1,6 +1,5 @@
 import Dexie from "dexie";
 import { withWriteLock } from './db-utils.js';
-import ItemWorkerURL from "../workers/itemWorker.js?worker";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
@@ -26,15 +25,6 @@ export async function checkDbHealth() {
 }
 
 let persistWorker = null;
-
-if (typeof Worker !== "undefined") {
-        try {
-                persistWorker = new Worker(ItemWorkerURL, { type: "module" });
-        } catch (e) {
-                console.error("Failed to init persist worker", e);
-                persistWorker = null;
-        }
-}
 
 
 // Persist queue for batching operations
