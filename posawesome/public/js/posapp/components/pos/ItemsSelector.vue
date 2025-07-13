@@ -181,7 +181,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import ItemWorkerURL from '../../../workers/itemWorker.js?worker&url';
+import WorkerURL from '../../../workers/itemWorker.js?worker&url';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, checkDbHealth, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
@@ -1738,11 +1738,7 @@ export default {
     this.loadItemSettings();
     if (typeof Worker !== 'undefined') {
       try {
-        const workerUrl = new URL(ItemWorkerURL, import.meta.env.BASE_URL);
-        this.itemWorker = new Worker(workerUrl, {
-          type: 'module',
-          name: 'itemWorker'
-        });
+        this.itemWorker = new Worker(WorkerURL, { type: 'module' });
 
         this.itemWorker.onerror = function (event) {
           console.error('Worker error:', event);
