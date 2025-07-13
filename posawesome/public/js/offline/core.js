@@ -1,6 +1,8 @@
 import Dexie from "dexie";
 import { withWriteLock } from './db-utils.js';
-import ItemWorkerURL from "../workers/itemWorker.js?worker";
+// Construct the worker URL without relying on the ?worker Vite loader so that
+// it remains stable and can be precached by the service worker.
+const ItemWorkerURL = new URL("../workers/itemWorker.js", import.meta.url).href;
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
