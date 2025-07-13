@@ -21,7 +21,6 @@ self.addEventListener('install', event => {
         '/assets/posawesome/js/posawesome.bundle.js',
 
         '/assets/posawesome/js/offline/index.js',
-        '/assets/posawesome/js/workers/itemWorker.js',
         '/assets/posawesome/js/libs/dexie.min.js',
 
         '/manifest.json',
