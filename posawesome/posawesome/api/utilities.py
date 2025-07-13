@@ -179,35 +179,35 @@ def get_sales_person_names():
 
 @frappe.whitelist()
 def get_language_options():
-    """Return newline separated language codes from translations directories of all apps.
+	"""Return newline separated language codes from translations directories of all apps.
 
-    Always include English (``en``) in the list so that users can explicitly
-    select it in the POS profile.
-    """
-    import os
+	Always include English (``en``) in the list so that users can explicitly
+	select it in the POS profile.
+	"""
+	import os
 
-    languages = {"en"}
+	languages = {"en"}
 
-    def normalize(code: str) -> str:
-        """Return language code normalized for comparison."""
-        return code.strip().lower().replace("_", "-")
+	def normalize(code: str) -> str:
+		"""Return language code normalized for comparison."""
+		return code.strip().lower().replace("_", "-")
 
-    # Collect languages from translation CSV files
-    for app in frappe.get_installed_apps():
-        translations_path = frappe.get_app_path(app, "translations")
-        if os.path.exists(translations_path):
-            for filename in os.listdir(translations_path):
-                if filename.endswith(".csv"):
-                    languages.add(normalize(os.path.splitext(filename)[0]))
+	# Collect languages from translation CSV files
+	for app in frappe.get_installed_apps():
+		translations_path = frappe.get_app_path(app, "translations")
+		if os.path.exists(translations_path):
+			for filename in os.listdir(translations_path):
+				if filename.endswith(".csv"):
+					languages.add(normalize(os.path.splitext(filename)[0]))
 
-    # Also include languages from the Translation doctype, if available
-    if frappe.db.table_exists("Translation"):
-        rows = frappe.db.sql("SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL")
-        for (language,) in rows:
-            languages.add(normalize(language))
+	# Also include languages from the Translation doctype, if available
+	if frappe.db.table_exists("Translation"):
+		rows = frappe.db.sql("SELECT DISTINCT language FROM `tabTranslation` WHERE language IS NOT NULL")
+		for (language,) in rows:
+			languages.add(normalize(language))
 
-    # Normalize to lowercase and deduplicate, then sort for consistent order
-    return "\n".join(sorted(languages))
+	# Normalize to lowercase and deduplicate, then sort for consistent order
+	return "\n".join(sorted(languages))
 
 
 @frappe.whitelist()
@@ -244,9 +244,10 @@ def get_translation_dict(lang: str) -> dict:
 
 	return translations
 
+
 @frappe.whitelist()
 def get_pos_profile_tax_inclusive(pos_profile: str):
-    """Return the 'posa_tax_inclusive' setting for the given POS Profile."""
-    if not pos_profile:
-        return None
-    return frappe.get_cached_value("POS Profile", pos_profile, "posa_tax_inclusive")
+	"""Return the 'posa_tax_inclusive' setting for the given POS Profile."""
+	if not pos_profile:
+		return None
+	return frappe.get_cached_value("POS Profile", pos_profile, "posa_tax_inclusive")
