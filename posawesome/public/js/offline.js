@@ -1,5 +1,5 @@
 import Dexie from "dexie";
-import WorkerURL from "./workers/itemWorker.js?worker&url";
+import ItemWorkerURL from "./workers/itemWorker.js?worker&url";
 
 // --- Dexie initialization ---------------------------------------------------
 const db = new Dexie("posawesome_offline");
@@ -7,8 +7,12 @@ db.version(1).stores({ keyval: "&key" });
 
 let persistWorker = null;
 if (typeof Worker !== "undefined") {
+        const workerUrl = new URL(ItemWorkerURL, import.meta.env.BASE_URL);
         try {
-                persistWorker = new Worker(WorkerURL, { type: "module" });
+                persistWorker = new Worker(workerUrl, {
+                        type: "module",
+                        name: "itemWorker",
+                });
         } catch (e) {
                 console.error("Failed to init persist worker", e);
                 persistWorker = null;
