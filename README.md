@@ -14,9 +14,10 @@ After switching branches or pulling latest changes:
 1. cd apps/posawesome
 2. git pull
 3. yarn install
-4. cd ../..
-5. bench build --app posawesome
-6. bench --site your.site migrate
+4. yarn build  # requires Node.js 18.18+
+5. cd ../..
+6. bench build --skip-assets
+7. bench --site your.site migrate
    - If the build exits with code 143, verify that your system has enough RAM or swap space.
    - You can also try building the app in smaller parts to reduce memory usage.
 
@@ -67,10 +68,11 @@ After switching branches or pulling latest changes:
 
 1. `bench get-app --branch Version-15 https://github.com/defendicon/POS-Awesome-V15`
 2. `bench setup requirements`
-3. `bench build --app posawesome`
-4. `bench restart`
-5. `bench --site [your.site.name] install-app posawesome`
-6. `bench --site [your.site.name] migrate`
+3. `yarn build`  # requires Node.js 18.18+
+4. `bench build --skip-assets`
+5. `bench restart`
+6. `bench --site [your.site.name] install-app posawesome`
+7. `bench --site [your.site.name] migrate`
 
 ---
 
