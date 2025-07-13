@@ -3,7 +3,7 @@
     class="navbar-enhanced elevation-2 px-2 pb-1">
     <v-app-bar-nav-icon ref="navIcon" @click="$emit('nav-click')" class="text-secondary nav-icon" />
 
-    <v-img src="/assets/posawesome/icons/pos.png" alt="POS Awesome" max-width="32" class="mx-2" />
+    <v-img src="/assets/posawesome/images/pos.png" alt="POS Awesome" max-width="32" class="mx-2" />
 
     <v-toolbar-title @click="$emit('go-desk')" class="text-h6 font-weight-bold text-primary navbar-title"
       style="cursor: pointer; text-decoration: none;">

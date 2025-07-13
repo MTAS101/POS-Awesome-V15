@@ -78,7 +78,7 @@
                 @dragend="onDragEnd"
                 @click="add_item(item)">
                 <v-img :src="item.image ||
-                        '/assets/posawesome/icons/placeholder-image.png'
+                        '/assets/posawesome/images/placeholder-image.png'
                         " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
                         height="100px">
                   <v-card-text class="text-caption px-1 pb-0 truncate">{{ item.item_name }}</v-card-text>
@@ -1438,7 +1438,7 @@ export default {
         html += `
           <div class="item-option p-3 mb-2 border rounded cursor-pointer" data-item-index="${index}" style="border: 1px solid #ddd; cursor: pointer;">
             <div class="d-flex align-items-center">
-              <img src="${item.image || '/assets/posawesome/icons/placeholder-image.png'}"
+              <img src="${item.image || '/assets/posawesome/images/placeholder-image.png'}"
                    style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;" />
               <div>
                 <div class="font-weight-bold">${item.item_name}</div>
