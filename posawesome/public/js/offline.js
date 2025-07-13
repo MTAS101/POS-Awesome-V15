@@ -7,8 +7,9 @@ db.version(1).stores({ keyval: "&key" });
 
 let persistWorker = null;
 if (typeof Worker !== "undefined") {
+        const workerUrl = new URL(ItemWorkerURL, import.meta.env.BASE_URL);
         try {
-                persistWorker = new Worker(ItemWorkerURL, {
+                persistWorker = new Worker(workerUrl, {
                         type: "module",
                         name: "itemWorker",
                 });
