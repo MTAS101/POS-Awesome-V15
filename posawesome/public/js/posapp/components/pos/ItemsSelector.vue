@@ -181,9 +181,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-// Generate an absolute URL for the worker file so that it can be loaded
-// correctly even when the server does not understand the `?worker` suffix.
-const ItemWorkerURL = new URL('../../../workers/itemWorker.js', import.meta.url);
+import ItemWorkerURL from '../../../workers/itemWorker.js?worker';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, checkDbHealth, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
