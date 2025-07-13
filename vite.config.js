@@ -1,10 +1,21 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
+import { VitePWA } from 'vite-plugin-pwa';
 import { resolve } from 'path';
 import frappeVueStyle from './frappe-vue-style.vite.js';
 
 export default defineConfig({
-  plugins: [frappeVueStyle(), vue()],
+  plugins: [
+    frappeVueStyle(),
+    vue(),
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'posawesome/www',
+      filename: 'sw.js',
+      injectRegister: false,
+      manifest: false,
+    }),
+  ],
   base: '/assets/posawesome/js/',
   build: {
     outDir: 'posawesome/public/js',
