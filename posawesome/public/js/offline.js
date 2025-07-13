@@ -1,5 +1,8 @@
 import Dexie from "dexie";
-import ItemWorkerURL from "./workers/itemWorker.js?worker";
+// Use an explicit URL so the worker can be loaded even when the
+// application is served without Vite's dev server handling the
+// `?worker` query parameter.
+const ItemWorkerURL = new URL('./workers/itemWorker.js', import.meta.url);
 
 // --- Dexie initialization ---------------------------------------------------
 const db = new Dexie("posawesome_offline");
