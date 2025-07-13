@@ -24,7 +24,7 @@
                   min-height="50">
                   <v-card hover="hover" @click="add_item(item)">
                     <v-img :src="item.image ||
-                      '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
+                      '/assets/posawesome/icons/placeholder-image.png'
                       " class="text-white align-end" gradient="to bottom, rgba(0,0,0,.2), rgba(0,0,0,.7)"
                       height="100px">
                       <v-card-text v-text="item.item_name" class="text-subtitle-2 px-1 pb-2"></v-card-text>

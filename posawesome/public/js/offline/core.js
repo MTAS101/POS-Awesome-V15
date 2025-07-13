@@ -1,5 +1,6 @@
 import Dexie from "dexie";
 import { withWriteLock } from './db-utils.js';
+import ItemWorkerURL from "../posapp/workers/itemWorker.js?worker";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
@@ -27,15 +28,12 @@ export async function checkDbHealth() {
 let persistWorker = null;
 
 if (typeof Worker !== "undefined") {
-	try {
-                // Load the worker without a query string so the service worker
-                // can serve the cached version when offline.
-                const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-                persistWorker = new Worker(workerUrl, { type: "classic" });
-	} catch (e) {
-		console.error("Failed to init persist worker", e);
-		persistWorker = null;
-	}
+        try {
+                persistWorker = new Worker(ItemWorkerURL, { type: "module" });
+        } catch (e) {
+                console.error("Failed to init persist worker", e);
+                persistWorker = null;
+        }
 }
 
 

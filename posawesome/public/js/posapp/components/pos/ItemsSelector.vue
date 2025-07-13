@@ -78,7 +78,7 @@
                 @dragend="onDragEnd"
                 @click="add_item(item)">
                 <v-img :src="item.image ||
-                        '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
+                        '/assets/posawesome/icons/placeholder-image.png'
                         " class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
                         height="100px">
                   <v-card-text class="text-caption px-1 pb-0 truncate">{{ item.item_name }}</v-card-text>
@@ -181,6 +181,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
+import ItemWorkerURL from '../../workers/itemWorker.js?worker';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, checkDbHealth, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
@@ -1437,7 +1438,7 @@ export default {
         html += `
           <div class="item-option p-3 mb-2 border rounded cursor-pointer" data-item-index="${index}" style="border: 1px solid #ddd; cursor: pointer;">
             <div class="d-flex align-items-center">
-              <img src="${item.image || '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'}" 
+              <img src="${item.image || '/assets/posawesome/icons/placeholder-image.png'}"
                    style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;" />
               <div>
                 <div class="font-weight-bold">${item.item_name}</div>
@@ -1737,11 +1738,7 @@ export default {
     this.loadItemSettings();
     if (typeof Worker !== 'undefined') {
       try {
-        // Use the plain URL so the service worker can match the cached file
-        // even when offline. Using a query string causes cache lookups to fail
-        // which results in "Failed to fetch a worker script" errors.
-        const workerUrl = '/assets/posawesome/js/posapp/workers/itemWorker.js';
-        this.itemWorker = new Worker(workerUrl, { type: 'classic' });
+        this.itemWorker = new Worker(ItemWorkerURL, { type: 'module' });
 
         this.itemWorker.onerror = function (event) {
           console.error('Worker error:', event);

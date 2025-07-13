@@ -120,7 +120,7 @@ export default {
         { text: 'Payments', icon: 'mdi-credit-card' }
       ],
       company: 'POS Awesome',
-      companyImg: '/assets/posawesome/js/posapp/components/pos/pos.png',
+      companyImg: '/assets/posawesome/icons/pos.png',
       showAboutDialog: false,
       showOfflineInvoices: false,
       freeze: false,

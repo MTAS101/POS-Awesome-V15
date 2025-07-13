@@ -1,4 +1,4 @@
-importScripts('/assets/posawesome/js/libs/dexie.min.js');
+import Dexie from 'dexie';
 
 const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
