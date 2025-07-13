@@ -8,7 +8,7 @@ self.addEventListener("install", (event) => {
 
 			const resources = [
                                "/assets/posawesome/js/posawesome.bundle.js",
-                                "/assets/posawesome/js/offline.js",
+				"/assets/posawesome/js/offline/index.js",
 				"/manifest.json",
 				"/offline.html",
 			];

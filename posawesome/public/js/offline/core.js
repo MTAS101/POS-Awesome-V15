@@ -1,6 +1,6 @@
 import Dexie from "dexie";
 import { withWriteLock } from './db-utils.js';
-import ItemWorkerURL from "../workers/itemWorker.js?worker&url";
+import ItemWorkerURL from "../workers/itemWorker.js?worker";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
@@ -29,7 +29,7 @@ let persistWorker = null;
 
 if (typeof Worker !== "undefined") {
         try {
-                persistWorker = new Worker(ItemWorkerURL, { type: "module", name: "itemWorker" });
+                persistWorker = new Worker(ItemWorkerURL, { type: "module" });
         } catch (e) {
                 console.error("Failed to init persist worker", e);
                 persistWorker = null;
