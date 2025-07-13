@@ -6,4 +6,5 @@ tags
 posawesome/docs/current
 node_modules
 posawesome/public/dist
+/posawesome/public/css/posapp
 /dist

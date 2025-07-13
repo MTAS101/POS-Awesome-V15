@@ -1,5 +1,7 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
+from pathlib import Path
+
+import frappe
+
 from . import __version__ as app_version
 
 app_name = "posawesome"
@@ -18,7 +20,7 @@ app_license = "GPLv3"
 # app_include_css = "/assets/posawesome/css/posawesome.css"
 # app_include_js = "/assets/posawesome/js/posawesome.js"
 app_include_js = [
-    "posawesome.bundle.js",
+    "dist/js/posawesome.bundle.js",
 ]
 
 # include js, css files in header of web template
@@ -66,7 +68,7 @@ doctype_js = {
 # ------------
 
 # before_install = "posawesome.install.before_install"
-# after_install = "posawesome.install.after_install"
+after_install = "posawesome.hooks.after_install_handler"
 # before_uninstall = "posawesome.uninstall.before_uninstall"
 after_uninstall = "posawesome.uninstall.after_uninstall"
 
@@ -284,3 +286,10 @@ fixtures = [
         ]
     }
 ]
+
+def after_install_handler():
+    """Install JS dependencies and build assets during bench install."""
+    app_path = Path(frappe.get_app_path("posawesome"))
+    frappe.utils.execute_cmd(
+        f"yarn --cwd {app_path} install && yarn --cwd {app_path} build"
+    )
