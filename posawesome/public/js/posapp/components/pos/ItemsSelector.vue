@@ -1738,8 +1738,10 @@ export default {
     this.loadItemSettings();
     if (typeof Worker !== 'undefined') {
       try {
-        this.itemWorker = new Worker(ItemWorkerURL, {
-          type: 'module'
+        const workerUrl = new URL(ItemWorkerURL, import.meta.env.BASE_URL);
+        this.itemWorker = new Worker(workerUrl, {
+          type: 'module',
+          name: 'itemWorker'
         });
 
         this.itemWorker.onerror = function (event) {
