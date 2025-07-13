@@ -6,12 +6,13 @@ self.addEventListener("install", (event) => {
 		(async () => {
 			const cache = await caches.open(CACHE_NAME);
 
-			const resources = [
-                               "/assets/posawesome/js/posawesome.bundle.js",
-				"/assets/posawesome/js/offline/index.js",
-				"/manifest.json",
-				"/offline.html",
-			];
+                        const resources = [
+                                "/assets/posawesome/js/posawesome.bundle.js",
+                                "/assets/posawesome/js/offline/index.js",
+                                "/assets/posawesome/js/workers/itemWorker.js",
+                                "/manifest.json",
+                                "/offline.html",
+                        ];
 
 			await Promise.all(
 				resources.map(async (url) => {
