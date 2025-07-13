@@ -8,6 +8,7 @@ export default defineConfig({
        build: {
                target: "esnext",
                outDir: "posawesome/public/js",
+               cssCodeSplit: true,
                lib: {
                        entry: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
                        name: "PosAwesome",
@@ -18,13 +19,14 @@ export default defineConfig({
                rollupOptions: {
                         external: ["socket.io-client", "dexie"],
                         output: {
+                                assetFileNames: () => "posawesome.css",
                                 globals: {
                                         "socket.io-client": "io",
                                         dexie: "Dexie",
                                 },
                         },
                 },
-	},
+       },
 	resolve: {
 		alias: {
 			"@": resolve(__dirname, "posawesome/public/js"),
