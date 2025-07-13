@@ -28,12 +28,8 @@ export async function checkDbHealth() {
 let persistWorker = null;
 
 if (typeof Worker !== "undefined") {
-        const workerUrl = new URL(ItemWorkerURL, import.meta.env.BASE_URL);
         try {
-                persistWorker = new Worker(workerUrl, {
-                        type: "module",
-                        name: "itemWorker",
-                });
+                persistWorker = new Worker(ItemWorkerURL, { type: "module" });
         } catch (e) {
                 console.error("Failed to init persist worker", e);
                 persistWorker = null;
