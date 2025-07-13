@@ -1,35 +1,27 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
-import { fileURLToPath, URL } from 'node:url';
-import { resolve } from 'node:path';
+import { resolve } from 'path';
+import frappeVueStyle from './frappe-vue-style.vite.js';
 
 export default defineConfig({
+  plugins: [frappeVueStyle(), vue()],
   base: '/assets/posawesome/js/',
-  plugins: [vue()],
   build: {
     outDir: 'posawesome/public/js',
     assetsDir: '.',
     cssCodeSplit: true,
     emptyOutDir: false,
     rollupOptions: {
-      input: {
-        'posawesome.bundle': fileURLToPath(
-          new URL('./posawesome/public/js/posawesome.bundle.js', import.meta.url)
-        ),
-        offline: fileURLToPath(
-          new URL('./posawesome/public/js/offline/index.js', import.meta.url)
-        )
-      },
+      input: 'posawesome/public/js/posawesome.bundle.js',
       output: {
-        entryFileNames: '[name].js',
-        assetFileNames: 'posawesome.css',
-        chunkFileNames: '[name]-[hash].js'
+        entryFileNames: 'posawesome.bundle.js',
+        assetFileNames: 'posawesome.css'
       }
     }
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'posawesome/public/js')
-    }
-  }
+      '@': resolve(__dirname, 'posawesome/public/js'),
+    },
+  },
 });
