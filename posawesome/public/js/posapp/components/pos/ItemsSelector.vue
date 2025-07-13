@@ -181,7 +181,6 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from './CameraScanner.vue';
-import ItemWorkerURL from '../../../workers/itemWorker.js?worker';
 import { saveItemUOMs, getItemUOMs, getLocalStock, isOffline, initializeStockCache, getItemsStorage, setItemsStorage, getLocalStockCache, setLocalStockCache, initPromise, checkDbHealth, getCachedPriceListItems, savePriceListItems, updateLocalStockCache, isStockCacheReady, getCachedItemDetails, saveItemDetailsCache } from '../../../offline/index.js';
 import { responsiveMixin } from '../../mixins/responsive.js';
 
@@ -220,7 +219,6 @@ export default {
     selected_currency: "",
     exchange_rate: 1,
     prePopulateInProgress: false,
-    itemWorker: null,
     items_request_token: 0,
     show_item_settings: false,
     hide_qty_decimals: false,
@@ -553,110 +551,7 @@ export default {
       }
       // Removed noisy debug log
 
-      if (this.itemWorker) {
-
-        try {
-          const res = await fetch(
-            "/api/method/posawesome.posawesome.api.items.get_items",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "X-Frappe-CSRF-Token": frappe.csrf_token,
-              },
-              credentials: "same-origin",
-              body: JSON.stringify({
-                pos_profile: JSON.stringify(vm.pos_profile),
-                price_list: vm.customer_price_list,
-                item_group: gr,
-                search_value: sr,
-                customer: vm.customer,
-              }),
-            }
-          );
-
-
-
-          const text = await res.text();
-          // console.log(text)
-          this.itemWorker.onmessage = async (ev) => {
-            if (this.items_request_token !== request_token) return;
-            if (ev.data.type === "parsed") {
-              const parsed = ev.data.items;
-              vm.items = parsed.message || parsed;
-              savePriceListItems(vm.customer_price_list, vm.items);
-              // Ensure UOMs are available for each item
-              vm.items.forEach((it) => {
-                if (it.item_uoms && it.item_uoms.length > 0) {
-                  saveItemUOMs(it.item_code, it.item_uoms);
-                } else {
-                  const cached = getItemUOMs(it.item_code);
-                  if (cached.length > 0) {
-                    it.item_uoms = cached;
-                  } else if (it.stock_uom) {
-                    it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
-                  }
-                }
-              });
-              vm.eventBus.emit("set_all_items", vm.items);
-              vm.loading = false;
-              vm.items_loaded = true;
-              console.info("Items Loaded");
-
-              // Pre-populate stock cache when items are freshly loaded
-              vm.prePopulateStockCache(vm.items);
-
-              vm.$nextTick(() => {
-                if (vm.search && !vm.pos_profile.pose_use_limit_search) {
-                  vm.search_onchange();
-                }
-              });
-
-              // Always refresh quantities after items are loaded
-              if (vm.items && vm.items.length > 0) {
-                vm.update_items_details(vm.items);
-              }
-
-              if (
-                vm.pos_profile.posa_local_storage &&
-                !vm.pos_profile.pose_use_limit_search
-              ) {
-                try {
-                  setItemsStorage(vm.items);
-                  vm.items.forEach((it) => {
-                    if (it.item_uoms && it.item_uoms.length > 0) {
-                      saveItemUOMs(it.item_code, it.item_uoms);
-                    }
-                  });
-                } catch (e) {
-                  console.error(e);
-                }
-              }
-
-              if (vm.pos_profile.pose_use_limit_search) {
-                vm.enter_event();
-              }
-
-              // Terminate the worker after items are parsed to
-              // release memory held by the worker thread.
-              if (vm.itemWorker) {
-                vm.itemWorker.terminate();
-                vm.itemWorker = null;
-              }
-            } else if (ev.data.type === "error") {
-              console.error('Item worker parse error:', ev.data.error);
-              vm.loading = false;
-            }
-          };
-          this.itemWorker.postMessage({ type: 'parse_and_cache', json: text, priceList: vm.customer_price_list });
-
-
-        } catch (err) {
-          console.error('Failed to fetch items', err);
-          vm.loading = false;
-        }
-      } else {
-        frappe.call({
+      frappe.call({
           method: "posawesome.posawesome.api.items.get_items",
           args: {
             pos_profile: JSON.stringify(vm.pos_profile),
@@ -723,7 +618,6 @@ export default {
             }
           }
         });
-      }
     },
     get_items_groups() {
       if (!this.pos_profile) {
@@ -1736,22 +1630,6 @@ export default {
 
   created: function () {
     this.loadItemSettings();
-    if (typeof Worker !== 'undefined') {
-      try {
-        this.itemWorker = new Worker(ItemWorkerURL, { type: 'module' });
-
-        this.itemWorker.onerror = function (event) {
-          console.error('Worker error:', event);
-          console.error('Message:', event.message);
-          console.error('Filename:', event.filename);
-          console.error('Line number:', event.lineno);
-        };
-        console.log("Created worker nowwwwww")
-      } catch (e) {
-        console.error('Failed to start item worker', e);
-        this.itemWorker = null;
-      }
-    }
     this.$nextTick(function () { });
     this.eventBus.on("register_pos_profile", async (data) => {
       await initPromise;
@@ -1850,9 +1728,6 @@ export default {
       }
     }
 
-    if (this.itemWorker) {
-      this.itemWorker.terminate();
-    }
 
     this.eventBus.off("update_currency");
     this.eventBus.off("server-online");
