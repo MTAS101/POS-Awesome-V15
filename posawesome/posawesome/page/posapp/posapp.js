@@ -123,33 +123,63 @@ frappe.pages["posapp"].on_page_load = async function (wrapper) {
 };
 
 async function setupLanguage() {
-	try {
-		const r = await frappe.call({
-			method: "posawesome.posawesome.api.shifts.check_opening_shift",
-			args: { user: frappe.session.user },
-		});
-		if (r.message && r.message.pos_profile && r.message.pos_profile.posa_language) {
-			frappe.boot.lang = r.message.pos_profile.posa_language;
-			await loadTranslations(r.message.pos_profile.posa_language);
-			return;
-		}
-	} catch (e) {
-		console.error("Failed to fetch POS profile language", e);
-	}
-	await loadTranslations();
+       const cachedLang = localStorage.getItem("posa_last_lang");
+       try {
+               const r = await frappe.call({
+                       method: "posawesome.posawesome.api.shifts.check_opening_shift",
+                       args: { user: frappe.session.user },
+               });
+               if (r.message && r.message.pos_profile && r.message.pos_profile.posa_language) {
+                       frappe.boot.lang = r.message.pos_profile.posa_language;
+                       await loadTranslations(r.message.pos_profile.posa_language);
+                       try {
+                               localStorage.setItem("posa_last_lang", r.message.pos_profile.posa_language);
+                       } catch (e) {
+                               console.warn("Failed to cache POS language", e);
+                       }
+                       return;
+               }
+       } catch (e) {
+               if (!navigator.onLine && cachedLang) {
+                       frappe.boot.lang = cachedLang;
+                       await loadTranslations(cachedLang);
+                       return;
+               }
+               console.error("Failed to fetch POS profile language", e);
+       }
+       await loadTranslations();
 }
 
 function loadTranslations(lang) {
-	return new Promise((resolve) => {
-		frappe.call({
-			method: "posawesome.posawesome.api.utilities.get_translation_dict",
-			args: { lang: lang || frappe.boot.lang },
-			callback: function (r) {
-				if (!r.exc && r.message) {
-					$.extend(frappe._messages, r.message);
-				}
-				resolve();
-			},
-		});
-	});
+       return new Promise((resolve) => {
+               const l = lang || frappe.boot.lang;
+               if (!navigator.onLine) {
+                       import("/assets/posawesome/js/offline/index.js")
+                               .then((m) => {
+                                       const cached = m.getCachedTranslations ? m.getCachedTranslations(l) : null;
+                                       if (cached) {
+                                               $.extend(frappe._messages, cached);
+                                       }
+                               })
+                               .finally(() => resolve());
+                       return;
+               }
+               frappe.call({
+                       method: "posawesome.posawesome.api.utilities.get_translation_dict",
+                       args: { lang: l },
+                       callback: function (r) {
+                               if (!r.exc && r.message) {
+                                       $.extend(frappe._messages, r.message);
+                                       import("/assets/posawesome/js/offline/index.js")
+                                               .then((m) => {
+                                                       if (m.saveTranslations) {
+                                                               m.saveTranslations(l, r.message);
+                                                       }
+                                               })
+                                               .catch(() => {});
+                               }
+                               resolve();
+                       },
+               });
+       });
 }

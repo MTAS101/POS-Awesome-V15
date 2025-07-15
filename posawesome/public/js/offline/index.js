@@ -103,3 +103,10 @@ export {
         getCachedGiftCoupons,
         clearGiftCouponCache,
 } from "./coupons.js";
+
+// Translations exports
+export {
+       saveTranslations,
+       getCachedTranslations,
+       clearTranslationCache,
+} from "./translations.js";

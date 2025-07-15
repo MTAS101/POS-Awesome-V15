@@ -23,6 +23,7 @@ export const memory = {
         price_list_cache: {},
         item_details_cache: {},
         coupon_cache: {},
+       translation_cache: {},
         pos_closing_storage: null,
         tax_template_cache: {},
         tax_inclusive: false,
@@ -274,11 +275,12 @@ export async function clearAllCache() {
         memory.sales_persons_storage = [];
         memory.price_list_cache = {};
         memory.item_details_cache = {};
-        memory.coupon_cache = {};
-        memory.pos_closing_storage = null;
-        memory.tax_template_cache = {};
-        memory.tax_inclusive = false;
-        memory.manual_offline = false;
+       memory.coupon_cache = {};
+       memory.translation_cache = {};
+       memory.pos_closing_storage = null;
+       memory.tax_template_cache = {};
+       memory.tax_inclusive = false;
+       memory.manual_offline = false;
 }
 
 /**
