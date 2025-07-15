@@ -1,111 +1,46 @@
-const CACHE_NAME = "posawesome-cache-v1";
-const MAX_CACHE_ITEMS = 1000;
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
 
-async function enforceCacheLimit(cache) {
-	const keys = await cache.keys();
-	if (keys.length > MAX_CACHE_ITEMS) {
-		const excess = keys.length - MAX_CACHE_ITEMS;
-		for (let i = 0; i < excess; i++) {
-			await cache.delete(keys[i]);
-		}
-	}
-}
+const CACHE_NAME = 'posawesome-cache-v1';
+const PRECACHE_RESOURCES = [
+  '/app/posapp',
+  '/assets/posawesome/js/posawesome.bundle.js',
+  '/assets/posawesome/js/offline/index.js',
+  '/assets/posawesome/js/posapp/workers/itemWorker.js',
+  '/assets/posawesome/js/libs/dexie.min.js',
+  '/manifest.json',
+  '/offline.html',
+];
 
-self.addEventListener("install", (event) => {
-	self.skipWaiting();
-	event.waitUntil(
-		(async () => {
-			const cache = await caches.open(CACHE_NAME);
-			const resources = [
-				"/app/posapp",
-				"/assets/posawesome/js/posawesome.bundle.js",
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 
-				"/assets/posawesome/js/offline/index.js",
+workbox.precaching.precacheAndRoute(PRECACHE_RESOURCES);
 
-				"/assets/posawesome/js/posapp/workers/itemWorker.js",
-				"/assets/posawesome/js/libs/dexie.min.js",
-
-				"/manifest.json",
-				"/offline.html",
-			];
-			await Promise.all(
-				resources.map(async (url) => {
-					try {
-						const resp = await fetch(url);
-						if (resp && resp.ok) {
-							await cache.put(url, resp.clone());
-						}
-					} catch (err) {
-						console.warn("SW install failed to fetch", url, err);
-					}
-				}),
-			);
-			await enforceCacheLimit(cache);
-		})(),
-	);
+const cachePlugin = new workbox.expiration.ExpirationPlugin({
+  maxEntries: 1000,
 });
 
-self.addEventListener("activate", (event) => {
-	event.waitUntil(
-		(async () => {
-			const keys = await caches.keys();
-			await Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)));
-			const cache = await caches.open(CACHE_NAME);
-			await enforceCacheLimit(cache);
-			await self.clients.claim();
-		})(),
-	);
-});
+workbox.routing.registerRoute(
+  ({request}) => request.mode === 'navigate',
+  new workbox.strategies.NetworkFirst({
+    cacheName: CACHE_NAME,
+    plugins: [cachePlugin],
+  })
+);
 
-self.addEventListener("fetch", (event) => {
-	if (event.request.method !== "GET") return;
+workbox.routing.registerRoute(
+  ({url, request}) => request.mode !== 'navigate' &&
+    (url.protocol === 'http:' || url.protocol === 'https:') &&
+    !url.href.includes('socket.io'),
+  new workbox.strategies.CacheFirst({
+    cacheName: CACHE_NAME,
+    plugins: [cachePlugin],
+  })
+);
 
-	const url = new URL(event.request.url);
-	if (url.protocol !== "http:" && url.protocol !== "https:") return;
-
-	if (event.request.url.includes("socket.io")) return;
-
-	if (event.request.mode === "navigate") {
-		event.respondWith(
-			(async () => {
-				try {
-					return await fetch(event.request);
-				} catch (err) {
-					const cached = await caches.match(event.request, { ignoreSearch: true });
-					return cached || caches.match("/app/posapp") || caches.match("/offline.html");
-				}
-			})(),
-		);
-		return;
-	}
-
-	event.respondWith(
-		(async () => {
-			try {
-				const cached = await caches.match(event.request);
-				if (cached) {
-					return cached;
-				}
-				const resp = await fetch(event.request);
-				if (resp && resp.ok && resp.status === 200) {
-					try {
-						const clone = resp.clone();
-						const cache = await caches.open(CACHE_NAME);
-						await cache.put(event.request, clone);
-						await enforceCacheLimit(cache);
-					} catch (e) {
-						console.warn("SW cache put failed", e);
-					}
-				}
-				return resp;
-			} catch (err) {
-				try {
-					const fallback = await caches.match(event.request);
-					return fallback || Response.error();
-				} catch (e) {
-					return Response.error();
-				}
-			}
-		})(),
-	);
+workbox.routing.setCatchHandler(async ({event}) => {
+  if (event.request.destination === 'document') {
+    return (await caches.match('/app/posapp')) || (await caches.match('/offline.html'));
+  }
+  return Response.error();
 });
