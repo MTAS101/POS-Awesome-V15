@@ -70,13 +70,13 @@ export default {
 			if (this.isReturnInvoice) {
 				new_item.qty = -Math.abs(new_item.qty || 1);
 			}
-                this.items.unshift(new_item);
-                // Force update of item rates when item is first added
-                this.update_item_detail(new_item, true);
-                // Apply UOM conversion immediately
-                if (new_item.uom && new_item.uom !== new_item.stock_uom) {
-                        this.calc_uom(new_item, new_item.uom);
-                }
+			this.items.unshift(new_item);
+			// Force update of item rates when item is first added
+			this.update_item_detail(new_item, true);
+			// Apply UOM conversion immediately
+			if (new_item.uom && new_item.uom !== new_item.stock_uom) {
+				this.calc_uom(new_item, new_item.uom);
+			}
 
 			// Expand new item if it has batch or serial number
 			if ((!this.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no) {
@@ -114,12 +114,12 @@ export default {
 				this.set_batch_qty(cur_item, cur_item.batch_no, false);
 			}
 
-                        this.set_serial_no(cur_item);
-                        if (cur_item.uom && cur_item.uom !== cur_item.stock_uom) {
-                                this.calc_uom(cur_item, cur_item.uom);
-                        }
-                }
-                this.$forceUpdate();
+			this.set_serial_no(cur_item);
+			if (cur_item.uom && cur_item.uom !== cur_item.stock_uom) {
+				this.calc_uom(cur_item, cur_item.uom);
+			}
+		}
+		this.$forceUpdate();
 
 		// Only try to expand if new_item exists and should be expanded
 		if (
