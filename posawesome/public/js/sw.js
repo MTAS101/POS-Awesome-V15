@@ -1,78 +1,35 @@
-const CACHE_NAME = "posawesome-cache-v1";
+importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.5.4/workbox-sw.js');
 
-self.addEventListener("install", (event) => {
-	self.skipWaiting();
-	event.waitUntil(
-		(async () => {
-			const cache = await caches.open(CACHE_NAME);
+const CACHE_NAME = 'posawesome-cache-v1';
+const PRECACHE_RESOURCES = [
+  '/assets/posawesome/js/posawesome.bundle.js',
+  '/assets/posawesome/js/offline/index.js',
+  '/manifest.json',
+  '/offline.html',
+];
 
-			const resources = [
-				"/assets/posawesome/js/posawesome.bundle.js",
-				"/assets/posawesome/js/offline/index.js",
-				"/manifest.json",
-				"/offline.html",
-			];
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 
-			await Promise.all(
-				resources.map(async (url) => {
-					try {
-						const resp = await fetch(url);
-						if (resp && resp.ok) {
-							await cache.put(url, resp.clone());
-						}
-					} catch (err) {
-						console.warn("SW install failed to fetch", url, err);
-					}
-				}),
-			);
-		})(),
-	);
+workbox.precaching.precacheAndRoute(PRECACHE_RESOURCES);
+
+const cachePlugin = new workbox.expiration.ExpirationPlugin({
+  maxEntries: 1000,
 });
 
-self.addEventListener("activate", (event) => {
-	event.waitUntil(
-		(async () => {
-			const keys = await caches.keys();
-			await Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)));
-			await self.clients.claim();
-		})(),
-	);
-});
+workbox.routing.registerRoute(
+  ({url, request}) => request.mode !== 'navigate' &&
+    (url.protocol === 'http:' || url.protocol === 'https:') &&
+    !url.href.includes('socket.io'),
+  new workbox.strategies.CacheFirst({
+    cacheName: CACHE_NAME,
+    plugins: [cachePlugin],
+  })
+);
 
-self.addEventListener("fetch", (event) => {
-	if (event.request.method !== "GET") return;
-
-	const url = new URL(event.request.url);
-	if (url.protocol !== "http:" && url.protocol !== "https:") return;
-
-	if (event.request.url.includes("socket.io")) return;
-
-	event.respondWith(
-		(async () => {
-			try {
-				const cached = await caches.match(event.request);
-				if (cached) {
-					return cached;
-				}
-				const resp = await fetch(event.request);
-				if (resp && resp.ok && resp.status === 200) {
-					try {
-						const respClone = resp.clone();
-						const cache = await caches.open(CACHE_NAME);
-						await cache.put(event.request, respClone);
-					} catch (e) {
-						console.warn("SW cache put failed", e);
-					}
-				}
-				return resp;
-			} catch (err) {
-				try {
-					const fallback = await caches.match(event.request);
-					return fallback || (await caches.match("/offline.html")) || Response.error();
-				} catch (e) {
-					return Response.error();
-				}
-			}
-		})(),
-	);
+workbox.routing.setCatchHandler(async ({event}) => {
+  if (event.request.destination === 'document') {
+    return (await caches.match('/offline.html'));
+  }
+  return Response.error();
 });
