@@ -938,29 +938,29 @@ export default {
 		click_item_row(event, { item }) {
 			this.add_item(item);
 		},
-               async add_item(item) {
-                       item = { ...item };
-                       if (item.has_variants) {
-                               this.eventBus.emit("open_variants_model", item, this.items);
-                       } else {
-                               if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
-                                       this.eventBus.emit("show_message", {
-                                               title: `No stock available for ${item.item_name}`,
-                                               color: "warning",
-                                       });
-                                       await this.update_items_details([item]);
-                                       return;
-                               }
+		add_item(item) {
+			item = { ...item };
+			if (item.has_variants) {
+				this.eventBus.emit("open_variants_model", item, this.items);
+			} else {
+				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
+					this.eventBus.emit("show_message", {
+						title: `No stock available for ${item.item_name}`,
+						color: "warning",
+					});
+					this.update_items_details([item]);
+					return;
+				}
 
-                               // Ensure UOMs are initialized before adding the item
-                               if (!item.item_uoms || item.item_uoms.length === 0) {
-                                       // If UOMs are not available, fetch them first
-                                       await this.update_items_details([item]);
+				// Ensure UOMs are initialized before adding the item
+				if (!item.item_uoms || item.item_uoms.length === 0) {
+					// If UOMs are not available, fetch them first
+					this.update_items_details([item]);
 
-                                       // Add stock UOM as fallback
-                                       if (!item.item_uoms || item.item_uoms.length === 0) {
-                                               item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
-                                       }
+					// Add stock UOM as fallback
+					if (!item.item_uoms || item.item_uoms.length === 0) {
+						item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
+					}
 				}
 
 				// Ensure correct rate based on selected currency
@@ -1123,9 +1123,9 @@ export default {
 			this.qty = 1;
 			this.$refs.debounce_search.focus();
 		},
-               async update_items_details(items) {
-                       const vm = this;
-                       if (!items || !items.length) return;
+		update_items_details(items) {
+			const vm = this;
+			if (!items || !items.length) return;
 
 			// reset any pending retry timer
 			if (vm.itemDetailsRetryTimeout) {
@@ -1202,100 +1202,113 @@ export default {
 
 			const itemsToFetch = items.filter((it) => cacheResult.missing.includes(it.item_code));
 
-                        try {
-                                vm.currentRequest = await frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_items_details",
-                                        args: {
-                                                pos_profile: JSON.stringify(vm.pos_profile),
-                                                items_data: JSON.stringify(itemsToFetch),
-                                                price_list: vm.active_price_list,
-                                        },
-                                        freeze: false,
-                                        signal: vm.abortController.signal,
-                                });
+			vm.currentRequest = frappe.call({
+				method: "posawesome.posawesome.api.items.get_items_details",
+				args: {
+					pos_profile: JSON.stringify(vm.pos_profile),
+					items_data: JSON.stringify(itemsToFetch),
+					price_list: vm.active_price_list,
+				},
+				// Avoid freezing the UI while item details are fetched
+				freeze: false,
+				signal: vm.abortController.signal,
+				callback: function (r) {
+					if (r.message) {
+						vm.itemDetailsRetryCount = 0;
+						let qtyChanged = false;
+						let updatedItems = [];
 
-                                const r = vm.currentRequest;
-                                if (r && r.message) {
-                                        vm.itemDetailsRetryCount = 0;
-                                        let qtyChanged = false;
-                                        let updatedItems = [];
+						// Batch updates to minimize reactivity triggers
+						vm.$nextTick(() => {
+							items.forEach((item) => {
+								const updated_item = r.message.find(
+									(element) => element.item_code == item.item_code,
+								);
+								if (updated_item) {
+									// Save previous quantity for comparison
+									const prev_qty = item.actual_qty;
 
-                                        items.forEach((item) => {
-                                                const updated_item = r.message.find(
-                                                        (element) => element.item_code == item.item_code,
-                                                );
-                                                if (updated_item) {
-                                                        const prev_qty = item.actual_qty;
+									// Prepare updates but don't apply them yet
+									updatedItems.push({
+										item: item,
+										updates: {
+											actual_qty: updated_item.actual_qty,
+											serial_no_data: updated_item.serial_no_data,
+											batch_no_data: updated_item.batch_no_data,
+											has_batch_no: updated_item.has_batch_no,
+											has_serial_no: updated_item.has_serial_no,
+											item_uoms:
+												updated_item.item_uoms && updated_item.item_uoms.length > 0
+													? updated_item.item_uoms
+													: item.item_uoms,
+										},
+									});
 
-                                                        updatedItems.push({
-                                                                item: item,
-                                                                updates: {
-                                                                        actual_qty: updated_item.actual_qty,
-                                                                        serial_no_data: updated_item.serial_no_data,
-                                                                        batch_no_data: updated_item.batch_no_data,
-                                                                        has_batch_no: updated_item.has_batch_no,
-                                                                        has_serial_no: updated_item.has_serial_no,
-                                                                        item_uoms:
-                                                                                updated_item.item_uoms && updated_item.item_uoms.length > 0
-                                                                                        ? updated_item.item_uoms
-                                                                                        : item.item_uoms,
-                                                                },
-                                                        });
+									// Track significant quantity changes
+									if (prev_qty > 0 && updated_item.actual_qty === 0) {
+										qtyChanged = true;
+									}
 
-                                                        if (prev_qty > 0 && updated_item.actual_qty === 0) {
-                                                                qtyChanged = true;
-                                                        }
+									// Cache UOMs separately
+									if (updated_item.item_uoms && updated_item.item_uoms.length > 0) {
+										saveItemUOMs(item.item_code, updated_item.item_uoms);
+									}
+								}
+							});
 
-                                                        if (updated_item.item_uoms && updated_item.item_uoms.length > 0) {
-                                                                saveItemUOMs(item.item_code, updated_item.item_uoms);
-                                                        }
-                                                }
-                                        });
+							// Apply all updates in one batch
+							updatedItems.forEach(({ item, updates }) => {
+								Object.assign(item, updates);
+								vm.applyCurrencyConversionToItem(item);
+							});
 
-                                        updatedItems.forEach(({ item, updates }) => {
-                                                Object.assign(item, updates);
-                                                vm.applyCurrencyConversionToItem(item);
-                                        });
+							// Update local stock cache with latest quantities
+							updateLocalStockCache(r.message);
+							saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
 
-                                        updateLocalStockCache(r.message);
-                                        saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
+							// Force update if any item's quantity changed significantly
+							if (qtyChanged) {
+								vm.$forceUpdate();
+							}
+						});
+					}
+				},
+				error: function (err) {
+					if (err.name !== "AbortError") {
+						console.error("Error fetching item details:", err);
+						// Fallback to local stock if server call fails
+						items.forEach((item) => {
+							const localQty = getLocalStock(item.item_code);
+							if (localQty !== null) {
+								item.actual_qty = localQty;
+							}
+							// Fallback to cached UOMs when offline or request fails
+							if (!item.item_uoms || item.item_uoms.length === 0) {
+								const cached = getItemUOMs(item.item_code);
+								if (cached.length > 0) {
+									item.item_uoms = cached;
+								}
+							}
+						});
 
-                                        if (qtyChanged) {
-                                                vm.$forceUpdate();
-                                        }
-                                }
-                        } catch (err) {
-                                if (err.name !== "AbortError") {
-                                        console.error("Error fetching item details:", err);
-                                        items.forEach((item) => {
-                                                const localQty = getLocalStock(item.item_code);
-                                                if (localQty !== null) {
-                                                        item.actual_qty = localQty;
-                                                }
-                                                if (!item.item_uoms || item.item_uoms.length === 0) {
-                                                        const cached = getItemUOMs(item.item_code);
-                                                        if (cached.length > 0) {
-                                                                item.item_uoms = cached;
-                                                        }
-                                                }
-                                        });
+						// do not retry if offline, wait for "server-online" event instead
+						if (!isOffline()) {
+							vm.itemDetailsRetryCount += 1;
+							const delay = Math.min(32000, 1000 * Math.pow(2, vm.itemDetailsRetryCount - 1));
+							vm.itemDetailsRetryTimeout = setTimeout(() => {
+								vm.update_items_details(items);
+							}, delay);
+						}
+					}
+				},
+			});
 
-                                        if (!isOffline()) {
-                                                vm.itemDetailsRetryCount += 1;
-                                                const delay = Math.min(32000, 1000 * Math.pow(2, vm.itemDetailsRetryCount - 1));
-                                                vm.itemDetailsRetryTimeout = setTimeout(() => {
-                                                        vm.update_items_details(items);
-                                                }, delay);
-                                        }
-                                }
-                        }
-
-                        // Cleanup on component destroy
-                        this.cleanupBeforeDestroy = () => {
-                                if (vm.abortController) {
-                                        vm.abortController.abort();
-                                }
-                        };
+			// Cleanup on component destroy
+			this.cleanupBeforeDestroy = () => {
+				if (vm.abortController) {
+					vm.abortController.abort();
+				}
+			};
 		},
 		update_cur_items_details() {
 			if (this.filtered_items && this.filtered_items.length > 0) {
