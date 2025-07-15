@@ -138,7 +138,13 @@ export default {
 				sortable: true,
 			},
 		],
-		max25chars: (v) => v.length <= 20 || "Input too long!", // TODO : should validate as number
+		max25chars(v) {
+			const pattern = /^-?(\d+|\d{1,3}(?:\.\d{3})*)(,\d+)?$/;
+			if (!pattern.test(v)) {
+				return "invalid number";
+			}
+			return String(v).length <= 20 || "Input too long!";
+		},
 		pagination: {},
 	}),
 	watch: {},
