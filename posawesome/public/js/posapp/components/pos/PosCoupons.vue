@@ -79,6 +79,7 @@
 </template>
 
 <script>
+import { isOffline, saveGiftCoupons, getCachedGiftCoupons } from "../../../offline/index.js";
 export default {
 	data: () => ({
 		loading: false,
@@ -160,25 +161,35 @@ export default {
 				},
 			});
 		},
-		setActiveGiftCoupons() {
-			if (!this.customer) return;
-			const vm = this;
-			frappe.call({
-				method: "posawesome.posawesome.api.offers.get_active_gift_coupons",
-				args: {
-					customer: vm.customer,
-					company: vm.pos_profile.company,
-				},
-				callback: function (r) {
-					if (r.message) {
-						const coupons = r.message;
-						coupons.forEach((coupon_code) => {
-							vm.add_coupon(coupon_code);
-						});
-					}
-				},
-			});
-		},
+                setActiveGiftCoupons() {
+                        if (!this.customer) return;
+                        const vm = this;
+                        const cached = getCachedGiftCoupons(vm.customer);
+                        if (isOffline()) {
+                                if (cached) {
+                                        cached.forEach((code) => vm.add_coupon(code));
+                                }
+                                return;
+                        }
+
+                        frappe.call({
+                                method: "posawesome.posawesome.api.offers.get_active_gift_coupons",
+                                args: {
+                                        customer: vm.customer,
+                                        company: vm.pos_profile.company,
+                                },
+                                callback: function (r) {
+                                        if (r.message) {
+                                                saveGiftCoupons(vm.customer, r.message);
+                                                r.message.forEach((coupon_code) => {
+                                                        vm.add_coupon(coupon_code);
+                                                });
+                                        } else if (cached) {
+                                                cached.forEach((code) => vm.add_coupon(code));
+                                        }
+                                },
+                        });
+                },
 
 		updatePosCoupons(offers) {
 			this.posa_coupons.forEach((coupon) => {

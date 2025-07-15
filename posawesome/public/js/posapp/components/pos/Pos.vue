@@ -53,13 +53,19 @@ import Returns from "./Returns.vue";
 import MpesaPayments from "./Mpesa-Payments.vue";
 import {
 	getCachedOffers,
-	saveOffers,
-	getOpeningStorage,
-	setOpeningStorage,
-	clearOpeningStorage,
-	initPromise,
-	checkDbHealth,
-	setTaxTemplate,
+        saveOffers,
+        getOpeningStorage,
+        setOpeningStorage,
+        clearOpeningStorage,
+        getClosingStorage,
+        setClosingStorage,
+        clearClosingStorage,
+        saveGiftCoupons,
+        getCachedGiftCoupons,
+        initPromise,
+        checkDbHealth,
+        setTaxTemplate,
+        isOffline,
 } from "../../../offline/index.js";
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline/index.js";
@@ -176,26 +182,45 @@ export default {
 		create_opening_voucher() {
 			this.dialog = true;
 		},
-		get_closing_data() {
-			return frappe
-				.call(
-					"posawesome.posawesome.doctype.pos_closing_shift.pos_closing_shift.make_closing_shift_from_opening",
-					{
-						opening_shift: this.pos_opening_shift,
-					},
-				)
-				.then((r) => {
-					if (r.message) {
-						this.eventBus.emit("open_ClosingDialog", r.message);
-					} else {
-						// console.log(r);
-					}
-				});
-		},
-		submit_closing_pos(data) {
-			frappe
-				.call(
-					"posawesome.posawesome.doctype.pos_closing_shift.pos_closing_shift.submit_closing_shift",
+                get_closing_data() {
+                        const cached = getClosingStorage();
+                        if (isOffline()) {
+                                if (cached) {
+                                        this.eventBus.emit("open_ClosingDialog", cached);
+                                } else {
+                                        this.eventBus.emit("show_message", {
+                                                title: __("Closing data unavailable offline"),
+                                                color: "warning",
+                                        });
+                                }
+                                return Promise.resolve();
+                        }
+
+                        return frappe
+                                .call(
+                                        "posawesome.posawesome.doctype.pos_closing_shift.pos_closing_shift.make_closing_shift_from_opening",
+                                        {
+                                                opening_shift: this.pos_opening_shift,
+                                        },
+                                )
+                                .then((r) => {
+                                        if (r.message) {
+                                                setClosingStorage(r.message);
+                                                this.eventBus.emit("open_ClosingDialog", r.message);
+                                        } else if (cached) {
+                                                this.eventBus.emit("open_ClosingDialog", cached);
+                                        }
+                                })
+                                .catch(() => {
+                                        if (cached) {
+                                                this.eventBus.emit("open_ClosingDialog", cached);
+                                        }
+                                });
+                },
+                submit_closing_pos(data) {
+                        frappe
+                                .call(
+                                        "posawesome.posawesome.doctype.pos_closing_shift.pos_closing_shift.submit_closing_shift",
 					{
 						closing_shift: data,
 					},
@@ -204,14 +229,15 @@ export default {
 					if (r.message) {
 						// Clear the cached opening shift data
 						this.pos_opening_shift = null;
-						this.pos_profile = null;
+                                                this.pos_profile = null;
 
-						// Clear from local storage
-						clearOpeningStorage();
+                                                // Clear from local storage
+                                                clearOpeningStorage();
+                                                clearClosingStorage();
 
-						this.eventBus.emit("show_message", {
-							title: `POS Shift Closed`,
-							color: "success",
+                                                this.eventBus.emit("show_message", {
+                                                        title: `POS Shift Closed`,
+                                                        color: "success",
 						});
 						this.check_opening_entry();
 					} else {
