@@ -60,6 +60,7 @@ After switching branches or pulling latest changes:
 33. Payments Reconciliation
 34. A lot more bug fixes from the version 14
 35. Offline invoices that fail to submit are saved as draft documents
+36. Extended offline caching for closing shifts and gift coupons
 
 ### How to Install
 

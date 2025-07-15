@@ -19,12 +19,14 @@ export const memory = {
 	customer_storage: [],
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
-	sales_persons_storage: [],
-	price_list_cache: {},
-	item_details_cache: {},
-	tax_template_cache: {},
-	tax_inclusive: false,
-	manual_offline: false,
+        sales_persons_storage: [],
+        price_list_cache: {},
+        item_details_cache: {},
+        coupon_cache: {},
+        pos_closing_storage: null,
+        tax_template_cache: {},
+        tax_inclusive: false,
+        manual_offline: false,
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
@@ -127,7 +129,29 @@ export function clearOpeningStorage() {
 }
 
 export function getOpeningDialogStorage() {
-	return memory.opening_dialog_storage || null;
+        return memory.opening_dialog_storage || null;
+}
+
+export function getClosingStorage() {
+        return memory.pos_closing_storage || null;
+}
+
+export function setClosingStorage(data) {
+        try {
+                memory.pos_closing_storage = JSON.parse(JSON.stringify(data));
+                persist("pos_closing_storage", memory.pos_closing_storage);
+        } catch (e) {
+                console.error("Failed to set closing storage", e);
+        }
+}
+
+export function clearClosingStorage() {
+        try {
+                memory.pos_closing_storage = null;
+                persist("pos_closing_storage", memory.pos_closing_storage);
+        } catch (e) {
+                console.error("Failed to clear closing storage", e);
+        }
 }
 
 export function setOpeningDialogStorage(data) {
@@ -247,12 +271,14 @@ export async function clearAllCache() {
 	memory.customer_storage = [];
 	memory.pos_opening_storage = null;
 	memory.opening_dialog_storage = null;
-	memory.sales_persons_storage = [];
-	memory.price_list_cache = {};
-	memory.item_details_cache = {};
-	memory.tax_template_cache = {};
-	memory.tax_inclusive = false;
-	memory.manual_offline = false;
+        memory.sales_persons_storage = [];
+        memory.price_list_cache = {};
+        memory.item_details_cache = {};
+        memory.coupon_cache = {};
+        memory.pos_closing_storage = null;
+        memory.tax_template_cache = {};
+        memory.tax_inclusive = false;
+        memory.manual_offline = false;
 }
 
 /**

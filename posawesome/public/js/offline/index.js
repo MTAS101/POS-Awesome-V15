@@ -16,11 +16,14 @@ export {
 	getOpeningStorage,
 	setOpeningStorage,
 	clearOpeningStorage,
-	getOpeningDialogStorage,
-	setOpeningDialogStorage,
-	getTaxTemplate,
-	setTaxTemplate,
-	setLastSyncTotals,
+        getOpeningDialogStorage,
+        setOpeningDialogStorage,
+        getClosingStorage,
+        setClosingStorage,
+        clearClosingStorage,
+        getTaxTemplate,
+        setTaxTemplate,
+        setLastSyncTotals,
 	getLastSyncTotals,
 	getTaxInclusiveSetting,
 	setTaxInclusiveSetting,
@@ -93,3 +96,10 @@ export {
 	clearCustomerBalanceCache,
 	clearExpiredCustomerBalances,
 } from "./customers.js";
+
+// Coupons exports
+export {
+        saveGiftCoupons,
+        getCachedGiftCoupons,
+        clearGiftCouponCache,
+} from "./coupons.js";
