@@ -4,4 +4,4 @@ console.log("Installing dependencies...");
 execSync("yarn install", { stdio: "inherit" });
 
 console.log("Building the application...");
-execSync("npx vite build", { stdio: "inherit" });
+execSync("node esbuild --production --apps posawesome --run-build-command", { stdio: "inherit" });
