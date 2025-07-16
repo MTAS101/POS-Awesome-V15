@@ -383,8 +383,7 @@ export default {
                if (typeof Worker !== "undefined") {
                        try {
                                const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-                               // Use module workers so Dexie can be imported as ES module
-                               this.customerWorker = new Worker(workerUrl, { type: "module" });
+                               this.customerWorker = new Worker(workerUrl, { type: "classic" });
                        } catch (e) {
                                console.error("Failed to start customer worker", e);
                                this.customerWorker = null;
