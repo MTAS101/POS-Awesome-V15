@@ -158,12 +158,11 @@
 <script>
 import UpdateCustomer from "./UpdateCustomer.vue";
 import {
-	getCustomerStorage,
-	setCustomerStorage,
-	isOffline,
-	memoryInitPromise,
-	initPromise,
-	getOfflineCustomers,
+       getCustomerStorage,
+       setCustomerStorage,
+       isOffline,
+       memoryInitPromise,
+       initPromise,
 } from "../../../offline/index.js";
 
 export default {
@@ -171,19 +170,19 @@ export default {
 		pos_profile: Object,
 	},
 
-	data: () => ({
-		pos_profile: "",
-		customers: [],
-		customer: "", // Selected customer
+        data: () => ({
+                pos_profile: "",
+                customers: [],
+                customer: "", // Selected customer
 		internalCustomer: null, // Model bound to the dropdown
 		tempSelectedCustomer: null, // Temporarily holds customer selected from dropdown
 		isMenuOpen: false, // Tracks whether dropdown menu is open
 		readonly: false,
 		customer_info: {}, // Used for edit modal
 		loadingCustomers: false, // ? New state to track loading status
-		customerSearch: "", // Search text
-		customerWorker: null,
-	}),
+                customerSearch: "", // Search text
+                customerWorker: null,
+        }),
 
 	components: {
 		UpdateCustomer,
@@ -278,62 +277,29 @@ export default {
 			}
 		},
 
-		mergeOfflineCustomers() {
-			try {
-				const queued = (getOfflineCustomers() || []).map((e) => e.args || e);
-				queued.forEach((c) => {
-					const name = c.customer_name || c.name;
-					if (!name) {
-						return;
-					}
-					if (!this.customers.some((cust) => cust.name === name)) {
-						this.customers.push({ ...c, name });
-					}
-				});
+               // Fetch customers list
+               async get_customer_names() {
+                       var vm = this;
+                       if (this.customers.length > 0) return;
 
-				if (this.pos_profile && this.pos_profile.posa_local_storage) {
-					if (this.customerWorker) {
-						this.customerWorker.onmessage = (ev) => {
-							if (ev.data && ev.data.type === "customers_parsed") {
-								setCustomerStorage(ev.data.customers);
-							}
-						};
-						this.customerWorker.postMessage({
-							type: "parse_and_cache_customers",
-							json: JSON.stringify(this.customers),
-						});
-					} else {
-						setCustomerStorage(this.customers);
-					}
-				}
-			} catch (err) {
-				console.error("Failed to merge offline customers", err);
-			}
-		},
+                      await initPromise;
+                      await memoryInitPromise;
 
-		// Fetch customers list
-		async get_customer_names() {
-			var vm = this;
-			if (this.customers.length > 0) return;
+                        if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
+                                try {
+                                        vm.customers = getCustomerStorage();
+                                } catch (e) {
+                                        console.error("Failed to parse customer cache:", e);
+                                        vm.customers = [];
+                                }
+                        }
 
-			await initPromise;
-			await memoryInitPromise;
+                        if (isOffline()) {
+                                vm.loadingCustomers = false;
+                                return;
+                        }
 
-			if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
-				try {
-					vm.customers = getCustomerStorage();
-				} catch (e) {
-					console.error("Failed to parse customer cache:", e);
-					vm.customers = [];
-				}
-			}
-
-			if (isOffline()) {
-				vm.loadingCustomers = false;
-				return;
-			}
-
-			this.loadingCustomers = true; // ? Start loading
+                        this.loadingCustomers = true; // ? Start loading
 			frappe.call({
 				method: "posawesome.posawesome.api.customers.get_customer_names",
 				args: {
@@ -343,21 +309,21 @@ export default {
 					if (r.message) {
 						vm.customers = r.message;
 
-						if (vm.pos_profile.posa_local_storage) {
-							if (vm.customerWorker) {
-								vm.customerWorker.onmessage = (ev) => {
-									if (ev.data && ev.data.type === "customers_parsed") {
-										setCustomerStorage(ev.data.customers);
-									}
-								};
-								vm.customerWorker.postMessage({
-									type: "parse_and_cache_customers",
-									json: JSON.stringify(r.message),
-								});
-							} else {
-								setCustomerStorage(r.message);
-							}
-						}
+                                                if (vm.pos_profile.posa_local_storage) {
+                                                        if (vm.customerWorker) {
+                                                                vm.customerWorker.onmessage = (ev) => {
+                                                                        if (ev.data && ev.data.type === "customers_parsed") {
+                                                                                setCustomerStorage(ev.data.customers);
+                                                                        }
+                                                                };
+                                                                vm.customerWorker.postMessage({
+                                                                        type: "parse_and_cache_customers",
+                                                                        json: JSON.stringify(r.message),
+                                                                });
+                                                        } else {
+                                                                setCustomerStorage(r.message);
+                                                        }
+                                                }
 					}
 					vm.loadingCustomers = false; // ? Stop loading
 				},
@@ -375,53 +341,49 @@ export default {
 		edit_customer() {
 			this.eventBus.emit("open_update_customer", this.customer_info);
 		},
-	},
+       },
 
-	async created() {
-		// Load cached customers immediately for offline use
-		await initPromise;
-		await memoryInitPromise;
-		if (typeof Worker !== "undefined") {
-			try {
-				const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-				this.customerWorker = new Worker(workerUrl, { type: "classic" });
-			} catch (e) {
-				console.error("Failed to start customer worker", e);
-				this.customerWorker = null;
-			}
-		}
-		if (getCustomerStorage().length) {
-			try {
-				this.customers = getCustomerStorage();
-			} catch (e) {
-				console.error("Failed to parse customer cache:", e);
-				this.customers = [];
-			}
-		} else {
-			// Fallback to localStorage if memory cache is empty
-			try {
-				const raw = localStorage.getItem("posa_customer_storage");
-				if (raw) {
-					this.customers = JSON.parse(raw);
-				}
-			} catch (err) {
-				console.error("Failed to parse localStorage customers", err);
-			}
-		}
+       async created() {
+               // Load cached customers immediately for offline use
+               await initPromise;
+               await memoryInitPromise;
+               if (typeof Worker !== "undefined") {
+                       try {
+                               const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+                               this.customerWorker = new Worker(workerUrl, { type: "classic" });
+                       } catch (e) {
+                               console.error("Failed to start customer worker", e);
+                               this.customerWorker = null;
+                       }
+               }
+               if (getCustomerStorage().length) {
+                       try {
+                               this.customers = getCustomerStorage();
+                       } catch (e) {
+                               console.error("Failed to parse customer cache:", e);
+                               this.customers = [];
+                       }
+               } else {
+                       // Fallback to localStorage if memory cache is empty
+                       try {
+                               const raw = localStorage.getItem("posa_customer_storage");
+                               if (raw) {
+                                       this.customers = JSON.parse(raw);
+                               }
+                       } catch (err) {
+                               console.error("Failed to parse localStorage customers", err);
+                       }
+               }
 
-		this.mergeOfflineCustomers();
-
-		this.$nextTick(() => {
+                this.$nextTick(() => {
 			this.eventBus.on("register_pos_profile", (pos_profile) => {
 				this.pos_profile = pos_profile;
 				this.get_customer_names();
-				this.mergeOfflineCustomers();
 			});
 
 			this.eventBus.on("payments_register_pos_profile", (pos_profile) => {
 				this.pos_profile = pos_profile;
 				this.get_customer_names();
-				this.mergeOfflineCustomers();
 			});
 
 			this.eventBus.on("set_customer", (customer) => {
@@ -437,21 +399,21 @@ export default {
 				} else {
 					this.customers.push(customer);
 				}
-				if (this.pos_profile.posa_local_storage) {
-					if (this.customerWorker) {
-						this.customerWorker.onmessage = (ev) => {
-							if (ev.data && ev.data.type === "customers_parsed") {
-								setCustomerStorage(ev.data.customers);
-							}
-						};
-						this.customerWorker.postMessage({
-							type: "parse_and_cache_customers",
-							json: JSON.stringify(this.customers),
-						});
-					} else {
-						setCustomerStorage(this.customers);
-					}
-				}
+                                if (this.pos_profile.posa_local_storage) {
+                                        if (this.customerWorker) {
+                                                this.customerWorker.onmessage = (ev) => {
+                                                        if (ev.data && ev.data.type === "customers_parsed") {
+                                                                setCustomerStorage(ev.data.customers);
+                                                        }
+                                                };
+                                                this.customerWorker.postMessage({
+                                                        type: "parse_and_cache_customers",
+                                                        json: JSON.stringify(this.customers),
+                                                });
+                                        } else {
+                                                setCustomerStorage(this.customers);
+                                        }
+                                }
 				this.customer = customer.name;
 				this.internalCustomer = customer.name;
 				this.eventBus.emit("update_customer", customer.name);
@@ -465,17 +427,17 @@ export default {
 				this.customer_info = data;
 			});
 
-			this.eventBus.on("fetch_customer_details", () => {
-				this.get_customer_names();
-			});
-		});
-	},
+                        this.eventBus.on("fetch_customer_details", () => {
+                                this.get_customer_names();
+                        });
+                });
+       },
 
-	beforeUnmount() {
-		if (this.customerWorker) {
-			this.customerWorker.terminate();
-			this.customerWorker = null;
-		}
-	},
+       beforeUnmount() {
+               if (this.customerWorker) {
+                       this.customerWorker.terminate();
+                       this.customerWorker = null;
+               }
+       },
 };
 </script>
