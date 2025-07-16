@@ -157,7 +157,7 @@
 
 <script>
 import UpdateCustomer from "./UpdateCustomer.vue";
-import { getCustomerStorage, setCustomerStorage } from "../../../offline/index.js";
+import { getCustomerStorage, setCustomerStorage, isOffline } from "../../../offline/index.js";
 
 export default {
 	props: {
@@ -275,16 +275,21 @@ export default {
 			var vm = this;
 			if (this.customers.length > 0) return;
 
-			if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
-				try {
-					vm.customers = getCustomerStorage();
-				} catch (e) {
-					console.error("Failed to parse customer cache:", e);
-					vm.customers = [];
-				}
-			}
+                        if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
+                                try {
+                                        vm.customers = getCustomerStorage();
+                                } catch (e) {
+                                        console.error("Failed to parse customer cache:", e);
+                                        vm.customers = [];
+                                }
+                        }
 
-			this.loadingCustomers = true; // ? Start loading
+                        if (isOffline()) {
+                                vm.loadingCustomers = false;
+                                return;
+                        }
+
+                        this.loadingCustomers = true; // ? Start loading
 			frappe.call({
 				method: "posawesome.posawesome.api.customers.get_customer_names",
 				args: {
