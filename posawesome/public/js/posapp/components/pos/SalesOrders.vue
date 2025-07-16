@@ -121,24 +121,22 @@ export default {
 			this.selected = [];
 		},
 
-               async search_orders() {
-                        const vm = this;
-                        try {
-                                const r = await frappe.call({
-                                        method: "posawesome.posawesome.api.sales_orders.search_orders",
-                                        args: {
-                                                order_name: vm.order_name,
-                                                company: this.pos_profile.company,
-                                                currency: this.pos_profile.currency,
-                                        },
-                                });
-                                if (r.message) {
-                                        vm.dialog_data = r.message;
-                                }
-                        } catch (error) {
-                                console.error("Error searching orders:", error);
-                        }
-               },
+		search_orders() {
+			frappe.call({
+				method: "posawesome.posawesome.api.sales_orders.search_orders",
+				args: {
+					order_name: vm.order_name,
+					company: this.pos_profile.company,
+					currency: this.pos_profile.currency,
+				},
+				async: false,
+				callback: function (r) {
+					if (r.message) {
+						vm.dialog_data = r.message;
+					}
+				},
+			});
+		},
 
 		async submit_dialog() {
 			if (this.selected.length > 0) {
