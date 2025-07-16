@@ -1584,94 +1584,81 @@ export default {
 			});
 		},
 		// Request payment for phone type
-		request_payment(payment) {
-			this.phone_dialog = false;
-			const vm = this;
-			if (!this.invoice_doc.contact_mobile) {
-				this.eventBus.emit("show_message", {
-					title: __("Please set the customer's mobile number"),
-					color: "error",
-				});
-				this.eventBus.emit("open_edit_customer");
-				this.back_to_invoice();
-				return;
-			}
-			this.eventBus.emit("freeze", { title: __("Waiting for payment...") });
-			this.invoice_doc.payments.forEach((payment) => {
-				payment.amount = this.flt(payment.amount);
-			});
-			let formData = { ...this.invoice_doc };
-			formData["total_change"] = !this.invoice_doc.is_return ? -this.diff_payment : 0;
-			formData["paid_change"] = !this.invoice_doc.is_return ? this.paid_change : 0;
-			formData["credit_change"] = -this.credit_change;
-			formData["redeemed_customer_credit"] = this.redeemed_customer_credit;
-			formData["customer_credit_dict"] = this.customer_credit_dict;
-			formData["is_cashback"] = this.is_cashback;
-			frappe
-				.call({
-					method: "posawesome.posawesome.api.invoices.update_invoice",
-					args: { data: formData },
-					async: false,
-					callback: function (r) {
-						if (r.message) {
-							vm.invoice_doc = r.message;
-						}
-					},
-				})
-				.then(() => {
-					frappe
-						.call({
-							method: "posawesome.posawesome.api.payments.create_payment_request",
-							args: { doc: vm.invoice_doc },
-						})
-						.fail(() => {
-							vm.eventBus.emit("unfreeze");
-							vm.eventBus.emit("show_message", {
-								title: __("Payment request failed"),
-								color: "error",
-							});
-						})
-						.then(({ message }) => {
-							const payment_request_name = message.name;
-							setTimeout(() => {
-								frappe.db
-									.get_value("Payment Request", payment_request_name, [
-										"status",
-										"grand_total",
-									])
-									.then(({ message }) => {
-										if (message.status !== "Paid") {
-											vm.eventBus.emit("unfreeze");
-											vm.eventBus.emit("show_message", {
-												title: __(
-													"Payment Request took too long to respond. Please try requesting for payment again",
-												),
-												color: "error",
-											});
-										} else {
-											vm.eventBus.emit("unfreeze");
-											vm.eventBus.emit("show_message", {
-												title: __("Payment of {0} received successfully.", [
-													vm.formatCurrency(
-														message.grand_total,
-														vm.invoice_doc.currency,
-														0,
-													),
-												]),
-												color: "success",
-											});
-											frappe.db
-												.get_doc("Sales Invoice", vm.invoice_doc.name)
-												.then((doc) => {
-													vm.invoice_doc = doc;
-													vm.submit(null, true);
-												});
-										}
-									});
-							}, 30000);
-						});
-				});
-		},
+               async request_payment(payment) {
+                       this.phone_dialog = false;
+                       const vm = this;
+                       if (!this.invoice_doc.contact_mobile) {
+                               this.eventBus.emit("show_message", {
+                                       title: __("Please set the customer's mobile number"),
+                                       color: "error",
+                               });
+                               this.eventBus.emit("open_edit_customer");
+                               this.back_to_invoice();
+                               return;
+                       }
+                       this.eventBus.emit("freeze", { title: __("Waiting for payment...") });
+                       this.invoice_doc.payments.forEach((payment) => {
+                               payment.amount = this.flt(payment.amount);
+                       });
+                       let formData = { ...this.invoice_doc };
+                       formData["total_change"] = !this.invoice_doc.is_return ? -this.diff_payment : 0;
+                       formData["paid_change"] = !this.invoice_doc.is_return ? this.paid_change : 0;
+                       formData["credit_change"] = -this.credit_change;
+                       formData["redeemed_customer_credit"] = this.redeemed_customer_credit;
+                       formData["customer_credit_dict"] = this.customer_credit_dict;
+                       formData["is_cashback"] = this.is_cashback;
+                        try {
+                                const r1 = await frappe.call({
+                                        method: "posawesome.posawesome.api.invoices.update_invoice",
+                                        args: { data: formData },
+                                });
+                                if (r1.message) {
+                                        vm.invoice_doc = r1.message;
+                                }
+
+                                const { message } = await frappe.call({
+                                        method: "posawesome.posawesome.api.payments.create_payment_request",
+                                        args: { doc: vm.invoice_doc },
+                                });
+
+                                const payment_request_name = message.name;
+                                setTimeout(() => {
+                                        frappe.db
+                                                .get_value("Payment Request", payment_request_name, ["status", "grand_total"])
+                                                .then(({ message }) => {
+                                                        if (message.status !== "Paid") {
+                                                                vm.eventBus.emit("unfreeze");
+                                                                vm.eventBus.emit("show_message", {
+                                                                        title: __(
+                                                                                "Payment Request took too long to respond. Please try requesting for payment again",
+                                                                        ),
+                                                                        color: "error",
+                                                                });
+                                                        } else {
+                                                                vm.eventBus.emit("unfreeze");
+                                                                vm.eventBus.emit("show_message", {
+                                                                        title: __("Payment of {0} received successfully.", [
+                                                                                vm.formatCurrency(message.grand_total, vm.invoice_doc.currency, 0),
+                                                                        ]),
+                                                                        color: "success",
+                                                                });
+                                                                frappe.db
+                                                                        .get_doc("Sales Invoice", vm.invoice_doc.name)
+                                                                        .then((doc) => {
+                                                                                vm.invoice_doc = doc;
+                                                                                vm.submit(null, true);
+                                                                        });
+                                                        }
+                                                });
+                                }, 30000);
+                        } catch (error) {
+                                vm.eventBus.emit("unfreeze");
+                                vm.eventBus.emit("show_message", {
+                                        title: __("Payment request failed"),
+                                        color: "error",
+                                });
+                        }
+               },
 		// Get M-Pesa payment modes from backend
 		get_mpesa_modes() {
 			const vm = this;
