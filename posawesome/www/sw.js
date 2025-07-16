@@ -26,21 +26,31 @@ const cachePlugin = new workbox.expiration.ExpirationPlugin({
 });
 
 workbox.routing.registerRoute(
-	({ request }) => request.mode === "navigate",
-	new workbox.strategies.NetworkFirst({
-		cacheName: CACHE_NAME,
-		plugins: [cachePlugin],
-	}),
+        ({ request }) => request.mode === "navigate",
+        new workbox.strategies.NetworkFirst({
+                cacheName: CACHE_NAME,
+                plugins: [cachePlugin],
+        }),
+);
+
+// Use network-first strategy for API calls to ensure fresh data when online
+workbox.routing.registerRoute(
+        ({ url }) => url.pathname.startsWith("/api/"),
+        new workbox.strategies.NetworkFirst({
+                cacheName: CACHE_NAME,
+                plugins: [cachePlugin],
+        })
 );
 
 workbox.routing.registerRoute(
-	({ url, request }) =>
-		request.mode !== "navigate" &&
-		(url.protocol === "http:" || url.protocol === "https:") &&
-		!url.href.includes("socket.io"),
-	new workbox.strategies.CacheFirst({
-		cacheName: CACHE_NAME,
-		plugins: [cachePlugin],
+        ({ url, request }) =>
+                request.mode !== "navigate" &&
+                !url.pathname.startsWith("/api/") &&
+                (url.protocol === "http:" || url.protocol === "https:") &&
+                !url.href.includes("socket.io"),
+        new workbox.strategies.CacheFirst({
+                cacheName: CACHE_NAME,
+                plugins: [cachePlugin],
 	}),
 );
 
