@@ -1,7 +1,6 @@
 import { createVuetify } from "vuetify";
 import { createApp } from "vue";
 import Dexie from "dexie";
-import onScan from "./onscan.js";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import eventBus from "./bus";
@@ -12,12 +11,7 @@ import Home from "./Home.vue";
 
 // Expose Dexie globally for libraries that expect a global Dexie instance
 if (typeof window !== "undefined" && !window.Dexie) {
-        window.Dexie = Dexie;
-}
-
-// Make the onScan library globally available for Vue components
-if (typeof window !== "undefined" && !window.onScan) {
-       window.onScan = onScan;
+	window.Dexie = Dexie;
 }
 
 frappe.provide("frappe.PosApp");
