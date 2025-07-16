@@ -399,7 +399,7 @@ export default {
 				} else {
 					this.customers.push(customer);
 				}
-                                if (this.pos_profile.posa_local_storage) {
+                                if (this.pos_profile.posa_local_storage || isOffline()) {
                                         if (this.customerWorker) {
                                                 this.customerWorker.onmessage = (ev) => {
                                                         if (ev.data && ev.data.type === "customers_parsed") {
