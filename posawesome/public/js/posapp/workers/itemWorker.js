@@ -23,7 +23,7 @@ self.onmessage = async (event) => {
 	// when the worker is used for frequent persistence operations. Remove
 	// the noisy log to keep the console clean.
 	const data = event.data || {};
-	if (data.type === "parse_and_cache") {
+        if (data.type === "parse_and_cache") {
 		try {
 			const parsed = JSON.parse(data.json);
 			const itemsRaw = parsed.message || parsed;
@@ -54,8 +54,30 @@ self.onmessage = async (event) => {
 			console.log(err);
 			self.postMessage({ type: "error", error: err.message });
 		}
-	} else if (data.type === "persist") {
-		await persist(data.key, data.value);
-		self.postMessage({ type: "persisted", key: data.key });
-	}
+        } else if (data.type === "parse_and_cache_customers") {
+                try {
+                        const parsed = JSON.parse(data.json);
+                        const customersRaw = parsed.message || parsed;
+                        let customers;
+                        try {
+                                if (typeof structuredClone === "function") {
+                                        customers = structuredClone(customersRaw);
+                                } else {
+                                        customers = JSON.parse(JSON.stringify(customersRaw));
+                                }
+                        } catch (e) {
+                                console.error("Failed to clone customers", e);
+                                self.postMessage({ type: "error", error: e.message });
+                                return;
+                        }
+                        await persist("customer_storage", customers);
+                        self.postMessage({ type: "customers_parsed", customers });
+                } catch (err) {
+                        console.log(err);
+                        self.postMessage({ type: "error", error: err.message });
+                }
+        } else if (data.type === "persist") {
+                await persist(data.key, data.value);
+                self.postMessage({ type: "persisted", key: data.key });
+        }
 };
