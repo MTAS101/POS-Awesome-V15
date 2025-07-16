@@ -123,25 +123,18 @@ export default {
 			this.eventBus.on("close_opening_dialog", () => {
 				this.dialog = false;
 			});
-                        this.eventBus.on("register_pos_data", (data) => {
-                                this.pos_profile = data.pos_profile;
-                                this.get_offers(this.pos_profile.name);
-                                this.pos_opening_shift = data.pos_opening_shift;
-                                this.eventBus.emit("register_pos_profile", data);
-                                console.info("LoadPosProfile");
-                        });
-                        // When profile is registered directly from composables,
-                        // ensure offers are fetched as well
-                        this.eventBus.on("register_pos_profile", (data) => {
-                                if (data && data.pos_profile) {
-                                        this.get_offers(data.pos_profile.name);
-                                }
-                        });
-                        this.eventBus.on("show_payment", (data) => {
-                                this.payment = true ? data === "true" : false;
-                                this.offers = false ? data === "true" : false;
-                                this.coupons = false ? data === "true" : false;
-                        });
+			this.eventBus.on("register_pos_data", (data) => {
+				this.pos_profile = data.pos_profile;
+				this.get_offers(this.pos_profile.name);
+				this.pos_opening_shift = data.pos_opening_shift;
+				this.eventBus.emit("register_pos_profile", data);
+				console.info("LoadPosProfile");
+			});
+			this.eventBus.on("show_payment", (data) => {
+				this.payment = true ? data === "true" : false;
+				this.offers = false ? data === "true" : false;
+				this.coupons = false ? data === "true" : false;
+			});
 			this.eventBus.on("show_offers", (data) => {
 				this.offers = true ? data === "true" : false;
 				this.payment = false ? data === "true" : false;
@@ -162,9 +155,8 @@ export default {
 	},
 	beforeUnmount() {
 		this.eventBus.off("close_opening_dialog");
-                this.eventBus.off("register_pos_data");
-                this.eventBus.off("register_pos_profile");
-                this.eventBus.off("LoadPosProfile");
+		this.eventBus.off("register_pos_data");
+		this.eventBus.off("LoadPosProfile");
 		this.eventBus.off("show_offers");
 		this.eventBus.off("show_coupons");
 		this.eventBus.off("open_closing_dialog");
