@@ -162,9 +162,8 @@ export default {
 	},
 	beforeUnmount() {
 		this.eventBus.off("close_opening_dialog");
-                this.eventBus.off("register_pos_data");
-                this.eventBus.off("register_pos_profile");
-                this.eventBus.off("LoadPosProfile");
+		this.eventBus.off("register_pos_data");
+		this.eventBus.off("LoadPosProfile");
 		this.eventBus.off("show_offers");
 		this.eventBus.off("show_coupons");
 		this.eventBus.off("open_closing_dialog");
