@@ -314,6 +314,18 @@ export default {
                        }
 
                         if (isOffline()) {
+                                if (vm.customers.length === 0) {
+                                        try {
+                                                const cached = getCustomerStorage();
+                                                if (cached.length) {
+                                                        vm.customers = cached;
+                                                }
+                                        } catch (e) {
+                                                console.error("Failed to load cached customers", e);
+                                        }
+                                        vm.mergeOfflineCustomers();
+                                }
+
                                 vm.loadingCustomers = false;
                                 return;
                         }
