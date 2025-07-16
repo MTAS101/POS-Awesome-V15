@@ -1,22 +1,13 @@
-let Dexie;
-let db;
+import Dexie from "../../libs/dexie.min.js";
 
-async function ensureDb() {
-       if (!Dexie) {
-               ({ default: Dexie } = await import("../../libs/dexie.min.js"));
-       }
-       if (!db) {
-               db = new Dexie("posawesome_offline");
-               db.version(1).stores({ keyval: "&key" });
-       }
-}
+const db = new Dexie("posawesome_offline");
+db.version(1).stores({ keyval: "&key" });
 
 async function persist(key, value) {
-       await ensureDb();
-       try {
-               await db.table("keyval").put({ key, value });
-       } catch (e) {
-               console.error("Worker persist failed", e);
+	try {
+		await db.table("keyval").put({ key, value });
+	} catch (e) {
+		console.error("Worker persist failed", e);
 	}
 	if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
 		try {
@@ -28,8 +19,7 @@ async function persist(key, value) {
 }
 
 self.onmessage = async (event) => {
-       await ensureDb();
-       // Logging every message can flood the console and increase memory usage
+	// Logging every message can flood the console and increase memory usage
 	// when the worker is used for frequent persistence operations. Remove
 	// the noisy log to keep the console clean.
 	const data = event.data || {};
