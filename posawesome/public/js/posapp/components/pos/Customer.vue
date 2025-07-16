@@ -170,18 +170,19 @@ export default {
 		pos_profile: Object,
 	},
 
-	data: () => ({
-		pos_profile: "",
-		customers: [],
-		customer: "", // Selected customer
+        data: () => ({
+                pos_profile: "",
+                customers: [],
+                customer: "", // Selected customer
 		internalCustomer: null, // Model bound to the dropdown
 		tempSelectedCustomer: null, // Temporarily holds customer selected from dropdown
 		isMenuOpen: false, // Tracks whether dropdown menu is open
 		readonly: false,
 		customer_info: {}, // Used for edit modal
 		loadingCustomers: false, // ? New state to track loading status
-		customerSearch: "", // Search text
-	}),
+                customerSearch: "", // Search text
+                customerWorker: null,
+        }),
 
 	components: {
 		UpdateCustomer,
@@ -308,9 +309,21 @@ export default {
 					if (r.message) {
 						vm.customers = r.message;
 
-						if (vm.pos_profile.posa_local_storage) {
-							setCustomerStorage(r.message);
-						}
+                                                if (vm.pos_profile.posa_local_storage) {
+                                                        if (vm.customerWorker) {
+                                                                vm.customerWorker.onmessage = (ev) => {
+                                                                        if (ev.data && ev.data.type === "customers_parsed") {
+                                                                                setCustomerStorage(ev.data.customers);
+                                                                        }
+                                                                };
+                                                                vm.customerWorker.postMessage({
+                                                                        type: "parse_and_cache_customers",
+                                                                        json: JSON.stringify(r.message),
+                                                                });
+                                                        } else {
+                                                                setCustomerStorage(r.message);
+                                                        }
+                                                }
 					}
 					vm.loadingCustomers = false; // ? Stop loading
 				},
@@ -334,6 +347,15 @@ export default {
                // Load cached customers immediately for offline use
                await initPromise;
                await memoryInitPromise;
+               if (typeof Worker !== "undefined") {
+                       try {
+                               const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+                               this.customerWorker = new Worker(workerUrl, { type: "classic" });
+                       } catch (e) {
+                               console.error("Failed to start customer worker", e);
+                               this.customerWorker = null;
+                       }
+               }
                if (getCustomerStorage().length) {
                        try {
                                this.customers = getCustomerStorage();
@@ -353,7 +375,7 @@ export default {
                        }
                }
 
-		this.$nextTick(() => {
+                this.$nextTick(() => {
 			this.eventBus.on("register_pos_profile", (pos_profile) => {
 				this.pos_profile = pos_profile;
 				this.get_customer_names();
@@ -377,9 +399,21 @@ export default {
 				} else {
 					this.customers.push(customer);
 				}
-				if (this.pos_profile.posa_local_storage) {
-					setCustomerStorage(this.customers);
-				}
+                                if (this.pos_profile.posa_local_storage) {
+                                        if (this.customerWorker) {
+                                                this.customerWorker.onmessage = (ev) => {
+                                                        if (ev.data && ev.data.type === "customers_parsed") {
+                                                                setCustomerStorage(ev.data.customers);
+                                                        }
+                                                };
+                                                this.customerWorker.postMessage({
+                                                        type: "parse_and_cache_customers",
+                                                        json: JSON.stringify(this.customers),
+                                                });
+                                        } else {
+                                                setCustomerStorage(this.customers);
+                                        }
+                                }
 				this.customer = customer.name;
 				this.internalCustomer = customer.name;
 				this.eventBus.emit("update_customer", customer.name);
@@ -393,10 +427,17 @@ export default {
 				this.customer_info = data;
 			});
 
-			this.eventBus.on("fetch_customer_details", () => {
-				this.get_customer_names();
-			});
-		});
-	},
+                        this.eventBus.on("fetch_customer_details", () => {
+                                this.get_customer_names();
+                        });
+                });
+       },
+
+       beforeUnmount() {
+               if (this.customerWorker) {
+                       this.customerWorker.terminate();
+                       this.customerWorker = null;
+               }
+       },
 };
 </script>
