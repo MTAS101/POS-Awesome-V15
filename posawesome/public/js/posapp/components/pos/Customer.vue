@@ -375,6 +375,22 @@ export default {
                        }
                }
 
+               // Include queued offline customers if any exist
+               if (!navigator.onLine) {
+                       try {
+                               const queued = (getOfflineCustomers() || [])
+                                       .map((c) => c.args || c)
+                                       .map((c) => ({ ...c, name: c.customer_name || c.name }));
+                               queued.forEach((cust) => {
+                                       if (!this.customers.find((c) => c.name === cust.name)) {
+                                               this.customers.push(cust);
+                                       }
+                               });
+                       } catch (e) {
+                               console.error("Failed to merge offline customers", e);
+                       }
+               }
+
                 this.$nextTick(() => {
 			this.eventBus.on("register_pos_profile", (pos_profile) => {
 				this.pos_profile = pos_profile;
