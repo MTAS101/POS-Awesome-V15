@@ -711,27 +711,21 @@ export default {
 						}
 					}
 				});
-                               this.eventBus.emit("set_all_items", vm.items);
-                               vm.loading = false;
-                               vm.items_loaded = true;
+				this.eventBus.emit("set_all_items", vm.items);
+				vm.loading = false;
+				vm.items_loaded = true;
 
-                               if (vm.items && vm.items.length > 0) {
-                                       await vm.prePopulateStockCache(vm.items);
-                                       vm.update_items_details(vm.items);
-                               }
-                               return;
-                       }
-                       // Removed noisy debug log
+				if (vm.items && vm.items.length > 0) {
+					await vm.prePopulateStockCache(vm.items);
+					vm.update_items_details(vm.items);
+				}
+				return;
+			}
+			// Removed noisy debug log
 
-                       if (isOffline()) {
-                               console.warn("Offline mode: skipping server fetch for items");
-                               vm.loading = false;
-                               return;
-                       }
-
-                       if (this.itemWorker) {
-                               try {
-                                       const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
+			if (this.itemWorker) {
+				try {
+					const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
 						method: "POST",
 						headers: {
 							"Content-Type": "application/json",
