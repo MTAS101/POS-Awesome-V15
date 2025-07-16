@@ -1933,8 +1933,7 @@ export default {
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
 				const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-                                // Load as module so we can import Dexie using ES modules
-                                this.itemWorker = new Worker(workerUrl, { type: "module" });
+				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {
 					console.error("Worker error:", event);
