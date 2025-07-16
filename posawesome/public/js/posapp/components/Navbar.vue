@@ -21,14 +21,18 @@
 			</template>
 
 			<!-- Slot for cache usage meter -->
-			<template #cache-usage-meter>
-				<CacheUsageMeter
-					:cache-usage="cacheUsage"
-					:cache-usage-loading="cacheUsageLoading"
-					:cache-usage-details="cacheUsageDetails"
-					@refresh="refreshCacheUsage"
-				/>
-			</template>
+                        <template #cache-usage-meter>
+                                <CacheUsageMeter
+                                        :cache-usage="cacheUsage"
+                                        :cache-usage-loading="cacheUsageLoading"
+                                        :cache-usage-details="cacheUsageDetails"
+                                        @refresh="refreshCacheUsage"
+                                />
+                        </template>
+
+                        <template #cache-ready-indicator>
+                                <CacheReadyIndicator :cache-ready="cacheReady" />
+                        </template>
 
 			<!-- Slot for menu -->
 			<template #menu>
@@ -94,21 +98,23 @@ import NavbarDrawer from "./navbar/NavbarDrawer.vue";
 import NavbarMenu from "./navbar/NavbarMenu.vue";
 import StatusIndicator from "./navbar/StatusIndicator.vue";
 import CacheUsageMeter from "./navbar/CacheUsageMeter.vue";
+import CacheReadyIndicator from "./navbar/CacheReadyIndicator.vue";
 import AboutDialog from "./navbar/AboutDialog.vue";
 import OfflineInvoices from "./OfflineInvoices.vue";
 import { clearAllCache } from "../../offline/cache.js";
 
 export default {
 	name: "NavBar",
-	components: {
-		NavbarAppBar,
-		NavbarDrawer,
-		NavbarMenu,
-		StatusIndicator,
-		CacheUsageMeter,
-		AboutDialog,
-		OfflineInvoicesDialog: OfflineInvoices,
-	},
+        components: {
+                NavbarAppBar,
+                NavbarDrawer,
+                NavbarMenu,
+                StatusIndicator,
+                CacheUsageMeter,
+                CacheReadyIndicator,
+                AboutDialog,
+                OfflineInvoicesDialog: OfflineInvoices,
+        },
 	props: {
 		posProfile: {
 			type: Object,
@@ -137,11 +143,15 @@ export default {
 			type: Boolean,
 			default: false,
 		},
-		cacheUsageDetails: {
-			type: Object,
-			default: () => ({ total: 0, indexedDB: 0, localStorage: 0 }),
-		},
-	},
+                cacheUsageDetails: {
+                        type: Object,
+                        default: () => ({ total: 0, indexedDB: 0, localStorage: 0 }),
+                },
+                cacheReady: {
+                        type: Boolean,
+                        default: false,
+                },
+        },
 	data() {
 		return {
 			drawer: false,

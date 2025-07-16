@@ -12,10 +12,11 @@
 				:sync-totals="syncTotals"
 				:manual-offline="manualOffline"
 				:is-dark="isDark"
-				:cache-usage="cacheUsage"
-				:cache-usage-loading="cacheUsageLoading"
-				:cache-usage-details="cacheUsageDetails"
-				@change-page="setPage($event)"
+                                :cache-usage="cacheUsage"
+                                :cache-usage-loading="cacheUsageLoading"
+                                :cache-usage-details="cacheUsageDetails"
+                                :cache-ready="cacheReady"
+                                @change-page="setPage($event)"
 				@nav-click="handleNavClick"
 				@close-shift="handleCloseShift"
 				@print-last-invoice="handlePrintLastInvoice"
@@ -51,7 +52,8 @@ import {
 	syncOfflineInvoices,
 	getPendingOfflineInvoiceCount,
 	isOffline,
-	getLastSyncTotals,
+        getLastSyncTotals,
+        isCacheReady,
 } from "../offline/index.js";
 import { silentPrint } from "./plugins/print.js";
 
@@ -75,10 +77,11 @@ export default {
 			manualOffline: false,
 
 			// Cache data
-			cacheUsage: 0,
-			cacheUsageLoading: false,
-			cacheUsageDetails: { total: 0, indexedDB: 0, localStorage: 0 },
-		};
+                        cacheUsage: 0,
+                        cacheUsageLoading: false,
+                        cacheUsageDetails: { total: 0, indexedDB: 0, localStorage: 0 },
+                        cacheReady: false,
+                };
 	},
 	computed: {
 		isDark() {
@@ -109,9 +112,10 @@ export default {
 		this.remove_frappe_nav();
 		this.initializeData();
 		this.setupNetworkListeners();
-		this.setupEventListeners();
-		this.handleRefreshCacheUsage();
-	},
+                this.setupEventListeners();
+                this.handleRefreshCacheUsage();
+                this.monitorCacheReady();
+        },
 	methods: {
 		setPage(page) {
 			this.page = page;
@@ -567,24 +571,34 @@ export default {
 			window.location.href = "/app";
 		},
 
-		handleRefreshCacheUsage() {
-			this.cacheUsageLoading = true;
-			getCacheUsageEstimate()
-				.then((usage) => {
-					this.cacheUsage = usage.percentage || 0;
-					this.cacheUsageDetails = {
-						total: usage.total || 0,
-						indexedDB: usage.indexedDB || 0,
-						localStorage: usage.localStorage || 0,
-					};
-				})
-				.catch((e) => {
-					console.error("Failed to refresh cache usage", e);
-				})
-				.finally(() => {
-					this.cacheUsageLoading = false;
-				});
-		},
+                handleRefreshCacheUsage() {
+                        this.cacheUsageLoading = true;
+                        getCacheUsageEstimate()
+                                .then((usage) => {
+                                        this.cacheUsage = usage.percentage || 0;
+                                        this.cacheUsageDetails = {
+                                                total: usage.total || 0,
+                                                indexedDB: usage.indexedDB || 0,
+                                                localStorage: usage.localStorage || 0,
+                                        };
+                                })
+                                .catch((e) => {
+                                        console.error("Failed to refresh cache usage", e);
+                                })
+                                .finally(() => {
+                                        this.cacheUsageLoading = false;
+                                });
+                },
+
+                monitorCacheReady() {
+                        const check = () => {
+                                this.cacheReady = isCacheReady();
+                                if (!this.cacheReady) {
+                                        setTimeout(check, 2000);
+                                }
+                        };
+                        check();
+                },
 
 		async refreshTaxInclusiveSetting() {
 			if (!this.posProfile || !this.posProfile.name || !navigator.onLine) {
