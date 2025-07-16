@@ -1,4 +1,7 @@
-import Dexie from "../../libs/dexie.min.js";
+// The worker is loaded as a classic script, so use importScripts to load Dexie
+// which exposes a global `Dexie` constructor. Using an absolute path ensures the
+// library can be resolved correctly regardless of the worker's location.
+importScripts("/assets/posawesome/js/libs/dexie.min.js");
 
 const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
