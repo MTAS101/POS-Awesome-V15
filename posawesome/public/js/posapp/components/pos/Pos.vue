@@ -103,7 +103,7 @@ export default {
 		Variants,
 		MpesaPayments,
 		SalesOrders,
-	},
+       },
 
        methods: {
                create_opening_voucher() {
@@ -116,7 +116,15 @@ export default {
                },
        },
 
-	mounted: function () {
+       watch: {
+               pos_profile(val) {
+                       if (val && val.name) {
+                               this.get_offers(val.name);
+                       }
+               },
+       },
+
+       mounted: function () {
 		this.$nextTick(function () {
 			this.check_opening_entry();
 			this.get_pos_setting();
