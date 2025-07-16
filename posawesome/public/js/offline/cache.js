@@ -29,14 +29,15 @@ export const memory = {
         tax_template_cache: {},
         tax_inclusive: false,
         manual_offline: false,
+       initialized: false,
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
 export const memoryInitPromise = (async () => {
-	try {
-		await checkDbHealth();
-		for (const key of Object.keys(memory)) {
-			const stored = await db.table("keyval").get(key);
+        try {
+                await checkDbHealth();
+                for (const key of Object.keys(memory)) {
+                        const stored = await db.table("keyval").get(key);
 			if (stored && stored.value !== undefined) {
 				memory[key] = stored.value;
 				continue;
@@ -51,11 +52,12 @@ export const memoryInitPromise = (async () => {
 						console.error("Failed to parse localStorage for", key, err);
 					}
 				}
-			}
-		}
-	} catch (e) {
-		console.error("Failed to initialize memory from DB", e);
-	}
+                        }
+                }
+               memory.initialized = true;
+        } catch (e) {
+                console.error("Failed to initialize memory from DB", e);
+        }
 })();
 
 // Reset cached invoices and customers after syncing
@@ -339,13 +341,20 @@ export async function getCacheUsageEstimate() {
 }
 
 export function isCacheReady() {
-        try {
-                return (
-                        isStockCacheReady() &&
-                        (memory.items_storage || []).length > 0 &&
-                        (memory.customer_storage || []).length > 0
-                );
-        } catch (e) {
-                return false;
-        }
+       try {
+               if (!memory.initialized) {
+                       return false;
+               }
+
+               const itemsReady = Array.isArray(memory.items_storage);
+               const customersReady = Array.isArray(memory.customer_storage);
+
+               const stockReady =
+                       isStockCacheReady() ||
+                       (Array.isArray(memory.items_storage) && memory.items_storage.length === 0);
+
+               return itemsReady && customersReady && stockReady;
+       } catch {
+               return false;
+       }
 }
