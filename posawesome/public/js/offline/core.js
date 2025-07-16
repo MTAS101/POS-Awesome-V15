@@ -31,8 +31,8 @@ if (typeof Worker !== "undefined") {
 		// Load the worker without a query string so the service worker
 		// can serve the cached version when offline.
                const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-               // Load the worker as a module to support ES module syntax
-               persistWorker = new Worker(workerUrl, { type: "module" });
+               // Worker uses importScripts, so load as a classic worker
+               persistWorker = new Worker(workerUrl);
 	} catch (e) {
 		console.error("Failed to init persist worker", e);
 		persistWorker = null;
