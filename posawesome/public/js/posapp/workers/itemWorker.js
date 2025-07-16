@@ -1,14 +1,25 @@
-importScripts("/assets/posawesome/js/libs/dexie.min.js");
+let DexieLoaded = false;
+let db = null;
+try {
+        importScripts("/assets/posawesome/js/libs/dexie.min.js");
+        DexieLoaded = typeof Dexie !== "undefined";
+} catch (e) {
+        console.error("Failed to load Dexie in worker", e);
+}
 
-const db = new Dexie("posawesome_offline");
-db.version(1).stores({ keyval: "&key" });
+if (DexieLoaded) {
+        db = new Dexie("posawesome_offline");
+        db.version(1).stores({ keyval: "&key" });
+}
 
 async function persist(key, value) {
-	try {
-		await db.table("keyval").put({ key, value });
-	} catch (e) {
-		console.error("Worker persist failed", e);
-	}
+        if (db) {
+                try {
+                        await db.table("keyval").put({ key, value });
+                } catch (e) {
+                        console.error("Worker persist failed", e);
+                }
+        }
 	if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
 		try {
 			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
@@ -40,13 +51,15 @@ self.onmessage = async (event) => {
 				self.postMessage({ type: "error", error: e.message });
 				return;
 			}
-			let cache = {};
-			try {
-				const stored = await db.table("keyval").get("price_list_cache");
-				if (stored && stored.value) cache = stored.value;
-			} catch (e) {
-				console.error("Failed to read cache in worker", e);
-			}
+                        let cache = {};
+                        if (db) {
+                                try {
+                                        const stored = await db.table("keyval").get("price_list_cache");
+                                        if (stored && stored.value) cache = stored.value;
+                                } catch (e) {
+                                        console.error("Failed to read cache in worker", e);
+                                }
+                        }
 			cache[data.priceList] = { items, timestamp: Date.now() };
 			await persist("price_list_cache", cache);
 			self.postMessage({ type: "parsed", items });
