@@ -52,7 +52,7 @@ import Variants from "./Variants.vue";
 import Returns from "./Returns.vue";
 import MpesaPayments from "./Mpesa-Payments.vue";
 import {
-	getCachedOffers,
+        getCachedOffers,
         saveOffers,
         getOpeningStorage,
         setOpeningStorage,
@@ -63,6 +63,7 @@ import {
         saveGiftCoupons,
         getCachedGiftCoupons,
         initPromise,
+        memoryInitPromise,
         checkDbHealth,
         setTaxTemplate,
         isOffline,
@@ -101,10 +102,11 @@ export default {
 		SalesOrders,
 	},
 
-	methods: {
-		async check_opening_entry() {
-			await initPromise;
-			await checkDbHealth();
+        methods: {
+                async check_opening_entry() {
+                        await initPromise;
+                        await memoryInitPromise;
+                        await checkDbHealth();
 			return frappe
 				.call("posawesome.posawesome.api.shifts.check_opening_shift", {
 					user: frappe.session.user,
