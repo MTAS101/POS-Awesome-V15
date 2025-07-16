@@ -1,4 +1,8 @@
-import Dexie from "../../libs/dexie.min.js";
+// When using web workers, importing ES modules can fail if the worker is
+// loaded as a classic script. Fall back to `importScripts` so the worker can
+// run even when module workers are not supported.
+importScripts("../../libs/dexie.min.js");
+const { Dexie } = self;
 
 const db = new Dexie("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
