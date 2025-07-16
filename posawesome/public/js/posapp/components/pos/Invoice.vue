@@ -507,11 +507,11 @@ export default {
 				return;
 			}
 			let invoice_name = this.invoice_doc.name;
-			frappe.run_serially([
-				() => {
-					const invoice_doc = this.save_and_clear_invoice();
-					invoice_name = invoice_doc.name ? invoice_doc.name : invoice_name;
-				},
+                        frappe.run_serially([
+                                async () => {
+                                        const invoice_doc = await this.save_and_clear_invoice();
+                                        invoice_name = invoice_doc.name ? invoice_doc.name : invoice_name;
+                                },
 				() => {
 					this.load_print_page(invoice_name);
 				},
