@@ -12,7 +12,6 @@ const PRECACHE_RESOURCES = [
         { url: "/assets/posawesome/js/offline/index.js", revision: CACHE_VERSION },
         { url: "/assets/posawesome/js/posapp/workers/itemWorker.js", revision: CACHE_VERSION },
         { url: "/assets/posawesome/js/libs/dexie.min.js", revision: CACHE_VERSION },
-        { url: "/assets/posawesome/js/libs/dexie.min.mjs", revision: CACHE_VERSION },
         { url: "/manifest.json", revision: CACHE_VERSION },
         { url: "/offline.html", revision: CACHE_VERSION },
 ];
