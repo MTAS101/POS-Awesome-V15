@@ -162,6 +162,7 @@ import {
        setCustomerStorage,
        isOffline,
        memoryInitPromise,
+       initPromise,
 } from "../../../offline/index.js";
 
 export default {
@@ -280,7 +281,8 @@ export default {
                        var vm = this;
                        if (this.customers.length > 0) return;
 
-                       await memoryInitPromise;
+                      await initPromise;
+                      await memoryInitPromise;
 
                         if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
                                 try {
@@ -326,10 +328,11 @@ export default {
 		edit_customer() {
 			this.eventBus.emit("open_update_customer", this.customer_info);
 		},
-	},
+       },
 
        async created() {
                // Load cached customers immediately for offline use
+               await initPromise;
                await memoryInitPromise;
                if (getCustomerStorage().length) {
                        try {
