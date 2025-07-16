@@ -1,4 +1,4 @@
-import Dexie from "../libs/dexie.mjs";
+import Dexie from "dexie";
 import { withWriteLock } from "./db-utils.js";
 
 // --- Dexie initialization ---------------------------------------------------
