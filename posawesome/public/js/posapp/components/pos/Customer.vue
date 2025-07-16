@@ -303,7 +303,7 @@ export default {
                       await initPromise;
                       await memoryInitPromise;
 
-                       if ((vm.pos_profile.posa_local_storage || isOffline()) && getCustomerStorage().length) {
+                       if (getCustomerStorage().length) {
                                try {
                                        vm.customers = getCustomerStorage();
                                } catch (e) {
