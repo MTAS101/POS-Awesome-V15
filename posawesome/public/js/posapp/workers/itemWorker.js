@@ -1,24 +1,41 @@
-// The worker is loaded as a classic script, so use importScripts to load Dexie
-// which exposes a global `Dexie` constructor. Using an absolute path ensures the
-// library can be resolved correctly regardless of the worker's location.
-importScripts("/assets/posawesome/js/libs/dexie.min.js");
+// Support both classic and module workers. When running as a classic worker the
+// global `importScripts` function is available. Module workers don't expose it,
+// so in that case use dynamic `import()` to load Dexie. Using an absolute path
+// ensures the script resolves correctly regardless of the worker's location.
+let DexieCtorPromise;
+if (typeof importScripts === "function") {
+    importScripts("/assets/posawesome/js/libs/dexie.min.js");
+    DexieCtorPromise = Promise.resolve(self.Dexie);
+} else {
+    DexieCtorPromise = import("/assets/posawesome/js/libs/dexie.min.js").then(
+        (m) => m.default || m.Dexie,
+    );
+}
 
-const db = new Dexie("posawesome_offline");
-db.version(1).stores({ keyval: "&key" });
+let db;
+async function getDb() {
+    if (!db) {
+        const DexieCtor = await DexieCtorPromise;
+        db = new DexieCtor("posawesome_offline");
+        db.version(1).stores({ keyval: "&key" });
+    }
+    return db;
+}
 
 async function persist(key, value) {
-	try {
-		await db.table("keyval").put({ key, value });
-	} catch (e) {
-		console.error("Worker persist failed", e);
-	}
-	if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
-		try {
-			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
-		} catch (err) {
-			console.error("Worker localStorage failed", err);
-		}
-	}
+        const database = await getDb();
+        try {
+                await database.table("keyval").put({ key, value });
+        } catch (e) {
+                console.error("Worker persist failed", e);
+        }
+        if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
+                try {
+                        localStorage.setItem(`posa_${key}`, JSON.stringify(value));
+                } catch (err) {
+                        console.error("Worker localStorage failed", err);
+                }
+        }
 }
 
 self.onmessage = async (event) => {
@@ -43,13 +60,14 @@ self.onmessage = async (event) => {
 				self.postMessage({ type: "error", error: e.message });
 				return;
 			}
-			let cache = {};
-			try {
-				const stored = await db.table("keyval").get("price_list_cache");
-				if (stored && stored.value) cache = stored.value;
-			} catch (e) {
-				console.error("Failed to read cache in worker", e);
-			}
+                        let cache = {};
+                        try {
+                                const database = await getDb();
+                                const stored = await database.table("keyval").get("price_list_cache");
+                                if (stored && stored.value) cache = stored.value;
+                        } catch (e) {
+                                console.error("Failed to read cache in worker", e);
+                        }
 			cache[data.priceList] = { items, timestamp: Date.now() };
 			await persist("price_list_cache", cache);
 			self.postMessage({ type: "parsed", items });
