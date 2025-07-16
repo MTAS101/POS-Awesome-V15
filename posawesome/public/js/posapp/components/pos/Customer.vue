@@ -383,7 +383,7 @@ export default {
                if (typeof Worker !== "undefined") {
                        try {
                                const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-                               this.customerWorker = new Worker(workerUrl, { type: "classic" });
+                               this.customerWorker = new Worker(workerUrl, { type: "module" });
                        } catch (e) {
                                console.error("Failed to start customer worker", e);
                                this.customerWorker = null;
