@@ -33,9 +33,10 @@ export {
 	queueHealthCheck,
 	purgeOldQueueEntries,
 	MAX_QUEUE_ITEMS,
-	resetOfflineState,
-	clearAllCache,
-	getCacheUsageEstimate,
+        resetOfflineState,
+        clearAllCache,
+        getCacheUsageEstimate,
+        isCacheReady,
 } from "./cache.js";
 
 // Stock exports

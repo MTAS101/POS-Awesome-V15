@@ -29,8 +29,11 @@
 		<!-- Enhanced connectivity status indicator - Always visible -->
 		<slot name="status-indicator"></slot>
 
-		<!-- Cache Usage Meter -->
-		<slot name="cache-usage-meter"></slot>
+                <!-- Cache Usage Meter -->
+                <slot name="cache-usage-meter"></slot>
+
+                <!-- Cache Ready Indicator -->
+                <slot name="cache-ready-indicator"></slot>
 
 		<div class="profile-section mx-1">
 			<v-chip color="primary" variant="outlined" class="profile-chip">

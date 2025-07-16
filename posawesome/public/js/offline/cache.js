@@ -1,5 +1,6 @@
 import { db, persist, checkDbHealth } from "./core.js";
 import { getAllByCursor } from "./db-utils.js";
+import { isStockCacheReady } from "./stock.js";
 import Dexie from "dexie";
 
 export const MAX_QUEUE_ITEMS = 1000;
@@ -335,4 +336,16 @@ export async function getCacheUsageEstimate() {
 			percentage: 0,
 		};
 	}
+}
+
+export function isCacheReady() {
+        try {
+                return (
+                        isStockCacheReady() &&
+                        (memory.items_storage || []).length > 0 &&
+                        (memory.customer_storage || []).length > 0
+                );
+        } catch (e) {
+                return false;
+        }
 }
