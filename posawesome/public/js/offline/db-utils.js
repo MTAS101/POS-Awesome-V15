@@ -1,5 +1,5 @@
 import { db } from "./core.js";
-import Dexie from "../libs/dexie.min.mjs";
+import Dexie from "../libs/dexie.min.js";
 
 let writeChain = Promise.resolve();
 
