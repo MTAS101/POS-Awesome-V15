@@ -56,7 +56,6 @@ export function usePosShift(openDialog) {
                     } catch (e) {
                         console.error("Failed to cache opening data", e);
                     }
-                    eventBus?.emit("register_pos_data", r.message);
                 } else {
                     const data = getOpeningStorage();
                     if (data) {
@@ -70,7 +69,6 @@ export function usePosShift(openDialog) {
                             console.warn("Realtime emit failed", e);
                         }
                         console.info("LoadPosProfile (cached)");
-                        eventBus?.emit("register_pos_data", data);
                         return;
                     }
                     openDialog && openDialog();
@@ -89,7 +87,6 @@ export function usePosShift(openDialog) {
                         console.warn("Realtime emit failed", e);
                     }
                     console.info("LoadPosProfile (cached)");
-                    eventBus?.emit("register_pos_data", data);
                     return;
                 }
                 openDialog && openDialog();
