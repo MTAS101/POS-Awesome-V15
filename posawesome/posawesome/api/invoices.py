@@ -124,6 +124,8 @@ def update_invoice(data):
 
 	# Set missing values first
 	invoice_doc.set_missing_values()
+	# Set a default exchange rate date
+	exchange_rate_date = invoice_doc.posting_date
 
 	# Ensure selected currency is preserved after set_missing_values
 	if selected_currency:
