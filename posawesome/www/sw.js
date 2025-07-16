@@ -5,14 +5,15 @@ try {
 }
 
 const CACHE_NAME = "posawesome-cache-v1";
+const CACHE_VERSION = "1.0.0";
 const PRECACHE_RESOURCES = [
-	"/app/posapp",
-	"/assets/posawesome/js/posawesome.bundle.js",
-	"/assets/posawesome/js/offline/index.js",
-	"/assets/posawesome/js/posapp/workers/itemWorker.js",
-	"/assets/posawesome/js/libs/dexie.min.js",
-	"/manifest.json",
-	"/offline.html",
+        { url: "/app/posapp", revision: CACHE_VERSION },
+        { url: "/assets/posawesome/js/posawesome.bundle.js", revision: CACHE_VERSION },
+        { url: "/assets/posawesome/js/offline/index.js", revision: CACHE_VERSION },
+        { url: "/assets/posawesome/js/posapp/workers/itemWorker.js", revision: CACHE_VERSION },
+        { url: "/assets/posawesome/js/libs/dexie.min.js", revision: CACHE_VERSION },
+        { url: "/manifest.json", revision: CACHE_VERSION },
+        { url: "/offline.html", revision: CACHE_VERSION },
 ];
 
 self.addEventListener("install", () => self.skipWaiting());
