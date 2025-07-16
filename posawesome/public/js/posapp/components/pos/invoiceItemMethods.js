@@ -11,10 +11,15 @@ import {
 } from "../../../offline/index.js";
 
 // Import composables
-import { setSerialNo, setBatchQty } from "../../composables/useBatchSerial.js";
-import { updateDiscountAmount, calcPrices, calcItemPrice } from "../../composables/useDiscounts.js";
-import { removeItem, addItem, getNewItem, clearInvoice } from "../../composables/useItemAddition.js";
-import { calcUom, calcStockQty } from "../../composables/useStockUtils.js";
+import { useBatchSerial } from "../../composables/useBatchSerial.js";
+import { useDiscounts } from "../../composables/useDiscounts.js";
+import { useItemAddition } from "../../composables/useItemAddition.js";
+import { useStockUtils } from "../../composables/useStockUtils.js";
+
+const { setSerialNo, setBatchQty } = useBatchSerial();
+const { updateDiscountAmount, calcPrices, calcItemPrice } = useDiscounts();
+const { removeItem, addItem, getNewItem, clearInvoice } = useItemAddition();
+const { calcUom, calcStockQty } = useStockUtils();
 
 export default {
 	remove_item(item) {
