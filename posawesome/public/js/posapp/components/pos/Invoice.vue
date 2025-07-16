@@ -252,6 +252,10 @@ import CancelSaleDialog from "./CancelSaleDialog.vue";
 import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
 import invoiceItemMethods from "./invoiceItemMethods";
+import invoiceComputed from "./invoiceComputed";
+import invoiceWatchers from "./invoiceWatchers"
+import offerMethods from "./invoiceOfferMethods";
+import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
@@ -329,10 +333,6 @@ export default {
 
 	methods: {
 		...shortcutMethods,
-		...itemAddition,
-		...batchSerial,
-		...discountMethods,
-		...stockUtils,
 		...offerMethods,
 		...invoiceItemMethods,
 		initializeItemsHeaders() {
