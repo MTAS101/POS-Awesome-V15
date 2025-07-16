@@ -157,7 +157,12 @@
 
 <script>
 import UpdateCustomer from "./UpdateCustomer.vue";
-import { getCustomerStorage, setCustomerStorage, isOffline } from "../../../offline/index.js";
+import {
+       getCustomerStorage,
+       setCustomerStorage,
+       isOffline,
+       memoryInitPromise,
+} from "../../../offline/index.js";
 
 export default {
 	props: {
@@ -270,10 +275,12 @@ export default {
 			}
 		},
 
-		// Fetch customers list
-		get_customer_names() {
-			var vm = this;
-			if (this.customers.length > 0) return;
+               // Fetch customers list
+               async get_customer_names() {
+                       var vm = this;
+                       if (this.customers.length > 0) return;
+
+                       await memoryInitPromise;
 
                         if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
                                 try {
@@ -321,16 +328,17 @@ export default {
 		},
 	},
 
-	created() {
-		// Load cached customers immediately for offline use
-		if (getCustomerStorage().length) {
-			try {
-				this.customers = getCustomerStorage();
-			} catch (e) {
-				console.error("Failed to parse customer cache:", e);
-				this.customers = [];
-			}
-		}
+       async created() {
+               // Load cached customers immediately for offline use
+               await memoryInitPromise;
+               if (getCustomerStorage().length) {
+                       try {
+                               this.customers = getCustomerStorage();
+                       } catch (e) {
+                               console.error("Failed to parse customer cache:", e);
+                               this.customers = [];
+                       }
+               }
 
 		this.$nextTick(() => {
 			this.eventBus.on("register_pos_profile", (pos_profile) => {
