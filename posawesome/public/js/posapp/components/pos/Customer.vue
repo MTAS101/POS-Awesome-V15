@@ -338,6 +338,16 @@ export default {
                                console.error("Failed to parse customer cache:", e);
                                this.customers = [];
                        }
+               } else {
+                       // Fallback to localStorage if memory cache is empty
+                       try {
+                               const raw = localStorage.getItem("posa_customer_storage");
+                               if (raw) {
+                                       this.customers = JSON.parse(raw);
+                               }
+                       } catch (err) {
+                               console.error("Failed to parse localStorage customers", err);
+                       }
                }
 
 		this.$nextTick(() => {
