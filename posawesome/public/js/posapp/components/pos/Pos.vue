@@ -63,11 +63,13 @@ import {
 } from "../../../offline/index.js";
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline/index.js";
-import { responsiveMixin } from "../../mixins/responsive.js";
+import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-	mixins: [responsiveMixin],
-	data: function () {
+       setup() {
+               return useResponsive();
+       },
+       data: function () {
 		return {
 			dialog: false,
 			pos_profile: "",
