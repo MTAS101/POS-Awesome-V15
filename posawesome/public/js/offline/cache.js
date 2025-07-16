@@ -1,7 +1,7 @@
 import { db, persist, checkDbHealth } from "./core.js";
 import { getAllByCursor } from "./db-utils.js";
 import { isStockCacheReady } from "./stock.js";
-import Dexie from "../libs/dexie.min.js";
+import Dexie from "../libs/dexie.min.mjs";
 
 export const MAX_QUEUE_ITEMS = 1000;
 
