@@ -711,21 +711,74 @@ export default {
 						}
 					}
 				});
-				this.eventBus.emit("set_all_items", vm.items);
-				vm.loading = false;
-				vm.items_loaded = true;
+                               this.eventBus.emit("set_all_items", vm.items);
+                               vm.loading = false;
+                               vm.items_loaded = true;
 
-				if (vm.items && vm.items.length > 0) {
-					await vm.prePopulateStockCache(vm.items);
-					vm.update_items_details(vm.items);
-				}
-				return;
-			}
-			// Removed noisy debug log
+                               if (vm.items && vm.items.length > 0) {
+                                       await vm.prePopulateStockCache(vm.items);
+                                       vm.update_items_details(vm.items);
+                               }
+                               return;
+                       }
+                       // Removed noisy debug log
 
-			if (this.itemWorker) {
-				try {
-					const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
+                       if (isOffline()) {
+                               console.warn("Offline mode: attempting to load cached items");
+                               let loaded = false;
+
+                               // Always try cached price list items first
+                               let cached = getCachedPriceListItems(vm.customer_price_list);
+                               if (cached && cached.length) {
+                                       vm.items = cached;
+                                       vm.items.forEach((it) => {
+                                               if (!it.item_uoms || it.item_uoms.length === 0) {
+                                                       const cachedUoms = getItemUOMs(it.item_code);
+                                                       if (cachedUoms.length > 0) {
+                                                               it.item_uoms = cachedUoms;
+                                                       } else if (it.stock_uom) {
+                                                               it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+                                                       }
+                                               }
+                                       });
+                                       this.eventBus.emit("set_all_items", vm.items);
+                                       vm.items_loaded = true;
+                                       loaded = true;
+                               }
+
+                               if (!loaded && vm.pos_profile.posa_local_storage && getItemsStorage().length) {
+                                       vm.items = getItemsStorage();
+                                       vm.items.forEach((it) => {
+                                               if (!it.item_uoms || it.item_uoms.length === 0) {
+                                                       const cachedUoms = getItemUOMs(it.item_code);
+                                                       if (cachedUoms.length > 0) {
+                                                               it.item_uoms = cachedUoms;
+                                                       } else if (it.stock_uom) {
+                                                               it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+                                                       }
+                                               }
+                                       });
+                                       this.eventBus.emit("set_all_items", vm.items);
+                                       vm.items_loaded = true;
+                                       loaded = true;
+                               }
+
+                               if (loaded) {
+                                       vm.loading = false;
+                                       if (vm.items && vm.items.length > 0) {
+                                               await vm.prePopulateStockCache(vm.items);
+                                               vm.update_items_details(vm.items);
+                                       }
+                               } else {
+                                       vm.items = [];
+                                       vm.loading = false;
+                               }
+                               return;
+                       }
+
+                       if (this.itemWorker) {
+                               try {
+                                       const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
 						method: "POST",
 						headers: {
 							"Content-Type": "application/json",
