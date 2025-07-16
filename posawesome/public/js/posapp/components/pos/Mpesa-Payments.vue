@@ -114,46 +114,44 @@ export default {
 				this.search();
 			}
 		},
-               async search() {
-                        const vm = this;
-                        try {
-                                const r = await frappe.call({
-                                        method: "posawesome.posawesome.api.m_pesa.get_mpesa_draft_payments",
-                                        args: {
-                                                company: this.company,
-                                                mode_of_payment: this.mode_of_payment,
-                                                mobile_no: this.mobile_no,
-                                                full_name: this.full_name,
-                                        },
-                                });
-                                if (!r.exc) {
-                                        vm.dialog_data = r.message;
-                                }
-                        } catch (error) {
-                                console.error("Error searching M-Pesa payments:", error);
-                        }
-               },
-               async submit_dialog() {
-                        const vm = this;
-                        if (this.selected.length > 0) {
-                                const selected_payment = this.selected[0].name;
-                                try {
-                                        const r = await frappe.call({
-                                                method: "posawesome.posawesome.api.m_pesa.submit_mpesa_payment",
-                                                args: {
-                                                        mpesa_payment: selected_payment,
-                                                        customer: this.customer,
-                                                },
-                                        });
-                                        if (!r.exc) {
-                                                vm.eventBus.emit("set_mpesa_payment", r.message);
-                                                vm.dialog = false;
-                                        }
-                                } catch (error) {
-                                        console.error("Error submitting M-Pesa payment:", error);
-                                }
-                        }
-               },
+		search() {
+			const vm = this;
+			frappe.call({
+				method: "posawesome.posawesome.api.m_pesa.get_mpesa_draft_payments",
+				args: {
+					company: this.company,
+					mode_of_payment: this.mode_of_payment,
+					mobile_no: this.mobile_no,
+					full_name: this.full_name,
+				},
+				async: false,
+				callback: function (r) {
+					if (!r.exc) {
+						vm.dialog_data = r.message;
+					}
+				},
+			});
+		},
+		submit_dialog() {
+			var vm = this;
+			if (this.selected.length > 0) {
+				const selected_payment = this.selected[0].name;
+				frappe.call({
+					method: "posawesome.posawesome.api.m_pesa.submit_mpesa_payment",
+					args: {
+						mpesa_payment: selected_payment,
+						customer: this.customer,
+					},
+					async: false,
+					callback: function (r) {
+						if (!r.exc) {
+							vm.eventBus.emit("set_mpesa_payment", r.message);
+							vm.dialog = false;
+						}
+					},
+				});
+			}
+		},
 		formatCurrency(value) {
 			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
 		},

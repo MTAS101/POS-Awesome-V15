@@ -399,31 +399,30 @@ export default {
 	},
 
 	// Save and clear the current invoice (draft logic)
-       async save_and_clear_invoice() {
-               const doc = this.get_invoice_doc();
-               let old_invoice;
-               if (doc.name) {
-                       old_invoice = await this.update_invoice(doc);
-               } else {
-                       if (doc.items.length) {
-                               old_invoice = await this.update_invoice(doc);
-                       } else {
-                               this.eventBus.emit("show_message", {
-                                       title: `Nothing to save`,
-                                       color: "error",
-                               });
-                       }
-               }
+	save_and_clear_invoice() {
+		const doc = this.get_invoice_doc();
+		if (doc.name) {
+			old_invoice = this.update_invoice(doc);
+		} else {
+			if (doc.items.length) {
+				old_invoice = this.update_invoice(doc);
+			} else {
+				this.eventBus.emit("show_message", {
+					title: `Nothing to save`,
+					color: "error",
+				});
+			}
+		}
 		if (!old_invoice) {
 			this.eventBus.emit("show_message", {
 				title: `Error saving the current invoice`,
 				color: "error",
 			});
 		} else {
-                       this.clear_invoice();
-                       return old_invoice;
-               }
-       },
+			this.clear_invoice();
+			return old_invoice;
+		}
+	},
 
 	// Start a new order (or return order) with provided data
 	async new_order(data = {}) {
@@ -969,113 +968,103 @@ export default {
 	},
 
 	// Update invoice in backend
-       async update_invoice(doc) {
-               const vm = this;
-               if (isOffline()) {
-                       // When offline, simply merge the passed doc with the current invoice_doc
-                       // to allow offline invoice creation without server calls
-                       vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
-                       return vm.invoice_doc;
-               }
-
-               try {
-                       const r = await frappe.call({
-                               method:
-                                       doc.doctype === "Sales Order" && this.pos_profile.posa_create_only_sales_order
-                                               ? "posawesome.posawesome.api.sales_orders.update_sales_order"
-                                               : "posawesome.posawesome.api.invoices.update_invoice",
-                               args: {
-                                       data: doc,
-                               },
-                       });
-
-                       if (r.message) {
-                               vm.invoice_doc = r.message;
-                               if (r.message.exchange_rate_date) {
-                                       vm.exchange_rate_date = r.message.exchange_rate_date;
-                                       const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
-                                       if (posting_backend !== vm.exchange_rate_date) {
-                                               vm.eventBus.emit("show_message", {
-                                                       title: __(
-                                                               "Exchange rate date " +
-                                                                       vm.exchange_rate_date +
-                                                                       " differs from posting date " +
-                                                                       posting_backend,
-                                                       ),
-                                                       color: "warning",
-                                               });
-                                       }
-                               }
-                       }
-
-                       return vm.invoice_doc;
-               } catch (error) {
-                       console.error("Error updating invoice:", error);
-                       throw error;
-               }
-       },
+	update_invoice(doc) {
+		var vm = this;
+		if (isOffline()) {
+			// When offline, simply merge the passed doc with the current invoice_doc
+			// to allow offline invoice creation without server calls
+			vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
+			return vm.invoice_doc;
+		}
+		frappe.call({
+			method:
+				doc.doctype === "Sales Order" && this.pos_profile.posa_create_only_sales_order
+					? "posawesome.posawesome.api.sales_orders.update_sales_order"
+					: "posawesome.posawesome.api.invoices.update_invoice",
+			args: {
+				data: doc,
+			},
+			async: false,
+			callback: function (r) {
+				if (r.message) {
+					vm.invoice_doc = r.message;
+					if (r.message.exchange_rate_date) {
+						vm.exchange_rate_date = r.message.exchange_rate_date;
+						const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
+						if (posting_backend !== vm.exchange_rate_date) {
+							vm.eventBus.emit("show_message", {
+								title: __(
+									"Exchange rate date " +
+										vm.exchange_rate_date +
+										" differs from posting date " +
+										posting_backend,
+								),
+								color: "warning",
+							});
+						}
+					}
+				}
+			},
+		});
+		return this.invoice_doc;
+	},
 
 	// Update invoice from order in backend
-       async update_invoice_from_order(doc) {
-               const vm = this;
-               if (isOffline()) {
-                       // Offline mode - merge doc locally without server update
-                       vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
-                       return vm.invoice_doc;
-               }
-
-               try {
-                       const r = await frappe.call({
-                               method: "posawesome.posawesome.api.invoices.update_invoice_from_order",
-                               args: {
-                                       data: doc,
-                               },
-                       });
-
-                       if (r.message) {
-                               vm.invoice_doc = r.message;
-                               if (r.message.exchange_rate_date) {
-                                       vm.exchange_rate_date = r.message.exchange_rate_date;
-                                       const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
-                                       if (posting_backend !== vm.exchange_rate_date) {
-                                               vm.eventBus.emit("show_message", {
-                                                       title: __(
-                                                               "Exchange rate date " +
-                                                                       vm.exchange_rate_date +
-                                                                       " differs from posting date " +
-                                                                       posting_backend,
-                                                       ),
-                                                       color: "warning",
-                                               });
-                                       }
-                               }
-                       }
-
-                       return vm.invoice_doc;
-               } catch (error) {
-                       console.error("Error updating invoice from order:", error);
-                       throw error;
-               }
-       },
+	update_invoice_from_order(doc) {
+		var vm = this;
+		if (isOffline()) {
+			// Offline mode - merge doc locally without server update
+			vm.invoice_doc = Object.assign({}, vm.invoice_doc || {}, doc);
+			return vm.invoice_doc;
+		}
+		frappe.call({
+			method: "posawesome.posawesome.api.invoices.update_invoice_from_order",
+			args: {
+				data: doc,
+			},
+			async: false,
+			callback: function (r) {
+				if (r.message) {
+					vm.invoice_doc = r.message;
+					if (r.message.exchange_rate_date) {
+						vm.exchange_rate_date = r.message.exchange_rate_date;
+						const posting_backend = vm.formatDateForBackend(vm.posting_date_display);
+						if (posting_backend !== vm.exchange_rate_date) {
+							vm.eventBus.emit("show_message", {
+								title: __(
+									"Exchange rate date " +
+										vm.exchange_rate_date +
+										" differs from posting date " +
+										posting_backend,
+								),
+								color: "warning",
+							});
+						}
+					}
+				}
+			},
+		});
+		return this.invoice_doc;
+	},
 
 	// Process and save invoice (handles update or create)
-       async process_invoice() {
-               const doc = this.get_invoice_doc();
-               try {
-                       const updated_doc = await this.update_invoice(doc);
-                       if (updated_doc && updated_doc.posting_date) {
-                               this.posting_date = this.formatDateForBackend(updated_doc.posting_date);
-                       }
-                       return updated_doc;
-               } catch (error) {
-                       console.error("Error in process_invoice:", error);
-                       this.eventBus.emit("show_message", {
-                               title: __(error.message || "Error processing invoice"),
-                               color: "error",
-                       });
-                       return false;
-               }
-       },
+	process_invoice() {
+		const doc = this.get_invoice_doc();
+		try {
+			const updated_doc = this.update_invoice(doc);
+			if (updated_doc && updated_doc.posting_date) {
+				this.posting_date = this.formatDateForBackend(updated_doc.posting_date);
+			}
+			return updated_doc;
+		} catch (error) {
+			console.error("Error in process_invoice:", error);
+			this.eventBus.emit("show_message", {
+				title: __(error.message || "Error processing invoice"),
+				color: "error",
+			});
+			return false;
+		}
+	},
 
 	// Process and save invoice from order
 	async process_invoice_from_order() {
@@ -1140,8 +1129,8 @@ export default {
 				console.log("Processing Sales Order payment");
 				invoice_doc = await this.process_invoice_from_order();
 			} else {
-                               console.log("Processing regular invoice");
-                               invoice_doc = await this.process_invoice();
+				console.log("Processing regular invoice");
+				invoice_doc = this.process_invoice();
 			}
 
 			if (!invoice_doc) {
@@ -1388,42 +1377,40 @@ export default {
 		return true;
 	},
 
-       // Get draft invoices from backend
-       async get_draft_invoices() {
-               const vm = this;
-               try {
-                       const r = await frappe.call({
-                               method: "posawesome.posawesome.api.invoices.get_draft_invoices",
-                               args: {
-                                       pos_opening_shift: this.pos_opening_shift.name,
-                               },
-                       });
-                       if (r.message) {
-                               vm.eventBus.emit("open_drafts", r.message);
-                       }
-               } catch (error) {
-                       console.error("Error fetching draft invoices:", error);
-               }
-       },
+	// Get draft invoices from backend
+	get_draft_invoices() {
+		var vm = this;
+		frappe.call({
+			method: "posawesome.posawesome.api.invoices.get_draft_invoices",
+			args: {
+				pos_opening_shift: this.pos_opening_shift.name,
+			},
+			async: false,
+			callback: function (r) {
+				if (r.message) {
+					vm.eventBus.emit("open_drafts", r.message);
+				}
+			},
+		});
+	},
 
-       // Get draft orders from backend
-       async get_draft_orders() {
-               const vm = this;
-               try {
-                       const r = await frappe.call({
-                               method: "posawesome.posawesome.api.sales_orders.search_orders",
-                               args: {
-                                       company: this.pos_profile.company,
-                                       currency: this.pos_profile.currency,
-                               },
-                       });
-                       if (r.message) {
-                               vm.eventBus.emit("open_orders", r.message);
-                       }
-               } catch (error) {
-                       console.error("Error fetching draft orders:", error);
-               }
-       },
+	// Get draft orders from backend
+	get_draft_orders() {
+		var vm = this;
+		frappe.call({
+			method: "posawesome.posawesome.api.sales_orders.search_orders",
+			args: {
+				company: this.pos_profile.company,
+				currency: this.pos_profile.currency,
+			},
+			async: false,
+			callback: function (r) {
+				if (r.message) {
+					vm.eventBus.emit("open_orders", r.message);
+				}
+			},
+		});
+	},
 
 	// Open returns dialog
 	open_returns() {
