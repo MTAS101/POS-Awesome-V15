@@ -160,6 +160,7 @@ import UpdateCustomer from "./UpdateCustomer.vue";
 import {
        getCustomerStorage,
        setCustomerStorage,
+       getOfflineCustomers,
        isOffline,
        memoryInitPromise,
        initPromise,
@@ -256,8 +257,8 @@ export default {
 		},
 
 		// Pressing Enter in input
-		handleEnter(event) {
-			const inputText = event.target.value?.toLowerCase() || "";
+                handleEnter(event) {
+                        const inputText = event.target.value?.toLowerCase() || "";
 
 			const matched = this.customers.find((cust) => {
 				return (
@@ -273,9 +274,26 @@ export default {
 				this.eventBus.emit("update_customer", matched.name);
 				this.isMenuOpen = false;
 
-				event.target.blur();
-			}
-		},
+                                event.target.blur();
+                        }
+                },
+
+                mergeOfflineCustomers() {
+                        try {
+                                const queued = (getOfflineCustomers() || []).map((c) => {
+                                        const data = { ...(c.args || {}) };
+                                        data.name = data.customer_name || data.name;
+                                        return data;
+                                });
+                                queued.forEach((cust) => {
+                                        if (!this.customers.some((c) => c.name === cust.name)) {
+                                                this.customers.push(cust);
+                                        }
+                                });
+                        } catch (e) {
+                                console.error("Failed to merge offline customers", e);
+                        }
+                },
 
                // Fetch customers list
                async get_customer_names() {
@@ -285,14 +303,15 @@ export default {
                       await initPromise;
                       await memoryInitPromise;
 
-                        if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
-                                try {
-                                        vm.customers = getCustomerStorage();
-                                } catch (e) {
-                                        console.error("Failed to parse customer cache:", e);
-                                        vm.customers = [];
-                                }
-                        }
+                       if (vm.pos_profile.posa_local_storage && getCustomerStorage().length) {
+                               try {
+                                       vm.customers = getCustomerStorage();
+                               } catch (e) {
+                                       console.error("Failed to parse customer cache:", e);
+                                       vm.customers = [];
+                               }
+                               vm.mergeOfflineCustomers();
+                       }
 
                         if (isOffline()) {
                                 vm.loadingCustomers = false;
@@ -306,8 +325,10 @@ export default {
 					pos_profile: this.pos_profile.pos_profile,
 				},
 				callback: function (r) {
-					if (r.message) {
-						vm.customers = r.message;
+                                       if (r.message) {
+                                               vm.customers = r.message;
+
+                                               vm.mergeOfflineCustomers();
 
                                                 if (vm.pos_profile.posa_local_storage) {
                                                         if (vm.customerWorker) {
@@ -374,6 +395,8 @@ export default {
                                console.error("Failed to parse localStorage customers", err);
                        }
                }
+
+               this.mergeOfflineCustomers();
 
                 this.$nextTick(() => {
 			this.eventBus.on("register_pos_profile", (pos_profile) => {
