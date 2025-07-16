@@ -814,10 +814,74 @@ export default {
 						json: text,
 						priceList: vm.customer_price_list,
 					});
-				} catch (err) {
-					console.error("Failed to fetch items", err);
-					vm.loading = false;
-				}
+                               } catch (err) {
+                                       console.error("Failed to fetch items", err);
+                                       // Fallback to standard frappe.call when fetch fails
+                                       frappe.call({
+                                               method: "posawesome.posawesome.api.items.get_items",
+                                               args: {
+                                                       pos_profile: JSON.stringify(vm.pos_profile),
+                                                       price_list: vm.customer_price_list,
+                                                       item_group: gr,
+                                                       search_value: sr,
+                                                       customer: vm.customer,
+                                               },
+                                               callback: async function (r) {
+                                                       if (vm.items_request_token !== request_token) return;
+                                                       if (r.message) {
+                                                               vm.items = r.message;
+                                                               // Ensure UOMs are available for each item
+                                                               vm.items.forEach((it) => {
+                                                                       if (it.item_uoms && it.item_uoms.length > 0) {
+                                                                               saveItemUOMs(it.item_code, it.item_uoms);
+                                                                       } else {
+                                                                               const cached = getItemUOMs(it.item_code);
+                                                                               if (cached.length > 0) {
+                                                                                       it.item_uoms = cached;
+                                                                               } else if (it.stock_uom) {
+                                                                                       it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+                                                                               }
+                                                                       }
+                                                               });
+                                                               vm.eventBus.emit("set_all_items", vm.items);
+                                                               vm.loading = false;
+                                                               vm.items_loaded = true;
+                                                               savePriceListItems(vm.customer_price_list, vm.items);
+                                                               console.info("Items Loaded");
+
+                                                               // Pre-populate stock cache when items are freshly loaded
+                                                               vm.prePopulateStockCache(vm.items);
+
+                                                               vm.$nextTick(() => {
+                                                                       if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+                                                                               vm.search_onchange();
+                                                                       }
+                                                               });
+
+                                                               // Always refresh quantities after items are loaded
+                                                               if (vm.items && vm.items.length > 0) {
+                                                                       vm.update_items_details(vm.items);
+                                                               }
+
+                                                               if (vm.pos_profile.posa_local_storage && !vm.pos_profile.pose_use_limit_search) {
+                                                                       try {
+                                                                               setItemsStorage(r.message);
+                                                                               r.message.forEach((it) => {
+                                                                                       if (it.item_uoms && it.item_uoms.length > 0) {
+                                                                                               saveItemUOMs(it.item_code, it.item_uoms);
+                                                                                       }
+                                                                               });
+                                                                       } catch (e) {
+                                                                               console.error(e);
+                                                                       }
+                                                               }
+                                                               if (vm.pos_profile.pose_use_limit_search) {
+                                                                       vm.enter_event();
+                                                               }
+                                                       }
+                                               },
+                                       });
+                               }
 			} else {
 				frappe.call({
 					method: "posawesome.posawesome.api.items.get_items",
