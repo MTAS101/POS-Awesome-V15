@@ -210,21 +210,14 @@ function set_html_data(frm) {
 	});
 }
 
-const get_value = (doctype, name, field) => {
-	let value;
-	frappe.call({
-		method: "frappe.client.get_value",
-		args: {
-			doctype: doctype,
-			filters: { name: name },
-			fieldname: field,
-		},
-		async: false,
-		callback: function (r) {
-			if (!r.exc) {
-				value = r.message[field];
-			}
-		},
-	});
-	return value;
+const get_value = async (doctype, name, field) => {
+       const { message } = await frappe.call({
+               method: "frappe.client.get_value",
+               args: {
+                       doctype: doctype,
+                       filters: { name: name },
+                       fieldname: field,
+               },
+       });
+       return message ? message[field] : undefined;
 };
