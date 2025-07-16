@@ -1,4 +1,4 @@
-import Dexie from "dexie";
+import Dexie from "./libs/dexie.mjs";
 
 // --- Dexie initialization ---------------------------------------------------
 const db = new Dexie("posawesome_offline");
