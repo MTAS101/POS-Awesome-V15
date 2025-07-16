@@ -340,58 +340,50 @@ export default {
                        }
                }
 
-               // Register event listeners early to avoid missing emitted events
-               this.eventBus.on("register_pos_profile", (pos_profile) => {
-                        this.pos_profile = pos_profile;
-                        this.get_customer_names();
-               });
+		this.$nextTick(() => {
+			this.eventBus.on("register_pos_profile", (pos_profile) => {
+				this.pos_profile = pos_profile;
+				this.get_customer_names();
+			});
 
-               this.eventBus.on("payments_register_pos_profile", (pos_profile) => {
-                        this.pos_profile = pos_profile;
-                        this.get_customer_names();
-               });
+			this.eventBus.on("payments_register_pos_profile", (pos_profile) => {
+				this.pos_profile = pos_profile;
+				this.get_customer_names();
+			});
 
-               this.eventBus.on("set_customer", (customer) => {
-                        this.customer = customer;
-                        this.internalCustomer = customer;
-               });
+			this.eventBus.on("set_customer", (customer) => {
+				this.customer = customer;
+				this.internalCustomer = customer;
+			});
 
-               this.eventBus.on("add_customer_to_list", (customer) => {
-                        const index = this.customers.findIndex((c) => c.name === customer.name);
-                        if (index !== -1) {
-                                // Replace existing entry to avoid duplicates after update
-                                this.customers.splice(index, 1, customer);
-                        } else {
-                                this.customers.push(customer);
-                        }
-                        if (this.pos_profile.posa_local_storage) {
-                                setCustomerStorage(this.customers);
-                        }
-                        this.customer = customer.name;
-                        this.internalCustomer = customer.name;
-                        this.eventBus.emit("update_customer", customer.name);
-               });
+			this.eventBus.on("add_customer_to_list", (customer) => {
+				const index = this.customers.findIndex((c) => c.name === customer.name);
+				if (index !== -1) {
+					// Replace existing entry to avoid duplicates after update
+					this.customers.splice(index, 1, customer);
+				} else {
+					this.customers.push(customer);
+				}
+				if (this.pos_profile.posa_local_storage) {
+					setCustomerStorage(this.customers);
+				}
+				this.customer = customer.name;
+				this.internalCustomer = customer.name;
+				this.eventBus.emit("update_customer", customer.name);
+			});
 
-               this.eventBus.on("set_customer_readonly", (value) => {
-                        this.readonly = value;
-               });
+			this.eventBus.on("set_customer_readonly", (value) => {
+				this.readonly = value;
+			});
 
-               this.eventBus.on("set_customer_info_to_edit", (data) => {
-                        this.customer_info = data;
-               });
+			this.eventBus.on("set_customer_info_to_edit", (data) => {
+				this.customer_info = data;
+			});
 
-               this.eventBus.on("fetch_customer_details", () => {
-                        this.get_customer_names();
-               });
-        },
-       beforeUnmount() {
-               this.eventBus.off("register_pos_profile");
-               this.eventBus.off("payments_register_pos_profile");
-               this.eventBus.off("set_customer");
-               this.eventBus.off("add_customer_to_list");
-               this.eventBus.off("set_customer_readonly");
-               this.eventBus.off("set_customer_info_to_edit");
-               this.eventBus.off("fetch_customer_details");
-       },
+			this.eventBus.on("fetch_customer_details", () => {
+				this.get_customer_names();
+			});
+		});
+	},
 };
 </script>
