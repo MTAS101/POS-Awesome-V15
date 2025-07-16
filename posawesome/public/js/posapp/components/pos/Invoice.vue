@@ -251,15 +251,11 @@ import MultiCurrencyRow from "./MultiCurrencyRow.vue";
 import CancelSaleDialog from "./CancelSaleDialog.vue";
 import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
+import invoiceItemMethods from "./invoiceItemMethods";
 import invoiceComputed from "./invoiceComputed";
-import invoiceWatchers from "./invoiceWatchers";
-import itemAddition from "./invoice-item/itemAddition";
-import batchSerial from "./invoice-item/batchSerial";
-import discountMethods from "./invoice-item/discounts";
-import stockUtils from "./invoice-item/stockUtils";
+import invoiceWatchers from "./invoiceWatchers"
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
-import invoiceItemMethods from "./invoiceItemMethods";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
@@ -337,10 +333,6 @@ export default {
 
 	methods: {
 		...shortcutMethods,
-		...itemAddition,
-		...batchSerial,
-		...discountMethods,
-		...stockUtils,
 		...offerMethods,
 		...invoiceItemMethods,
 		initializeItemsHeaders() {
