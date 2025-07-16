@@ -1,4 +1,4 @@
-import Dexie from "./libs/dexie-wrapper.js";
+import Dexie from "dexie";
 
 // --- Dexie initialization ---------------------------------------------------
 const db = new Dexie("posawesome_offline");
