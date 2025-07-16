@@ -125,7 +125,7 @@ export default {
 			});
                         this.eventBus.on("register_pos_data", (data) => {
                                 this.pos_profile = data.pos_profile;
-                                this.get_offers(this.pos_profile.name);
+                                this.get_offers(this.pos_profile.name, this.pos_profile);
                                 this.pos_opening_shift = data.pos_opening_shift;
                                 this.eventBus.emit("register_pos_profile", data);
                                 console.info("LoadPosProfile");
@@ -134,7 +134,7 @@ export default {
                         // ensure offers are fetched as well
                         this.eventBus.on("register_pos_profile", (data) => {
                                 if (data && data.pos_profile) {
-                                        this.get_offers(data.pos_profile.name);
+                                        this.get_offers(data.pos_profile.name, data.pos_profile);
                                 }
                         });
                         this.eventBus.on("show_payment", (data) => {
