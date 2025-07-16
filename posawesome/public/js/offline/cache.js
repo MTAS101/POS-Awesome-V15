@@ -1,6 +1,6 @@
 import { db, persist, checkDbHealth } from "./core.js";
 import { getAllByCursor } from "./db-utils.js";
-import Dexie from "dexie";
+import Dexie from "../libs/dexie-wrapper.js";
 
 export const MAX_QUEUE_ITEMS = 1000;
 
