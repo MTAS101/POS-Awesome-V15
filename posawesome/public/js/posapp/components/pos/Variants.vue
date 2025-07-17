@@ -83,11 +83,10 @@ export default {
 
 	computed: {
 		variantsItems() {
-			if (!this.parentItem) {
+			if (!this.parentItem || !Array.isArray(this.items)) {
 				return [];
-			} else {
-				return this.items.filter((item) => item.variant_of == this.parentItem.item_code);
 			}
+			return this.items.filter((item) => item.variant_of == this.parentItem.item_code);
 		},
 	},
 
@@ -170,7 +169,7 @@ export default {
 		this.eventBus.on("open_variants_model", async (item, items, profile) => {
 			this.varaintsDialog = true;
 			this.parentItem = item || null;
-			this.items = items;
+			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
 			if (!this.items || this.items.length === 0) {
 				await this.fetchVariants(item.item_code, profile);
