@@ -961,6 +961,10 @@ export default {
 						console.error("Failed to fetch variants", e);
 					}
 				}
+				this.eventBus.emit("show_message", {
+					title: __("This is an item template. Please choose a variant."),
+					color: "warning",
+				});
 				this.eventBus.emit("open_variants_model", item, variants);
 			} else {
 				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
@@ -1218,7 +1222,14 @@ export default {
 
 			vm.abortController = new AbortController();
 
-			const itemsToFetch = items.filter((it) => cacheResult.missing.includes(it.item_code));
+			const itemsToFetch = items.filter(
+				(it) => cacheResult.missing.includes(it.item_code) && !it.has_variants,
+			);
+
+			if (itemsToFetch.length === 0) {
+				vm.itemDetailsRetryCount = 0;
+				return;
+			}
 
 			try {
 				vm.currentRequest = await frappe.call({
