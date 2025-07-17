@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2020, Youssef Restom and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
 import json
 import frappe
 from frappe import _
@@ -557,9 +555,11 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 	# Ensure conversion rate exists when price list currency differs from
 	# company currency to avoid ValidationError from ERPNext. Also provide
 	# sensible defaults when price list or currency is missing.
-	if company and price_list:
+	if company:
 		company_currency = frappe.db.get_value("Company", company, "default_currency")
-		price_list_currency = frappe.db.get_value("Price List", price_list, "currency") or company_currency
+		price_list_currency = company_currency
+		if price_list:
+			price_list_currency = frappe.db.get_value("Price List", price_list, "currency") or company_currency
 
 		exchange_rate = 1
 		if price_list_currency != company_currency and allow_multi_currency:
