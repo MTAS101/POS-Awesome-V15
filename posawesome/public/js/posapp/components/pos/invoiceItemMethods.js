@@ -2399,6 +2399,7 @@ export default {
 					fieldname: "new_rate",
 					fieldtype: "Float",
 					label: __("New Price List Rate"),
+					default: item.price_list_rate || item.rate,
 					reqd: 1,
 				},
 			],
