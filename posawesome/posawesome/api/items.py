@@ -5,6 +5,7 @@
 from __future__ import unicode_literals
 import json
 import frappe
+from frappe import _
 from frappe.utils import nowdate, flt, cstr
 from erpnext.stock.get_item_details import get_item_details
 from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
@@ -676,3 +677,35 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
 			}
 
 	return {}
+
+@frappe.whitelist()
+def update_price_list_rate(item_code, price_list, rate, uom=None):
+    """Create or update Item Price for the given item and price list."""
+    if not item_code or not price_list:
+        frappe.throw(_("Item Code and Price List are required"))
+
+    rate = flt(rate)
+    filters = {"item_code": item_code, "price_list": price_list}
+    if uom:
+        filters["uom"] = uom
+    else:
+        filters["uom"] = ["", None]
+
+    name = frappe.db.exists("Item Price", filters)
+    if name:
+        doc = frappe.get_doc("Item Price", name)
+        doc.price_list_rate = rate
+        doc.save(ignore_permissions=True)
+    else:
+        doc = frappe.get_doc({
+            "doctype": "Item Price",
+            "item_code": item_code,
+            "price_list": price_list,
+            "uom": uom,
+            "price_list_rate": rate,
+            "selling": 1,
+        })
+        doc.insert(ignore_permissions=True)
+
+    frappe.db.commit()
+    return _("Item Price has been added or updated")

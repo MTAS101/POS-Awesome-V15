@@ -1909,6 +1909,20 @@ export default {
 					}
 					break;
 
+				case "price_list_rate":
+					item._manual_rate_set = true;
+					item.base_price_list_rate = this.flt(
+						newValue * this.exchange_rate,
+						this.currency_precision,
+					);
+					item.price_list_rate = newValue;
+					item.base_rate = item.base_price_list_rate;
+					item.rate = newValue;
+					item.discount_amount = 0;
+					item.base_discount_amount = 0;
+					item.discount_percentage = 0;
+					break;
+
 				case "discount_amount":
 					console.log("[calc_prices] Event Target ID:", fieldId);
 					console.log("[calc_prices] RAW value received by function:", value); // <-- ADDED THIS
@@ -2373,5 +2387,48 @@ export default {
 
 		// Force UI update
 		this.$forceUpdate();
+	},
+
+	change_price_list_rate(item) {
+		const vm = this;
+		frappe.prompt(
+			[
+				{
+					fieldname: "new_rate",
+					fieldtype: "Float",
+					label: __("New Price List Rate"),
+					reqd: 1,
+				},
+			],
+			function (values) {
+				const rate = flt(values.new_rate);
+				frappe.call({
+					method: "posawesome.posawesome.api.items.update_price_list_rate",
+					args: {
+						item_code: item.item_code,
+						price_list: vm.get_price_list(),
+						rate: rate,
+						uom: item.uom,
+					},
+					callback: function (r) {
+						if (!r.exc) {
+							item.price_list_rate = rate;
+							item.base_price_list_rate = rate;
+							if (!item._manual_rate_set) {
+								item.rate = rate;
+								item.base_rate = rate;
+							}
+							vm.calc_item_price(item);
+							vm.eventBus.emit("show_message", {
+								title: r.message || __("Item price updated"),
+								color: "success",
+							});
+						}
+					},
+				});
+			},
+			__("Change Price"),
+			__("Update"),
+		);
 	},
 };
