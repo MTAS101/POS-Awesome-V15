@@ -486,7 +486,11 @@ def get_items_details(pos_profile, items_data, price_list=None):
 	pos_profile = json.loads(pos_profile)
 	items_data = json.loads(items_data)
 	warehouse = pos_profile.get("warehouse")
-	company = pos_profile.get("company")
+	company = (
+	pos_profile.get("company")
+	or frappe.defaults.get_user_default("Company")
+	or frappe.defaults.get_global_default("company")
+	)
 	result = []
 
 	if items_data:
