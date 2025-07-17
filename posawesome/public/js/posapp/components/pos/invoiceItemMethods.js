@@ -2391,8 +2391,10 @@ export default {
 
 	change_price_list_rate(item) {
 		const vm = this;
-		frappe.prompt(
-			[
+
+		const d = new frappe.ui.Dialog({
+			title: __("Change Price"),
+			fields: [
 				{
 					fieldname: "new_rate",
 					fieldtype: "Float",
@@ -2400,7 +2402,8 @@ export default {
 					reqd: 1,
 				},
 			],
-			function (values) {
+			primary_action_label: __("Update"),
+			primary_action(values) {
 				const rate = flt(values.new_rate);
 				frappe.call({
 					method: "posawesome.posawesome.api.items.update_price_list_rate",
@@ -2410,7 +2413,7 @@ export default {
 						rate: rate,
 						uom: item.uom,
 					},
-					callback: function (r) {
+					callback(r) {
 						if (!r.exc) {
 							item.price_list_rate = rate;
 							item.base_price_list_rate = rate;
@@ -2426,9 +2429,16 @@ export default {
 						}
 					},
 				});
+				d.hide();
 			},
-			__("Change Price"),
-			__("Update"),
-		);
+		});
+
+		d.get_field("new_rate").$input.on("keydown", function (e) {
+			if (e.key === "Enter") {
+				d.get_primary_btn().click();
+			}
+		});
+
+		d.show();
 	},
 };
