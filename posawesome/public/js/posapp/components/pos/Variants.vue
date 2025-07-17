@@ -134,15 +134,34 @@ export default {
 			this.eventBus.emit("add_item", item);
 			this.close_dialog();
 		},
+		async fetchVariants(code, profile) {
+			try {
+				const r = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_item_variants",
+					args: {
+						item_code: code,
+						pos_profile: JSON.stringify(profile || {}),
+					},
+				});
+				if (r.message) {
+					this.items = (this.items || []).concat(r.message);
+				}
+			} catch (e) {
+				console.error("Failed to fetch variants", e);
+			}
+		},
 	},
 
 	created: function () {
-		this.eventBus.on("open_variants_model", (item, items) => {
+		this.eventBus.on("open_variants_model", async (item, items, profile) => {
 			this.varaintsDialog = true;
 			this.parentItem = item || null;
 			this.items = items;
 			this.filters = {};
-			this.$nextTick(function () {
+			if (!this.variantsItems.length) {
+				await this.fetchVariants(item.item_code, profile);
+			}
+			this.$nextTick(() => {
 				this.filterdItems = this.variantsItems;
 			});
 		});

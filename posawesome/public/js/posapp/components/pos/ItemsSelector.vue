@@ -941,7 +941,7 @@ export default {
 		async add_item(item) {
 			item = { ...item };
 			if (item.has_variants) {
-				this.eventBus.emit("open_variants_model", item, this.items);
+				this.eventBus.emit("open_variants_model", item, this.items, this.pos_profile);
 			} else {
 				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
 					this.eventBus.emit("show_message", {
