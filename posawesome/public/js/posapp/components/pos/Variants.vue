@@ -98,6 +98,24 @@ export default {
 		formatCurrency(value) {
 			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
 		},
+		async fetchVariants(code, profile) {
+			try {
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_item_variants",
+					args: {
+						pos_profile: JSON.stringify(profile || {}),
+						parent_item_code: code,
+					},
+				});
+				if (res.message) {
+					const existingCodes = new Set((this.items || []).map((it) => it.item_code));
+					const newItems = res.message.filter((it) => !existingCodes.has(it.item_code));
+					this.items = (this.items || []).concat(newItems);
+				}
+			} catch (e) {
+				console.error("Failed to fetch variants", e);
+			}
+		},
 		updateFiltredItems() {
 			this.$nextTick(function () {
 				const values = [];
@@ -137,12 +155,15 @@ export default {
 	},
 
 	created: function () {
-		this.eventBus.on("open_variants_model", (item, items) => {
+		this.eventBus.on("open_variants_model", async (item, items, profile) => {
 			this.varaintsDialog = true;
 			this.parentItem = item || null;
 			this.items = items;
 			this.filters = {};
-			this.$nextTick(function () {
+			if (!this.items || this.items.length === 0) {
+				await this.fetchVariants(item.item_code, profile);
+			}
+			this.$nextTick(() => {
 				this.filterdItems = this.variantsItems;
 			});
 		});
