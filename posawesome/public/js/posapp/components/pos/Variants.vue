@@ -91,6 +91,18 @@ export default {
 		},
 	},
 
+	watch: {
+		items: {
+			handler() {
+				this.filterdItems = this.variantsItems;
+			},
+			deep: true,
+		},
+		parentItem() {
+			this.filterdItems = this.variantsItems;
+		},
+	},
+
 	methods: {
 		close_dialog() {
 			this.varaintsDialog = false;
