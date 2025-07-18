@@ -420,7 +420,7 @@ def get_items(
 def get_items_groups():
 	return frappe.db.sql(
 		"""select name from `tabItem Group`
-        where is_group = 0 order by name limit 500""",
+	where is_group = 0 order by name limit 500""",
 		as_dict=1,
 	)
 
@@ -488,15 +488,28 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 	detail_map = {d["item_code"]: d for d in details}
 	result = []
 	for item in items_data:
-		item_barcode = frappe.get_all(
-			"Item Barcode",
-			filters={"parent": item["item_code"]},
-			fields=["barcode", "posa_uom"],
-		)
-		item["item_barcode"] = item_barcode or []
-		if detail_map.get(item["item_code"]):
-			item.update(detail_map[item["item_code"]])
-		result.append(item)
+	        item_barcode = frappe.get_all(
+	                "Item Barcode",
+	                filters={"parent": item["item_code"]},
+	                fields=["barcode", "posa_uom"],
+	        )
+	        item["item_barcode"] = item_barcode or []
+	        if detail_map.get(item["item_code"]):
+	                item.update(detail_map[item["item_code"]])
+
+	        item_price = {}
+	        if item_prices.get(item["item_code"]):
+	                item_price = (
+	                        item_prices.get(item["item_code"]).get(item.get("stock_uom"))
+	                        or item_prices.get(item["item_code"]).get("None")
+	                        or {}
+	                )
+
+	        item["price_list_rate"] = item_price.get("price_list_rate")
+	        item["currency"] = item_price.get("currency") or price_list_currency or pos_profile.get("currency")
+	        item["rate"] = item_price.get("price_list_rate") or 0
+
+	        result.append(item)
 
 	return result
 
@@ -763,30 +776,30 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
 def update_price_list_rate(item_code, price_list, rate, uom=None):
     """Create or update Item Price for the given item and price list."""
     if not item_code or not price_list:
-        frappe.throw(_("Item Code and Price List are required"))
+	frappe.throw(_("Item Code and Price List are required"))
 
     rate = flt(rate)
     filters = {"item_code": item_code, "price_list": price_list}
     if uom:
-        filters["uom"] = uom
+	filters["uom"] = uom
     else:
-        filters["uom"] = ["", None]
+	filters["uom"] = ["", None]
 
     name = frappe.db.exists("Item Price", filters)
     if name:
-        doc = frappe.get_doc("Item Price", name)
-        doc.price_list_rate = rate
-        doc.save(ignore_permissions=True)
+	doc = frappe.get_doc("Item Price", name)
+	doc.price_list_rate = rate
+	doc.save(ignore_permissions=True)
     else:
-        doc = frappe.get_doc({
-            "doctype": "Item Price",
-            "item_code": item_code,
-            "price_list": price_list,
-            "uom": uom,
-            "price_list_rate": rate,
-            "selling": 1,
-        })
-        doc.insert(ignore_permissions=True)
+	doc = frappe.get_doc({
+	    "doctype": "Item Price",
+	    "item_code": item_code,
+	    "price_list": price_list,
+	    "uom": uom,
+	    "price_list_rate": rate,
+	    "selling": 1,
+	})
+	doc.insert(ignore_permissions=True)
 
     frappe.db.commit()
     return _("Item Price has been added or updated")
@@ -796,16 +809,16 @@ def update_price_list_rate(item_code, price_list, rate, uom=None):
 def get_price_for_uom(item_code, price_list, uom):
     """Return Item Price for the given item, price list and UOM if it exists."""
     if not (item_code and price_list and uom):
-        return None
+	return None
 
     price = frappe.db.get_value(
-        "Item Price",
-        {
-            "item_code": item_code,
-            "price_list": price_list,
-            "uom": uom,
-            "selling": 1,
-        },
-        "price_list_rate",
+	"Item Price",
+	{
+	    "item_code": item_code,
+	    "price_list": price_list,
+	    "uom": uom,
+	    "selling": 1,
+	},
+	"price_list_rate",
     )
     return price
