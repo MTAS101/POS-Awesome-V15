@@ -57,10 +57,7 @@
 										</v-img>
 										<v-card-text class="text--primary pa-1">
 											<div class="text-caption text-primary accent-3">
-												{{ formatCurrency(item.price_list_rate || item.rate || 0) }}
-												{{
-													item.currency || (posProfile && posProfile.currency) || ""
-												}}
+												{{ displayPrice(item) }}
 											</div>
 										</v-card-text>
 									</v-card>
@@ -116,6 +113,11 @@ export default {
 		},
 		formatCurrency(value) {
 			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
+		},
+		displayPrice(item) {
+			const price = item.price_list_rate != null ? item.price_list_rate : item.rate;
+			const currency = item.currency || (this.posProfile && this.posProfile.currency) || "";
+			return `${this.formatCurrency(price || 0)} ${currency}`.trim();
 		},
 		async fetchVariants(code, profile, priceList) {
 			try {
