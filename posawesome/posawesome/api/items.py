@@ -544,6 +544,7 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 		)
 
 	item["selling_price_list"] = price_list
+	item["price_list"] = price_list
 
 	# Determine if multi-currency is enabled on the POS Profile
 	allow_multi_currency = False
