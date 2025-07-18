@@ -57,8 +57,8 @@
 										</v-img>
 										<v-card-text class="text--primary pa-1">
 											<div class="text-caption text-primary accent-3">
-												{{ item.price_list_rate || item.rate || 0 }}
-												{{ item.currency || "" }}
+												{{ currencySymbol(item.currency || "") }}
+												{{ formatCurrency(item.price_list_rate || item.rate || 0) }}
 											</div>
 										</v-card-text>
 									</v-card>
@@ -73,11 +73,15 @@
 </template>
 
 <script>
+import format from "../../format.js";
+
 export default {
+	mixins: [format],
 	data: () => ({
 		varaintsDialog: false,
 		parentItem: null,
 		items: null,
+		pos_profile: null,
 		filters: {},
 		filterdItems: [],
 	}),
@@ -171,6 +175,7 @@ export default {
 			this.varaintsDialog = true;
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
+			this.pos_profile = profile || null;
 			this.filters = {};
 			if (!this.items || this.items.length === 0) {
 				await this.fetchVariants(item.item_code, profile);
