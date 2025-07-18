@@ -32,6 +32,7 @@ export {
 	MAX_QUEUE_ITEMS,
 	resetOfflineState,
 	clearAllCache,
+	forceClearAllCache,
 	getCacheUsageEstimate,
 } from "./cache.js";
 
