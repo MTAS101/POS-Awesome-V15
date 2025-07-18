@@ -131,9 +131,18 @@ export default {
 					},
 				});
 				if (res.message) {
-					const existingCodes = new Set((this.items || []).map((it) => it.item_code));
-					const newItems = res.message.filter((it) => !existingCodes.has(it.item_code));
-					this.items = (this.items || []).concat(newItems);
+					const itemsMap = {};
+					(this.items || []).forEach((it) => {
+						itemsMap[it.item_code] = it;
+					});
+					res.message.forEach((it) => {
+						if (itemsMap[it.item_code]) {
+							Object.assign(itemsMap[it.item_code], it);
+						} else {
+							this.items = this.items || [];
+							this.items.push(it);
+						}
+					});
 				}
 			} catch (e) {
 				console.error("Failed to fetch variants", e);
@@ -185,9 +194,7 @@ export default {
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
-			if (!this.items || this.items.length === 0) {
-				await this.fetchVariants(item.item_code, profile, priceList);
-			}
+			await this.fetchVariants(item.item_code, profile, priceList);
 			// Ensure rate is populated for all variant items
 			this.items.forEach((it) => {
 				if (!it.rate && it.price_list_rate) {
