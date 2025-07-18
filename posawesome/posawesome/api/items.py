@@ -624,8 +624,6 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 		if not stock_uom_exists:
 			uoms.append({"uom": stock_uom, "conversion_factor": 1.0})
 
-	# Map price_list_rate to rate for frontend compatibility
-	res["rate"] = res.get("price_list_rate", 0)
 	res["item_uoms"] = uoms
 
 	return res
