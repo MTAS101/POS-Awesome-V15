@@ -429,11 +429,6 @@ def get_items_groups():
 def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=None):
 	pos_profile = json.loads(pos_profile)
 	price_list = price_list or pos_profile.get("selling_price_list")
-	company = (
-	        pos_profile.get("company")
-	        or frappe.defaults.get_user_default("Company")
-	        or frappe.defaults.get_global_default("company")
-	)
 
 	fields = [
 		"name as item_code",
@@ -469,8 +464,6 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 	)
 
 	detail_map = {d["item_code"]: d for d in details}
-	# Cache template item details to minimize database calls
-	template_details_cache = {}
 	result = []
 	for item in items_data:
 		item_barcode = frappe.get_all(
@@ -481,24 +474,6 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 		item["item_barcode"] = item_barcode or []
 		if detail_map.get(item["item_code"]):
 			item.update(detail_map[item["item_code"]])
-		# Fallback to template price if variant has no price
-		if ((not item.get("rate") or float(item.get("rate") or 0) == 0) and item.get("variant_of")):
-			template_code = item.get("variant_of")
-			if template_code not in template_details_cache:
-				template_details_cache[template_code] = get_item_detail(
-				json.dumps({"item_code": template_code}),
-				warehouse=pos_profile.get("warehouse"),
-				price_list=price_list or pos_profile.get("selling_price_list"),
-				company=company,
-				)
-			template_detail = template_details_cache.get(template_code) or {}
-			if template_detail:
-				fallback_rate = template_detail.get("rate") or template_detail.get("price_list_rate")
-				if fallback_rate:
-					item["rate"] = fallback_rate
-					item["price_list_rate"] = fallback_rate
-					if not item.get("currency"):
-						item["currency"] = template_detail.get("currency")
 		result.append(item)
 
 	return result
