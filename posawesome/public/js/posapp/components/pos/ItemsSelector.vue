@@ -953,7 +953,9 @@ export default {
 			item = { ...item };
 			if (item.has_variants) {
 				let variants = this.items.filter((it) => it.variant_of == item.item_code);
-				if (!variants.length) {
+				let shouldFetch = !variants.length || variants.some((v) => !v.rate || v.rate === 0);
+
+				if (shouldFetch) {
 					try {
 						const res = await frappe.call({
 							method: "posawesome.posawesome.api.items.get_item_variants",
@@ -966,7 +968,15 @@ export default {
 						});
 						if (res.message) {
 							variants = res.message;
-							this.items.push(...variants);
+							// Replace or add fetched variants into the main items list
+							variants.forEach((variant) => {
+								const idx = this.items.findIndex((it) => it.item_code === variant.item_code);
+								if (idx > -1) {
+									this.items.splice(idx, 1, variant);
+								} else {
+									this.items.push(variant);
+								}
+							});
 						}
 					} catch (e) {
 						console.error("Failed to fetch variants", e);
