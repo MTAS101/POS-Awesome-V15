@@ -136,6 +136,9 @@ export default {
 						itemsMap[it.item_code] = it;
 					});
 					res.message.forEach((it) => {
+						if (it.price_list_rate != null) {
+							it.rate = it.price_list_rate;
+						}
 						if (itemsMap[it.item_code]) {
 							Object.assign(itemsMap[it.item_code], it);
 						} else {
@@ -197,7 +200,7 @@ export default {
 			await this.fetchVariants(item.item_code, profile, priceList);
 			// Ensure rate is populated for all variant items
 			this.items.forEach((it) => {
-				if (!it.rate && it.price_list_rate) {
+				if (it.price_list_rate != null) {
 					it.rate = it.price_list_rate;
 				}
 			});
