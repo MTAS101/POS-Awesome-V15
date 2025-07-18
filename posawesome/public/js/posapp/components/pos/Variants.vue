@@ -75,7 +75,10 @@
 </template>
 
 <script>
+import format from "../../format";
+
 export default {
+	mixins: [format],
 	data: () => ({
 		variantsDialog: false,
 		parentItem: null,
