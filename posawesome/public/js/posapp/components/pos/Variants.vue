@@ -109,15 +109,13 @@ export default {
 		formatCurrency(value) {
 			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
 		},
-		async fetchVariants(code, profile, priceList, customer) {
+		async fetchVariants(code, profile) {
 			try {
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_item_variants",
 					args: {
 						pos_profile: JSON.stringify(profile || {}),
 						parent_item_code: code,
-						price_list: priceList,
-						customer: customer,
 					},
 				});
 				if (res.message) {
@@ -168,13 +166,13 @@ export default {
 	},
 
 	created: function () {
-		this.eventBus.on("open_variants_model", async (item, items, profile, priceList, customer) => {
+		this.eventBus.on("open_variants_model", async (item, items, profile) => {
 			this.varaintsDialog = true;
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
 			if (!this.items || this.items.length === 0) {
-				await this.fetchVariants(item.item_code, profile, priceList, customer);
+				await this.fetchVariants(item.item_code, profile);
 			}
 			this.$nextTick(() => {
 				this.filterdItems = this.variantsItems;
