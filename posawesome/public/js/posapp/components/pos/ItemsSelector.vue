@@ -625,6 +625,17 @@ export default {
 			this.eventBus.emit("show_coupons", "true");
 		},
 		forceReloadItems() {
+			// Always recreate the worker when forcing a reload so
+			// subsequent reloads fetch fresh data from the server.
+			if (!this.itemWorker && typeof Worker !== "undefined") {
+				try {
+					const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+					this.itemWorker = new Worker(workerUrl, { type: "classic" });
+				} catch (e) {
+					console.error("Failed to start item worker", e);
+					this.itemWorker = null;
+				}
+			}
 			this.items_loaded = false;
 			this.get_items(true);
 		},
