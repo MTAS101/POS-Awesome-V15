@@ -1,6 +1,6 @@
 <template>
 	<v-row justify="center">
-		<v-dialog v-model="varaintsDialog" max-width="600px">
+		<v-dialog v-model="variantsDialog" max-width="600px">
 			<v-card min-height="500px">
 				<v-card-title>
 					<span class="text-h5 text-primary">Select Item</span>
@@ -57,8 +57,10 @@
 										</v-img>
 										<v-card-text class="text--primary pa-1">
 											<div class="text-caption text-primary accent-3">
-												{{ item.price_list_rate || item.rate || 0 }}
-												{{ item.currency || "" }}
+												{{ formatCurrency(item.price_list_rate || item.rate || 0) }}
+												{{
+													item.currency || (posProfile && posProfile.currency) || ""
+												}}
 											</div>
 										</v-card-text>
 									</v-card>
@@ -75,11 +77,12 @@
 <script>
 export default {
 	data: () => ({
-		varaintsDialog: false,
+		variantsDialog: false,
 		parentItem: null,
 		items: null,
 		filters: {},
 		filterdItems: [],
+		posProfile: null,
 	}),
 
 	computed: {
@@ -105,18 +108,21 @@ export default {
 
 	methods: {
 		close_dialog() {
-			this.varaintsDialog = false;
+			this.variantsDialog = false;
 		},
 		formatCurrency(value) {
 			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
 		},
 		async fetchVariants(code, profile) {
 			try {
+				const posProfile = profile || this.posProfile || {};
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_item_variants",
 					args: {
-						pos_profile: JSON.stringify(profile || {}),
+						pos_profile: JSON.stringify(posProfile),
 						parent_item_code: code,
+						price_list: posProfile.selling_price_list,
+						customer: posProfile.customer,
 					},
 				});
 				if (res.message) {
@@ -168,7 +174,8 @@ export default {
 
 	created: function () {
 		this.eventBus.on("open_variants_model", async (item, items, profile) => {
-			this.varaintsDialog = true;
+			this.variantsDialog = true;
+			this.posProfile = profile || null;
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
