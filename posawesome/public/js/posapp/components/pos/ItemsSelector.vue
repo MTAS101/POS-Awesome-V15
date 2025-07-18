@@ -967,8 +967,6 @@ export default {
 						if (res.message) {
 							variants = res.message;
 							this.items.push(...variants);
-							// ensure rates and base values are set before display
-							variants.forEach((v) => this.applyCurrencyConversionToItem(v));
 						}
 					} catch (e) {
 						console.error("Failed to fetch variants", e);
