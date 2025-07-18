@@ -57,14 +57,8 @@
 										</v-img>
 										<v-card-text class="text--primary pa-1">
 											<div class="text-caption text-primary accent-3">
-												{{
-													currencySymbol(
-														item.currency ||
-															item.price_list_currency ||
-															profile.currency,
-													)
-												}}
-												{{ formatCurrency(item.price_list_rate || item.rate || 0) }}
+												{{ item.price_list_rate || item.rate || 0 }}
+												{{ item.currency || "" }}
 											</div>
 										</v-card-text>
 									</v-card>
@@ -79,17 +73,13 @@
 </template>
 
 <script>
-import format from "../../format";
-
 export default {
-	mixins: [format],
 	data: () => ({
 		varaintsDialog: false,
 		parentItem: null,
 		items: null,
 		filters: {},
 		filterdItems: [],
-		profile: {},
 	}),
 
 	computed: {
@@ -117,7 +107,10 @@ export default {
 		close_dialog() {
 			this.varaintsDialog = false;
 		},
-		async fetchVariants(code, profile = this.profile) {
+		formatCurrency(value) {
+			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
+		},
+		async fetchVariants(code, profile) {
 			try {
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_item_variants",
@@ -179,17 +172,13 @@ export default {
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
-			this.profile = profile || {};
 			if (!this.items || this.items.length === 0) {
-				await this.fetchVariants(item.item_code);
+				await this.fetchVariants(item.item_code, profile);
 			}
-			// Ensure rate and currency are populated for all variant items
+			// Ensure rate is populated for all variant items
 			this.items.forEach((it) => {
 				if (!it.rate && it.price_list_rate) {
 					it.rate = it.price_list_rate;
-				}
-				if (!it.currency) {
-					it.currency = it.price_list_currency || this.profile.currency;
 				}
 			});
 			this.$nextTick(() => {
