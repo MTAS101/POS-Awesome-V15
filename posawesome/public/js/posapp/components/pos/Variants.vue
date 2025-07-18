@@ -131,20 +131,23 @@ export default {
 					},
 				});
 				if (res.message) {
+					const itemsMap = {};
+					(this.items || []).forEach((it) => {
+						itemsMap[it.item_code] = it;
+					});
 					res.message.forEach((it) => {
 						if (it.price_list_rate != null) {
 							it.rate = it.price_list_rate;
 						}
-						const idx = (this.items || []).findIndex((x) => x.item_code === it.item_code);
-						if (idx > -1) {
-							const updated = { ...this.items[idx], ...it };
-							this.items.splice(idx, 1, updated);
+						if (itemsMap[it.item_code]) {
+							Object.assign(itemsMap[it.item_code], it);
 						} else {
 							this.items = this.items || [];
 							this.items.push(it);
 						}
 					});
-					this.filterdItems = this.variantsItems;
+					// Force array reactivity so UI updates with new prices
+					this.items = [...this.items];
 				}
 			} catch (e) {
 				console.error("Failed to fetch variants", e);
