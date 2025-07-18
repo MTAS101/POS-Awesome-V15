@@ -2,19 +2,18 @@
 # For license information, please see license.txt
 
 import json
-from typing import Dict, List
-
 import frappe
+from frappe import _
+from frappe.utils import nowdate, flt, cstr
+from erpnext.stock.get_item_details import get_item_details
 from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
+from frappe.utils.background_jobs import enqueue
 from erpnext.stock.doctype.batch.batch import (
 	get_batch_no,
 	get_batch_qty,
 )
-from erpnext.stock.get_item_details import get_item_details
-from frappe import _
-from frappe.utils import cstr, flt, nowdate
-from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
+from typing import List, Dict
 
 
 def get_seearch_items_conditions(item_code, serial_no, batch_no, barcode):
@@ -23,7 +22,7 @@ def get_seearch_items_conditions(item_code, serial_no, batch_no, barcode):
 	item_code = item_code or ""
 
 	if serial_no or batch_no or barcode:
-		return f" and name = {frappe.db.escape(item_code)}"
+		return " and name = {0}".format(frappe.db.escape(item_code))
 
 	return """ and (name like {item_code} or item_name like {item_code})""".format(
 		item_code=frappe.db.escape("%" + item_code + "%")
@@ -147,7 +146,7 @@ def get_items(
 			elif frappe.cache().get_value("bin_qty_cache"):
 				frappe.cache().delete_value("bin_qty_cache")
 		except Exception as e:
-			frappe.log_error(f"Error clearing bin_qty_cache: {e!s}", "POS Awesome")
+			frappe.log_error(f"Error clearing bin_qty_cache: {str(e)}", "POS Awesome")
 
 		today = nowdate()
 		warehouse = pos_profile.get("warehouse")
@@ -196,10 +195,10 @@ def get_items(
 			if item_group:
 				# Escape item_group to avoid SQL errors with special characters
 				safe_item_group = frappe.db.escape("%" + item_group + "%")
-				condition += f" AND item_group like {safe_item_group}"
+				condition += " AND item_group like {item_group}".format(item_group=safe_item_group)
 
 			# Always apply a search limit when limit search is enabled
-			limit_clause = f" LIMIT {search_limit}"
+			limit_clause = " LIMIT {search_limit}".format(search_limit=search_limit)
 
 			# If force reload is enabled and the user is explicitly searching,
 			# remove the limit to return all matching items
@@ -465,13 +464,6 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 	)
 
 	detail_map = {d["item_code"]: d for d in details}
-	# Cache template item details to minimize database calls
-	template_details_cache = {}
-	company = (
-	pos_profile.get("company")
-	or frappe.defaults.get_user_default("Company")
-	or frappe.defaults.get_global_default("company")
-	)
 	result = []
 	for item in items_data:
 		item_barcode = frappe.get_all(
@@ -482,25 +474,7 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 		item["item_barcode"] = item_barcode or []
 		if detail_map.get(item["item_code"]):
 			item.update(detail_map[item["item_code"]])
-		# Fallback to template price if variant has no price
-		if ((not item.get("rate") or float(item.get("rate") or 0) == 0) and item.get("variant_of")):
-			template_code = item.get("variant_of")
-			if template_code not in template_details_cache:
-				template_details_cache[template_code] = get_item_detail(
-					json.dumps({"item_code": template_code}),
-					warehouse=pos_profile.get("warehouse"),
-					price_list=price_list or pos_profile.get("selling_price_list"),
-					company=company,
-				)
-			template_detail = template_details_cache.get(template_code) or {}
-			if template_detail:
-				fallback_rate = template_detail.get("rate") or template_detail.get("price_list_rate")
-				if fallback_rate:
-					item["rate"] = fallback_rate
-					item["price_list_rate"] = fallback_rate
-					if not item.get("currency"):
-						item["currency"] = template_detail.get("currency")
-	result.append(item)
+		result.append(item)
 
 	return result
 
