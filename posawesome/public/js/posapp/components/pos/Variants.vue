@@ -87,8 +87,6 @@ export default {
 		filterdItems: [],
 		posProfile: null,
 		priceList: null,
-		selected_currency: "",
-		exchange_rate: 1,
 	}),
 
 	computed: {
@@ -147,7 +145,6 @@ export default {
 							this.items = this.items || [];
 							this.items.push(it);
 						}
-						this.applyCurrencyConversionToItem(it);
 					});
 					// Force array reactivity so UI updates with new prices
 					this.items = [...this.items];
@@ -188,39 +185,6 @@ export default {
 				}
 			});
 		},
-
-		applyCurrencyConversionToItem(item) {
-			if (!item || !this.posProfile || !this.posProfile.posa_allow_multi_currency) {
-				return;
-			}
-
-			const base = this.posProfile.currency;
-
-			if (!item.original_rate) {
-				item.original_rate = item.rate;
-				item.original_currency = item.currency || base;
-			}
-
-			const priceListRate = item.original_rate;
-			const base_rate = priceListRate * (item.plc_conversion_rate || 1);
-
-			item.base_rate = base_rate;
-			item.base_price_list_rate = priceListRate;
-
-			const converted_rate =
-				item.original_currency === this.selected_currency
-					? priceListRate
-					: priceListRate * (this.exchange_rate || 1);
-
-			item.rate = this.flt(converted_rate, this.currency_precision);
-			item.currency = this.selected_currency;
-			item.price_list_rate = item.rate;
-		},
-
-		applyCurrencyConversionToItems() {
-			if (!Array.isArray(this.items)) return;
-			this.items.forEach((it) => this.applyCurrencyConversionToItem(it));
-		},
 		add_item(item) {
 			this.eventBus.emit("add_item", item);
 			this.close_dialog();
@@ -235,8 +199,6 @@ export default {
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
-			this.selected_currency = (profile && profile.currency) || "";
-			this.exchange_rate = 1;
 			await this.fetchVariants(item.item_code, profile, priceList);
 			// Ensure rate is populated for all variant items
 			this.items.forEach((it) => {
@@ -244,21 +206,13 @@ export default {
 					it.rate = it.price_list_rate;
 				}
 			});
-			this.applyCurrencyConversionToItems();
 			this.$nextTick(() => {
 				this.filterdItems = this.variantsItems;
 			});
 		});
-
-		this.eventBus.on("update_currency", (data) => {
-			this.selected_currency = data.currency;
-			this.exchange_rate = data.exchange_rate;
-			this.applyCurrencyConversionToItems();
-		});
 	},
 	beforeUnmount() {
 		this.eventBus.off("open_variants_model");
-		this.eventBus.off("update_currency");
 	},
 };
 </script>
