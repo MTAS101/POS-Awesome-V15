@@ -767,3 +767,22 @@ def update_price_list_rate(item_code, price_list, rate, uom=None):
 
     frappe.db.commit()
     return _("Item Price has been added or updated")
+
+
+@frappe.whitelist()
+def get_price_for_uom(item_code, price_list, uom):
+    """Return Item Price for the given item, price list and UOM if it exists."""
+    if not (item_code and price_list and uom):
+        return None
+
+    price = frappe.db.get_value(
+        "Item Price",
+        {
+            "item_code": item_code,
+            "price_list": price_list,
+            "uom": uom,
+            "selling": 1,
+        },
+        "price_list_rate",
+    )
+    return price

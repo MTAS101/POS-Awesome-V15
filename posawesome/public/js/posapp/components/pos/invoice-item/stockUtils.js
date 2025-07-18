@@ -1,5 +1,5 @@
 export default {
-	calc_uom(item, value) {
+	async calc_uom(item, value) {
 		let new_uom = item.item_uoms.find((element) => element.uom == value);
 
 		// try cached uoms when not found on item
@@ -34,6 +34,56 @@ export default {
 
 		// Calculate the ratio of new to old conversion factor
 		const conversion_ratio = item.conversion_factor / old_conversion_factor;
+
+		// Try to fetch rate for this UOM from price list
+		const priceList = this.get_price_list();
+		let uomRate = null;
+		if (priceList) {
+			const cached = getCachedPriceListItems(priceList) || [];
+			const match = cached.find((p) => p.item_code === item.item_code && p.uom === new_uom.uom);
+			if (match) {
+				uomRate = match.price_list_rate || match.rate;
+			}
+		}
+		if (!uomRate && !isOffline()) {
+			try {
+				const r = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_price_for_uom",
+					args: {
+						item_code: item.item_code,
+						price_list: priceList,
+						uom: new_uom.uom,
+					},
+				});
+				if (r.message) {
+					uomRate = r.message;
+				}
+			} catch (e) {
+				console.error("Failed to fetch UOM price", e);
+			}
+		}
+
+		if (uomRate) {
+			item.base_price_list_rate = uomRate;
+			if (!item.posa_offer_applied) {
+				item.base_rate = uomRate;
+			}
+
+			if (this.selected_currency !== (this.price_list_currency || this.pos_profile.currency)) {
+				item.price_list_rate = this.flt(
+					item.base_price_list_rate * this.exchange_rate,
+					this.currency_precision,
+				);
+				item.rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
+			} else {
+				item.price_list_rate = item.base_price_list_rate;
+				item.rate = item.base_rate;
+			}
+
+			this.calc_stock_qty(item, item.qty);
+			this.$forceUpdate();
+			return;
+		}
 
 		// Reset discount if not offer
 		if (!item.posa_offer_applied) {
