@@ -158,19 +158,25 @@ export default {
 		new_item.discount_amount = 0;
 		new_item.discount_percentage = 0;
 		new_item.discount_amount_per_item = 0;
-		new_item.price_list_rate = item.rate;
+		new_item.price_list_rate = item.price_list_rate || item.rate;
 
 		// Setup base rates properly for multi-currency
 		const baseCurrency = this.price_list_currency || this.pos_profile.currency;
 		if (this.selected_currency !== baseCurrency) {
 			// Store original base currency values
-			new_item.base_price_list_rate = item.base_price_list_rate || item.rate / this.exchange_rate;
-			new_item.base_rate = item.base_rate || item.rate / this.exchange_rate;
+			new_item.base_price_list_rate =
+				item.base_price_list_rate || item.price_list_rate || item.rate / this.exchange_rate;
+			new_item.base_rate =
+				item.base_rate ||
+				item.base_price_list_rate ||
+				item.price_list_rate ||
+				item.rate / this.exchange_rate;
 			new_item.base_discount_amount = 0;
 		} else {
 			// In base currency, base rates = displayed rates
-			new_item.base_price_list_rate = item.base_price_list_rate || item.rate;
-			new_item.base_rate = item.base_rate || item.rate;
+			new_item.base_price_list_rate = item.base_price_list_rate || item.price_list_rate || item.rate;
+			new_item.base_rate =
+				item.base_rate || item.base_price_list_rate || item.price_list_rate || item.rate;
 			new_item.base_discount_amount = 0;
 		}
 
