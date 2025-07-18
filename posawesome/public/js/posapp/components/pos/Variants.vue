@@ -143,6 +143,8 @@ export default {
 							this.items.push(it);
 						}
 					});
+					// Force array reactivity so UI updates with new prices
+					this.items = [...this.items];
 				}
 			} catch (e) {
 				console.error("Failed to fetch variants", e);
