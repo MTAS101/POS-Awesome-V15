@@ -462,6 +462,28 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 		json.dumps(items_data),
 		price_list=price_list,
 	)
+	today = nowdate()
+	price_list_currency = frappe.db.get_value("Price List", price_list, "currency")
+	item_codes = [d["item_code"] for d in items_data]
+	item_prices_data = frappe.get_all(
+		"Item Price",
+		fields=["item_code", "price_list_rate", "currency", "uom"],
+		filters={
+			"price_list": price_list,
+			"item_code": ["in", item_codes],
+			"currency": price_list_currency or pos_profile.get("currency"),
+			"selling": 1,
+			"valid_from": ["<=", today],
+			"customer": ["in", ["", None, customer]],
+		},
+		or_filters=[["valid_upto", ">=", today], ["valid_upto", "in", ["", None]]],
+		order_by="valid_from ASC, valid_upto DESC",
+	)
+
+	item_prices = {}
+	for d in item_prices_data:
+		item_prices.setdefault(d.item_code, {})
+		item_prices[d.item_code][d.get("uom") or "None"] = d
 
 	detail_map = {d["item_code"]: d for d in details}
 	result = []
