@@ -57,7 +57,8 @@
 										</v-img>
 										<v-card-text class="text--primary pa-1">
 											<div class="text-caption text-primary accent-3">
-												{{ item.rate || 0 }} {{ item.currency || "" }}
+												{{ item.price_list_rate || item.rate || 0 }}
+												{{ item.currency || "" }}
 											</div>
 										</v-card-text>
 									</v-card>
@@ -174,6 +175,12 @@ export default {
 			if (!this.items || this.items.length === 0) {
 				await this.fetchVariants(item.item_code, profile);
 			}
+			// Ensure rate is populated for all variant items
+			this.items.forEach((it) => {
+				if (!it.rate && it.price_list_rate) {
+					it.rate = it.price_list_rate;
+				}
+			});
 			this.$nextTick(() => {
 				this.filterdItems = this.variantsItems;
 			});
