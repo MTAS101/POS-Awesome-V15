@@ -21,15 +21,17 @@
 									:value="value.attribute_value"
 									variant="outlined"
 									label
-									>{{ value.attribute_value }}</v-chip
+									@click="updateFiltredItems"
 								>
+									{{ value.attribute_value }}
+								</v-chip>
 							</v-chip-group>
 							<v-divider class="p-0 m-0"></v-divider>
 						</div>
 						<div>
 							<v-row density="default" class="overflow-y-auto" style="max-height: 500px">
 								<v-col
-									v-for="(item, idx) in displayVariants"
+									v-for="(item, idx) in filterdItems"
 									:key="idx"
 									xl="2"
 									lg="3"
@@ -55,14 +57,10 @@
 										</v-img>
 										<v-card-text class="text--primary pa-1">
 											<div class="text-caption text-primary accent-3">
+												{{ formatCurrency(item.price_list_rate || item.rate || 0) }}
 												{{
-													currencySymbol(
-														item.currency ||
-															(posProfile && posProfile.currency) ||
-															"",
-													)
+													item.currency || (posProfile && posProfile.currency) || ""
 												}}
-												{{ formatCurrency(item.rate ?? item.price_list_rate ?? 0) }}
 											</div>
 										</v-card-text>
 									</v-card>
@@ -81,34 +79,43 @@ import format from "../../format";
 
 export default {
 	mixins: [format],
-	data() {
-		return {
-			variantsDialog: false,
-			parentItem: null,
-			variants: [],
-			filters: {},
-			posProfile: null,
-			priceList: null,
-		};
-	},
+	data: () => ({
+		variantsDialog: false,
+		parentItem: null,
+		items: null,
+		filters: {},
+		filterdItems: [],
+		posProfile: null,
+		priceList: null,
+	}),
+
 	computed: {
-		displayVariants() {
-			const active = Object.entries(this.filters).filter(([k, v]) => v);
-			if (!active.length) {
-				return this.variants;
+		variantsItems() {
+			if (!this.parentItem || !Array.isArray(this.items)) {
+				return [];
 			}
-			return this.variants.filter((item) => {
-				return active.every(([key, val]) => {
-					const attrs = Array.isArray(item.item_attributes) ? item.item_attributes : [];
-					const attr = attrs.find((a) => a.attribute === key);
-					return attr && attr.attribute_value === val;
-				});
-			});
+			return this.items.filter((item) => item.variant_of == this.parentItem.item_code);
 		},
 	},
+
+	watch: {
+		items: {
+			handler() {
+				this.filterdItems = this.variantsItems;
+			},
+			deep: true,
+		},
+		parentItem() {
+			this.filterdItems = this.variantsItems;
+		},
+	},
+
 	methods: {
 		close_dialog() {
 			this.variantsDialog = false;
+		},
+		formatCurrency(value) {
+			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
 		},
 		async fetchVariants(code, profile, priceList) {
 			try {
@@ -124,34 +131,84 @@ export default {
 					},
 				});
 				if (res.message) {
-					this.variants = res.message.map((it) => {
+					const itemsMap = {};
+					(this.items || []).forEach((it) => {
+						itemsMap[it.item_code] = it;
+					});
+					res.message.forEach((it) => {
 						if (it.price_list_rate != null) {
 							it.rate = it.price_list_rate;
 						}
-						return it;
+						if (itemsMap[it.item_code]) {
+							Object.assign(itemsMap[it.item_code], it);
+						} else {
+							this.items = this.items || [];
+							this.items.push(it);
+						}
 					});
-					this.variants = [...this.variants];
+					// Force array reactivity so UI updates with new prices
+					this.items = [...this.items];
 				}
 			} catch (e) {
 				console.error("Failed to fetch variants", e);
 			}
+		},
+		updateFiltredItems() {
+			this.$nextTick(function () {
+				const values = [];
+				Object.entries(this.filters).forEach(([key, value]) => {
+					if (value) {
+						values.push(value);
+					}
+				});
+
+				if (!values.length) {
+					this.filterdItems = this.variantsItems;
+				} else {
+					const itemsList = [];
+					this.filterdItems = [];
+					this.variantsItems.forEach((item) => {
+						let apply = true;
+						item.item_attributes.forEach((attr) => {
+							if (
+								this.filters[attr.attribute] &&
+								this.filters[attr.attribute] != attr.attribute_value
+							) {
+								apply = false;
+							}
+						});
+						if (apply && !itemsList.includes(item.item_code)) {
+							this.filterdItems.push(item);
+							itemsList.push(item.item_code);
+						}
+					});
+				}
+			});
 		},
 		add_item(item) {
 			this.eventBus.emit("add_item", item);
 			this.close_dialog();
 		},
 	},
-	created() {
+
+	created: function () {
 		this.eventBus.on("open_variants_model", async (item, items, profile, priceList) => {
 			this.variantsDialog = true;
 			this.posProfile = profile || null;
 			this.priceList = priceList || null;
 			this.parentItem = item || null;
-			this.variants = Array.isArray(items) ? items : [];
+			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
-			if (item) {
-				await this.fetchVariants(item.item_code, profile, priceList);
-			}
+			await this.fetchVariants(item.item_code, profile, priceList);
+			// Ensure rate is populated for all variant items
+			this.items.forEach((it) => {
+				if (it.price_list_rate != null) {
+					it.rate = it.price_list_rate;
+				}
+			});
+			this.$nextTick(() => {
+				this.filterdItems = this.variantsItems;
+			});
 		});
 	},
 	beforeUnmount() {
