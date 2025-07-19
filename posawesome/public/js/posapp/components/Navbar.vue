@@ -96,7 +96,8 @@ import StatusIndicator from "./navbar/StatusIndicator.vue";
 import CacheUsageMeter from "./navbar/CacheUsageMeter.vue";
 import AboutDialog from "./navbar/AboutDialog.vue";
 import OfflineInvoices from "./OfflineInvoices.vue";
-import { clearAllCache, forceClearAllCache } from "../../offline/cache.js";
+import { forceClearAllCache } from "../../offline/cache.js";
+import { clearAllCaches } from "../../utils/clearAllCaches.js";
 
 export default {
 	name: "NavBar",
@@ -233,6 +234,7 @@ export default {
 		async clearCache() {
 			try {
 				await forceClearAllCache();
+				await clearAllCaches({ confirmBeforeClear: false }).catch(() => {});
 				this.showMessage({ color: "success", title: this.__("Cache cleared successfully") });
 			} catch (e) {
 				console.error("Failed to clear cache", e);
