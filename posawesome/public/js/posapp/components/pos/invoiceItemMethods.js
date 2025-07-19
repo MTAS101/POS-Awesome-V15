@@ -70,7 +70,9 @@ export default {
 			if (this.isReturnInvoice) {
 				new_item.qty = -Math.abs(new_item.qty || 1);
 			}
-			this.items.unshift(new_item);
+                        const idx = this.items.unshift(new_item) - 1;
+                        // Replace the item to trigger reactivity for new props
+                        this.items[idx] = { ...new_item };
 			// Force update of item rates when item is first added
 			this.update_item_detail(new_item, true);
 			// Apply UOM conversion immediately
