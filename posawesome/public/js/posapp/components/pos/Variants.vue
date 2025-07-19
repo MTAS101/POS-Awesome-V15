@@ -131,15 +131,23 @@ export default {
 					},
 				});
 				if (res.message) {
-					// Replace current items with server data to ensure prices are up-to-date
-					this.items = res.message.map((it) => {
+					const itemsMap = {};
+					(this.items || []).forEach((it) => {
+						itemsMap[it.item_code] = it;
+					});
+					res.message.forEach((it) => {
 						if (it.price_list_rate != null) {
 							it.rate = it.price_list_rate;
 						}
-						return it;
+						if (itemsMap[it.item_code]) {
+							Object.assign(itemsMap[it.item_code], it);
+						} else {
+							this.items = this.items || [];
+							this.items.push(it);
+						}
 					});
-					// Display freshly fetched variants immediately
-					this.filterdItems = [...this.items];
+					// Force array reactivity so UI updates with new prices
+					this.items = [...this.items];
 				}
 			} catch (e) {
 				console.error("Failed to fetch variants", e);
