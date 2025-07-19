@@ -124,13 +124,38 @@ export default {
 					},
 				});
 				if (res.message) {
-					this.variants = res.message.map((it) => {
+					const variants = res.message.map((it) => {
 						if (it.price_list_rate != null) {
 							it.rate = it.price_list_rate;
 						}
 						return it;
 					});
-					this.variants = [...this.variants];
+
+					// If any variant lacks rate information, fetch it directly
+					await Promise.all(
+						variants.map(async (v) => {
+							if (!v.rate) {
+								try {
+									const r = await frappe.call({
+										method: "posawesome.posawesome.api.items.get_price_for_uom",
+										args: {
+											item_code: v.item_code,
+											price_list: list,
+											uom: v.stock_uom,
+										},
+									});
+									if (r.message) {
+										v.rate = r.message;
+										v.price_list_rate = r.message;
+									}
+								} catch (err) {
+									console.error("Failed to fetch price", err);
+								}
+							}
+						}),
+					);
+
+					this.variants = [...variants];
 				}
 			} catch (e) {
 				console.error("Failed to fetch variants", e);
