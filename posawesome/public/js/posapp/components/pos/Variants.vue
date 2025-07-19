@@ -114,6 +114,10 @@ export default {
 			try {
 				const posProfile = profile || this.posProfile || {};
 				const list = priceList || this.priceList || posProfile.selling_price_list;
+
+				if (!Array.isArray(this.variants)) {
+					this.variants = [];
+				}
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_item_variants",
 					args: {
@@ -130,6 +134,33 @@ export default {
 						}
 						return it;
 					});
+
+					// If any variant lacks rate information, fetch it directly
+					if (list) {
+						await Promise.all(
+							this.variants.map(async (v) => {
+								if (!v.rate) {
+									try {
+										const r = await frappe.call({
+											method: "posawesome.posawesome.api.items.get_price_for_uom",
+											args: {
+												item_code: v.item_code,
+												price_list: list,
+												uom: v.stock_uom,
+											},
+										});
+										if (r.message) {
+											v.rate = r.message;
+											v.price_list_rate = r.message;
+										}
+									} catch (err) {
+										console.error("Failed to fetch price", err);
+									}
+								}
+							}),
+						);
+					}
+
 					this.variants = [...this.variants];
 				}
 			} catch (e) {
