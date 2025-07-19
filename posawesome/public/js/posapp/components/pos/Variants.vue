@@ -56,9 +56,9 @@
 											></v-card-text>
 										</v-img>
 										<v-card-text class="text--primary pa-1">
-      <div class="text-caption text-primary text-accent-3">
-       {{ formatCurrencySafe(item.price_list_rate || item.rate || 0) }} {{ item.currency || "" }}
-      </div>
+											<div class="text-caption text-primary accent-3">
+												{{ item.rate || 0 }} {{ item.currency || "" }}
+											</div>
 										</v-card-text>
 									</v-card>
 								</v-col>
@@ -72,7 +72,6 @@
 </template>
 
 <script>
-/* global frappe */
 export default {
 	data: () => ({
 		varaintsDialog: false,
@@ -80,7 +79,6 @@ export default {
 		items: null,
 		filters: {},
 		filterdItems: [],
-		pos_profile: null,
 	}),
 
 	computed: {
@@ -104,75 +102,39 @@ export default {
 		},
 	},
 
-        methods: {
-                close_dialog() {
-                        this.varaintsDialog = false;
-                },
-                formatCurrency(value) {
-                        return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
-                },
-               formatCurrencySafe(val) {
-                       const mixinFn =
-                               this.$options.mixins &&
-                               this.$options.mixins[0] &&
-                               this.$options.mixins[0].methods &&
-                               this.$options.mixins[0].methods.formatCurrency;
-
-                       if (mixinFn) {
-                               return mixinFn.call(this, val, 2);
-                       }
-                       return new Intl.NumberFormat('en-PK', {
-                               minimumFractionDigits: 0,
-                               maximumFractionDigits: 2,
-                       }).format(val);
-               },
-               applyCurrencyConversionToItem(item) {
-                       if (!item) return;
-                       if (!item.original_rate) {
-                               item.original_rate = item.price_list_rate || item.rate;
-                               item.original_currency = item.currency || (this.pos_profile && this.pos_profile.currency);
-                       }
-                       // Use original_rate as price list rate in item's currency
-                       item.base_price_list_rate = item.price_list_rate || item.original_rate;
-                       item.base_rate = item.base_rate || item.base_price_list_rate;
-                       item.rate = item.price_list_rate || item.rate;
-                       item.currency = item.currency || (this.pos_profile && this.pos_profile.currency);
-                       console.log("after currency conversion", {
-                               code: item.item_code,
-                               rate: item.rate,
-                               currency: item.currency,
-                       });
-               },
-               async fetchVariants(code, profile) {
-                       console.log("fetchVariants called with", code, profile);
-                       try {
-                               const res = await frappe.call({
-                                       method: "posawesome.posawesome.api.items.get_item_variants",
-                                       args: {
-                                               pos_profile: JSON.stringify((profile || this.pos_profile) || {}),
-                                               parent_item_code: code,
-                                       },
-                               });
-                               console.log("variants API result", res);
-                               if (res.message) {
-                                       const existingCodes = new Set((this.items || []).map((it) => it.item_code));
-                                       const newItems = res.message.filter((it) => !existingCodes.has(it.item_code));
-                                       console.log("new variant items", newItems);
-                                       await Promise.all(newItems.map((it) => this.fetchVariantRate(it)));
-                                       this.items = (this.items || []).concat(newItems);
-                               }
-                       } catch (e) {
-                               console.error("Failed to fetch variants", e);
-                       }
-               },
-               updateFiltredItems() {
-                       this.$nextTick(function () {
-                               const values = [];
-                               Object.entries(this.filters).forEach(([, value]) => {
-                                       if (value) {
-                                               values.push(value);
-                                       }
-                               });
+	methods: {
+		close_dialog() {
+			this.varaintsDialog = false;
+		},
+		formatCurrency(value) {
+			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
+		},
+		async fetchVariants(code, profile) {
+			try {
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_item_variants",
+					args: {
+						pos_profile: JSON.stringify(profile || {}),
+						parent_item_code: code,
+					},
+				});
+				if (res.message) {
+					const existingCodes = new Set((this.items || []).map((it) => it.item_code));
+					const newItems = res.message.filter((it) => !existingCodes.has(it.item_code));
+					this.items = (this.items || []).concat(newItems);
+				}
+			} catch (e) {
+				console.error("Failed to fetch variants", e);
+			}
+		},
+		updateFiltredItems() {
+			this.$nextTick(function () {
+				const values = [];
+				Object.entries(this.filters).forEach(([key, value]) => {
+					if (value) {
+						values.push(value);
+					}
+				});
 
 				if (!values.length) {
 					this.filterdItems = this.variantsItems;
@@ -189,101 +151,36 @@ export default {
 								apply = false;
 							}
 						});
-                                               if (apply && !itemsList.includes(item.item_code)) {
-                                                       this.filterdItems.push(item);
-                                                       itemsList.push(item.item_code);
-                                               }
-                                       });
-                               }
-                               console.log("filtered items", this.filterdItems.map((it) => it.item_code));
-                       });
-               },
-               async fetchVariantRate(item) {
-                       if (!this.pos_profile) {
-                               console.warn(
-                                       "fetchVariantRate: pos_profile missing – using default price list"
-                               );
-                               const profile = {
-                                       warehouse: "",
-                                       selling_price_list: frappe.sys_defaults.price_list,
-                                       company: frappe.defaults.get_default("company"),
-                                       currency: frappe.defaults.get_default("currency"),
-                                       name: "",
-                               };
-                               this.pos_profile = profile;
-                       }
-                       console.log("fetchVariantRate called for", item.item_code);
-                       try {
-                               const res = await frappe.call({
-					method: "posawesome.posawesome.api.items.get_item_detail",
-					args: {
-						warehouse: this.pos_profile.warehouse,
-						price_list: this.pos_profile.selling_price_list,
-						company: this.pos_profile.company,
-						item: JSON.stringify({
-							item_code: item.item_code,
-							pos_profile: this.pos_profile.name,
-							qty: item.qty || 1,
-							uom: item.uom || item.stock_uom,
-							doctype: "Sales Invoice",
-						}),
-					},
-				});
-                               console.log("variant rate result", res);
-                               if (res.message) {
-                                       const data = res.message;
-                                       item.rate = data.price_list_rate;
-                                       item.price_list_rate = data.price_list_rate;
-                                       item.base_rate = data.price_list_rate;
-                                       item.base_price_list_rate = data.price_list_rate;
-                                       item.currency = data.currency || data.price_list_currency || this.pos_profile.currency;
-                                       this.applyCurrencyConversionToItem(item);
-                                       console.log("rate applied", {
-                                               code: item.item_code,
-                                               rate: item.rate,
-                                       });
-                               }
-                       } catch (e) {
-                               console.error("Failed to fetch variant rate", e);
-                       }
-               },
-               async add_item(item) {
-                       console.log("add_item called", item.item_code);
-                       await this.fetchVariantRate(item);
-                       const payload = { ...item, code: item.item_code };
-                       console.log("emitting add_item", {
-                               code: payload.code,
-                               rate: payload.rate,
-                       });
-                       this.eventBus.emit("add_item", payload);
-                       this.close_dialog();
-               },
+						if (apply && !itemsList.includes(item.item_code)) {
+							this.filterdItems.push(item);
+							itemsList.push(item.item_code);
+						}
+					});
+				}
+			});
+		},
+		add_item(item) {
+			this.eventBus.emit("add_item", item);
+			this.close_dialog();
+		},
 	},
 
-        created: function () {
-                this.eventBus.on("open_variants_model", async (item, items, profile) => {
-                        console.log("open_variants_model", { item, items, profile });
-                        this.varaintsDialog = true;
-                        this.parentItem = item || null;
-                        this.items = Array.isArray(items) ? items : [];
-                        this.filters = {};
-                        // fallback: use current POS profile if caller didn't pass one
-                        this.pos_profile =
-                                profile ||
-                                (window.frappe && frappe.boot && frappe.boot.pos_profile) ||
-                                null;
-                        if (!this.items || this.items.length === 0) {
-                                await this.fetchVariants(item.item_code, this.pos_profile);
-                        }
-                        this.$nextTick(() => {
-                                this.filterdItems = this.variantsItems;
-                        });
-                });
-        },
-        beforeUnmount() {
-                console.log("variants dialog destroyed");
-                this.eventBus.off("open_variants_model");
-        },
+	created: function () {
+		this.eventBus.on("open_variants_model", async (item, items, profile) => {
+			this.varaintsDialog = true;
+			this.parentItem = item || null;
+			this.items = Array.isArray(items) ? items : [];
+			this.filters = {};
+			if (!this.items || this.items.length === 0) {
+				await this.fetchVariants(item.item_code, profile);
+			}
+			this.$nextTick(() => {
+				this.filterdItems = this.variantsItems;
+			});
+		});
+	},
+	beforeUnmount() {
+		this.eventBus.off("open_variants_model");
+	},
 };
 </script>
-
