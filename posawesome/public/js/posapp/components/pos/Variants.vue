@@ -153,46 +153,38 @@ export default {
 				console.error("Failed to fetch variants", e);
 			}
 		},
-                updateFiltredItems() {
-                        this.$nextTick(function () {
-                                const values = [];
-                                Object.entries(this.filters).forEach(([key, value]) => {
-                                        if (value) {
-                                                values.push(value);
-                                        }
-                                });
+		updateFiltredItems() {
+			this.$nextTick(function () {
+				const values = [];
+				Object.entries(this.filters).forEach(([key, value]) => {
+					if (value) {
+						values.push(value);
+					}
+				});
 
-                                if (!values.length) {
-                                        this.filterdItems = this.variantsItems;
-                                } else {
-                                        const itemsList = [];
-                                        this.filterdItems = [];
-                                        this.variantsItems.forEach((item) => {
-                                                let apply = true;
-                                                item.item_attributes.forEach((attr) => {
-                                                        if (
-                                                                this.filters[attr.attribute] &&
-                                                                this.filters[attr.attribute] != attr.attribute_value
-                                                        ) {
-                                                                apply = false;
-                                                        }
-                                                });
-                                                if (apply && !itemsList.includes(item.item_code)) {
-                                                        this.filterdItems.push(item);
-                                                        itemsList.push(item.item_code);
-                                                }
-                                        });
-                                }
-
-                                // If any filtered item lacks pricing info, refetch variants
-                                const needsPrice = this.filterdItems.some(
-                                        (it) => it.rate == null && it.price_list_rate == null,
-                                );
-                                if (needsPrice && this.parentItem) {
-                                        this.fetchVariants(this.parentItem.item_code, this.posProfile, this.priceList);
-                                }
-                        });
-                },
+				if (!values.length) {
+					this.filterdItems = this.variantsItems;
+				} else {
+					const itemsList = [];
+					this.filterdItems = [];
+					this.variantsItems.forEach((item) => {
+						let apply = true;
+						item.item_attributes.forEach((attr) => {
+							if (
+								this.filters[attr.attribute] &&
+								this.filters[attr.attribute] != attr.attribute_value
+							) {
+								apply = false;
+							}
+						});
+						if (apply && !itemsList.includes(item.item_code)) {
+							this.filterdItems.push(item);
+							itemsList.push(item.item_code);
+						}
+					});
+				}
+			});
+		},
 		add_item(item) {
 			this.eventBus.emit("add_item", item);
 			this.close_dialog();
