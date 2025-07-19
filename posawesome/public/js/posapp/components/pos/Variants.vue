@@ -121,6 +121,10 @@ export default {
 			try {
 				const posProfile = profile || this.posProfile || {};
 				const list = priceList || this.priceList || posProfile.selling_price_list;
+
+				if (!Array.isArray(this.variants)) {
+					this.variants = [];
+				}
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_item_variants",
 					args: {
@@ -135,6 +139,7 @@ export default {
 					(this.variants || []).forEach((it) => {
 						itemsMap[it.item_code] = it;
 					});
+
 					res.message.forEach((it) => {
 						if (it.price_list_rate != null) {
 							it.rate = it.price_list_rate;
