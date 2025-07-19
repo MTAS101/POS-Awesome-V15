@@ -20,14 +20,10 @@ export default {
 		this.expanded = this.expanded.filter((id) => id !== item.posa_row_id);
 	},
 
-       add_item(item) {
-               console.log("Invoice.add_item received", {
-                       code: item.item_code,
-                       rate: item.rate,
-               });
-               if (!item.uom) {
-                       item.uom = item.stock_uom;
-               }
+	add_item(item) {
+		if (!item.uom) {
+			item.uom = item.stock_uom;
+		}
 		let index = -1;
 		if (!this.new_line) {
 			// For auto_set_batch enabled, we should check if the item code and UOM match only
@@ -74,20 +70,10 @@ export default {
 			if (this.isReturnInvoice) {
 				new_item.qty = -Math.abs(new_item.qty || 1);
 			}
-                       const idx = this.items.unshift(new_item) - 1;
-                       // Replace the item to trigger reactivity for new props
-                       this.items[idx] = { ...new_item };
-                       console.log("Item inserted at", idx, {
-                               code: new_item.item_code,
-                               rate: new_item.rate,
-                       });
-                       // Force update of item rates when item is first added
-                       this.update_item_detail(new_item, true);
-                       console.log("update_item_detail called", {
-                               code: new_item.item_code,
-                               rate: new_item.rate,
-                       });
-                       // Apply UOM conversion immediately
+			this.items.unshift(new_item);
+			// Force update of item rates when item is first added
+			this.update_item_detail(new_item, true);
+			// Apply UOM conversion immediately
 			if (new_item.uom && new_item.uom !== new_item.stock_uom) {
 				this.calc_uom(new_item, new_item.uom);
 			}
@@ -1475,14 +1461,10 @@ export default {
 	},
 
 	// Update details for a single item (fetch from backend)
-       update_item_detail(item, force_update = false) {
-               console.log("update_item_detail request", {
-                       code: item.item_code,
-                       force_update,
-               });
-               if (!item.item_code) {
-                       return;
-               }
+	update_item_detail(item, force_update = false) {
+		if (!item.item_code) {
+			return;
+		}
 		var vm = this;
 
 		// Remove this block which was causing the issue - rates should persist regardless of currency
