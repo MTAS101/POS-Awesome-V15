@@ -125,24 +125,17 @@ export default {
 				if (!Array.isArray(this.variants)) {
 					this.variants = [];
 				}
-
-                               const res = await frappe.call({
-                                       method: "posawesome.posawesome.api.items.get_item_variants",
-                                       args: {
-                                               pos_profile: JSON.stringify(posProfile),
-                                               parent_item_code: code,
-                                               price_list: list,
-                                               customer: posProfile.customer,
-                                       },
-                               });
-                               if (res.message) {
-
-					const itemsMap = {};
-					(this.variants || []).forEach((it) => {
-						itemsMap[it.item_code] = it;
-					});
-
-					res.message.forEach((it) => {
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_item_variants",
+					args: {
+						pos_profile: JSON.stringify(posProfile),
+						parent_item_code: code,
+						price_list: list,
+						customer: posProfile.customer,
+					},
+				});
+				if (res.message) {
+					this.variants = res.message.map((it) => {
 						if (it.price_list_rate != null) {
 							it.rate = it.price_list_rate;
 						}
@@ -154,32 +147,31 @@ export default {
 						}
 					});
 
-                                       // If any variant lacks rate information, fetch it directly
-                                       if (list) {
-                                               await Promise.all(
-                                                       this.variants.map(async (v) => {
-                                                               if (!v.rate) {
-                                                                       try {
-                                                                               const r = await frappe.call({
-                                                                                       method: "posawesome.posawesome.api.items.get_price_for_uom",
-                                                                                       args: {
-                                                                                               item_code: v.item_code,
-                                                                                               price_list: list,
-                                                                                               uom: v.stock_uom,
-                                                                                       },
-                                                                               });
-                                                                               if (r.message) {
-                                                                                       v.rate = r.message;
-                                                                                       v.price_list_rate = r.message;
-                                                                               }
-                                                                       } catch (err) {
-                                                                               console.error("Failed to fetch price", err);
-                                                                       }
-                                                               }
-                                                       }),
-                                               );
-                                       }
-
+					// If any variant lacks rate information, fetch it directly
+					if (list) {
+						await Promise.all(
+							this.variants.map(async (v) => {
+								if (!v.rate) {
+									try {
+										const r = await frappe.call({
+											method: "posawesome.posawesome.api.items.get_price_for_uom",
+											args: {
+												item_code: v.item_code,
+												price_list: list,
+												uom: v.stock_uom,
+											},
+										});
+										if (r.message) {
+											v.rate = r.message;
+											v.price_list_rate = r.message;
+										}
+									} catch (err) {
+										console.error("Failed to fetch price", err);
+									}
+								}
+							}),
+						);
+					}
 
 					this.variants = [...this.variants];
 				}
