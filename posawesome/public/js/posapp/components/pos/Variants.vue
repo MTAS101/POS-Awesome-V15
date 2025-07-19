@@ -56,9 +56,9 @@
 											></v-card-text>
 										</v-img>
 										<v-card-text class="text--primary pa-1">
-      <div class="text-caption text-primary text-accent-3">
-       {{ formatCurrencySafe(item.price_list_rate || item.rate || 0) }} {{ item.currency || "" }}
-      </div>
+											<div class="text-caption text-primary accent-3">
+												{{ item.rate || 0 }} {{ item.currency || "" }}
+											</div>
 										</v-card-text>
 									</v-card>
 								</v-col>
@@ -72,7 +72,6 @@
 </template>
 
 <script>
-/* global frappe */
 export default {
 	data: () => ({
 		varaintsDialog: false,
@@ -80,7 +79,6 @@ export default {
 		items: null,
 		filters: {},
 		filterdItems: [],
-		pos_profile: null,
 	}),
 
 	computed: {
@@ -104,63 +102,35 @@ export default {
 		},
 	},
 
-        methods: {
-                close_dialog() {
-                        this.varaintsDialog = false;
-                },
-                formatCurrency(value) {
-                        return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
-                },
-               formatCurrencySafe(val) {
-                       const mixinFn =
-                               this.$options.mixins &&
-                               this.$options.mixins[0] &&
-                               this.$options.mixins[0].methods &&
-                               this.$options.mixins[0].methods.formatCurrency;
-
-                       if (mixinFn) {
-                               return mixinFn.call(this, val, 2);
-                       }
-                       return new Intl.NumberFormat('en-PK', {
-                               minimumFractionDigits: 0,
-                               maximumFractionDigits: 2,
-                       }).format(val);
-               },
-               applyCurrencyConversionToItem(item) {
-                       if (!item) return;
-                       if (!item.original_rate) {
-                               item.original_rate = item.price_list_rate || item.rate;
-                               item.original_currency = item.currency || (this.pos_profile && this.pos_profile.currency);
-                       }
-                       // Use original_rate as price list rate in item's currency
-                       item.base_price_list_rate = item.price_list_rate || item.original_rate;
-                       item.base_rate = item.base_rate || item.base_price_list_rate;
-                       item.rate = item.price_list_rate || item.rate;
-                       item.currency = item.currency || (this.pos_profile && this.pos_profile.currency);
-               },
-                async fetchVariants(code, profile) {
-                        try {
-                                const res = await frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_item_variants",
-                                        args: {
-                                                pos_profile: JSON.stringify(profile || {}),
-                                                parent_item_code: code,
-                                        },
-                                });
-                                if (res.message) {
-                                        const existingCodes = new Set((this.items || []).map((it) => it.item_code));
-                                       const newItems = res.message.filter((it) => !existingCodes.has(it.item_code));
-                                       await Promise.all(newItems.map((it) => this.fetchVariantRate(it)));
-                                       this.items = (this.items || []).concat(newItems);
-                                }
-                        } catch (e) {
-                                console.error("Failed to fetch variants", e);
-                        }
-                },
+	methods: {
+		close_dialog() {
+			this.varaintsDialog = false;
+		},
+		formatCurrency(value) {
+			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
+		},
+		async fetchVariants(code, profile) {
+			try {
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_item_variants",
+					args: {
+						pos_profile: JSON.stringify(profile || {}),
+						parent_item_code: code,
+					},
+				});
+				if (res.message) {
+					const existingCodes = new Set((this.items || []).map((it) => it.item_code));
+					const newItems = res.message.filter((it) => !existingCodes.has(it.item_code));
+					this.items = (this.items || []).concat(newItems);
+				}
+			} catch (e) {
+				console.error("Failed to fetch variants", e);
+			}
+		},
 		updateFiltredItems() {
 			this.$nextTick(function () {
 				const values = [];
-                                Object.entries(this.filters).forEach(([, value]) => {
+				Object.entries(this.filters).forEach(([key, value]) => {
 					if (value) {
 						values.push(value);
 					}
@@ -189,41 +159,7 @@ export default {
 				}
 			});
 		},
-		async fetchVariantRate(item) {
-			if (!this.pos_profile) {
-				return;
-			}
-			try {
-				const res = await frappe.call({
-					method: "posawesome.posawesome.api.items.get_item_detail",
-					args: {
-						warehouse: this.pos_profile.warehouse,
-						price_list: this.pos_profile.selling_price_list,
-						company: this.pos_profile.company,
-						item: JSON.stringify({
-							item_code: item.item_code,
-							pos_profile: this.pos_profile.name,
-							qty: item.qty || 1,
-							uom: item.uom || item.stock_uom,
-							doctype: "Sales Invoice",
-						}),
-					},
-				});
-                                if (res.message) {
-                                        const data = res.message;
-                                        item.rate = data.price_list_rate;
-                                        item.price_list_rate = data.price_list_rate;
-                                        item.base_rate = data.price_list_rate;
-                                        item.base_price_list_rate = data.price_list_rate;
-                                        item.currency = data.currency || data.price_list_currency || this.pos_profile.currency;
-                                        this.applyCurrencyConversionToItem(item);
-                                }
-			} catch (e) {
-				console.error("Failed to fetch variant rate", e);
-			}
-		},
-		async add_item(item) {
-			await this.fetchVariantRate(item);
+		add_item(item) {
 			this.eventBus.emit("add_item", item);
 			this.close_dialog();
 		},
@@ -235,7 +171,6 @@ export default {
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
-			this.pos_profile = profile || null;
 			if (!this.items || this.items.length === 0) {
 				await this.fetchVariants(item.item_code, profile);
 			}
@@ -249,4 +184,3 @@ export default {
 	},
 };
 </script>
-
