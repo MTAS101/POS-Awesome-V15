@@ -132,7 +132,7 @@ export default {
 				});
 				if (res.message) {
 					const itemsMap = {};
-					(this.items || []).forEach((it) => {
+					(this.variants || []).forEach((it) => {
 						itemsMap[it.item_code] = it;
 					});
 					res.message.forEach((it) => {
@@ -142,12 +142,36 @@ export default {
 						if (itemsMap[it.item_code]) {
 							Object.assign(itemsMap[it.item_code], it);
 						} else {
-							this.items = this.items || [];
-							this.items.push(it);
+							this.variants.push(it);
+							itemsMap[it.item_code] = it;
 						}
 					});
-					// Force array reactivity so UI updates with new prices
-					this.items = [...this.items];
+
+					// If any variant lacks rate information, fetch it directly
+					await Promise.all(
+						this.variants.map(async (v) => {
+							if (!v.rate) {
+								try {
+									const r = await frappe.call({
+										method: "posawesome.posawesome.api.items.get_price_for_uom",
+										args: {
+											item_code: v.item_code,
+											price_list: list,
+											uom: v.stock_uom,
+										},
+									});
+									if (r.message) {
+										v.rate = r.message;
+										v.price_list_rate = r.message;
+									}
+								} catch (err) {
+									console.error("Failed to fetch price", err);
+								}
+							}
+						}),
+					);
+
+					this.variants = [...this.variants];
 				}
 			} catch (e) {
 				console.error("Failed to fetch variants", e);
