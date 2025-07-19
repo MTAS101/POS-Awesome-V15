@@ -2,12 +2,14 @@ import globals from "globals";
 import pluginJs from "@eslint/js";
 import pluginVue from "eslint-plugin-vue";
 import pluginVuetify from "eslint-plugin-vuetify";
+import vueParser from "vue-eslint-parser";
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
   {
     files: ["**/*.{js,mjs,cjs,vue}"],
     languageOptions: {
+      parser: vueParser,
       parserOptions: { ecmaVersion: 2020, sourceType: "module" },
       globals: globals.browser,
     },
