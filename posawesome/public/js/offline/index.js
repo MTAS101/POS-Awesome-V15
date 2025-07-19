@@ -1,7 +1,15 @@
 // Main entry point - re-exports all functions for backward compatibility
 
 // Core exports
-export { db, initPromise, persist, addToPersistQueue, checkDbHealth } from "./core.js";
+export {
+	db,
+	initPromise,
+	persist,
+	addToPersistQueue,
+	checkDbHealth,
+	initPersistWorker,
+	terminatePersistWorker,
+} from "./core.js";
 
 // Cache exports
 export {

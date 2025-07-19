@@ -26,7 +26,8 @@ export async function checkDbHealth() {
 
 let persistWorker = null;
 
-if (typeof Worker !== "undefined") {
+export function initPersistWorker() {
+	if (persistWorker || typeof Worker === "undefined") return;
 	try {
 		// Load the worker without a query string so the service worker
 		// can serve the cached version when offline.
@@ -37,6 +38,20 @@ if (typeof Worker !== "undefined") {
 		persistWorker = null;
 	}
 }
+
+export function terminatePersistWorker() {
+	if (persistWorker) {
+		try {
+			persistWorker.terminate();
+		} catch (e) {
+			console.error("Failed to terminate persist worker", e);
+		}
+		persistWorker = null;
+	}
+}
+
+// Initialize worker immediately
+initPersistWorker();
 
 // Persist queue for batching operations
 const persistQueue = {};

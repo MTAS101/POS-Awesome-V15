@@ -1,4 +1,4 @@
-import { db, persist, checkDbHealth } from "./core.js";
+import { db, persist, checkDbHealth, terminatePersistWorker, initPersistWorker } from "./core.js";
 import { getAllByCursor } from "./db-utils.js";
 import Dexie from "dexie";
 
@@ -217,11 +217,13 @@ export function purgeOldQueueEntries(limit = MAX_QUEUE_ITEMS) {
 export async function clearAllCache() {
 	try {
 		await checkDbHealth();
+		terminatePersistWorker();
 		if (db.isOpen()) {
 			await db.close();
 		}
 		await Dexie.delete("posawesome_offline");
 		await db.open();
+		initPersistWorker();
 	} catch (e) {
 		console.error("Failed to clear IndexedDB cache", e);
 	}
@@ -257,6 +259,7 @@ export async function clearAllCache() {
 
 // Faster cache clearing without reopening the database
 export async function forceClearAllCache() {
+	terminatePersistWorker();
 	if (typeof localStorage !== "undefined") {
 		Object.keys(localStorage).forEach((key) => {
 			if (key.startsWith("posa_")) {
@@ -288,6 +291,7 @@ export async function forceClearAllCache() {
 	// Delete the IndexedDB database in the background
 	try {
 		await Dexie.delete("posawesome_offline");
+		initPersistWorker();
 	} catch (e) {
 		console.error("Failed to clear IndexedDB cache", e);
 	}
