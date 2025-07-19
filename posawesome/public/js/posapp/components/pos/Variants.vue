@@ -56,7 +56,7 @@
 											></v-card-text>
 										</v-img>
 										<v-card-text class="text--primary pa-1">
-											<div class="text-caption text-primary accent-3">
+                                                                               <div class="text-caption text-primary">
 												{{ item.rate || 0 }} {{ item.currency || "" }}
 											</div>
 										</v-card-text>
@@ -79,6 +79,7 @@ export default {
 		items: null,
 		filters: {},
 		filterdItems: [],
+		pos_profile: null,
 	}),
 
 	computed: {
@@ -130,7 +131,7 @@ export default {
 		updateFiltredItems() {
 			this.$nextTick(function () {
 				const values = [];
-				Object.entries(this.filters).forEach(([key, value]) => {
+                                Object.entries(this.filters).forEach(([, value]) => {
 					if (value) {
 						values.push(value);
 					}
@@ -159,7 +160,40 @@ export default {
 				}
 			});
 		},
-		add_item(item) {
+		async fetchVariantRate(item) {
+			if (!this.pos_profile) {
+				return;
+			}
+			try {
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_item_detail",
+					args: {
+						warehouse: this.pos_profile.warehouse,
+						price_list: this.pos_profile.selling_price_list,
+						company: this.pos_profile.company,
+						item: JSON.stringify({
+							item_code: item.item_code,
+							pos_profile: this.pos_profile.name,
+							qty: item.qty || 1,
+							uom: item.uom || item.stock_uom,
+							doctype: "Sales Invoice",
+						}),
+					},
+				});
+				if (res.message) {
+					const data = res.message;
+					item.rate = data.price_list_rate;
+					item.price_list_rate = data.price_list_rate;
+					item.base_rate = data.price_list_rate;
+					item.base_price_list_rate = data.price_list_rate;
+					item.currency = data.currency || data.price_list_currency || this.pos_profile.currency;
+				}
+			} catch (e) {
+				console.error("Failed to fetch variant rate", e);
+			}
+		},
+		async add_item(item) {
+			await this.fetchVariantRate(item);
 			this.eventBus.emit("add_item", item);
 			this.close_dialog();
 		},
@@ -171,6 +205,7 @@ export default {
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
+			this.pos_profile = profile || null;
 			if (!this.items || this.items.length === 0) {
 				await this.fetchVariants(item.item_code, profile);
 			}
