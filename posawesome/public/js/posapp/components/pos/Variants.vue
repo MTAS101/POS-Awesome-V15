@@ -125,6 +125,10 @@ export default {
 				if (!Array.isArray(this.variants)) {
 					this.variants = [];
 				}
+				const itemsMap = {};
+				this.variants.forEach((it) => {
+					itemsMap[it.item_code] = it;
+				});
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_item_variants",
 					args: {
@@ -135,7 +139,7 @@ export default {
 					},
 				});
 				if (res.message) {
-					this.variants = res.message.map((it) => {
+					res.message.forEach((it) => {
 						if (it.price_list_rate != null) {
 							it.rate = it.price_list_rate;
 						}
@@ -143,7 +147,6 @@ export default {
 							Object.assign(itemsMap[it.item_code], it);
 						} else {
 							this.variants.push(it);
-							itemsMap[it.item_code] = it;
 						}
 					});
 
