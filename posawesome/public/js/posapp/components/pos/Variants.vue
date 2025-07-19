@@ -57,14 +57,10 @@
 										</v-img>
 										<v-card-text class="text--primary pa-1">
 											<div class="text-caption text-primary accent-3">
-												{{
-													currencySymbol(
-														item.currency ||
-															(posProfile && posProfile.currency) ||
-															"",
-													)
-												}}
 												{{ formatCurrency(item.price_list_rate || item.rate || 0) }}
+												{{
+													item.currency || (posProfile && posProfile.currency) || ""
+												}}
 											</div>
 										</v-card-text>
 									</v-card>
