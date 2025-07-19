@@ -117,42 +117,31 @@ export default {
 		formatCurrency(value) {
 			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
 		},
-		async fetchVariants(code, profile, priceList) {
-			try {
-				const posProfile = profile || this.posProfile || {};
-				const list = priceList || this.priceList || posProfile.selling_price_list;
-				const res = await frappe.call({
-					method: "posawesome.posawesome.api.items.get_item_variants",
-					args: {
-						pos_profile: JSON.stringify(posProfile),
-						parent_item_code: code,
-						price_list: list,
-						customer: posProfile.customer,
-					},
-				});
-				if (res.message) {
-					const itemsMap = {};
-					(this.items || []).forEach((it) => {
-						itemsMap[it.item_code] = it;
-					});
-					res.message.forEach((it) => {
-						if (it.price_list_rate != null) {
-							it.rate = it.price_list_rate;
-						}
-						if (itemsMap[it.item_code]) {
-							Object.assign(itemsMap[it.item_code], it);
-						} else {
-							this.items = this.items || [];
-							this.items.push(it);
-						}
-					});
-					// Force array reactivity so UI updates with new prices
-					this.items = [...this.items];
-				}
-			} catch (e) {
-				console.error("Failed to fetch variants", e);
-			}
-		},
+               async fetchVariants(code, profile, priceList) {
+                       try {
+                               const posProfile = profile || this.posProfile || {};
+                               const list = priceList || this.priceList || posProfile.selling_price_list;
+                               const res = await frappe.call({
+                                       method: "posawesome.posawesome.api.items.get_item_variants",
+                                       args: {
+                                               pos_profile: JSON.stringify(posProfile),
+                                               parent_item_code: code,
+                                               price_list: list,
+                                               customer: posProfile.customer,
+                                       },
+                               });
+                               if (res.message) {
+                                       this.items = res.message.map((it) => {
+                                               if (it.price_list_rate != null) {
+                                                       it.rate = it.price_list_rate;
+                                               }
+                                               return it;
+                                       });
+                               }
+                       } catch (e) {
+                               console.error("Failed to fetch variants", e);
+                       }
+               },
 		updateFiltredItems() {
 			this.$nextTick(function () {
 				const values = [];
@@ -192,24 +181,18 @@ export default {
 	},
 
 	created: function () {
-		this.eventBus.on("open_variants_model", async (item, items, profile, priceList) => {
-			this.variantsDialog = true;
-			this.posProfile = profile || null;
-			this.priceList = priceList || null;
-			this.parentItem = item || null;
-			this.items = Array.isArray(items) ? items : [];
-			this.filters = {};
-			await this.fetchVariants(item.item_code, profile, priceList);
-			// Ensure rate is populated for all variant items
-			this.items.forEach((it) => {
-				if (it.price_list_rate != null) {
-					it.rate = it.price_list_rate;
-				}
-			});
-			this.$nextTick(() => {
-				this.filterdItems = this.variantsItems;
-			});
-		});
+               this.eventBus.on("open_variants_model", async (item, _items, profile, priceList) => {
+                       this.variantsDialog = true;
+                       this.posProfile = profile || null;
+                       this.priceList = priceList || null;
+                       this.parentItem = item || null;
+                       this.filters = {};
+                       this.items = [];
+                       await this.fetchVariants(item.item_code, profile, priceList);
+                       this.$nextTick(() => {
+                               this.filterdItems = this.variantsItems;
+                       });
+               });
 	},
 	beforeUnmount() {
 		this.eventBus.off("open_variants_model");
