@@ -21,17 +21,16 @@
 									:value="value.attribute_value"
 									variant="outlined"
 									label
-									@click="updateFiltredItems"
+									@click="applyFilters"
+									>{{ value.attribute_value }}</v-chip
 								>
-									{{ value.attribute_value }}
-								</v-chip>
 							</v-chip-group>
 							<v-divider class="p-0 m-0"></v-divider>
 						</div>
 						<div>
 							<v-row density="default" class="overflow-y-auto" style="max-height: 500px">
 								<v-col
-									v-for="(item, idx) in filterdItems"
+									v-for="(item, idx) in filteredVariants"
 									:key="idx"
 									xl="2"
 									lg="3"
@@ -57,10 +56,7 @@
 										</v-img>
 										<v-card-text class="text--primary pa-1">
 											<div class="text-caption text-primary accent-3">
-												{{ formatCurrency(item.price_list_rate || item.rate || 0) }}
-												{{
-													item.currency || (posProfile && posProfile.currency) || ""
-												}}
+												{{ displayPrice(item) }}
 											</div>
 										</v-card-text>
 									</v-card>
@@ -79,43 +75,54 @@ import format from "../../format";
 
 export default {
 	mixins: [format],
-	data: () => ({
-		variantsDialog: false,
-		parentItem: null,
-		items: null,
-		filters: {},
-		filterdItems: [],
-		posProfile: null,
-		priceList: null,
-	}),
-
-	computed: {
-		variantsItems() {
-			if (!this.parentItem || !Array.isArray(this.items)) {
-				return [];
-			}
-			return this.items.filter((item) => item.variant_of == this.parentItem.item_code);
-		},
+	data() {
+		return {
+			variantsDialog: false,
+			parentItem: null,
+			variants: [],
+			filters: {},
+			filteredVariants: [],
+			posProfile: null,
+			priceList: null,
+		};
 	},
-
 	watch: {
-		items: {
-			handler() {
-				this.filterdItems = this.variantsItems;
-			},
+		filters: {
+			handler: "applyFilters",
 			deep: true,
 		},
+		variants() {
+			this.applyFilters();
+		},
 		parentItem() {
-			this.filterdItems = this.variantsItems;
+			this.applyFilters();
 		},
 	},
-
 	methods: {
 		close_dialog() {
 			this.variantsDialog = false;
 		},
-		formatCurrency(value) {
-			return this.$options.mixins[0].methods.formatCurrency.call(this, value, 2);
+		displayPrice(item) {
+			const currency = item.currency || (this.posProfile && this.posProfile.currency) || "";
+			const rate = item.rate != null ? item.rate : item.price_list_rate || 0;
+			return this.currencySymbol(currency) + this.formatCurrency(rate);
+		},
+		applyFilters() {
+			if (!this.parentItem) {
+				this.filteredVariants = [];
+				return;
+			}
+			const activeFilters = Object.entries(this.filters).filter(([k, v]) => v);
+			if (!activeFilters.length) {
+				this.filteredVariants = [...this.variants];
+				return;
+			}
+			this.filteredVariants = this.variants.filter((it) => {
+				return activeFilters.every(([key, val]) => {
+					const attr = it.item_attributes.find((a) => a.attribute === key);
+					return attr && attr.attribute_value === val;
+				});
+			});
 		},
 		async fetchVariants(code, profile, priceList) {
 			try {
@@ -131,84 +138,35 @@ export default {
 					},
 				});
 				if (res.message) {
-					const itemsMap = {};
-					(this.items || []).forEach((it) => {
-						itemsMap[it.item_code] = it;
-					});
-					res.message.forEach((it) => {
+					this.variants = res.message.map((it) => {
 						if (it.price_list_rate != null) {
 							it.rate = it.price_list_rate;
 						}
-						if (itemsMap[it.item_code]) {
-							Object.assign(itemsMap[it.item_code], it);
-						} else {
-							this.items = this.items || [];
-							this.items.push(it);
-						}
+						return it;
 					});
-					// Force array reactivity so UI updates with new prices
-					this.items = [...this.items];
+					this.variants = [...this.variants];
+					this.applyFilters();
 				}
 			} catch (e) {
 				console.error("Failed to fetch variants", e);
 			}
-		},
-		updateFiltredItems() {
-			this.$nextTick(function () {
-				const values = [];
-				Object.entries(this.filters).forEach(([key, value]) => {
-					if (value) {
-						values.push(value);
-					}
-				});
-
-				if (!values.length) {
-					this.filterdItems = this.variantsItems;
-				} else {
-					const itemsList = [];
-					this.filterdItems = [];
-					this.variantsItems.forEach((item) => {
-						let apply = true;
-						item.item_attributes.forEach((attr) => {
-							if (
-								this.filters[attr.attribute] &&
-								this.filters[attr.attribute] != attr.attribute_value
-							) {
-								apply = false;
-							}
-						});
-						if (apply && !itemsList.includes(item.item_code)) {
-							this.filterdItems.push(item);
-							itemsList.push(item.item_code);
-						}
-					});
-				}
-			});
 		},
 		add_item(item) {
 			this.eventBus.emit("add_item", item);
 			this.close_dialog();
 		},
 	},
-
-	created: function () {
+	created() {
 		this.eventBus.on("open_variants_model", async (item, items, profile, priceList) => {
 			this.variantsDialog = true;
 			this.posProfile = profile || null;
 			this.priceList = priceList || null;
 			this.parentItem = item || null;
-			this.items = Array.isArray(items) ? items : [];
+			this.variants = Array.isArray(items) ? items : [];
 			this.filters = {};
-			await this.fetchVariants(item.item_code, profile, priceList);
-			// Ensure rate is populated for all variant items
-			this.items.forEach((it) => {
-				if (it.price_list_rate != null) {
-					it.rate = it.price_list_rate;
-				}
-			});
-			this.$nextTick(() => {
-				this.filterdItems = this.variantsItems;
-			});
+			if (item) {
+				await this.fetchVariants(item.item_code, profile, priceList);
+			}
 		});
 	},
 	beforeUnmount() {
