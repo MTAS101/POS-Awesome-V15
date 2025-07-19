@@ -2,6 +2,9 @@ import { db, persist, checkDbHealth, terminatePersistWorker, initPersistWorker }
 import { getAllByCursor } from "./db-utils.js";
 import Dexie from "dexie";
 
+// Increment this number whenever the cache data structure changes
+export const CACHE_VERSION = 1;
+
 export const MAX_QUEUE_ITEMS = 1000;
 
 // Memory cache object
@@ -23,6 +26,8 @@ export const memory = {
 	price_list_cache: {},
 	item_details_cache: {},
 	tax_template_cache: {},
+	// Track the current cache schema version
+	cache_version: CACHE_VERSION,
 	tax_inclusive: false,
 	manual_offline: false,
 };
@@ -48,6 +53,21 @@ export const memoryInitPromise = (async () => {
 					}
 				}
 			}
+		}
+
+		// Verify cache version and clear outdated caches
+		const versionEntry = await db.table("keyval").get("cache_version");
+		let storedVersion = versionEntry ? versionEntry.value : null;
+		if (!storedVersion && typeof localStorage !== "undefined") {
+			const v = localStorage.getItem("posa_cache_version");
+			if (v) storedVersion = parseInt(v, 10);
+		}
+		if (storedVersion !== CACHE_VERSION) {
+			await forceClearAllCache();
+			memory.cache_version = CACHE_VERSION;
+			persist("cache_version", CACHE_VERSION);
+		} else {
+			memory.cache_version = storedVersion || CACHE_VERSION;
 		}
 	} catch (e) {
 		console.error("Failed to initialize memory from DB", e);
@@ -253,8 +273,11 @@ export async function clearAllCache() {
 	memory.price_list_cache = {};
 	memory.item_details_cache = {};
 	memory.tax_template_cache = {};
+	memory.cache_version = CACHE_VERSION;
 	memory.tax_inclusive = false;
 	memory.manual_offline = false;
+
+	persist("cache_version", CACHE_VERSION);
 }
 
 // Faster cache clearing without reopening the database
@@ -285,6 +308,7 @@ export async function forceClearAllCache() {
 	memory.price_list_cache = {};
 	memory.item_details_cache = {};
 	memory.tax_template_cache = {};
+	memory.cache_version = CACHE_VERSION;
 	memory.tax_inclusive = false;
 	memory.manual_offline = false;
 
@@ -295,6 +319,8 @@ export async function forceClearAllCache() {
 	} catch (e) {
 		console.error("Failed to clear IndexedDB cache", e);
 	}
+
+	persist("cache_version", CACHE_VERSION);
 }
 
 /**
