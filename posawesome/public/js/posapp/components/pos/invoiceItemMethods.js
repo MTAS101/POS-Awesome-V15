@@ -1666,10 +1666,10 @@ export default {
 		return calcItemPrice(item, this);
 	},
 
-	// Update UOM (unit of measure) for an item and recalculate prices
-	calc_uom(item, value) {
-		return calcUom(item, value, this);
-	},
+       // Update UOM (unit of measure) for an item and recalculate prices
+       async calc_uom(item, value) {
+               return await calcUom(item, value, this);
+       },
 
 	// Calculate stock quantity for an item
 	calc_stock_qty(item, value) {
