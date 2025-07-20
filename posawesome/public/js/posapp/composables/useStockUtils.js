@@ -1,9 +1,9 @@
 import { ref } from "vue";
+import { isOffline, getCachedPriceListItems } from "../../offline/index.js";
 
 export function useStockUtils() {
-       // Calculate UOM conversion and update item rates
-       const calcUom = async (item, value, context) => {
-
+	// Calculate UOM conversion and update item rates
+	const calcUom = async (item, value, context) => {
 		let new_uom = item.item_uoms.find((element) => element.uom == value);
 
 		// try cached uoms when not found on item
@@ -40,7 +40,7 @@ export function useStockUtils() {
 		const conversion_ratio = item.conversion_factor / old_conversion_factor;
 
 		// Try to fetch rate for this UOM from price list
-               const priceList = context.get_price_list ? context.get_price_list() : null;
+		const priceList = context.get_price_list ? context.get_price_list() : null;
 		let uomRate = null;
 		if (priceList) {
 			const cached = getCachedPriceListItems(priceList) || [];
@@ -73,20 +73,20 @@ export function useStockUtils() {
 				item.base_rate = uomRate;
 			}
 
-                       if (context.selected_currency !== (context.price_list_currency || context.pos_profile.currency)) {
-                               item.price_list_rate = context.flt(
-                                       item.base_price_list_rate * context.exchange_rate,
-                                       context.currency_precision,
-                               );
-                               item.rate = context.flt(item.base_rate * context.exchange_rate, context.currency_precision);
-                       } else {
-                               item.price_list_rate = item.base_price_list_rate;
-                               item.rate = item.base_rate;
-                       }
+			if (context.selected_currency !== (context.price_list_currency || context.pos_profile.currency)) {
+				item.price_list_rate = context.flt(
+					item.base_price_list_rate * context.exchange_rate,
+					context.currency_precision,
+				);
+				item.rate = context.flt(item.base_rate * context.exchange_rate, context.currency_precision);
+			} else {
+				item.price_list_rate = item.base_price_list_rate;
+				item.rate = item.base_rate;
+			}
 
-                       if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
-                       if (context.$forceUpdate) context.$forceUpdate();
-                       return;
+			if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+			if (context.$forceUpdate) context.$forceUpdate();
+			return;
 		}
 
 		// Reset discount if not offer
@@ -124,7 +124,10 @@ export function useStockUtils() {
 				// Convert to selected currency
 				const baseCurrency = context.price_list_currency || context.pos_profile.currency;
 				if (context.selected_currency !== baseCurrency) {
-					item.rate = context.flt(converted_rate / context.exchange_rate, context.currency_precision);
+					item.rate = context.flt(
+						converted_rate / context.exchange_rate,
+						context.currency_precision,
+					);
 					item.price_list_rate = item.rate;
 				} else {
 					item.rate = converted_rate;
@@ -167,7 +170,10 @@ export function useStockUtils() {
 						base_discount / context.exchange_rate,
 						context.currency_precision,
 					);
-					item.rate = context.flt(item.base_rate / context.exchange_rate, context.currency_precision);
+					item.rate = context.flt(
+						item.base_rate / context.exchange_rate,
+						context.currency_precision,
+					);
 				} else {
 					item.price_list_rate = updated_base_price;
 					item.discount_amount = base_discount;
