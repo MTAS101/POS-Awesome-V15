@@ -122,6 +122,10 @@ export default {
 		back_to_invoice() {
 			this.eventBus.emit("show_offers", "false");
 		},
+		toggleOfferApplied(offer) {
+			offer.offer_applied = !offer.offer_applied;
+			this.forceUpdateItem();
+		},
 		forceUpdateItem() {
 			let list_offers = [];
 			list_offers = [...this.pos_offers];
