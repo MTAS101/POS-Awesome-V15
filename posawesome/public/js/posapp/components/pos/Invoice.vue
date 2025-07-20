@@ -254,7 +254,7 @@ import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
 import invoiceItemMethods from "./invoiceItemMethods";
 import invoiceComputed from "./invoiceComputed";
-import invoiceWatchers from "./invoiceWatchers"
+import invoiceWatchers from "./invoiceWatchers";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
@@ -962,6 +962,7 @@ export default {
 				this.remove_item(item);
 			}
 			this.calc_stock_qty(item, item.qty);
+			this.handelOffers();
 			this.$forceUpdate();
 		},
 
@@ -973,6 +974,7 @@ export default {
 				this.remove_item(item);
 			}
 			this.calc_stock_qty(item, item.qty);
+			this.handelOffers();
 			this.$forceUpdate();
 		},
 
@@ -1141,7 +1143,7 @@ export default {
 		this.eventBus.on("reset_posting_date", () => {
 			this.posting_date = frappe.datetime.nowdate();
 		});
-               this.eventBus.on("calc_uom", this.calc_uom);
+		this.eventBus.on("calc_uom", this.calc_uom);
 		this.eventBus.on("item-drag-start", (item) => {
 			this.showDropFeedback(true);
 		});
