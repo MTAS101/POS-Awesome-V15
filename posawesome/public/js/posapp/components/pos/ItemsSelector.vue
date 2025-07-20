@@ -976,13 +976,7 @@ export default {
 					title: __("This is an item template. Please choose a variant."),
 					color: "warning",
 				});
-                               console.log('sending profile', this.$root.pos_profile);
-                               this.eventBus.emit(
-                                       "open_variants_model",
-                                       item,
-                                       this.items,
-                                       this.$root.pos_profile
-                               );
+				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile);
 			} else {
 				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
 					this.eventBus.emit("show_message", {
