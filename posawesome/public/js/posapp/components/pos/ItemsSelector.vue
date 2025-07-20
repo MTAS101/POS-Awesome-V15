@@ -338,6 +338,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
+import { ensurePosProfile } from "../../../utils/pos_profile.js";
 import {
 	saveItemUOMs,
 	getItemUOMs,
@@ -976,13 +977,8 @@ export default {
 					title: __("This is an item template. Please choose a variant."),
 					color: "warning",
 				});
-                               console.log('sending profile', this.pos_profile);
-                               this.eventBus.emit(
-                                       "open_variants_model",
-                                       item,
-                                       this.items,
-                                       this.pos_profile
-                               );
+				console.log("sending profile", this.pos_profile);
+				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile);
 			} else {
 				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
 					this.eventBus.emit("show_message", {
@@ -2006,7 +2002,11 @@ export default {
 		});
 	},
 
-	mounted() {
+	async mounted() {
+		const profile = await ensurePosProfile();
+		if (!this.pos_profile) {
+			this.pos_profile = profile;
+		}
 		this.scan_barcoud();
 		// grid layout adjusts automatically with CSS, set items per page based on device size
 		this.adjustItemsPerPage(this.windowWidth, this.windowHeight);
