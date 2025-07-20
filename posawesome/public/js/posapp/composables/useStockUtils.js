@@ -85,6 +85,7 @@ export function useStockUtils() {
 			}
 
 			if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+			if (context.handelOffers) context.handelOffers();
 			if (context.$forceUpdate) context.$forceUpdate();
 			return;
 		}
@@ -206,12 +207,14 @@ export function useStockUtils() {
 
 		// Update item details
 		if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+		if (context.handelOffers) context.handelOffers();
 		if (context.forceUpdate) context.forceUpdate();
 	};
 
 	// Calculate stock quantity for an item
-	const calcStockQty = (item, value) => {
+	const calcStockQty = (item, value, context) => {
 		item.stock_qty = item.conversion_factor * value;
+		if (context && context.handelOffers) context.handelOffers();
 	};
 
 	return {

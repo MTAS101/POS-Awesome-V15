@@ -143,9 +143,10 @@ export function useDiscounts() {
 			}
 
 			// Update stock calculations and force UI update
-			if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
-			if (context.forceUpdate) context.forceUpdate();
-		} catch (error) {
+                        if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+                        if (context.handelOffers) context.handelOffers();
+                        if (context.forceUpdate) context.forceUpdate();
+                } catch (error) {
 			console.error("Error calculating prices:", error);
 			context.eventBus.emit("show_message", {
 				title: __("Error calculating prices"),
