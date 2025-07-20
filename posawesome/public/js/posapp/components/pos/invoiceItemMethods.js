@@ -1668,12 +1668,7 @@ export default {
 
        // Update UOM (unit of measure) for an item and recalculate prices
        async calc_uom(item, value) {
-               await calcUom(item, value, this);
-               if (this.apply_discounts) {
-                       this.apply_discounts();
-               } else if (this.handelOffers) {
-                       this.handelOffers();
-               }
+               return await calcUom(item, value, this);
        },
 
 	// Calculate stock quantity for an item
