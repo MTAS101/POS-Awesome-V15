@@ -40,7 +40,7 @@ export function useStockUtils() {
 		const conversion_ratio = item.conversion_factor / old_conversion_factor;
 
 		// Try to fetch rate for this UOM from price list
-		const priceList = this.get_price_list();
+               const priceList = context.get_price_list ? context.get_price_list() : null;
 		let uomRate = null;
 		if (priceList) {
 			const cached = getCachedPriceListItems(priceList) || [];
@@ -73,20 +73,20 @@ export function useStockUtils() {
 				item.base_rate = uomRate;
 			}
 
-			if (this.selected_currency !== (this.price_list_currency || this.pos_profile.currency)) {
-				item.price_list_rate = this.flt(
-					item.base_price_list_rate * this.exchange_rate,
-					this.currency_precision,
-				);
-				item.rate = this.flt(item.base_rate * this.exchange_rate, this.currency_precision);
-			} else {
-				item.price_list_rate = item.base_price_list_rate;
-				item.rate = item.base_rate;
-			}
+                       if (context.selected_currency !== (context.price_list_currency || context.pos_profile.currency)) {
+                               item.price_list_rate = context.flt(
+                                       item.base_price_list_rate * context.exchange_rate,
+                                       context.currency_precision,
+                               );
+                               item.rate = context.flt(item.base_rate * context.exchange_rate, context.currency_precision);
+                       } else {
+                               item.price_list_rate = item.base_price_list_rate;
+                               item.rate = item.base_rate;
+                       }
 
-			this.calc_stock_qty(item, item.qty);
-			this.$forceUpdate();
-			return;
+                       if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+                       if (context.$forceUpdate) context.$forceUpdate();
+                       return;
 		}
 
 		// Reset discount if not offer
