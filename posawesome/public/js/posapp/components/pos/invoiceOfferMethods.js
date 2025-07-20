@@ -15,10 +15,6 @@ export default {
 	},
 
 	handelOffers() {
-		console.debug("handelOffers called", {
-			items: this.items.length,
-			offers: this.posOffers.length,
-		});
 		const offers = [];
 		this.posOffers.forEach((offer) => {
 			if (offer.apply_on === "Item Code") {
@@ -91,11 +87,6 @@ export default {
 	},
 
 	checkQtyAnountOffer(offer, qty, amount) {
-		console.debug("checkQtyAnountOffer", {
-			offer: offer.name,
-			qty,
-			amount,
-		});
 		let min_qty = false;
 		let max_qty = false;
 		let min_amt = false;
@@ -103,28 +94,28 @@ export default {
 		const applys = [];
 
 		if (offer.min_qty || offer.min_qty == 0) {
-			if (Number(qty) >= Number(offer.min_qty)) {
+			if (qty >= offer.min_qty) {
 				min_qty = true;
 			}
 			applys.push(min_qty);
 		}
 
 		if (offer.max_qty > 0) {
-			if (Number(qty) <= Number(offer.max_qty)) {
+			if (qty <= offer.max_qty) {
 				max_qty = true;
 			}
 			applys.push(max_qty);
 		}
 
 		if (offer.min_amt > 0) {
-			if (Number(amount) >= Number(offer.min_amt)) {
+			if (amount >= offer.min_amt) {
 				min_amt = true;
 			}
 			applys.push(min_amt);
 		}
 
 		if (offer.max_amt > 0) {
-			if (Number(amount) <= Number(offer.max_amt)) {
+			if (amount <= offer.max_amt) {
 				max_amt = true;
 			}
 			applys.push(max_amt);
@@ -137,7 +128,6 @@ export default {
 			apply: apply,
 			conditions: { min_qty, max_qty, min_amt, max_amt },
 		};
-		console.debug("checkQtyAnountOffer result", res);
 		return res;
 	},
 
@@ -161,11 +151,6 @@ export default {
 		if (offer.apply_on === "Item Code") {
 			if (this.checkOfferCoupon(offer)) {
 				this.items.forEach((item) => {
-					console.debug("evaluating item for offer", {
-						offer: offer.name,
-						item: item.item_code,
-						qty: item.stock_qty,
-					});
 					if (!item.posa_is_offer && item.item_code === offer.item) {
 						const items = [];
 						if (
@@ -180,10 +165,6 @@ export default {
 								item.stock_qty * item.price_list_rate,
 							);
 							if (res.apply) {
-								console.debug("offer conditions met", {
-									offer: offer.name,
-									item: item.item_code,
-								});
 								items.push(item.posa_row_id);
 								offer.items = items;
 								apply_offer = offer;
@@ -220,10 +201,6 @@ export default {
 				if (total_count || total_amount) {
 					const res = this.checkQtyAnountOffer(offer, total_count, total_amount);
 					if (res.apply) {
-						console.debug("group offer matched", {
-							offer: offer.name,
-							items: items.length,
-						});
 						offer.items = items;
 						apply_offer = offer;
 					}
@@ -257,10 +234,6 @@ export default {
 				if (total_count || total_amount) {
 					const res = this.checkQtyAnountOffer(offer, total_count, total_amount);
 					if (res.apply) {
-						console.debug("brand offer matched", {
-							offer: offer.name,
-							items: items.length,
-						});
 						offer.items = items;
 						apply_offer = offer;
 					}
@@ -285,10 +258,6 @@ export default {
 				if (total_count || total_amount) {
 					const res = this.checkQtyAnountOffer(offer, total_count, total_amount);
 					if (res.apply) {
-						console.debug("transaction offer matched", {
-							offer: offer.name,
-							itemCount: this.items.length,
-						});
 						this.items.forEach((item) => {
 							items.push(item.posa_row_id);
 						});
@@ -306,9 +275,6 @@ export default {
 	},
 
 	updateInvoiceOffers(offers) {
-		console.debug("updateInvoiceOffers", {
-			offers: offers.length,
-		});
 		this.posa_offers.forEach((invoiceOffer) => {
 			const existOffer = offers.find((offer) => invoiceOffer.row_id == offer.row_id);
 			if (!existOffer) {

@@ -29,7 +29,6 @@ export default {
 	items: {
 		deep: true,
 		handler(items) {
-			console.debug("items watcher triggered", items);
 			this.handelOffers();
 			this.$forceUpdate();
 		},
