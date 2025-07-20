@@ -203,13 +203,12 @@
 
 							<!-- Load More button at the bottom of results -->
 							<div class="text-center mt-3" v-if="has_more_invoices">
-								<v-btn
-									color="primary"
-									variant="text"
-									variant="outlined"
-									:loading="loading_more"
-									@click="load_more_invoices"
-								>
+                                                                <v-btn
+                                                                        color="primary"
+                                                                        variant="outlined"
+                                                                        :loading="loading_more"
+                                                                        @click="load_more_invoices"
+                                                                >
 									{{ __("Load More Invoices") }}
 								</v-btn>
 							</div>

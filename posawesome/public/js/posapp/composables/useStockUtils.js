@@ -1,8 +1,8 @@
 import { ref } from "vue";
 
 export function useStockUtils() {
-	// Calculate UOM conversion and update item rates
-	const calcUom = (item, value, context) => {
+       // Calculate UOM conversion and update item rates
+       const calcUom = async (item, value, context) => {
 
 		let new_uom = item.item_uoms.find((element) => element.uom == value);
 

@@ -184,7 +184,7 @@
 										item-title="uom"
 										item-value="uom"
 										hide-details
-										@update:model-value="calcUom(item, $event)"
+                                                                               @update:model-value="handleUomUpdate(item, $event)"
 										:disabled="
 											!!item.posa_is_replace ||
 											(isReturnInvoice && invoice_doc.return_against)
@@ -586,15 +586,19 @@ export default {
 			return false;
 		},
 	},
-	methods: {
-		onDragOverFromSelector(event) {
-			// Check if drag data is from item selector
-			const dragData = event.dataTransfer.types.includes("application/json");
+        methods: {
+                onDragOverFromSelector(event) {
+                        // Check if drag data is from item selector
+                        const dragData = event.dataTransfer.types.includes("application/json");
 			if (dragData) {
 				event.preventDefault();
 				event.dataTransfer.dropEffect = "copy";
 			}
-		},
+                },
+
+                async handleUomUpdate(item, value) {
+                        await this.calcUom(item, value);
+                },
 
 		onDragEnterFromSelector(event) {
 			this.$emit("show-drop-feedback", true);
