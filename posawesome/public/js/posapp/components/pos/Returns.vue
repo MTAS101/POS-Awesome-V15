@@ -9,7 +9,7 @@
 					<!-- Invoice ID and Date Range search -->
 					<v-row class="mb-2">
 						<v-col cols="12">
-							<v-alert dense type="info" text outlined v-if="!from_date && !to_date">
+							<v-alert density="compact" type="info" text variant="outlined" v-if="!from_date && !to_date">
 								<small>{{ __("Use date range to search for older invoices") }}</small>
 							</v-alert>
 						</v-col>
@@ -155,11 +155,11 @@
 							theme="dark"
 							@click="search_invoices"
 						>
-							<v-icon left>mdi-magnify</v-icon>
+							<v-icon start>mdi-magnify</v-icon>
 							{{ __("Search") }}
 						</v-btn>
 						<v-btn variant="text" class="ml-2" color="warning" theme="dark" @click="clear_search">
-							<v-icon left>mdi-refresh</v-icon>
+							<v-icon start>mdi-refresh</v-icon>
 							{{ __("Clear") }}
 						</v-btn>
 						<v-btn
@@ -205,8 +205,8 @@
 							<div class="text-center mt-3" v-if="has_more_invoices">
 								<v-btn
 									color="primary"
-									text
-									outlined
+									variant="text"
+									variant="outlined"
 									:loading="loading_more"
 									@click="load_more_invoices"
 								>

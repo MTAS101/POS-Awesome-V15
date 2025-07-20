@@ -322,7 +322,7 @@
 											v-model="method.amount"
 											type="number"
 											flat
-											@input="$forceUpdate()"
+											@update:model-value="$forceUpdate()"
 										></v-text-field>
 									</div>
 								</v-col>

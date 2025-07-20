@@ -1,7 +1,7 @@
 <template>
 	<v-navigation-drawer
 		v-model="drawerOpen"
-		:mini-variant="mini"
+		:rail="mini"
 		expand-on-hover
 		width="220"
 		:class="['drawer-custom', { 'drawer-visible': drawerOpen }]"
@@ -24,7 +24,7 @@
 
 		<v-divider />
 
-		<v-list dense nav>
+		<v-list density="compact" nav>
 			<v-list-item-group v-model="activeItem" active-class="active-item">
 				<v-list-item
 					v-for="(item, index) in items"
