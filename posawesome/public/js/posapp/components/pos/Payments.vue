@@ -737,7 +737,7 @@
 </template>
 
 <script>
-/* eslint-disable vue/no-dupe-keys */
+ 
 // Importing format mixin for currency and utility functions
 import format from "../../format";
 import {

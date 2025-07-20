@@ -52,31 +52,41 @@ import Variants from "./Variants.vue";
 import Returns from "./Returns.vue";
 import MpesaPayments from "./Mpesa-Payments.vue";
 import {
-	getCachedOffers,
-	saveOffers,
-	getOpeningStorage,
-	setOpeningStorage,
-	clearOpeningStorage,
-	initPromise,
-	checkDbHealth,
-	setTaxTemplate,
+       getOpeningStorage,
+       setOpeningStorage,
+       clearOpeningStorage,
+       initPromise,
+       checkDbHealth,
+       setTaxTemplate,
 } from "../../../offline/index.js";
+import { getCurrentInstance } from "vue";
+import { usePosShift } from "../../composables/usePosShift.js";
+import { useOffers } from "../../composables/useOffers.js";
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline/index.js";
-import { responsiveMixin } from "../../mixins/responsive.js";
+import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-	mixins: [responsiveMixin],
-	data: function () {
-		return {
-			dialog: false,
-			pos_profile: "",
-			pos_opening_shift: "",
-			payment: false,
-			offers: false,
-			coupons: false,
-		};
-	},
+       setup() {
+               const instance = getCurrentInstance();
+               const responsive = useResponsive();
+               const shift = usePosShift(() => {
+                       if (instance && instance.proxy) {
+                               instance.proxy.dialog = true;
+                       }
+               });
+               const offers = useOffers();
+               return { ...responsive, ...shift, ...offers };
+       },
+       data: function () {
+               return {
+                       dialog: false,
+                       
+                       payment: false,
+                       offers: false,
+                       coupons: false,
+               };
+       },
 
 	components: {
 		ItemsSelector,
@@ -95,164 +105,16 @@ export default {
 		SalesOrders,
 	},
 
-	methods: {
-		async check_opening_entry() {
-			await initPromise;
-			await checkDbHealth();
-			return frappe
-				.call("posawesome.posawesome.api.shifts.check_opening_shift", {
-					user: frappe.session.user,
-				})
-				.then((r) => {
-					if (r.message) {
-						this.pos_profile = r.message.pos_profile;
-						this.pos_opening_shift = r.message.pos_opening_shift;
-						this.get_offers(this.pos_profile.name);
-						if (this.pos_profile.taxes_and_charges) {
-							frappe.call({
-								method: "frappe.client.get",
-								args: {
-									doctype: "Sales Taxes and Charges Template",
-									name: this.pos_profile.taxes_and_charges,
-								},
-								callback: (res) => {
-									if (res.message) {
-										setTaxTemplate(this.pos_profile.taxes_and_charges, res.message);
-									}
-								},
-							});
-						}
-						this.eventBus.emit("register_pos_profile", r.message);
-						this.eventBus.emit("set_company", r.message.company);
-						try {
-							frappe.realtime.emit("pos_profile_registered");
-						} catch (e) {
-							console.warn("Realtime emit failed", e);
-						}
-						console.info("LoadPosProfile");
-						try {
-							setOpeningStorage(r.message);
-						} catch (e) {
-							console.error("Failed to cache opening data", e);
-						}
-					} else {
-						const data = getOpeningStorage();
-						if (data) {
-							this.pos_profile = data.pos_profile;
-							this.pos_opening_shift = data.pos_opening_shift;
-							this.get_offers(this.pos_profile.name);
-							this.eventBus.emit("register_pos_profile", data);
-							this.eventBus.emit("set_company", data.company);
-							try {
-								frappe.realtime.emit("pos_profile_registered");
-							} catch (e) {
-								console.warn("Realtime emit failed", e);
-							}
-							console.info("LoadPosProfile (cached)");
-							return;
-						}
-						this.create_opening_voucher();
-					}
-				})
-				.catch(() => {
-					const data = getOpeningStorage();
-					if (data) {
-						this.pos_profile = data.pos_profile;
-						this.pos_opening_shift = data.pos_opening_shift;
-						this.get_offers(this.pos_profile.name);
-						this.eventBus.emit("register_pos_profile", data);
-						this.eventBus.emit("set_company", data.company);
-						try {
-							frappe.realtime.emit("pos_profile_registered");
-						} catch (e) {
-							console.warn("Realtime emit failed", e);
-						}
-						console.info("LoadPosProfile (cached)");
-						return;
-					}
-					this.create_opening_voucher();
-				});
-		},
-		create_opening_voucher() {
-			this.dialog = true;
-		},
-		get_closing_data() {
-			return frappe
-				.call(
-					"posawesome.posawesome.doctype.pos_closing_shift.pos_closing_shift.make_closing_shift_from_opening",
-					{
-						opening_shift: this.pos_opening_shift,
-					},
-				)
-				.then((r) => {
-					if (r.message) {
-						this.eventBus.emit("open_ClosingDialog", r.message);
-					} else {
-						// console.log(r);
-					}
-				});
-		},
-		submit_closing_pos(data) {
-			frappe
-				.call(
-					"posawesome.posawesome.doctype.pos_closing_shift.pos_closing_shift.submit_closing_shift",
-					{
-						closing_shift: data,
-					},
-				)
-				.then((r) => {
-					if (r.message) {
-						// Clear the cached opening shift data
-						this.pos_opening_shift = null;
-						this.pos_profile = null;
-
-						// Clear from local storage
-						clearOpeningStorage();
-
-						this.eventBus.emit("show_message", {
-							title: `POS Shift Closed`,
-							color: "success",
-						});
-						this.check_opening_entry();
-					} else {
-						console.log(r);
-					}
-				});
-		},
-		get_offers(pos_profile) {
-			// Load cached offers if available
-			if (this.pos_profile && this.pos_profile.posa_local_storage) {
-				const cached = getCachedOffers();
-				if (cached.length) {
-					this.eventBus.emit("set_offers", cached);
-				}
-			}
-
-			return frappe
-				.call("posawesome.posawesome.api.offers.get_offers", {
-					profile: pos_profile,
-				})
-				.then((r) => {
-					if (r.message) {
-						console.info("LoadOffers");
-						saveOffers(r.message);
-						this.eventBus.emit("set_offers", r.message);
-					}
-				})
-				.catch((err) => {
-					console.error("Failed to fetch offers:", err);
-					const cached = getCachedOffers();
-					if (cached.length) {
-						this.eventBus.emit("set_offers", cached);
-					}
-				});
-		},
-		get_pos_setting() {
-			frappe.db.get_doc("POS Settings", undefined).then((doc) => {
-				this.eventBus.emit("set_pos_settings", doc);
-			});
-		},
-	},
+       methods: {
+               create_opening_voucher() {
+                       this.dialog = true;
+               },
+               get_pos_setting() {
+                       frappe.db.get_doc("POS Settings", undefined).then((doc) => {
+                               this.eventBus.emit("set_pos_settings", doc);
+                       });
+               },
+       },
 
 	mounted: function () {
 		this.$nextTick(function () {
