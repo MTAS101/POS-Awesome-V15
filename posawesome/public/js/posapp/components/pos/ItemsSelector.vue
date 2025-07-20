@@ -361,13 +361,13 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-       mixins: [format],
-       setup() {
-               return useResponsive();
-       },
-       components: {
-               CameraScanner,
-       },
+	mixins: [format],
+	setup() {
+		return useResponsive();
+	},
+	components: {
+		CameraScanner,
+	},
 	data: () => ({
 		pos_profile: "",
 		flags: {},
@@ -1353,7 +1353,7 @@ export default {
 			try {
 				// Use the new isStockCacheReady function
 				if (isStockCacheReady()) {
-					console.debug("Stock cache already initialized");
+					console.log("[debug] Stock cache already initialized");
 					return;
 				}
 

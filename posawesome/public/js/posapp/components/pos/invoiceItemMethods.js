@@ -26,10 +26,8 @@ export default {
 		return removeItem(item, this);
 	},
 
-
 	add_item(item) {
 		return addItem(item, this);
-
 	},
 
 	// Create a new item object with default and calculated fields
@@ -1272,14 +1270,14 @@ export default {
 	},
 
 	// Update details for a single item (fetch from backend)
-       update_item_detail(item, force_update = false) {
-               console.log("update_item_detail request", {
-                       code: item.item_code,
-                       force_update,
-               });
-               if (!item.item_code) {
-                       return;
-               }
+	update_item_detail(item, force_update = false) {
+		console.log("update_item_detail request", {
+			code: item.item_code,
+			force_update,
+		});
+		if (!item.item_code) {
+			return;
+		}
 		var vm = this;
 
 		// Remove this block which was causing the issue - rates should persist regardless of currency
@@ -1666,16 +1664,24 @@ export default {
 		return calcItemPrice(item, this);
 	},
 
-       // Update UOM (unit of measure) for an item and recalculate prices
-       async calc_uom(item, value) {
-               return await calcUom(item, value, this);
-       },
+	// Update UOM (unit of measure) for an item and recalculate prices
+	async calc_uom(item, value) {
+		await calcUom(item, value, this);
+		console.log("[debug] calc_uom executed", {
+			item: item.item_code,
+			value,
+		});
+		if (this.apply_discounts) {
+			this.apply_discounts();
+		} else if (this.handelOffers) {
+			this.handelOffers();
+		}
+	},
 
 	// Calculate stock quantity for an item
 	calc_stock_qty(item, value) {
 		return calcStockQty(item, value, this);
 	},
-
 
 	// Set serial numbers for an item (and update qty)
 	set_serial_no(item) {
