@@ -93,8 +93,7 @@ export function useItemAddition() {
 			} else {
 				cur_item.qty += item.qty || 1;
 			}
-                        if (context.calc_stock_qty) context.calc_stock_qty(cur_item, cur_item.qty);
-                        if (context.handelOffers) context.handelOffers();
+			if (context.calc_stock_qty) context.calc_stock_qty(cur_item, cur_item.qty);
 
 			// Update batch quantity if needed
 			if (cur_item.has_batch_no && cur_item.batch_no && context.setBatchQty) {
