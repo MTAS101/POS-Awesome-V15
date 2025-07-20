@@ -93,32 +93,32 @@ export default {
 		let max_amt = false;
 		const applys = [];
 
-		if (offer.min_qty || offer.min_qty == 0) {
-			if (qty >= offer.min_qty) {
-				min_qty = true;
-			}
-			applys.push(min_qty);
-		}
+                if (offer.min_qty || offer.min_qty == 0) {
+                        if (Number(qty) >= Number(offer.min_qty)) {
+                                min_qty = true;
+                        }
+                        applys.push(min_qty);
+                }
 
-		if (offer.max_qty > 0) {
-			if (qty <= offer.max_qty) {
-				max_qty = true;
-			}
-			applys.push(max_qty);
-		}
+                if (offer.max_qty > 0) {
+                        if (Number(qty) <= Number(offer.max_qty)) {
+                                max_qty = true;
+                        }
+                        applys.push(max_qty);
+                }
 
-		if (offer.min_amt > 0) {
-			if (amount >= offer.min_amt) {
-				min_amt = true;
-			}
-			applys.push(min_amt);
-		}
+                if (offer.min_amt > 0) {
+                        if (Number(amount) >= Number(offer.min_amt)) {
+                                min_amt = true;
+                        }
+                        applys.push(min_amt);
+                }
 
-		if (offer.max_amt > 0) {
-			if (amount <= offer.max_amt) {
-				max_amt = true;
-			}
-			applys.push(max_amt);
+                if (offer.max_amt > 0) {
+                        if (Number(amount) <= Number(offer.max_amt)) {
+                                max_amt = true;
+                        }
+                        applys.push(max_amt);
 		}
 		let apply = false;
 		if (!applys.includes(false)) {
