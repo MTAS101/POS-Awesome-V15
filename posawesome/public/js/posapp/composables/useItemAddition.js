@@ -60,14 +60,14 @@ export function useItemAddition() {
 			if (context.isReturnInvoice) {
 				new_item.qty = -Math.abs(new_item.qty || 1);
 			}
-			context.items.unshift(new_item);
-			// Force update of item rates when item is first added
-			if (context.update_item_detail) context.update_item_detail(new_item, true);
-
 			// Apply UOM conversion immediately if barcode specifies a different UOM
 			if (context.calc_uom && new_item.uom) {
 				await context.calc_uom(new_item, new_item.uom);
 			}
+
+			context.items.unshift(new_item);
+			// Force update of item rates when item is first added
+			if (context.update_item_detail) context.update_item_detail(new_item, true);
 
 			// Expand new item if it has batch or serial number
 			if (
