@@ -12,7 +12,7 @@ export function useItemAddition() {
 	};
 
 	// Add item to invoice
-	const addItem = (item, context) => {
+	const addItem = async (item, context) => {
 		if (!item.uom) {
 			item.uom = item.stock_uom;
 		}
@@ -66,7 +66,7 @@ export function useItemAddition() {
 
 			// Apply UOM conversion immediately if barcode specifies a different UOM
 			if (context.calc_uom && new_item.uom) {
-				context.calc_uom(new_item, new_item.uom);
+				await context.calc_uom(new_item, new_item.uom);
 			}
 
 			// Expand new item if it has batch or serial number
@@ -112,7 +112,7 @@ export function useItemAddition() {
 
 			// Recalculate rates if UOM differs from stock UOM
 			if (context.calc_uom && cur_item.uom) {
-				context.calc_uom(cur_item, cur_item.uom);
+				await context.calc_uom(cur_item, cur_item.uom);
 			}
 		}
 		if (context.forceUpdate) context.forceUpdate();
