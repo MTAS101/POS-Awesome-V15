@@ -65,7 +65,7 @@ export function useItemAddition() {
 			if (context.update_item_detail) context.update_item_detail(new_item, true);
 
 			// Apply UOM conversion immediately if barcode specifies a different UOM
-			if (context.calc_uom && new_item.uom) {
+			if (context.calc_uom && new_item.uom && !new_item.skip_uom_calc) {
 				await context.calc_uom(new_item, new_item.uom);
 			}
 

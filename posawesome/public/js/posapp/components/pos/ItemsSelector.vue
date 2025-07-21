@@ -1583,6 +1583,46 @@ export default {
 				const barcodeMatch = newItem.item_barcode.find((b) => b.barcode === scannedCode);
 				if (barcodeMatch && barcodeMatch.posa_uom) {
 					newItem.uom = barcodeMatch.posa_uom;
+
+					// Before calculations, check if price list has a rate for this UOM
+					const priceList = this.get_price_list ? this.get_price_list() : this.active_price_list;
+					let uomRate = null;
+
+					if (priceList) {
+						const cached = getCachedPriceListItems(priceList) || [];
+						const match = cached.find(
+							(p) => p.item_code === newItem.item_code && p.uom === newItem.uom,
+						);
+						if (match) {
+							uomRate = match.price_list_rate || match.rate;
+						}
+					}
+
+					if (!uomRate && !isOffline()) {
+						try {
+							const r = await frappe.call({
+								method: "posawesome.posawesome.api.items.get_price_for_uom",
+								args: {
+									item_code: newItem.item_code,
+									price_list: priceList,
+									uom: newItem.uom,
+								},
+							});
+							if (r.message) {
+								uomRate = r.message;
+							}
+						} catch (e) {
+							console.error("Failed to fetch UOM price", e);
+						}
+					}
+
+					if (uomRate) {
+						newItem.rate = uomRate;
+						newItem.price_list_rate = uomRate;
+						newItem.base_rate = uomRate;
+						newItem.base_price_list_rate = uomRate;
+						newItem.skip_uom_calc = true; // skip further calculations
+					}
 				}
 			}
 
