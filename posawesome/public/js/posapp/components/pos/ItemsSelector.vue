@@ -361,13 +361,13 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-       mixins: [format],
-       setup() {
-               return useResponsive();
-       },
-       components: {
-               CameraScanner,
-       },
+	mixins: [format],
+	setup() {
+		return useResponsive();
+	},
+	components: {
+		CameraScanner,
+	},
 	data: () => ({
 		pos_profile: "",
 		flags: {},
@@ -1575,8 +1575,19 @@ export default {
 		async addScannedItemToInvoice(item, scannedCode) {
 			console.log("Adding scanned item to invoice:", item, scannedCode);
 
+			// Clone the item to avoid mutating list data
+			const newItem = { ...item };
+
+			// If the scanned barcode has a specific UOM, apply it
+			if (Array.isArray(newItem.item_barcode)) {
+				const barcodeMatch = newItem.item_barcode.find((b) => b.barcode === scannedCode);
+				if (barcodeMatch && barcodeMatch.posa_uom) {
+					newItem.uom = barcodeMatch.posa_uom;
+				}
+			}
+
 			// Use existing add_item method with enhanced feedback
-			await this.add_item(item);
+			await this.add_item(newItem);
 
 			// Show success message
 			frappe.show_alert(
