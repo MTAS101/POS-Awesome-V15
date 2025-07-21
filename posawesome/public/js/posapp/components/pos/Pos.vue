@@ -10,7 +10,7 @@
 		<OpeningDialog v-if="dialog" :dialog="dialog"></OpeningDialog>
 		<v-row v-show="!dialog" dense class="ma-0 dynamic-main-row">
 			<v-col
-				v-show="!payment && !offers && !coupons"
+				v-show="!payment && !showOffers && !coupons"
 				xl="5"
 				lg="5"
 				md="5"
@@ -20,7 +20,7 @@
 			>
 				<ItemsSelector></ItemsSelector>
 			</v-col>
-			<v-col v-show="offers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
+			<v-col v-show="showOffers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
 				<PosOffers></PosOffers>
 			</v-col>
 			<v-col v-show="coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
@@ -83,7 +83,7 @@ export default {
 			dialog: false,
 
 			payment: false,
-			offers: false,
+			showOffers: false,
 			coupons: false,
 		};
 	},
@@ -138,19 +138,19 @@ export default {
 				}
 			});
 			this.eventBus.on("show_payment", (data) => {
-				this.payment = true ? data === "true" : false;
-				this.offers = false ? data === "true" : false;
-				this.coupons = false ? data === "true" : false;
+				this.payment = data === "true";
+				this.showOffers = false;
+				this.coupons = false;
 			});
 			this.eventBus.on("show_offers", (data) => {
-				this.offers = true ? data === "true" : false;
-				this.payment = false ? data === "true" : false;
-				this.coupons = false ? data === "true" : false;
+				this.showOffers = data === "true";
+				this.payment = false;
+				this.coupons = false;
 			});
 			this.eventBus.on("show_coupons", (data) => {
-				this.coupons = true ? data === "true" : false;
-				this.offers = false ? data === "true" : false;
-				this.payment = false ? data === "true" : false;
+				this.coupons = data === "true";
+				this.showOffers = false;
+				this.payment = false;
 			});
 			this.eventBus.on("open_closing_dialog", () => {
 				this.get_closing_data();
