@@ -66,15 +66,11 @@ export function useStockUtils() {
 			}
 		}
 
-                if (uomRate) {
-                        // Mark rate as explicitly fetched from price list so
-                        // later updates don't override it automatically
-                        item._manual_rate_set = true;
-
-                        item.base_price_list_rate = uomRate;
-                        if (!item.posa_offer_applied) {
-                                item.base_rate = uomRate;
-                        }
+		if (uomRate) {
+			item.base_price_list_rate = uomRate;
+			if (!item.posa_offer_applied) {
+				item.base_rate = uomRate;
+			}
 
 			const baseCurrency = context.price_list_currency || context.pos_profile.currency;
 			if (context.selected_currency !== baseCurrency) {
@@ -91,18 +87,12 @@ export function useStockUtils() {
 			if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
 			if (context.forceUpdate) context.forceUpdate();
 			return;
-                }
+		}
 
-                // When no price list rate was found, treat rate as calculated
-                // so future updates may override it if needed
-                if (!uomRate) {
-                        item._manual_rate_set = false;
-                }
-
-                // Reset discount if not offer
-                if (!item.posa_offer_applied) {
-                        item.discount_amount = 0;
-                        item.discount_percentage = 0;
+		// Reset discount if not offer
+		if (!item.posa_offer_applied) {
+			item.discount_amount = 0;
+			item.discount_percentage = 0;
 		}
 
 		// Store original base rates if not already stored
