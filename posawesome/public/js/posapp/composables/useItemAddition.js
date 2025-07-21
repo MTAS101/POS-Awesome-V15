@@ -65,10 +65,34 @@ export function useItemAddition() {
 				await context.calc_uom(new_item, new_item.uom);
 			}
 
+			// Attempt to fetch an explicit rate for this UOM from the active price list
+			try {
+				const r = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_price_for_uom",
+					args: {
+						item_code: new_item.item_code,
+						price_list: context.get_price_list ? context.get_price_list() : null,
+						uom: new_item.uom,
+					},
+				});
+				if (r.message) {
+					const price = parseFloat(r.message);
+					Object.assign(new_item, {
+						rate: price,
+						base_rate: price,
+						price_list_rate: price,
+						base_price_list_rate: price,
+						_manual_rate_set: true,
+						skip_force_update: true,
+					});
+				}
+			} catch (e) {
+				console.warn("UOM price fetch failed", e);
+			}
+
 			context.items.unshift(new_item);
-			// Force update of item rates when item is first added unless disabled
-			const forceUpdate = !new_item.skip_force_update;
-			if (context.update_item_detail) context.update_item_detail(new_item, forceUpdate);
+			// Skip recalculation to preserve the manually set rate
+			if (context.update_item_detail) context.update_item_detail(new_item, false);
 
 			// Expand new item if it has batch or serial number
 			if (
