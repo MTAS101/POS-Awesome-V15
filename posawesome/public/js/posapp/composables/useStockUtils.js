@@ -29,16 +29,7 @@ export function useStockUtils() {
 			return;
 		}
 
-		// Store old conversion factor for ratio calculation
-		const old_conversion_factor = item.conversion_factor || 1;
-
-		// Update conversion factor
-		item.conversion_factor = new_uom.conversion_factor;
-
-		// Calculate the ratio of new to old conversion factor
-		const conversion_ratio = item.conversion_factor / old_conversion_factor;
-
-		// Try to fetch rate for this UOM from price list
+		// Try to fetch rate for this UOM from price list before doing any calculations
 		const priceList = context.get_price_list ? context.get_price_list() : null;
 		let uomRate = null;
 		if (priceList && context.getCachedPriceListItems) {
@@ -67,6 +58,8 @@ export function useStockUtils() {
 		}
 
 		if (uomRate) {
+			// Apply conversion factor without further calculations
+			item.conversion_factor = new_uom.conversion_factor;
 			item.base_price_list_rate = uomRate;
 			if (!item.posa_offer_applied) {
 				item.base_rate = uomRate;
@@ -89,6 +82,15 @@ export function useStockUtils() {
 			return;
 		}
 
+		// Store old conversion factor for ratio calculation
+		const old_conversion_factor = item.conversion_factor || 1;
+
+		// Update conversion factor
+		item.conversion_factor = new_uom.conversion_factor;
+
+		// Calculate the ratio of new to old conversion factor
+		const conversion_ratio = item.conversion_factor / old_conversion_factor;
+
 		// Reset discount if not offer
 		if (!item.posa_offer_applied) {
 			item.discount_amount = 0;
@@ -107,10 +109,10 @@ export function useStockUtils() {
 			const offer =
 				context.posOffers && Array.isArray(context.posOffers)
 					? context.posOffers.find((o) => {
-						if (!o || !o.items) return false;
-						const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
-						return Array.isArray(items) && items.includes(item.posa_row_id);
-					})
+							if (!o || !o.items) return false;
+							const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+							return Array.isArray(items) && items.includes(item.posa_row_id);
+						})
 					: null;
 
 			if (offer && offer.discount_type === "Rate") {
@@ -124,7 +126,10 @@ export function useStockUtils() {
 				// Convert to selected currency
 				const baseCurrency = context.price_list_currency || context.pos_profile.currency;
 				if (context.selected_currency !== baseCurrency) {
-					item.rate = context.flt(converted_rate / context.exchange_rate, context.currency_precision);
+					item.rate = context.flt(
+						converted_rate / context.exchange_rate,
+						context.currency_precision,
+					);
 					item.price_list_rate = item.rate;
 				} else {
 					item.rate = converted_rate;
@@ -167,7 +172,10 @@ export function useStockUtils() {
 						base_discount / context.exchange_rate,
 						context.currency_precision,
 					);
-					item.rate = context.flt(item.base_rate / context.exchange_rate, context.currency_precision);
+					item.rate = context.flt(
+						item.base_rate / context.exchange_rate,
+						context.currency_precision,
+					);
 				} else {
 					item.price_list_rate = updated_base_price;
 					item.discount_amount = base_discount;
