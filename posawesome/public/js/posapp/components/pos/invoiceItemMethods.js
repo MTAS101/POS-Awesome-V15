@@ -74,10 +74,11 @@ export default {
 			if (this.isReturnInvoice) {
 				new_item.qty = -Math.abs(new_item.qty || 1);
 			}
-                       const idx = this.items.unshift(new_item) - 1;
-                       // Replace the item to trigger reactivity for new props
-                       this.items[idx] = { ...new_item };
-                       console.log("Item inserted at", idx, {
+                       this.items.unshift(new_item);
+                       // Replace the newly inserted item at index 0 to ensure
+                       // Vue reactivity and avoid overwriting existing rows
+                       this.items[0] = { ...new_item };
+                       console.log("Item inserted at", 0, {
                                code: new_item.item_code,
                                rate: new_item.rate,
                        });
