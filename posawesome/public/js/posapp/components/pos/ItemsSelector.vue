@@ -361,13 +361,13 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-	mixins: [format],
-	setup() {
-		return useResponsive();
-	},
-	components: {
-		CameraScanner,
-	},
+       mixins: [format],
+       setup() {
+               return useResponsive();
+       },
+       components: {
+               CameraScanner,
+       },
 	data: () => ({
 		pos_profile: "",
 		flags: {},
@@ -1574,14 +1574,6 @@ export default {
 		},
 		async addScannedItemToInvoice(item, scannedCode) {
 			console.log("Adding scanned item to invoice:", item, scannedCode);
-
-			// If the scanned barcode has an associated UOM, apply it
-			if (scannedCode && item.item_barcode && Array.isArray(item.item_barcode)) {
-				const bcMatch = item.item_barcode.find((b) => b.barcode === scannedCode && b.posa_uom);
-				if (bcMatch) {
-					item.uom = bcMatch.posa_uom;
-				}
-			}
 
 			// Use existing add_item method with enhanced feedback
 			await this.add_item(item);
