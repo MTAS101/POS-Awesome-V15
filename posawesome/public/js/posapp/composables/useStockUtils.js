@@ -66,12 +66,11 @@ export function useStockUtils() {
 			}
 		}
 
-                if (uomRate) {
-                        const price = parseFloat(uomRate);
-                        item.base_price_list_rate = price;
-                        if (!item.posa_offer_applied) {
-                                item.base_rate = price;
-                        }
+		if (uomRate) {
+			item.base_price_list_rate = uomRate;
+			if (!item.posa_offer_applied) {
+				item.base_rate = uomRate;
+			}
 
 			const baseCurrency = context.price_list_currency || context.pos_profile.currency;
 			if (context.selected_currency !== baseCurrency) {
@@ -85,14 +84,10 @@ export function useStockUtils() {
 				item.rate = item.base_rate;
 			}
 
-                        item._manual_rate_set = true;
-                        if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
-                        if (context.forceUpdate) context.forceUpdate();
-                        return;
-                }
-
-                // No explicit price found; allow automatic rate calculations
-                item._manual_rate_set = false;
+			if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+			if (context.forceUpdate) context.forceUpdate();
+			return;
+		}
 
 		// Reset discount if not offer
 		if (!item.posa_offer_applied) {
