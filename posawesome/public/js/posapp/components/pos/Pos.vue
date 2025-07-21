@@ -52,12 +52,12 @@ import Variants from "./Variants.vue";
 import Returns from "./Returns.vue";
 import MpesaPayments from "./Mpesa-Payments.vue";
 import {
-       getOpeningStorage,
-       setOpeningStorage,
-       clearOpeningStorage,
-       initPromise,
-       checkDbHealth,
-       setTaxTemplate,
+	getOpeningStorage,
+	setOpeningStorage,
+	clearOpeningStorage,
+	initPromise,
+	checkDbHealth,
+	setTaxTemplate,
 } from "../../../offline/index.js";
 import { getCurrentInstance } from "vue";
 import { usePosShift } from "../../composables/usePosShift.js";
@@ -67,26 +67,26 @@ import { clearExpiredCustomerBalances } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-       setup() {
-               const instance = getCurrentInstance();
-               const responsive = useResponsive();
-               const shift = usePosShift(() => {
-                       if (instance && instance.proxy) {
-                               instance.proxy.dialog = true;
-                       }
-               });
-               const offers = useOffers();
-               return { ...responsive, ...shift, ...offers };
-       },
-       data: function () {
-               return {
-                       dialog: false,
-                       
-                       payment: false,
-                       offers: false,
-                       coupons: false,
-               };
-       },
+	setup() {
+		const instance = getCurrentInstance();
+		const responsive = useResponsive();
+		const shift = usePosShift(() => {
+			if (instance && instance.proxy) {
+				instance.proxy.dialog = true;
+			}
+		});
+		const offers = useOffers();
+		return { ...responsive, ...shift, ...offers };
+	},
+	data: function () {
+		return {
+			dialog: false,
+
+			payment: false,
+			offers: false,
+			coupons: false,
+		};
+	},
 
 	components: {
 		ItemsSelector,
@@ -105,16 +105,16 @@ export default {
 		SalesOrders,
 	},
 
-       methods: {
-               create_opening_voucher() {
-                       this.dialog = true;
-               },
-               get_pos_setting() {
-                       frappe.db.get_doc("POS Settings", undefined).then((doc) => {
-                               this.eventBus.emit("set_pos_settings", doc);
-                       });
-               },
-       },
+	methods: {
+		create_opening_voucher() {
+			this.dialog = true;
+		},
+		get_pos_setting() {
+			frappe.db.get_doc("POS Settings", undefined).then((doc) => {
+				this.eventBus.emit("set_pos_settings", doc);
+			});
+		},
+	},
 
 	mounted: function () {
 		this.$nextTick(function () {
@@ -125,10 +125,17 @@ export default {
 			});
 			this.eventBus.on("register_pos_data", (data) => {
 				this.pos_profile = data.pos_profile;
-				this.get_offers(this.pos_profile.name);
+				this.get_offers(this.pos_profile.name, this.pos_profile);
 				this.pos_opening_shift = data.pos_opening_shift;
 				this.eventBus.emit("register_pos_profile", data);
 				console.info("LoadPosProfile");
+			});
+			// When profile is registered directly from composables,
+			// ensure offers are fetched as well
+			this.eventBus.on("register_pos_profile", (data) => {
+				if (data && data.pos_profile) {
+					this.get_offers(data.pos_profile.name, data.pos_profile);
+				}
 			});
 			this.eventBus.on("show_payment", (data) => {
 				this.payment = true ? data === "true" : false;
@@ -156,6 +163,7 @@ export default {
 	beforeUnmount() {
 		this.eventBus.off("close_opening_dialog");
 		this.eventBus.off("register_pos_data");
+		this.eventBus.off("register_pos_profile");
 		this.eventBus.off("LoadPosProfile");
 		this.eventBus.off("show_offers");
 		this.eventBus.off("show_coupons");
