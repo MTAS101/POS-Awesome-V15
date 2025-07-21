@@ -1,4 +1,5 @@
 import { ref } from "vue";
+import { isOffline } from "../../offline/index.js";
 
 export function useStockUtils() {
 	// Calculate UOM conversion and update item rates
