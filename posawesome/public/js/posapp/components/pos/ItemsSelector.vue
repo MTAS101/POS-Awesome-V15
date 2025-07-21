@@ -358,13 +358,16 @@ import {
 	getCachedItemDetails,
 	saveItemDetailsCache,
 } from "../../../offline/index.js";
-import { responsiveMixin } from "../../mixins/responsive.js";
+import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-	mixins: [format, responsiveMixin],
-	components: {
-		CameraScanner,
-	},
+       mixins: [format],
+       setup() {
+               return useResponsive();
+       },
+       components: {
+               CameraScanner,
+       },
 	data: () => ({
 		pos_profile: "",
 		flags: {},
