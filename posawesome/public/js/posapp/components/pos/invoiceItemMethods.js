@@ -804,9 +804,9 @@ export default {
 							vm.eventBus.emit("show_message", {
 								title: __(
 									"Exchange rate date " +
-									vm.exchange_rate_date +
-									" differs from posting date " +
-									posting_backend,
+										vm.exchange_rate_date +
+										" differs from posting date " +
+										posting_backend,
 								),
 								color: "warning",
 							});
@@ -842,9 +842,9 @@ export default {
 							vm.eventBus.emit("show_message", {
 								title: __(
 									"Exchange rate date " +
-									vm.exchange_rate_date +
-									" differs from posting date " +
-									posting_backend,
+										vm.exchange_rate_date +
+										" differs from posting date " +
+										posting_backend,
 								),
 								color: "warning",
 							});
@@ -1319,6 +1319,9 @@ export default {
 			callback: function (r) {
 				if (r.message) {
 					const data = r.message;
+					if (!item.warehouse) {
+						item.warehouse = vm.pos_profile.warehouse;
+					}
 					// Ensure price list currency is synced from server response
 					if (data.price_list_currency) {
 						vm.price_list_currency = data.price_list_currency;
@@ -1673,7 +1676,6 @@ export default {
 	calc_stock_qty(item, value) {
 		return calcStockQty(item, value, this);
 	},
-
 
 	// Set serial numbers for an item (and update qty)
 	set_serial_no(item) {

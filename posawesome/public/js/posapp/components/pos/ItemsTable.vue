@@ -268,15 +268,23 @@
 										density="compact"
 										variant="outlined"
 										color="primary"
-										:label="frappe._('Price list Rate')"
+										:label="frappe._('Price List Rate')"
 										:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
 										class="dark-field"
 										hide-details
-										:model-value="formatCurrency(item.price_list_rate)"
+										:model-value="formatCurrency(item.price_list_rate || 0)"
 										:disabled="!pos_profile.posa_allow_price_list_rate_change"
+										prepend-inner-icon="mdi-format-list-numbered"
 										:prefix="currencySymbol(pos_profile.currency)"
 										@change="changePriceListRate(item)"
 									></v-text-field>
+									<v-btn
+										v-if="pos_profile.posa_allow_price_list_rate_change"
+										size="x-small"
+										class="ml-1"
+										@click.stop="changePriceListRate(item)"
+										>{{ __("Change") }}</v-btn
+									>
 								</div>
 								<div class="form-field">
 									<v-text-field
@@ -347,7 +355,7 @@
 							</div>
 
 							<!-- Serial Number Section -->
-							<div class="form-section" v-if="item.has_serial_no == 1 || item.serial_no">
+							<div class="form-section" v-if="item.has_serial_no || item.serial_no">
 								<div class="form-row">
 									<div class="form-field">
 										<v-text-field
@@ -386,7 +394,7 @@
 							</div>
 
 							<!-- Batch Number Section -->
-							<div class="form-section" v-if="item.has_batch_no == 1 || item.batch_no">
+							<div class="form-section" v-if="item.has_batch_no || item.batch_no">
 								<div class="form-row">
 									<div class="form-field">
 										<v-text-field
@@ -480,28 +488,6 @@
 										disabled
 										prepend-inner-icon="mdi-warehouse"
 									></v-text-field>
-								</div>
-								<div class="form-field">
-									<v-text-field
-										density="compact"
-										variant="outlined"
-										color="primary"
-										:label="frappe._('Price List Rate')"
-										:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
-										class="dark-field"
-										hide-details
-										:model-value="formatCurrency(item.price_list_rate || 0)"
-										:disabled="!pos_profile.posa_allow_price_list_rate_change"
-										prepend-inner-icon="mdi-format-list-numbered"
-										@change="changePriceListRate(item)"
-									></v-text-field>
-									<v-btn
-										v-if="pos_profile.posa_allow_price_list_rate_change"
-										size="x-small"
-										class="ml-1"
-										@click.stop="changePriceListRate(item)"
-										>{{ __("Change") }}</v-btn
-									>
 								</div>
 								<div class="form-field">
 									<v-text-field
