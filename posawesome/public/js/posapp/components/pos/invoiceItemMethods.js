@@ -74,6 +74,7 @@ export default {
 			if (this.isReturnInvoice) {
 				new_item.qty = -Math.abs(new_item.qty || 1);
 			}
+      
                        this.items.unshift(new_item);
                        // Replace the newly inserted item at index 0 to ensure
                        // Vue reactivity and avoid overwriting existing rows
