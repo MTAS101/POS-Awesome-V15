@@ -1583,6 +1583,23 @@ export default {
 				const barcodeMatch = newItem.item_barcode.find((b) => b.barcode === scannedCode);
 				if (barcodeMatch && barcodeMatch.posa_uom) {
 					newItem.uom = barcodeMatch.posa_uom;
+
+					// Try fetching the rate for this UOM from the active price list
+					try {
+						const res = await frappe.call({
+							method: "posawesome.posawesome.api.items.get_price_for_uom",
+							args: {
+								item_code: newItem.item_code,
+								price_list: this.active_price_list,
+								uom: barcodeMatch.posa_uom,
+							},
+						});
+						if (res.message) {
+							newItem.rate = parseFloat(res.message);
+						}
+					} catch (e) {
+						console.error("Failed to fetch UOM price", e);
+					}
 				}
 			}
 
