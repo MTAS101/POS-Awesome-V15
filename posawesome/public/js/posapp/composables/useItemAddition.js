@@ -64,6 +64,11 @@ export function useItemAddition() {
 			// Force update of item rates when item is first added
 			if (context.update_item_detail) context.update_item_detail(new_item, true);
 
+			// Apply UOM conversion immediately if barcode specifies a different UOM
+			if (context.calc_uom && new_item.uom) {
+				context.calc_uom(new_item, new_item.uom);
+			}
+
 			// Expand new item if it has batch or serial number
 			if (
 				(!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) ||
@@ -104,6 +109,11 @@ export function useItemAddition() {
 			}
 
 			if (context.setSerialNo) context.setSerialNo(cur_item);
+
+			// Recalculate rates if UOM differs from stock UOM
+			if (context.calc_uom && cur_item.uom) {
+				context.calc_uom(cur_item, cur_item.uom);
+			}
 		}
 		if (context.forceUpdate) context.forceUpdate();
 
