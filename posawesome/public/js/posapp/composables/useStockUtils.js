@@ -39,38 +39,39 @@ export function useStockUtils() {
 		const conversion_ratio = item.conversion_factor / old_conversion_factor;
 
 		// Try to fetch rate for this UOM from price list
-		const priceList = context.get_price_list ? context.get_price_list() : null;
-		let uomRate = null;
-		if (priceList && context.getCachedPriceListItems) {
-			const cached = context.getCachedPriceListItems(priceList) || [];
-			const match = cached.find((p) => p.item_code === item.item_code && p.uom === new_uom.uom);
-			if (match) {
-				uomRate = match.price_list_rate || match.rate;
-			}
-		}
-		if (!uomRate && typeof isOffline === "function" && !isOffline()) {
-			try {
-				const r = await frappe.call({
-					method: "posawesome.posawesome.api.items.get_price_for_uom",
-					args: {
-						item_code: item.item_code,
-						price_list: priceList,
-						uom: new_uom.uom,
-					},
-				});
-				if (r.message) {
-					uomRate = r.message;
-				}
-			} catch (e) {
-				console.error("Failed to fetch UOM price", e);
-			}
-		}
+                const priceList = context.get_price_list ? context.get_price_list() : null;
+                let uomRate = null;
+                if (priceList && context.getCachedPriceListItems) {
+                        const cached = context.getCachedPriceListItems(priceList) || [];
+                        const match = cached.find((p) => p.item_code === item.item_code && p.uom === new_uom.uom);
+                        if (match) {
+                                uomRate = match.price_list_rate || match.rate;
+                        }
+                }
+                if (!uomRate && typeof isOffline === "function" && !isOffline()) {
+                        try {
+                                const r = await frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_price_for_uom",
+                                        args: {
+                                                item_code: item.item_code,
+                                                price_list: priceList,
+                                                uom: new_uom.uom,
+                                        },
+                                });
+                                if (r.message) {
+                                        uomRate = parseFloat(r.message);
+                                }
+                        } catch (e) {
+                                console.error("Failed to fetch UOM price", e);
+                        }
+                }
 
-		if (uomRate) {
-			item.base_price_list_rate = uomRate;
-			if (!item.posa_offer_applied) {
-				item.base_rate = uomRate;
-			}
+                if (uomRate) {
+                        item._manual_rate_set = true;
+                        item.base_price_list_rate = uomRate;
+                        if (!item.posa_offer_applied) {
+                                item.base_rate = uomRate;
+                        }
 
 			const baseCurrency = context.price_list_currency || context.pos_profile.currency;
 			if (context.selected_currency !== baseCurrency) {
@@ -84,10 +85,13 @@ export function useStockUtils() {
 				item.rate = item.base_rate;
 			}
 
-			if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
-			if (context.forceUpdate) context.forceUpdate();
-			return;
-		}
+                        if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+                        if (context.forceUpdate) context.forceUpdate();
+                        return;
+                }
+
+                // No explicit UOM price found, allow normal recalculation
+                item._manual_rate_set = false;
 
 		// Reset discount if not offer
 		if (!item.posa_offer_applied) {
