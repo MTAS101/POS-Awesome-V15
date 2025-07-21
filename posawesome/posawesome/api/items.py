@@ -631,43 +631,33 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 
 @frappe.whitelist()
 def get_items_from_barcode(selling_price_list, currency, barcode):
-    search_item = frappe.db.get_value(
-            "Item Barcode",
-            {"barcode": barcode},
-            ["parent as item_code", "posa_uom"],
-            as_dict=1,
-    )
-    if search_item:
-            item_doc = frappe.get_cached_doc("Item", search_item.item_code)
-            price_filters = {
-                    "item_code": search_item.item_code,
-                    "price_list": selling_price_list,
-                    "currency": currency,
-            }
+	search_item = frappe.db.get_value(
+		"Item Barcode",
+		{"barcode": barcode},
+		["parent as item_code", "posa_uom"],
+		as_dict=1,
+	)
+	if search_item:
+		item_doc = frappe.get_cached_doc("Item", search_item.item_code)
+		item_price = frappe.db.get_value(
+			"Item Price",
+			{
+				"item_code": search_item.item_code,
+				"price_list": selling_price_list,
+				"currency": currency,
+			},
+			"price_list_rate",
+		)
 
-            if search_item.posa_uom:
-                    price_filters["uom"] = search_item.posa_uom
-            else:
-                    price_filters["uom"] = ["in", ["", None, item_doc.stock_uom]]
-
-            price_doc = frappe.get_all(
-                    "Item Price",
-                    fields=["price_list_rate"],
-                    filters=price_filters,
-                    limit_page_length=1,
-            )
-
-            item_price = price_doc[0].price_list_rate if price_doc else 0
-
-            return {
-                    "item_code": item_doc.name,
-                    "item_name": item_doc.item_name,
-                    "barcode": barcode,
-                    "rate": item_price,
-                    "uom": search_item.posa_uom or item_doc.stock_uom,
-                    "currency": currency,
-            }
-    return None
+		return {
+			"item_code": item_doc.name,
+			"item_name": item_doc.item_name,
+			"barcode": barcode,
+			"rate": item_price or 0,
+			"uom": search_item.posa_uom or item_doc.stock_uom,
+			"currency": currency,
+		}
+	return None
 
 
 def build_item_cache(item_code):
