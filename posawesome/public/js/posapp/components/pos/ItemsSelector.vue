@@ -1586,6 +1586,25 @@ export default {
 				}
 			}
 
+			// Attempt to fetch rate for this barcode from the server
+			if (!isOffline() && navigator.onLine) {
+				try {
+					const r = await frappe.call({
+						method: "posawesome.posawesome.api.items.get_items_from_barcode",
+						args: {
+							selling_price_list: this.active_price_list,
+							currency: this.selected_currency || this.pos_profile.currency,
+							barcode: scannedCode,
+						},
+					});
+					if (r.message && r.message.rate) {
+						newItem.rate = r.message.rate;
+					}
+				} catch (e) {
+					console.warn("Failed to fetch barcode price", e);
+				}
+			}
+
 			// Use existing add_item method with enhanced feedback
 			await this.add_item(newItem);
 
