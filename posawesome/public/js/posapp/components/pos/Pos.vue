@@ -117,6 +117,11 @@ export default {
 	},
 
 	mounted: function () {
+		// Ensure all views start closed on initial load
+		this.offers = false;
+		this.payment = false;
+		this.coupons = false;
+
 		this.$nextTick(function () {
 			this.check_opening_entry();
 			this.get_pos_setting();
