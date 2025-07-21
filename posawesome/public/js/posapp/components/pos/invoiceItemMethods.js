@@ -1275,6 +1275,7 @@ export default {
 			code: item.item_code,
 			force_update,
 		});
+		if (item._manual_rate_set && !force_update) return;
 		if (!item.item_code) {
 			return;
 		}
