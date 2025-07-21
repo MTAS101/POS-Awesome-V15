@@ -193,25 +193,19 @@
 						:formatCurrency="formatCurrency"
 						:currencySymbol="currencySymbol"
 						:isNumber="isNumber"
-						:setFormatedQty="
-							(item, field, precision, allow, val) =>
-								setFormatedQty(item, field, precision, allow, val)
-						"
-						:calcStockQty="(item, qty) => calc_stock_qty(item, qty)"
-						:setFormatedCurrency="
-							(item, field, precision, allow, evt) =>
-								setFormatedCurrency(item, field, precision, allow, evt)
-						"
-						:calcPrices="(item, val, evt) => calc_prices(item, val, evt)"
-						:calcUom="(item, val) => calc_uom(item, val)"
-						:setSerialNo="(item) => set_serial_no(item)"
-						:setBatchQty="(item, val) => set_batch_qty(item, val)"
-						:validateDueDate="(val) => validate_due_date(val)"
-						:removeItem="(item) => remove_item(item)"
-						:subtractOne="(item) => subtract_one(item)"
-						:addOne="(item) => add_one(item)"
-						:toggleOffer="(item) => toggleOffer(item)"
-						:changePriceListRate="(item) => change_price_list_rate(item)"
+						:setFormatedQty="setFormatedQty"
+						:calcStockQty="calc_stock_qty"
+						:setFormatedCurrency="setFormatedCurrency"
+						:calcPrices="calc_prices"
+						:calcUom="calc_uom"
+						:setSerialNo="set_serial_no"
+						:setBatchQty="set_batch_qty"
+						:validateDueDate="validate_due_date"
+						:removeItem="remove_item"
+						:subtractOne="subtract_one"
+						:addOne="add_one"
+						:toggleOffer="toggleOffer"
+						:changePriceListRate="change_price_list_rate"
 						@update:expanded="expanded = $event"
 						@reorder-items="handleItemReorder"
 						@add-item-from-drag="handleItemDrop"
@@ -260,7 +254,7 @@ import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
 import invoiceItemMethods from "./invoiceItemMethods";
 import invoiceComputed from "./invoiceComputed";
-import invoiceWatchers from "./invoiceWatchers";
+import invoiceWatchers from "./invoiceWatchers"
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
@@ -1147,7 +1141,7 @@ export default {
 		this.eventBus.on("reset_posting_date", () => {
 			this.posting_date = frappe.datetime.nowdate();
 		});
-		this.eventBus.on("calc_uom", this.calc_uom);
+               this.eventBus.on("calc_uom", this.calc_uom);
 		this.eventBus.on("item-drag-start", (item) => {
 			this.showDropFeedback(true);
 		});
