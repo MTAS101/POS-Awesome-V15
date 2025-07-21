@@ -1486,6 +1486,14 @@ export default {
 
 					// Force update UI immediately
 					vm.$forceUpdate();
+
+					// Re-apply UOM pricing now that full
+					// item details are available. This
+					// ensures price list rates for bar code
+					// scans use the correct UOM price.
+					if (item.uom && vm.calc_uom) {
+						vm.calc_uom(item, item.uom);
+					}
 				}
 			},
 		});
