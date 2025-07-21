@@ -1530,16 +1530,16 @@ def create_customer(
 
 @frappe.whitelist()
 def get_items_from_barcode(selling_price_list, currency, barcode):
-	search_item = frappe.get_all(
-		"Item Barcode",
-		filters={"barcode": barcode},
-		fields=["parent", "barcode", "posa_uom"],
-	)
-	if len(search_item) == 0:
-		return ""
-	item_code = search_item[0].parent
-	item_list = frappe.get_all(
-		"Item",
+       search_item = frappe.get_all(
+               "Item Barcode",
+               filters={"barcode": barcode},
+               fields=["parent", "barcode", "posa_uom"],
+       )
+       if len(search_item) == 0:
+               return ""
+       item_code = search_item[0].parent
+       item_list = frappe.get_all(
+               "Item",
 		filters={"name": item_code},
 		fields=[
 			"name",
@@ -1556,45 +1556,51 @@ def get_items_from_barcode(selling_price_list, currency, barcode):
 		],
 	)
 
-	if item_list[0]:
-		item = item_list[0]
-		filters = {"price_list": selling_price_list, "item_code": item_code}
-		prices_with_uom = frappe.db.count(
-			"Item Price",
-			filters={
-				"price_list": selling_price_list,
-				"item_code": item_code,
-				"uom": item.stock_uom,
-			},
-		)
+       if item_list[0]:
+               item = item_list[0]
+               filters = {"price_list": selling_price_list, "item_code": item_code}
 
-		if prices_with_uom > 0:
-			filters["uom"] = item.stock_uom
-		else:
-			filters["uom"] = ["in", ["", None, item.stock_uom]]
+               if search_item[0].posa_uom:
+                       filters["uom"] = search_item[0].posa_uom
+               else:
+                       prices_with_uom = frappe.db.count(
+                               "Item Price",
+                               filters={
+                                       "price_list": selling_price_list,
+                                       "item_code": item_code,
+                                       "uom": item.stock_uom,
+                               },
+                       )
 
-		item_prices_data = frappe.get_all(
-			"Item Price",
-			fields=["item_code", "price_list_rate", "currency"],
-			filters=filters,
-		)
+                       if prices_with_uom > 0:
+                               filters["uom"] = item.stock_uom
+                       else:
+                               filters["uom"] = ["in", ["", None, item.stock_uom]]
 
-		item_price = 0
-		if len(item_prices_data):
-			item_price = item_prices_data[0].get("price_list_rate")
-			currency = item_prices_data[0].get("currency")
+               item_prices_data = frappe.get_all(
+                       "Item Price",
+                       fields=["item_code", "price_list_rate", "currency"],
+                       filters=filters,
+                       limit_page_length=1,
+               )
 
-		item.update(
-			{
-				"rate": item_price,
-				"currency": currency,
-				"item_code": item_code,
-				"barcode": barcode,
-				"actual_qty": 0,
-				"item_barcode": search_item,
-			}
-		)
-		return item
+               item_price = 0
+               if len(item_prices_data):
+                       item_price = item_prices_data[0].get("price_list_rate")
+                       currency = item_prices_data[0].get("currency")
+
+               item.update(
+                       {
+                               "rate": item_price,
+                               "currency": currency,
+                               "item_code": item_code,
+                               "barcode": barcode,
+                               "actual_qty": 0,
+                               "item_barcode": search_item,
+                               "uom": search_item[0].posa_uom or item.stock_uom,
+                       }
+               )
+               return item
 
 
 @frappe.whitelist()
