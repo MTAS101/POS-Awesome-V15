@@ -26,8 +26,8 @@ export default {
 		return removeItem(item, this);
 	},
 
-	add_item(item) {
-		return addItem(item, this);
+	async add_item(item) {
+		return await addItem(item, this);
 	},
 
 	// Create a new item object with default and calculated fields
