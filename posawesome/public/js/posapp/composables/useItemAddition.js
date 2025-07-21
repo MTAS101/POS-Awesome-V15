@@ -65,7 +65,10 @@ export function useItemAddition() {
 			if (context.update_item_detail) context.update_item_detail(new_item, true);
 
 			// Expand new item if it has batch or serial number
-			if ((!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no) {
+			if (
+				(!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) ||
+				new_item.has_serial_no
+			) {
 				nextTick(() => {
 					context.expanded = [new_item.posa_row_id];
 				});
@@ -116,6 +119,9 @@ export function useItemAddition() {
 	// Create a new item object with default and calculated fields
 	const getNewItem = (item, context) => {
 		const new_item = { ...item };
+		if (!new_item.warehouse) {
+			new_item.warehouse = context.pos_profile.warehouse;
+		}
 		if (!item.qty) {
 			item.qty = 1;
 		}
