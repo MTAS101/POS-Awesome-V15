@@ -66,8 +66,9 @@ export function useItemAddition() {
 			}
 
 			context.items.unshift(new_item);
-			// Force update of item rates when item is first added
-			if (context.update_item_detail) context.update_item_detail(new_item, true);
+			// Force update of item rates when item is first added unless disabled
+			const forceUpdate = !new_item.skip_force_update;
+			if (context.update_item_detail) context.update_item_detail(new_item, forceUpdate);
 
 			// Expand new item if it has batch or serial number
 			if (
