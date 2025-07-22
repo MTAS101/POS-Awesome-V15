@@ -484,6 +484,11 @@ export default {
 		new_line() {
 			this.eventBus.emit("set_new_line", this.new_line);
 		},
+		item_group(newValue, oldValue) {
+			if (this.pos_profile.pose_use_limit_search && newValue !== oldValue) {
+				this.get_items();
+			}
+		},
 		filtered_items(new_value, old_value) {
 			// Update item details if items changed
 			if (!this.pos_profile.pose_use_limit_search && new_value.length !== old_value.length) {
