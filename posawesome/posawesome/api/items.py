@@ -427,7 +427,6 @@ def get_items_groups():
 
 @frappe.whitelist()
 def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=None):
-	"""Return variants for a template along with attribute metadata."""
 	pos_profile = json.loads(pos_profile)
 	price_list = price_list or pos_profile.get("selling_price_list")
 
@@ -454,8 +453,9 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 		fields=fields,
 		order_by="item_name asc",
 	)
+
 	if not items_data:
-		return {"variants": [], "attributes_meta": {}}
+		return []
 
 	details = get_items_details(
 		json.dumps(pos_profile),
@@ -465,27 +465,18 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 
 	detail_map = {d["item_code"]: d for d in details}
 	result = []
-	attributes_meta = {}
 	for item in items_data:
 		item_barcode = frappe.get_all(
-		"Item Barcode",
-		filters={"parent": item["item_code"]},
-		fields=["barcode", "posa_uom"],
+			"Item Barcode",
+			filters={"parent": item["item_code"]},
+			fields=["barcode", "posa_uom"],
 		)
-		item_attributes = frappe.get_all(
-		"Item Variant Attribute",
-		fields=["attribute", "attribute_value"],
-		filters={"parent": item["item_code"], "parentfield": "attributes"},
-		)
-		item["item_attributes"] = item_attributes or []
-		for attr in item_attributes:
-			attributes_meta.setdefault(attr.attribute, set()).add(attr.attribute_value)
 		item["item_barcode"] = item_barcode or []
 		if detail_map.get(item["item_code"]):
 			item.update(detail_map[item["item_code"]])
-			result.append(item)
-	attributes_meta = {k: sorted(list(v)) for k, v in attributes_meta.items()}
-	return {"variants": result, "attributes_meta": attributes_meta}
+		result.append(item)
+
+	return result
 
 
 @frappe.whitelist()

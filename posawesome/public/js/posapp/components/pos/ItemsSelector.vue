@@ -168,8 +168,10 @@
 								@click="add_item(item)"
 							>
 								<v-img
-									:src="item.image || placeholder"
-									:lazy-src="placeholder"
+									:src="
+										item.image ||
+										'/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
+									"
 									class="text-white align-end"
 									gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)"
 									height="100px"
@@ -336,7 +338,6 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
-import placeholder from "./placeholder-image.png";
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
 import {
 	saveItemUOMs,
@@ -956,7 +957,6 @@ export default {
 			item = { ...item };
 			if (item.has_variants) {
 				let variants = this.items.filter((it) => it.variant_of == item.item_code);
-				let attributesMeta = {};
 				if (!variants.length) {
 					try {
 						const res = await frappe.call({
@@ -969,12 +969,7 @@ export default {
 							},
 						});
 						if (res.message) {
-							if (res.message.variants) {
-								variants = res.message.variants;
-								attributesMeta = res.message.attributes_meta || {};
-							} else {
-								variants = res.message;
-							}
+							variants = res.message;
 							this.items.push(...variants);
 						}
 					} catch (e) {
@@ -986,7 +981,7 @@ export default {
 					color: "warning",
 				});
 				console.log("sending profile", this.pos_profile);
-				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile, attributesMeta);
+				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile);
 			} else {
 				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
 					this.eventBus.emit("show_message", {
