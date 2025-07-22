@@ -241,14 +241,10 @@ def apply_tax_inclusive(doc):
 
 	has_changes = False
 	for tax in doc.get("taxes", []):
-		if tax.charge_type == "Actual":
-			if tax.included_in_print_rate:
-				tax.included_in_print_rate = 0
-				has_changes = True
-				continue
 		if not tax.included_in_print_rate:
 			tax.included_in_print_rate = 1
 			has_changes = True
+
 	if has_changes:
 		doc.calculate_taxes_and_totals()
 
