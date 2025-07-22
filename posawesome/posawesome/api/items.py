@@ -447,30 +447,15 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 		"brand",
 	]
 
-        items_data = frappe.get_all(
-                "Item",
-                filters={"variant_of": parent_item_code, "disabled": 0},
-                fields=fields,
-                order_by="item_name asc",
-        )
+	items_data = frappe.get_all(
+		"Item",
+		filters={"variant_of": parent_item_code, "disabled": 0},
+		fields=fields,
+		order_by="item_name asc",
+	)
 
-        attributes_meta = {}
-        template_attributes = frappe.get_all(
-                "Item Variant Attribute",
-                fields=["attribute"],
-                filters={"parent": parent_item_code, "parenttype": "Item"},
-        )
-        for attr in template_attributes:
-                values = frappe.get_all(
-                        "Item Attribute Value",
-                        fields=["attribute_value"],
-                        filters={"parent": attr.attribute, "parenttype": "Item Attribute"},
-                        order_by="idx asc",
-                )
-                attributes_meta[attr.attribute] = [v.attribute_value for v in values]
-
-        if not items_data:
-                return {"variants": [], "attributes_meta": attributes_meta}
+	if not items_data:
+		return []
 
 	details = get_items_details(
 		json.dumps(pos_profile),
@@ -481,23 +466,17 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 	detail_map = {d["item_code"]: d for d in details}
 	result = []
 	for item in items_data:
-                item_barcode = frappe.get_all(
-                        "Item Barcode",
-                        filters={"parent": item["item_code"]},
-                        fields=["barcode", "posa_uom"],
-                )
-                item["item_barcode"] = item_barcode or []
-                item_attributes = frappe.get_all(
-                        "Item Variant Attribute",
-                        fields=["attribute", "attribute_value"],
-                        filters={"parent": item["item_code"], "parentfield": "attributes"},
-                )
-                item["item_attributes"] = item_attributes or []
-                if detail_map.get(item["item_code"]):
-                        item.update(detail_map[item["item_code"]])
-                result.append(item)
+		item_barcode = frappe.get_all(
+			"Item Barcode",
+			filters={"parent": item["item_code"]},
+			fields=["barcode", "posa_uom"],
+		)
+		item["item_barcode"] = item_barcode or []
+		if detail_map.get(item["item_code"]):
+			item.update(detail_map[item["item_code"]])
+		result.append(item)
 
-        return {"variants": result, "attributes_meta": attributes_meta}
+	return result
 
 
 @frappe.whitelist()
