@@ -983,6 +983,8 @@ export default {
 					color: "warning",
 				});
 				console.log("sending profile", this.pos_profile);
+				// Ensure attributes meta is always an object
+				attrsMeta = attrsMeta || {};
 				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile, attrsMeta);
 			} else {
 				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
