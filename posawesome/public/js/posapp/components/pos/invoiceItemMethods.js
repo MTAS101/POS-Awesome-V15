@@ -409,7 +409,7 @@ export default {
 						charge_type: row.charge_type || "On Net Total",
 						description: row.description,
 						rate: row.rate,
-						included_in_print_rate: inclusive ? 1 : 0,
+						included_in_print_rate: row.charge_type === "Actual" ? 0 : inclusive ? 1 : 0,
 						tax_amount: tax_amount,
 						total: runningTotal,
 						base_tax_amount: tax_amount * (this.exchange_rate || 1),
