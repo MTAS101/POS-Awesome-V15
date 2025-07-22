@@ -779,10 +779,8 @@ def update_invoice(data):
 	if frappe.get_cached_value("POS Profile", invoice_doc.pos_profile, "posa_tax_inclusive"):
 		if invoice_doc.get("taxes"):
 			for tax in invoice_doc.taxes:
-				if tax.charge_type == "Actual":
-					tax.included_in_print_rate = 0
-				else:
-					tax.included_in_print_rate = 1
+				tax.included_in_print_rate = 1
+
 	invoice_doc.flags.ignore_permissions = True
 	frappe.flags.ignore_account_permission = True
 	invoice_doc.docstatus = 0
