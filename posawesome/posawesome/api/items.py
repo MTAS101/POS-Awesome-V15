@@ -153,7 +153,7 @@ def get_items(
 			barcode = data.get("barcode") if data.get("barcode") else ""
 
 			condition += get_seearch_items_conditions(item_code, serial_no, batch_no, barcode)
-			if item_group:
+			if item_group and item_group.upper() != "ALL":
 				# Escape item_group to avoid SQL errors with special characters
 				safe_item_group = frappe.db.escape("%" + item_group + "%")
 				condition += f" AND item_group like {safe_item_group}"
@@ -174,8 +174,9 @@ def get_items(
 		# Build ORM filters
 		filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
 
-		# Add item group filter
+		# Add item group filter based on allowed groups in POS Profile
 		item_groups = get_item_groups(pos_profile.get("name"))
+		item_groups = [g.strip("'") for g in item_groups]
 		if item_groups:
 			filters["item_group"] = ["in", item_groups]
 
@@ -195,8 +196,9 @@ def get_items(
 				filters["name"] = data.get("item_code")
 				or_filters = []
 
-		if item_group:
-			filters["item_group"] = ["like", f"%{item_group}%"]
+			# Apply specific item group filter only when not requesting ALL
+				if item_group and item_group.upper() != "ALL":
+					filters["item_group"] = ["like", f"%{item_group}%"]
 
 		if not posa_show_template_items:
 			filters["has_variants"] = 0
