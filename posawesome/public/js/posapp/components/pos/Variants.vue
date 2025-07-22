@@ -8,8 +8,8 @@
 					<v-btn color="error" theme="dark" @click="close_dialog">Close</v-btn>
 				</v-card-title>
 				<v-card-text class="pa-0">
-					<v-container v-if="attributesSource && attributesSource.length">
-						<div v-for="attr in attributesSource" :key="attr.attribute">
+					<v-container v-if="parentItem">
+						<div v-for="attr in parentItem.attributes" :key="attr.attribute">
 							<v-chip-group
 								v-model="filters[attr.attribute]"
 								selected-class="green--text text--accent-4"
@@ -82,7 +82,6 @@ export default {
 		varaintsDialog: false,
 		parentItem: null,
 		items: null,
-		attributesMeta: {},
 		filters: {},
 		filterdItems: [],
 		pos_profile: null,
@@ -94,19 +93,6 @@ export default {
 				return [];
 			}
 			return this.items.filter((item) => item.variant_of == this.parentItem.item_code);
-		},
-		attributesSource() {
-			if (this.parentItem && Array.isArray(this.parentItem.attributes)) {
-				return this.parentItem.attributes;
-			}
-			const res = [];
-			for (const [attr, values] of Object.entries(this.attributesMeta || {})) {
-				res.push({
-					attribute: attr,
-					values: values.map((v) => ({ attribute_value: v, abbr: v })),
-				});
-			}
-			return res;
 		},
 	},
 
@@ -285,13 +271,12 @@ export default {
 	},
 
 	created: function () {
-		this.eventBus.on("open_variants_model", async (item, items, profile, attrsMeta) => {
-			console.log("open_variants_model", { item, items, profile, attrsMeta });
+		this.eventBus.on("open_variants_model", async (item, items, profile) => {
+			console.log("open_variants_model", { item, items, profile });
 			this.varaintsDialog = true;
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
-			this.attributesMeta = attrsMeta || {};
 			if (profile) {
 				this.pos_profile = profile;
 			} else {
