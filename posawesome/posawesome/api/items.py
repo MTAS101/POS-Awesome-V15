@@ -427,68 +427,69 @@ def get_items_groups():
 
 @frappe.whitelist()
 def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=None):
-        """Return variants of an item along with attribute metadata."""
-        pos_profile = json.loads(pos_profile)
-        price_list = price_list or pos_profile.get("selling_price_list")
+	"""Return variants of an item along with attribute metadata."""
+	pos_profile = json.loads(pos_profile)
+	price_list = price_list or pos_profile.get("selling_price_list")
 
-        fields = [
-                "name as item_code",
-                "item_name",
-                "description",
-                "stock_uom",
-                "image",
-                "is_stock_item",
-                "has_variants",
-                "variant_of",
-                "item_group",
-                "idx",
-                "has_batch_no",
-                "has_serial_no",
-                "max_discount",
-                "brand",
-        ]
+	fields = [
+		"name as item_code",
+		"item_name",
+		"description",
+		"stock_uom",
+		"image",
+		"is_stock_item",
+		"has_variants",
+		"variant_of",
+		"item_group",
+		"idx",
+		"has_batch_no",
+		"has_serial_no",
+		"max_discount",
+		"brand",
+	]
 
-        items_data = frappe.get_all(
-                "Item",
-                filters={"variant_of": parent_item_code, "disabled": 0},
-                fields=fields,
-                order_by="item_name asc",
-        )
+	items_data = frappe.get_all(
+		"Item",
+		filters={"variant_of": parent_item_code, "disabled": 0},
+		fields=fields,
+		order_by="item_name asc",
+	)
 
-        if not items_data:
-                return {"variants": [], "attributes_meta": {}}
+	if not items_data:
+		return {"variants": [], "attributes_meta": {}}
 
-        details = get_items_details(
-                json.dumps(pos_profile),
-                json.dumps(items_data),
-                price_list=price_list,
-        )
+	details = get_items_details(
+		json.dumps(pos_profile),
+		json.dumps(items_data),
+		price_list=price_list,
+	)
 
-        detail_map = {d["item_code"]: d for d in details}
-        result = []
-        for item in items_data:
-                item_barcode = frappe.get_all(
-                        "Item Barcode",
-                        filters={"parent": item["item_code"]},
-                        fields=["barcode", "posa_uom"],
-                )
-                item["item_barcode"] = item_barcode or []
-                if detail_map.get(item["item_code"]):
-                        item.update(detail_map[item["item_code"]])
-                result.append(item)
+	detail_map = {d["item_code"]: d for d in details}
+	result = []
+	for item in items_data:
+		item_barcode = frappe.get_all(
+			"Item Barcode",
+			filters={"parent": item["item_code"]},
+			fields=["barcode", "posa_uom"],
+		)
+		item["item_barcode"] = item_barcode or []
+		if detail_map.get(item["item_code"]):
+			item.update(detail_map[item["item_code"]])
+		result.append(item)
 
-        # Build attributes meta from variant attribute values
-        attr_rows = frappe.get_all(
-                "Item Variant Attribute",
-                filters={"parent": ["in", [d["item_code"] for d in items_data]]},
-                fields=["attribute", "attribute_value"],
-        )
-        attributes_meta = {}
-        for row in attr_rows:
-                attributes_meta.setdefault(row.attribute, set()).add(row.attribute_value)
-        attributes_meta = {k: sorted(list(v)) for k, v in attributes_meta.items()}
+	# Build attributes meta from variant attribute values
+	attr_rows = frappe.get_all(
+		"Item Variant Attribute",
+		filters={"parent": ["in", [d["item_code"] for d in items_data]]},
+		fields=["attribute", "attribute_value"],
+	)
+	attributes_meta = {}
+	for row in attr_rows:
+		attributes_meta.setdefault(row.attribute, set()).add(row.attribute_value)
+	attributes_meta = {k: sorted(list(v)) for k, v in attributes_meta.items()}
 
-        return {"variants": result, "attributes_meta": attributes_meta}
+	# Ensure attributes_meta is always a dictionary
+	return {"variants": result, "attributes_meta": attributes_meta or {}}
 
 
 @frappe.whitelist()
@@ -497,9 +498,9 @@ def get_items_details(pos_profile, items_data, price_list=None):
 	items_data = json.loads(items_data)
 	warehouse = pos_profile.get("warehouse")
 	company = (
-	pos_profile.get("company")
-	or frappe.defaults.get_user_default("Company")
-	or frappe.defaults.get_global_default("company")
+		pos_profile.get("company")
+		or frappe.defaults.get_user_default("Company")
+		or frappe.defaults.get_global_default("company")
 	)
 	result = []
 
@@ -571,7 +572,9 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 		company_currency = frappe.db.get_value("Company", company, "default_currency")
 		price_list_currency = company_currency
 		if price_list:
-			price_list_currency = frappe.db.get_value("Price List", price_list, "currency") or company_currency
+			price_list_currency = (
+				frappe.db.get_value("Price List", price_list, "currency") or company_currency
+			)
 
 		exchange_rate = 1
 		if price_list_currency != company_currency and allow_multi_currency:
@@ -748,53 +751,56 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
 
 	return {}
 
+
 @frappe.whitelist()
 def update_price_list_rate(item_code, price_list, rate, uom=None):
-    """Create or update Item Price for the given item and price list."""
-    if not item_code or not price_list:
-        frappe.throw(_("Item Code and Price List are required"))
+	"""Create or update Item Price for the given item and price list."""
+	if not item_code or not price_list:
+		frappe.throw(_("Item Code and Price List are required"))
 
-    rate = flt(rate)
-    filters = {"item_code": item_code, "price_list": price_list}
-    if uom:
-        filters["uom"] = uom
-    else:
-        filters["uom"] = ["", None]
+	rate = flt(rate)
+	filters = {"item_code": item_code, "price_list": price_list}
+	if uom:
+		filters["uom"] = uom
+	else:
+		filters["uom"] = ["", None]
 
-    name = frappe.db.exists("Item Price", filters)
-    if name:
-        doc = frappe.get_doc("Item Price", name)
-        doc.price_list_rate = rate
-        doc.save(ignore_permissions=True)
-    else:
-        doc = frappe.get_doc({
-            "doctype": "Item Price",
-            "item_code": item_code,
-            "price_list": price_list,
-            "uom": uom,
-            "price_list_rate": rate,
-            "selling": 1,
-        })
-        doc.insert(ignore_permissions=True)
+	name = frappe.db.exists("Item Price", filters)
+	if name:
+		doc = frappe.get_doc("Item Price", name)
+		doc.price_list_rate = rate
+		doc.save(ignore_permissions=True)
+	else:
+		doc = frappe.get_doc(
+			{
+				"doctype": "Item Price",
+				"item_code": item_code,
+				"price_list": price_list,
+				"uom": uom,
+				"price_list_rate": rate,
+				"selling": 1,
+			}
+		)
+		doc.insert(ignore_permissions=True)
 
-    frappe.db.commit()
-    return _("Item Price has been added or updated")
+	frappe.db.commit()
+	return _("Item Price has been added or updated")
 
 
 @frappe.whitelist()
 def get_price_for_uom(item_code, price_list, uom):
-    """Return Item Price for the given item, price list and UOM if it exists."""
-    if not (item_code and price_list and uom):
-        return None
+	"""Return Item Price for the given item, price list and UOM if it exists."""
+	if not (item_code and price_list and uom):
+		return None
 
-    price = frappe.db.get_value(
-        "Item Price",
-        {
-            "item_code": item_code,
-            "price_list": price_list,
-            "uom": uom,
-            "selling": 1,
-        },
-        "price_list_rate",
-    )
-    return price
+	price = frappe.db.get_value(
+		"Item Price",
+		{
+			"item_code": item_code,
+			"price_list": price_list,
+			"uom": uom,
+			"selling": 1,
+		},
+		"price_list_rate",
+	)
+	return price
