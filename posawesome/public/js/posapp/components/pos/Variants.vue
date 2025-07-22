@@ -14,6 +14,7 @@
 								v-model="filters[attr.attribute]"
 								selected-class="green--text text--accent-4"
 								column
+								@update:model-value="updateFiltredItems"
 							>
 								<v-chip
 									v-for="value in attr.values"
@@ -21,9 +22,16 @@
 									:value="value.attribute_value"
 									variant="outlined"
 									label
-									@click="updateFiltredItems"
 								>
 									{{ value.attribute_value }}
+								</v-chip>
+								<v-chip
+									v-if="filters[attr.attribute]"
+									variant="text"
+									color="primary"
+									@click.stop="clearFilter(attr.attribute)"
+								>
+									{{ __("Clear") }}
 								</v-chip>
 							</v-chip-group>
 							<v-divider class="p-0 m-0"></v-divider>
@@ -115,6 +123,23 @@ export default {
 			this.filterdItems = this.variantsItems;
 			this.displayCount = 100;
 		},
+		attributes_meta: {
+			handler(newVal) {
+				if (this.parentItem && newVal && Object.keys(newVal).length) {
+					this.parentItem.attributes = Object.keys(newVal).map((attr) => ({
+						attribute: attr,
+						values: newVal[attr].map((v) => ({ attribute_value: v, abbr: v })),
+					}));
+				} else if (this.parentItem) {
+					this.parentItem.attributes = [];
+				}
+				this.$nextTick(() => {
+					this.filterdItems = this.variantsItems;
+					this.displayCount = 100;
+				});
+			},
+			deep: true,
+		},
 	},
 
 	methods: {
@@ -196,14 +221,29 @@ export default {
 					this.filterdItems = [];
 					this.variantsItems.forEach((item) => {
 						let apply = true;
-						item.item_attributes.forEach((attr) => {
-							if (
-								this.filters[attr.attribute] &&
-								this.filters[attr.attribute] != attr.attribute_value
-							) {
-								apply = false;
+						let attrs = [];
+						if (Array.isArray(item.item_attributes)) {
+							attrs = item.item_attributes;
+						} else if (
+							typeof item.item_attributes === "string" &&
+							item.item_attributes.trim().startsWith("[")
+						) {
+							try {
+								attrs = JSON.parse(item.item_attributes);
+							} catch (e) {
+								attrs = [];
 							}
-						});
+						}
+						for (const [attrName, val] of Object.entries(this.filters)) {
+							if (!val) continue;
+							const found = attrs.find(
+								(a) => a.attribute === attrName && String(a.attribute_value) === String(val),
+							);
+							if (!found) {
+								apply = false;
+								break;
+							}
+						}
 						if (apply && !itemsList.includes(item.item_code)) {
 							this.filterdItems.push(item);
 							itemsList.push(item.item_code);
@@ -214,8 +254,13 @@ export default {
 					"filtered items",
 					this.filterdItems.map((it) => it.item_code),
 				);
+				this.displayCount = 100;
 			});
 		}, 200),
+		clearFilter(attr) {
+			this.$set(this.filters, attr, null);
+			this.updateFiltredItems();
+		},
 		loadMore() {
 			if (this.displayCount < this.filterdItems.length) {
 				this.displayCount += 100;
