@@ -224,21 +224,26 @@ export default {
 						let attrs = [];
 						if (Array.isArray(item.item_attributes)) {
 							attrs = item.item_attributes;
-						} else if (
-							typeof item.item_attributes === "string" &&
-							item.item_attributes.trim().startsWith("[")
-						) {
-							try {
-								attrs = JSON.parse(item.item_attributes);
-							} catch (e) {
-								attrs = [];
+						} else if (typeof item.item_attributes === "string") {
+							const txt = item.item_attributes.trim();
+							if (txt.startsWith("[") || txt.startsWith("{")) {
+								try {
+									attrs = JSON.parse(txt);
+								} catch (e) {
+									attrs = [];
+								}
 							}
 						}
 						for (const [attrName, val] of Object.entries(this.filters)) {
 							if (!val) continue;
-							const found = attrs.find(
-								(a) => a.attribute === attrName && String(a.attribute_value) === String(val),
-							);
+							const found = attrs.find((a) => {
+								return (
+									String(a.attribute).trim().toLowerCase() ===
+										String(attrName).trim().toLowerCase() &&
+									String(a.attribute_value).trim().toLowerCase() ===
+										String(val).trim().toLowerCase()
+								);
+							});
 							if (!found) {
 								apply = false;
 								break;
