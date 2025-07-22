@@ -977,6 +977,21 @@ export default {
 					} catch (e) {
 						console.error("Failed to fetch variants", e);
 					}
+				} else {
+					// Build attribute metadata from already loaded variants
+					variants.forEach((it) => {
+						if (Array.isArray(it.item_attributes)) {
+							it.item_attributes.forEach((attr) => {
+								if (!attrsMeta[attr.attribute]) {
+									attrsMeta[attr.attribute] = new Set();
+								}
+								attrsMeta[attr.attribute].add(attr.attribute_value);
+							});
+						}
+					});
+					Object.keys(attrsMeta).forEach((k) => {
+						attrsMeta[k] = Array.from(attrsMeta[k]);
+					});
 				}
 				this.eventBus.emit("show_message", {
 					title: __("This is an item template. Please choose a variant."),

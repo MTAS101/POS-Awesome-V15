@@ -115,6 +115,21 @@ export default {
 			this.filterdItems = this.variantsItems;
 			this.displayCount = 100;
 		},
+		attributes_meta: {
+			handler(val) {
+				if (this.parentItem && val && Object.keys(val).length) {
+					this.parentItem.attributes = Object.keys(val).map((attr) => ({
+						attribute: attr,
+						values: val[attr].map((v) => ({ attribute_value: v, abbr: v })),
+					}));
+					this.$nextTick(() => {
+						this.filterdItems = this.variantsItems;
+						this.displayCount = 100;
+					});
+				}
+			},
+			deep: true,
+		},
 	},
 
 	methods: {
@@ -214,6 +229,7 @@ export default {
 					"filtered items",
 					this.filterdItems.map((it) => it.item_code),
 				);
+				this.displayCount = 100;
 			});
 		}, 200),
 		loadMore() {

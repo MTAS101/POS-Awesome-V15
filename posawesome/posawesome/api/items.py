@@ -488,7 +488,7 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
                 attributes_meta.setdefault(row.attribute, set()).add(row.attribute_value)
         attributes_meta = {k: sorted(list(v)) for k, v in attributes_meta.items()}
 
-        return {"variants": result, "attributes_meta": attributes_meta}
+        return {"variants": result, "attributes_meta": attributes_meta or {}}
 
 
 @frappe.whitelist()
