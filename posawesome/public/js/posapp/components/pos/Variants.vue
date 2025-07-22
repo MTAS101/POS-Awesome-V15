@@ -31,7 +31,7 @@
 						<div>
 							<v-row density="default" class="overflow-y-auto" style="max-height: 500px">
 								<v-col
-									v-for="(item, idx) in filterdItems"
+									v-for="(item, idx) in displayItems"
 									:key="idx"
 									xl="2"
 									lg="3"
@@ -65,6 +65,7 @@
 										</v-card-text>
 									</v-card>
 								</v-col>
+								<div v-intersect="loadMore"></div>
 							</v-row>
 						</div>
 					</v-container>
@@ -77,6 +78,7 @@
 <script>
 /* global frappe */
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
+import _ from "lodash";
 export default {
 	data: () => ({
 		varaintsDialog: false,
@@ -85,6 +87,8 @@ export default {
 		filters: {},
 		filterdItems: [],
 		pos_profile: null,
+		attributes_meta: {},
+		displayCount: 100,
 	}),
 
 	computed: {
@@ -94,17 +98,22 @@ export default {
 			}
 			return this.items.filter((item) => item.variant_of == this.parentItem.item_code);
 		},
+		displayItems() {
+			return this.filterdItems.slice(0, this.displayCount);
+		},
 	},
 
 	watch: {
 		items: {
 			handler() {
 				this.filterdItems = this.variantsItems;
+				this.displayCount = 100;
 			},
 			deep: true,
 		},
 		parentItem() {
 			this.filterdItems = this.variantsItems;
+			this.displayCount = 100;
 		},
 	},
 
@@ -159,8 +168,10 @@ export default {
 				});
 				console.log("variants API result", res);
 				if (res.message) {
+					const variants = res.message.variants || res.message;
+					this.attributes_meta = res.message.attributes_meta || this.attributes_meta;
 					const existingCodes = new Set((this.items || []).map((it) => it.item_code));
-					const newItems = res.message.filter((it) => !existingCodes.has(it.item_code));
+					const newItems = variants.filter((it) => !existingCodes.has(it.item_code));
 					console.log("new variant items", newItems);
 					await Promise.all(newItems.map((it) => this.fetchVariantRate(it)));
 					this.items = (this.items || []).concat(newItems);
@@ -169,7 +180,7 @@ export default {
 				console.error("Failed to fetch variants", e);
 			}
 		},
-		updateFiltredItems() {
+		updateFiltredItems: _.debounce(function () {
 			this.$nextTick(function () {
 				const values = [];
 				Object.entries(this.filters).forEach(([, value]) => {
@@ -204,6 +215,11 @@ export default {
 					this.filterdItems.map((it) => it.item_code),
 				);
 			});
+		}, 200),
+		loadMore() {
+			if (this.displayCount < this.filterdItems.length) {
+				this.displayCount += 100;
+			}
 		},
 		async fetchVariantRate(item) {
 			if (!this.pos_profile) {
@@ -271,12 +287,23 @@ export default {
 	},
 
 	created: function () {
-		this.eventBus.on("open_variants_model", async (item, items, profile) => {
-			console.log("open_variants_model", { item, items, profile });
+		this.eventBus.on("open_variants_model", async (item, items, profile, attrsMeta) => {
+			console.log("open_variants_model", { item, items, profile, attrsMeta });
 			this.varaintsDialog = true;
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
+			this.attributes_meta = attrsMeta || this.attributes_meta;
+			if (
+				!this.parentItem.attributes &&
+				this.attributes_meta &&
+				Object.keys(this.attributes_meta).length
+			) {
+				this.parentItem.attributes = Object.keys(this.attributes_meta).map((attr) => ({
+					attribute: attr,
+					values: this.attributes_meta[attr].map((v) => ({ attribute_value: v, abbr: v })),
+				}));
+			}
 			if (profile) {
 				this.pos_profile = profile;
 			} else {
@@ -288,6 +315,7 @@ export default {
 			}
 			this.$nextTick(() => {
 				this.filterdItems = this.variantsItems;
+				this.displayCount = 100;
 			});
 		});
 	},

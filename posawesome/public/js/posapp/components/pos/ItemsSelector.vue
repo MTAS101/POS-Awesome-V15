@@ -957,6 +957,7 @@ export default {
 			item = { ...item };
 			if (item.has_variants) {
 				let variants = this.items.filter((it) => it.variant_of == item.item_code);
+				let attrsMeta = {};
 				if (!variants.length) {
 					try {
 						const res = await frappe.call({
@@ -969,7 +970,8 @@ export default {
 							},
 						});
 						if (res.message) {
-							variants = res.message;
+							variants = res.message.variants || res.message;
+							attrsMeta = res.message.attributes_meta || {};
 							this.items.push(...variants);
 						}
 					} catch (e) {
@@ -981,7 +983,7 @@ export default {
 					color: "warning",
 				});
 				console.log("sending profile", this.pos_profile);
-				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile);
+				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile, attrsMeta);
 			} else {
 				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
 					this.eventBus.emit("show_message", {
