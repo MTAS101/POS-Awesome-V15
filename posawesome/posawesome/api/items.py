@@ -427,56 +427,68 @@ def get_items_groups():
 
 @frappe.whitelist()
 def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=None):
-	pos_profile = json.loads(pos_profile)
-	price_list = price_list or pos_profile.get("selling_price_list")
+        """Return variants of an item along with attribute metadata."""
+        pos_profile = json.loads(pos_profile)
+        price_list = price_list or pos_profile.get("selling_price_list")
 
-	fields = [
-		"name as item_code",
-		"item_name",
-		"description",
-		"stock_uom",
-		"image",
-		"is_stock_item",
-		"has_variants",
-		"variant_of",
-		"item_group",
-		"idx",
-		"has_batch_no",
-		"has_serial_no",
-		"max_discount",
-		"brand",
-	]
+        fields = [
+                "name as item_code",
+                "item_name",
+                "description",
+                "stock_uom",
+                "image",
+                "is_stock_item",
+                "has_variants",
+                "variant_of",
+                "item_group",
+                "idx",
+                "has_batch_no",
+                "has_serial_no",
+                "max_discount",
+                "brand",
+        ]
 
-	items_data = frappe.get_all(
-		"Item",
-		filters={"variant_of": parent_item_code, "disabled": 0},
-		fields=fields,
-		order_by="item_name asc",
-	)
+        items_data = frappe.get_all(
+                "Item",
+                filters={"variant_of": parent_item_code, "disabled": 0},
+                fields=fields,
+                order_by="item_name asc",
+        )
 
-	if not items_data:
-		return []
+        if not items_data:
+                return {"variants": [], "attributes_meta": {}}
 
-	details = get_items_details(
-		json.dumps(pos_profile),
-		json.dumps(items_data),
-		price_list=price_list,
-	)
+        details = get_items_details(
+                json.dumps(pos_profile),
+                json.dumps(items_data),
+                price_list=price_list,
+        )
 
-	detail_map = {d["item_code"]: d for d in details}
-	result = []
-	for item in items_data:
-		item_barcode = frappe.get_all(
-			"Item Barcode",
-			filters={"parent": item["item_code"]},
-			fields=["barcode", "posa_uom"],
-		)
-		item["item_barcode"] = item_barcode or []
-		if detail_map.get(item["item_code"]):
-			item.update(detail_map[item["item_code"]])
-		result.append(item)
+        detail_map = {d["item_code"]: d for d in details}
+        result = []
+        for item in items_data:
+                item_barcode = frappe.get_all(
+                        "Item Barcode",
+                        filters={"parent": item["item_code"]},
+                        fields=["barcode", "posa_uom"],
+                )
+                item["item_barcode"] = item_barcode or []
+                if detail_map.get(item["item_code"]):
+                        item.update(detail_map[item["item_code"]])
+                result.append(item)
 
-	return result
+        # Build attributes meta from variant attribute values
+        attr_rows = frappe.get_all(
+                "Item Variant Attribute",
+                filters={"parent": ["in", [d["item_code"] for d in items_data]]},
+                fields=["attribute", "attribute_value"],
+        )
+        attributes_meta = {}
+        for row in attr_rows:
+                attributes_meta.setdefault(row.attribute, set()).add(row.attribute_value)
+        attributes_meta = {k: sorted(list(v)) for k, v in attributes_meta.items()}
+
+        return {"variants": result, "attributes_meta": attributes_meta}
 
 
 @frappe.whitelist()
