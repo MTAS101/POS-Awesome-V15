@@ -75,17 +75,30 @@ export function useItemAddition() {
 						uom: new_item.uom,
 					},
 				});
-				if (r.message) {
-					const price = parseFloat(r.message);
-					Object.assign(new_item, {
-						rate: price,
-						base_rate: price,
-						price_list_rate: price,
-						base_price_list_rate: price,
-						_manual_rate_set: true,
-						skip_force_update: true,
-					});
-				}
+                                if (r.message) {
+                                        const price = parseFloat(r.message);
+                                        const baseCurrency =
+                                                context.price_list_currency || context.pos_profile.currency;
+
+                                        // Convert price to selected currency when multi-currency is enabled
+                                        let converted_price = price;
+                                        if (
+                                                context.pos_profile.posa_allow_multi_currency &&
+                                                context.selected_currency &&
+                                                context.selected_currency !== baseCurrency
+                                        ) {
+                                                converted_price = price * (context.exchange_rate || 1);
+                                        }
+
+                                        Object.assign(new_item, {
+                                                rate: converted_price,
+                                                price_list_rate: converted_price,
+                                                base_rate: price,
+                                                base_price_list_rate: price,
+                                                _manual_rate_set: true,
+                                                skip_force_update: true,
+                                        });
+                                }
 			} catch (e) {
 				console.warn("UOM price fetch failed", e);
 			}
