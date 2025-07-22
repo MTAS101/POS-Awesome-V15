@@ -1,13 +1,6 @@
 <template>
 	<v-row justify="center">
-		<v-dialog
-			v-model="varaintsDialog"
-			max-width="600px"
-			tabindex="0"
-			@keydown.left.prevent="moveHighlight(-1)"
-			@keydown.right.prevent="moveHighlight(1)"
-			@keydown.enter.prevent="selectHighlighted"
-		>
+		<v-dialog v-model="varaintsDialog" max-width="600px">
 			<v-card min-height="500px">
 				<v-card-title>
 					<span class="text-h5 text-primary">Select Item</span>
@@ -47,11 +40,7 @@
 									cols="6"
 									min-height="50"
 								>
-									<v-card
-										hover="hover"
-										@click="add_item(item)"
-										:class="{ 'bg-grey-lighten-3': idx === highlightIndex }"
-									>
+									<v-card hover="hover" @click="add_item(item)">
 										<v-img
 											:src="
 												item.image ||
@@ -95,8 +84,6 @@ export default {
 		items: null,
 		filters: {},
 		filterdItems: [],
-		attributesMeta: {},
-		highlightIndex: 0,
 		pos_profile: null,
 	}),
 
@@ -118,10 +105,6 @@ export default {
 		},
 		parentItem() {
 			this.filterdItems = this.variantsItems;
-			this.highlightIndex = 0;
-		},
-		filterdItems() {
-			this.highlightIndex = 0;
 		},
 	},
 
@@ -285,31 +268,14 @@ export default {
 			this.eventBus.emit("add_item", payload);
 			this.close_dialog();
 		},
-		moveHighlight(step) {
-			const len = this.filterdItems.length;
-			if (!len) return;
-			this.highlightIndex = (this.highlightIndex + step + len) % len;
-		},
-		selectHighlighted() {
-			if (this.filterdItems[this.highlightIndex]) {
-				this.add_item(this.filterdItems[this.highlightIndex]);
-			}
-		},
 	},
 
 	created: function () {
-		this.eventBus.on("open_variants_model", async (item, items, profile, attributesMeta) => {
-			console.log("open_variants_model", { item, items, profile, attributesMeta });
+		this.eventBus.on("open_variants_model", async (item, items, profile) => {
+			console.log("open_variants_model", { item, items, profile });
 			this.varaintsDialog = true;
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
-			this.attributesMeta = attributesMeta || {};
-			if (Object.keys(this.attributesMeta).length) {
-				this.parentItem.attributes = Object.entries(this.attributesMeta).map(([attr, vals]) => ({
-					attribute: attr,
-					values: vals.map((v) => ({ attribute_value: v, abbr: v })),
-				}));
-			}
 			this.filters = {};
 			if (profile) {
 				this.pos_profile = profile;
