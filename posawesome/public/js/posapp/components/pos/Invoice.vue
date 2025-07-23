@@ -180,6 +180,7 @@
 
 					<!-- ItemsTable component with reorder event handler -->
 					<ItemsTable
+						ref="itemsTable"
 						:headers="items_headers"
 						:items="items"
 						:expanded="expanded"
@@ -1055,7 +1056,9 @@ export default {
 			this.fetch_price_lists();
 			this.update_price_list();
 		});
-		this.eventBus.on("add_item", this.add_item);
+		this.eventBus.on("add_item", (item) => {
+			this.$refs.itemsTable.addItemDebounced(item);
+		});
 		this.eventBus.on("update_customer", (customer) => {
 			this.customer = customer;
 		});

@@ -1,4 +1,5 @@
 import { ref, nextTick } from "vue";
+import _ from 'lodash';
 
 export function useItemAddition() {
 	// Remove item from invoice
@@ -317,10 +318,33 @@ export function useItemAddition() {
 		context.invoiceTypes = ["Invoice", "Order"];
 	};
 
+	// Add this utility for grouping logic, matching ItemsTable.vue
+	function groupAndAddItem(items, newItem) {
+		// Find a matching item (by item_code, uom, and rate)
+		const match = items.find(
+			item =>
+				item.item_code === newItem.item_code &&
+				item.uom === newItem.uom &&
+				item.rate === newItem.rate
+		);
+		if (match) {
+			// If found, increment quantity
+			match.qty += newItem.qty || 1;
+			match.amount = match.qty * match.rate;
+		} else {
+			items.push({ ...newItem });
+		}
+	}
+
+	// Debounced version for rapid additions
+	const groupAndAddItemDebounced = _.debounce(groupAndAddItem, 50);
+
 	return {
 		removeItem,
 		addItem,
 		getNewItem,
 		clearInvoice,
+		groupAndAddItem,
+		groupAndAddItemDebounced
 	};
 }
