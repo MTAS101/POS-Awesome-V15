@@ -7,7 +7,8 @@ import json
 import frappe
 from frappe.utils import cstr
 from typing import List, Dict
-
+import time
+import os
 
 def get_version():
 	branch_name = get_app_branch("erpnext")
@@ -251,3 +252,31 @@ def get_pos_profile_tax_inclusive(pos_profile: str):
 	if not pos_profile:
 		return None
 	return frappe.get_cached_value("POS Profile", pos_profile, "posa_tax_inclusive")
+
+
+
+@frappe.whitelist(allow_guest=True)
+def get_server_usage():
+    try:
+        import psutil
+        cpu_percent = psutil.cpu_percent(interval=0.5)
+        memory_percent = psutil.virtual_memory().percent
+        load_avg = os.getloadavg() if hasattr(os, 'getloadavg') else (0, 0, 0)
+        uptime = time.time() - psutil.boot_time()
+    except ImportError:
+        cpu_percent = None
+        memory_percent = None
+        load_avg = (None, None, None)
+        uptime = None
+    except Exception as e:
+        frappe.log_error(f"Server usage error: {e}")
+        cpu_percent = None
+        memory_percent = None
+        load_avg = (None, None, None)
+        uptime = None
+    return {
+        'cpu_percent': cpu_percent,
+        'memory_percent': memory_percent,
+        'load_avg': load_avg,
+        'uptime': uptime,
+    } 

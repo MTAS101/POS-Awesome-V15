@@ -3,27 +3,41 @@
     <v-tooltip location="bottom">
       <template #activator="{ props }">
         <div v-bind="props" class="cpu-meter-container">
-          <v-progress-circular
-            :model-value="cpuPercent"
-            :color="cpuColor"
-            :size="32"
-            :width="3"
-            class="cpu-meter"
-          >
-            <v-icon size="16">mdi-chip</v-icon>
-          </v-progress-circular>
+          <v-icon size="22" color="success">mdi-chip</v-icon>
+          <span class="cpu-current-lag">{{ cpuLag.toFixed(1) }} ms</span>
         </div>
       </template>
       <div class="cpu-tooltip-content">
         <div class="cpu-tooltip-title">{{ __("CPU Load") }}</div>
-        <div class="cpu-tooltip-bar mb-2">
-          <div class="cpu-bar-bg">
-            <div class="cpu-bar-fill" :style="{ width: cpuPercent + '%' }"></div>
-          </div>
-          <span class="cpu-bar-label">{{ cpuPercent }}%</span>
+        <div class="cpu-tooltip-peak mb-1">
+          <v-icon size="14" color="success" class="mr-1">mdi-arrow-up-bold</v-icon>
+          {{ __("Peak:") }}
+          <b>{{ peakLag.toFixed(1) }} ms</b>
+          ({{ peakPercent }}%)
+        </div>
+        <div class="cpu-tooltip-sparkline mb-2">
+          <svg :width="180" :height="40" class="cpu-sparkline-large">
+            <defs>
+              <linearGradient id="cpuAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4caf50" stop-opacity="0.35"/>
+                <stop offset="100%" stop-color="#4caf50" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <polyline
+              :points="sparklinePointsLarge"
+              fill="none"
+              stroke="#4caf50"
+              stroke-width="2"
+            />
+            <polygon
+              :points="areaPointsLarge"
+              fill="url(#cpuAreaGradient)"
+              stroke="none"
+            />
+          </svg>
         </div>
         <div class="cpu-tooltip-detail">
-          {{ __("Event Loop Lag:") }} <b>{{ cpuLag.toFixed(1) }}</b> ms
+          {{ __("Current Event Loop Lag:") }} <b>{{ cpuLag.toFixed(1) }}</b> ms
         </div>
         <div v-if="cpuLag >= 80" class="cpu-tooltip-warning">
           <v-icon size="14" color="error" class="mr-1">mdi-alert</v-icon>
@@ -50,19 +64,38 @@
 import { computed, inject } from "vue";
 import { useCpuLoad } from "../../composables/useCpuLoad";
 
-const { cpuLag } = useCpuLoad();
-
-// i18n translation function (Vuetify/Frappe style)
+const { cpuLag, history } = useCpuLoad(1000, 60);
 const __ = inject("__", (txt: string) => txt);
 
-// Convert lag to a percentage for the progress circle (0-100ms = 0-100%)
-const cpuPercent = computed(() => Math.min(100, Math.round(cpuLag.value)));
+function getSparklinePoints(arr: number[], w: number, h: number) {
+  if (!arr.length) return '';
+  const max = Math.max(...arr, 100);
+  const min = 0;
+  const step = arr.length > 1 ? w / (arr.length - 1) : w;
+  return arr
+    .map((v, i) => `${i * step},${h - ((v - min) / (max - min || 1)) * h}`)
+    .join(' ');
+}
 
-const cpuColor = computed(() => {
-  if (cpuLag.value < 40) return "success";
-  if (cpuLag.value < 80) return "warning";
-  return "error";
-});
+function getAreaPoints(arr: number[], w: number, h: number) {
+  if (!arr.length) return '';
+  const max = Math.max(...arr, 100);
+  const min = 0;
+  const step = arr.length > 1 ? w / (arr.length - 1) : w;
+  let points = arr
+    .map((v, i) => `${i * step},${h - ((v - min) / (max - min || 1)) * h}`)
+    .join(' ');
+  // Close the area polygon
+  points += ` ${w},${h} 0,${h}`;
+  return points;
+}
+
+const sparklinePointsLarge = computed(() => getSparklinePoints(history.value, 180, 40));
+const areaPointsLarge = computed(() => getAreaPoints(history.value, 180, 40));
+
+// Peak lag in ms and as a percentage (100ms = 100%)
+const peakLag = computed(() => Math.max(...history.value, 0));
+const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 </script>
 
 <style scoped>
@@ -158,6 +191,53 @@ const cpuColor = computed(() => {
   font-size: 12px;
   display: flex;
   align-items: center;
+}
+
+.cpu-sparkline-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cpu-sparkline {
+  display: block;
+  background: none;
+}
+.cpu-current-lag {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4caf50;
+  min-width: 48px;
+  text-align: right;
+}
+.cpu-tooltip-sparkline {
+  width: 180px;
+  height: 40px;
+  margin-bottom: 8px;
+}
+.cpu-sparkline-large {
+  display: block;
+  background: none;
+}
+
+.cpu-tooltip-legend {
+  font-size: 12px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.legend-dot.client {
+  background: #4caf50;
+}
+.legend-dot.server {
+  background: #1976d2;
 }
 
 /* Fix tooltip background and text color in light mode */

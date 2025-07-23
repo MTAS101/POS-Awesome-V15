@@ -1,8 +1,10 @@
 // Network-related composable functions for Home.vue
+import { isManualOffline } from '../../offline/index.js';
 
 export function setupNetworkListeners() {
     // Listen for network status changes
     window.addEventListener("online", () => {
+        if (isManualOffline()) return;
         this.networkOnline = true;
         console.log("Network: Online");
         // Verify actual connectivity
@@ -10,6 +12,7 @@ export function setupNetworkListeners() {
     });
 
     window.addEventListener("offline", () => {
+        if (isManualOffline()) return;
         this.networkOnline = false;
         this.serverOnline = false;
         window.serverOnline = false;
@@ -18,11 +21,18 @@ export function setupNetworkListeners() {
     });
 
     // Initial network status
-    this.networkOnline = navigator.onLine;
-    this.checkNetworkConnectivity();
+    if (!isManualOffline()) {
+        this.networkOnline = navigator.onLine;
+        this.checkNetworkConnectivity();
+    } else {
+        this.networkOnline = false;
+        this.serverOnline = false;
+        window.serverOnline = false;
+    }
 
     // Periodic network check every 15 seconds
     setInterval(() => {
+        if (isManualOffline()) return;
         if (navigator.onLine) {
             this.checkNetworkConnectivity();
         }
