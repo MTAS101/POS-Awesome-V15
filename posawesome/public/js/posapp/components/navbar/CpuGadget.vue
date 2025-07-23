@@ -43,18 +43,39 @@
           <v-icon size="14" color="error" class="mr-1">mdi-alert</v-icon>
           {{ __("Warning: High lag may indicate heavy processing or browser slowness.") }}
         </div>
-        <div v-if="serverLoading" class="cpu-tooltip-detail">{{ __("Loading server CPU usage...") }}</div>
+        <div v-if="serverLoading" class="cpu-tooltip-detail">{{ __("Loading server CPU/memory usage...") }}</div>
         <div v-else-if="serverError" class="cpu-tooltip-warning">{{ serverError }}</div>
-        <div v-else class="cpu-tooltip-detail">
-          {{ __("Server CPU Usage:") }} <b>{{ serverCpu !== null ? serverCpu.toFixed(1) + '%' : 'N/A' }}</b>
-          <span class="ml-2">{{ __("Peak Server:") }} <b>{{ serverPeak.toFixed(1) }}%</b></span>
+        <div v-else>
+          <div class="cpu-tooltip-detail">
+            {{ __("Server CPU Usage:") }} <b>{{ serverCpu !== null ? serverCpu.toFixed(1) + '%' : 'N/A' }}</b>
+            <span class="ml-2">{{ __("Peak Server:") }} <b>{{ serverPeak.toFixed(1) }}%</b></span>
+          </div>
+          <div class="cpu-tooltip-detail">
+            {{ __("Server Memory Usage:") }}
+            <b>{{ serverMemory !== null ? serverMemory.toFixed(1) + '%' : 'N/A' }}</b>
+            <span class="ml-2">{{ __("Peak Memory:") }} <b>{{ serverMemoryPeak.toFixed(1) }}%</b></span>
+          </div>
+          <div class="cpu-tooltip-bar">
+            <div class="cpu-bar-bg">
+              <div class="cpu-bar-fill" :style="{ width: (serverMemory || 0) + '%', background: 'linear-gradient(90deg,#1976d2 0%,#42a5f5 100%)' }"></div>
+            </div>
+            <span class="cpu-bar-label">{{ serverMemory !== null ? serverMemory.toFixed(1) + '%' : 'N/A' }}</span>
+          </div>
+          <div class="cpu-tooltip-detail">
+            {{ __("Total:") }} <b>{{ formatBytes(memoryTotal) }}</b>
+            <span class="ml-2">{{ __("Used:") }} <b>{{ formatBytes(memoryUsed) }}</b></span>
+            <span class="ml-2">{{ __("Available:") }} <b>{{ formatBytes(memoryAvailable) }}</b></span>
+          </div>
+          <div class="cpu-tooltip-detail">
+            {{ __("Server Uptime:") }} <b>{{ formatUptime(serverUptime) }}</b>
+          </div>
         </div>
         <div class="cpu-tooltip-tip mt-2">
           <v-icon size="14" color="primary" class="mr-1">mdi-lightbulb-on-outline</v-icon>
           {{ __("Tip: Close unused tabs or apps to reduce lag.") }}
         </div>
         <div class="cpu-tooltip-explanation mt-2">
-          <v-icon size="14" color="info" class="mr-1">mdi-chip"</v-icon>
+          <v-icon size="14" color="info" class="mr-1">mdi-chip</v-icon>
           {{ __("Event-loop lag measures how busy your browser is. Lower is better.") }}
         </div>
         <div class="cpu-tooltip-action mt-2">
@@ -67,45 +88,56 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref, onMounted, onUnmounted } from "vue";
+import { computed, inject } from "vue";
 import { useCpuLoad } from "../../composables/useCpuLoad";
+import { useServerCpu } from "../../composables/useServerCpu";
 
 const { cpuLag, history } = useCpuLoad(1000, 60);
 const __ = inject("__", (txt: string) => txt);
 
-// Server CPU usage integration
-const serverCpu = ref<number | null>(null);
-const serverPeak = ref<number>(0);
-const serverLoading = ref(true);
-const serverError = ref<string | null>(null);
-let serverTimer: number | null = null;
+// Use the composable for server CPU and memory
+const {
+  cpu: serverCpu,
+  memory: serverMemory,
+  memoryTotal,
+  memoryUsed,
+  memoryAvailable,
+  history: serverHistory,
+  loading: serverLoading,
+  error: serverError
+} = useServerCpu(10000, 60);
 
-async function fetchServerCpu() {
-  serverLoading.value = true;
-  serverError.value = null;
-  try {
-    const res = await fetch("/api/method/posawesome.posawesome.api.utilities.get_server_usage");
-    const data = await res.json();
-    if (data && data.message && typeof data.message.cpu_percent === 'number') {
-      serverCpu.value = data.message.cpu_percent;
-      if (typeof serverCpu.value === 'number' && serverCpu.value !== null && serverCpu.value > serverPeak.value) serverPeak.value = serverCpu.value;
-    } else {
-      serverError.value = "No data from server";
-    }
-  } catch (e) {
-    serverError.value = (e as Error).message;
-  } finally {
-    serverLoading.value = false;
+const serverPeak = computed(() => Math.max(...serverHistory.value.map(h => h.cpu ?? 0), 0));
+const serverMemoryPeak = computed(() => Math.max(...serverHistory.value.map(h => h.memory ?? 0), 0));
+
+// Uptime formatting
+import { ref, watch } from "vue";
+const serverUptime = ref<number | null>(null);
+watch(serverHistory, (hist) => {
+  if (hist.length && hist[hist.length - 1].uptime != null) {
+    serverUptime.value = hist[hist.length - 1].uptime;
   }
+}, { immediate: true, deep: true });
+
+function formatUptime(seconds: number | null) {
+  if (seconds == null) return 'N/A';
+  const d = Math.floor(seconds / (3600 * 24));
+  const h = Math.floor((seconds % (3600 * 24)) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  let str = '';
+  if (d > 0) str += `${d}d `;
+  if (h > 0 || d > 0) str += `${h}h `;
+  str += `${m}m`;
+  return str.trim();
 }
 
-onMounted(() => {
-  fetchServerCpu();
-  serverTimer = window.setInterval(fetchServerCpu, 10000);
-});
-onUnmounted(() => {
-  if (serverTimer) clearInterval(serverTimer);
-});
+function formatBytes(bytes: number | null) {
+  if (bytes == null) return 'N/A';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}
 
 function getSparklinePoints(arr: number[], w: number, h: number) {
   if (!arr.length) return '';

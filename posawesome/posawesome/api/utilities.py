@@ -9,6 +9,7 @@ from frappe.utils import cstr
 from typing import List, Dict
 import time
 import os
+import psutil
 
 def get_version():
 	branch_name = get_app_branch("erpnext")
@@ -258,25 +259,38 @@ def get_pos_profile_tax_inclusive(pos_profile: str):
 @frappe.whitelist(allow_guest=True)
 def get_server_usage():
     try:
-        import psutil
+        
         cpu_percent = psutil.cpu_percent(interval=0.5)
-        memory_percent = psutil.virtual_memory().percent
+        mem = psutil.virtual_memory()
+        memory_percent = mem.percent
+        memory_total = mem.total
+        memory_used = mem.used
+        memory_available = mem.available
         load_avg = os.getloadavg() if hasattr(os, 'getloadavg') else (0, 0, 0)
         uptime = time.time() - psutil.boot_time()
     except ImportError:
         cpu_percent = None
         memory_percent = None
+        memory_total = None
+        memory_used = None
+        memory_available = None
         load_avg = (None, None, None)
         uptime = None
     except Exception as e:
         frappe.log_error(f"Server usage error: {e}")
         cpu_percent = None
         memory_percent = None
+        memory_total = None
+        memory_used = None
+        memory_available = None
         load_avg = (None, None, None)
         uptime = None
     return {
         'cpu_percent': cpu_percent,
         'memory_percent': memory_percent,
+        'memory_total': memory_total,
+        'memory_used': memory_used,
+        'memory_available': memory_available,
         'load_avg': load_avg,
         'uptime': uptime,
     } 

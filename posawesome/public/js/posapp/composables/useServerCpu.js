@@ -5,6 +5,9 @@ const API_URL = "/api/method/posawesome.posawesome.api.utilities.get_server_usag
 export function useServerCpu(pollInterval = 10000, windowSize = 60) {
     const cpu = ref(null);
     const memory = ref(null);
+    const memoryTotal = ref(null);
+    const memoryUsed = ref(null);
+    const memoryAvailable = ref(null);
     const history = ref([]);
     const loading = ref(true);
     const error = ref(null);
@@ -19,7 +22,18 @@ export function useServerCpu(pollInterval = 10000, windowSize = 60) {
             if (data && data.message) {
                 cpu.value = data.message.cpu_percent;
                 memory.value = data.message.memory_percent;
-                history.value.push({ cpu: cpu.value, memory: memory.value });
+                memoryTotal.value = data.message.memory_total;
+                memoryUsed.value = data.message.memory_used;
+                memoryAvailable.value = data.message.memory_available;
+                const uptime = data.message.uptime;
+                history.value.push({
+                    cpu: cpu.value,
+                    memory: memory.value,
+                    memoryTotal: memoryTotal.value,
+                    memoryUsed: memoryUsed.value,
+                    memoryAvailable: memoryAvailable.value,
+                    uptime: uptime
+                });
                 if (history.value.length > windowSize) history.value.shift();
             } else {
                 error.value = "No data from server";
@@ -38,5 +52,5 @@ export function useServerCpu(pollInterval = 10000, windowSize = 60) {
         if (timer) clearInterval(timer);
     });
 
-    return { cpu, memory, history, loading, error };
+    return { cpu, memory, memoryTotal, memoryUsed, memoryAvailable, history, loading, error };
 } 
