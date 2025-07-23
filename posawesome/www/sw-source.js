@@ -1,10 +1,8 @@
-importScripts(
-       "https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-sw.js"
-);
+importScripts("https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-sw.js");
 
 const { precaching, routing, strategies } = workbox;
 const { precacheAndRoute } = precaching;
-const { registerRoute, setDefaultHandler } = routing;
+const { registerRoute, setCatchHandler } = routing;
 const { NetworkFirst, StaleWhileRevalidate } = strategies;
 
 precacheAndRoute(self.__WB_MANIFEST);
@@ -19,11 +17,9 @@ registerRoute(
 );
 
 // Fallback to offline page when navigation fails
-setDefaultHandler(async ({ event }) => {
-	try {
-		return await fetch(event.request);
-	} catch (err) {
-		const cache = await caches.open("pages-cache");
-		return await cache.match("/offline.html");
+setCatchHandler(async ({ event }) => {
+	if (event.request.mode === "navigate") {
+		return (await caches.match("/offline.html")) || Response.error();
 	}
+	return Response.error();
 });
