@@ -43,6 +43,12 @@
           <v-icon size="14" color="error" class="mr-1">mdi-alert</v-icon>
           {{ __("Warning: High lag may indicate heavy processing or browser slowness.") }}
         </div>
+        <div v-if="serverLoading" class="cpu-tooltip-detail">{{ __("Loading server CPU usage...") }}</div>
+        <div v-else-if="serverError" class="cpu-tooltip-warning">{{ serverError }}</div>
+        <div v-else class="cpu-tooltip-detail">
+          {{ __("Server CPU Usage:") }} <b>{{ serverCpu !== null ? serverCpu.toFixed(1) + '%' : 'N/A' }}</b>
+          <span class="ml-2">{{ __("Peak Server:") }} <b>{{ serverPeak.toFixed(1) }}%</b></span>
+        </div>
         <div class="cpu-tooltip-tip mt-2">
           <v-icon size="14" color="primary" class="mr-1">mdi-lightbulb-on-outline</v-icon>
           {{ __("Tip: Close unused tabs or apps to reduce lag.") }}
@@ -61,11 +67,45 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject } from "vue";
+import { computed, inject, ref, onMounted, onUnmounted } from "vue";
 import { useCpuLoad } from "../../composables/useCpuLoad";
 
 const { cpuLag, history } = useCpuLoad(1000, 60);
 const __ = inject("__", (txt: string) => txt);
+
+// Server CPU usage integration
+const serverCpu = ref<number | null>(null);
+const serverPeak = ref<number>(0);
+const serverLoading = ref(true);
+const serverError = ref<string | null>(null);
+let serverTimer: number | null = null;
+
+async function fetchServerCpu() {
+  serverLoading.value = true;
+  serverError.value = null;
+  try {
+    const res = await fetch("/api/method/posawesome.posawesome.api.utilities.get_server_usage");
+    const data = await res.json();
+    if (data && data.message && typeof data.message.cpu_percent === 'number') {
+      serverCpu.value = data.message.cpu_percent;
+      if (typeof serverCpu.value === 'number' && serverCpu.value !== null && serverCpu.value > serverPeak.value) serverPeak.value = serverCpu.value;
+    } else {
+      serverError.value = "No data from server";
+    }
+  } catch (e) {
+    serverError.value = (e as Error).message;
+  } finally {
+    serverLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  fetchServerCpu();
+  serverTimer = window.setInterval(fetchServerCpu, 10000);
+});
+onUnmounted(() => {
+  if (serverTimer) clearInterval(serverTimer);
+});
 
 function getSparklinePoints(arr: number[], w: number, h: number) {
   if (!arr.length) return '';
