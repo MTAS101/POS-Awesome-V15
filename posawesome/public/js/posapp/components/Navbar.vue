@@ -33,8 +33,13 @@
 
       <!-- Slot for CPU gadget -->
       <template #cpu-gadget>
-        <CpuGadget />
+        <ServerUsageGadget />
       </template>
+
+			<!-- Slot for Database Usage Gadget -->
+			<template #db-usage-gadget>
+				<DatabaseUsageGadget />
+			</template>
 
 			<!-- Slot for menu -->
 			<template #menu>
@@ -104,7 +109,8 @@ import StatusIndicator from "./navbar/StatusIndicator.vue";
 import CacheUsageMeter from "./navbar/CacheUsageMeter.vue";
 import AboutDialog from "./navbar/AboutDialog.vue";
 import OfflineInvoices from "./OfflineInvoices.vue";
-import CpuGadget from "./navbar/CpuGadget.vue";
+import ServerUsageGadget from "./navbar/ServerUsageGadget.vue";
+import DatabaseUsageGadget from "./navbar/DatabaseUsageGadget.vue";
 import { forceClearAllCache } from "../../offline/cache.js";
 import { clearAllCaches } from "../../utils/clearAllCaches.js";
 import { isOffline } from "../../offline/index.js";
@@ -119,7 +125,8 @@ export default {
 		CacheUsageMeter,
 		AboutDialog,
 		OfflineInvoicesDialog: OfflineInvoices,
-		CpuGadget,
+		ServerUsageGadget,
+		DatabaseUsageGadget,
 	},
 	props: {
 		posProfile: {

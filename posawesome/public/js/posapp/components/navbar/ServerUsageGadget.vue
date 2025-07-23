@@ -3,12 +3,15 @@
     <v-tooltip location="bottom">
       <template #activator="{ props }">
         <div v-bind="props" class="cpu-meter-container">
-          <v-icon size="22" color="success">mdi-chip</v-icon>
+          <v-icon size="22" color="primary">mdi-server</v-icon>
           <span class="cpu-current-lag">{{ cpuLag.toFixed(1) }} ms</span>
         </div>
       </template>
       <div class="cpu-tooltip-content">
-        <div class="cpu-tooltip-title">{{ __("CPU Load") }}</div>
+        <div class="cpu-tooltip-title">
+          <v-icon size="16" color="primary" class="mr-1">mdi-server</v-icon>
+          {{ __("Server Health") }}
+        </div>
         <div class="cpu-tooltip-peak mb-1">
           <v-icon size="14" color="success" class="mr-1">mdi-arrow-up-bold</v-icon>
           {{ __("Peak:") }}
@@ -37,6 +40,7 @@
           </svg>
         </div>
         <div class="cpu-tooltip-detail">
+          <v-icon size="14" color="primary" class="mr-1">mdi-chip</v-icon>
           {{ __("Current Event Loop Lag:") }} <b>{{ cpuLag.toFixed(1) }}</b> ms
         </div>
         <div v-if="cpuLag >= 80" class="cpu-tooltip-warning">
@@ -47,10 +51,12 @@
         <div v-else-if="serverError" class="cpu-tooltip-warning">{{ serverError }}</div>
         <div v-else>
           <div class="cpu-tooltip-detail">
+            <v-icon size="14" color="primary" class="mr-1">mdi-chip</v-icon>
             {{ __("Server CPU Usage:") }} <b>{{ serverCpu !== null ? serverCpu.toFixed(1) + '%' : 'N/A' }}</b>
             <span class="ml-2">{{ __("Peak Server:") }} <b>{{ serverPeak.toFixed(1) }}%</b></span>
           </div>
           <div class="cpu-tooltip-detail">
+            <v-icon size="14" color="primary" class="mr-1">mdi-memory</v-icon>
             {{ __("Server Memory Usage:") }}
             <b>{{ serverMemory !== null ? serverMemory.toFixed(1) + '%' : 'N/A' }}</b>
             <span class="ml-2">{{ __("Peak Memory:") }} <b>{{ serverMemoryPeak.toFixed(1) }}%</b></span>
@@ -62,11 +68,13 @@
             <span class="cpu-bar-label">{{ serverMemory !== null ? serverMemory.toFixed(1) + '%' : 'N/A' }}</span>
           </div>
           <div class="cpu-tooltip-detail">
+            <v-icon size="14" color="primary" class="mr-1">mdi-database</v-icon>
             {{ __("Total:") }} <b>{{ formatBytes(memoryTotal) }}</b>
             <span class="ml-2">{{ __("Used:") }} <b>{{ formatBytes(memoryUsed) }}</b></span>
             <span class="ml-2">{{ __("Available:") }} <b>{{ formatBytes(memoryAvailable) }}</b></span>
           </div>
           <div class="cpu-tooltip-detail">
+            <v-icon size="14" color="primary" class="mr-1">mdi-timer-outline</v-icon>
             {{ __("Server Uptime:") }} <b>{{ formatUptime(serverUptime) }}</b>
           </div>
         </div>
@@ -89,10 +97,10 @@
 
 <script setup lang="ts">
 import { computed, inject } from "vue";
-import { useCpuLoad } from "../../composables/useCpuLoad";
-import { useServerCpu } from "../../composables/useServerCpu";
+import { useClientLoad } from "../../composables/useClientLoad";
+import { useServerStats } from "../../composables/useServerStats";
 
-const { cpuLag, history } = useCpuLoad(1000, 60);
+const { cpuLag, history } = useClientLoad(1000, 60);
 const __ = inject("__", (txt: string) => txt);
 
 // Use the composable for server CPU and memory
@@ -105,7 +113,7 @@ const {
   history: serverHistory,
   loading: serverLoading,
   error: serverError
-} = useServerCpu(10000, 60);
+} = useServerStats(10000, 60);
 
 const serverPeak = computed(() => Math.max(...serverHistory.value.map(h => h.cpu ?? 0), 0));
 const serverMemoryPeak = computed(() => Math.max(...serverHistory.value.map(h => h.memory ?? 0), 0));
