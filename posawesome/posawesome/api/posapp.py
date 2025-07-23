@@ -261,6 +261,7 @@ def get_items(
 
 		# Add item group filter
 		item_groups = get_item_groups(pos_profile.get("name"))
+		item_groups = [g.strip("'") for g in item_groups]
 		if item_groups:
 			filters["item_group"] = ["in", item_groups]
 
@@ -279,8 +280,7 @@ def get_items(
 			if data.get("item_code"):
 				filters["name"] = data.get("item_code")
 				or_filters = []
-
-		if item_group:
+		if item_group and item_group.upper() != "ALL":
 			filters["item_group"] = ["like", f"%{item_group}%"]
 
 		if not posa_show_template_items:
@@ -776,11 +776,13 @@ def update_invoice(data):
 
 		add_taxes_from_tax_template(item, invoice_doc)
 
-	if frappe.get_cached_value("POS Profile", invoice_doc.pos_profile, "posa_tax_inclusive"):
-		if invoice_doc.get("taxes"):
-			for tax in invoice_doc.taxes:
-				tax.included_in_print_rate = 1
-
+	inclusive = frappe.get_cached_value("POS Profile", invoice_doc.pos_profile, "posa_tax_inclusive")
+	if invoice_doc.get("taxes"):
+		for tax in invoice_doc.taxes:
+			if tax.charge_type == "Actual":
+				tax.included_in_print_rate = 0
+			else:
+				tax.included_in_print_rate = 1 if inclusive else 0
 	invoice_doc.flags.ignore_permissions = True
 	frappe.flags.ignore_account_permission = True
 	invoice_doc.docstatus = 0

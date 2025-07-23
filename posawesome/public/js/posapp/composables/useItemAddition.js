@@ -76,33 +76,98 @@ export function useItemAddition() {
 						uom: new_item.uom,
 					},
 				});
-				if (r.message) {
-					const price = parseFloat(r.message);
-					Object.assign(new_item, {
-						rate: price,
-						base_rate: price,
-						price_list_rate: price,
-						base_price_list_rate: price,
-						_manual_rate_set: true,
-						skip_force_update: true,
-					});
-				}
+                                if (r.message) {
+                                        const price = parseFloat(r.message);
+                                        const baseCurrency =
+                                                context.price_list_currency || context.pos_profile.currency;
+
+                                        // Convert price to selected currency when multi-currency is enabled
+                                        let converted_price = price;
+                                        if (
+                                                context.pos_profile.posa_allow_multi_currency &&
+                                                context.selected_currency &&
+                                                context.selected_currency !== baseCurrency
+                                        ) {
+                                                converted_price = price * (context.exchange_rate || 1);
+                                        }
+
+                                        Object.assign(new_item, {
+                                                rate: converted_price,
+                                                price_list_rate: converted_price,
+                                                base_rate: price,
+                                                base_price_list_rate: price,
+                                                _manual_rate_set: true,
+                                                skip_force_update: true,
+                                        });
+                                }
 			} catch (e) {
 				console.warn("UOM price fetch failed", e);
 			}
 
-			context.items.unshift(new_item);
-			// Skip recalculation to preserve the manually set rate
-			if (context.update_item_detail) context.update_item_detail(new_item, false);
+			// Check again in case the item was added while awaiting price fetch
+			if (!context.new_line) {
+				if (context.pos_profile.posa_auto_set_batch && item.has_batch_no) {
+					index = context.items.findIndex(
+						(el) =>
+							el.item_code === item.item_code &&
+							el.uom === item.uom &&
+							!el.posa_is_offer &&
+							!el.posa_is_replace,
+					);
+				} else {
+					index = context.items.findIndex(
+						(el) =>
+							el.item_code === item.item_code &&
+							el.uom === item.uom &&
+							!el.posa_is_offer &&
+							!el.posa_is_replace &&
+							((el.batch_no && item.batch_no && el.batch_no === item.batch_no) ||
+								(!el.batch_no && !item.batch_no)),
+					);
+				}
+			}
 
-			// Expand new item if it has batch or serial number
-			if (
-				(!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) ||
-				new_item.has_serial_no
-			) {
-				nextTick(() => {
-					context.expanded = [new_item.posa_row_id];
-				});
+			if (index === -1 || context.new_line) {
+				context.items.unshift(new_item);
+				// Skip recalculation to preserve the manually set rate
+				if (context.update_item_detail) context.update_item_detail(new_item, false);
+
+				// Expand new item if it has batch or serial number
+				if (
+					(!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) ||
+					new_item.has_serial_no
+				) {
+					nextTick(() => {
+						context.expanded = [new_item.posa_row_id];
+					});
+				}
+			} else {
+				const cur_item = context.items[index];
+				if (context.update_items_details) context.update_items_details([cur_item]);
+				// Merge serial numbers if any
+				if (new_item.serial_no_selected && new_item.serial_no_selected.length) {
+					new_item.serial_no_selected.forEach((sn) => {
+						if (!cur_item.serial_no_selected.includes(sn)) {
+							cur_item.serial_no_selected.push(sn);
+						}
+					});
+				}
+				if (context.isReturnInvoice) {
+					cur_item.qty -= new_item.qty || 1;
+				} else {
+					cur_item.qty += new_item.qty || 1;
+				}
+				if (context.calc_stock_qty) context.calc_stock_qty(cur_item, cur_item.qty);
+
+				if (cur_item.has_batch_no && cur_item.batch_no && context.setBatchQty) {
+					context.setBatchQty(cur_item, cur_item.batch_no, false);
+				}
+
+				if (context.setSerialNo) context.setSerialNo(cur_item);
+
+				if (context.calc_uom && cur_item.uom) {
+					await context.calc_uom(cur_item, cur_item.uom);
+				}
 			}
 		} else {
 			const cur_item = context.items[index];

@@ -17,6 +17,7 @@
 					:server-connecting="serverConnecting"
 					:is-ip-host="isIpHost"
 					:sync-totals="syncTotals"
+					:cache-ready="cacheReady"
 				/>
 			</template>
 
@@ -152,6 +153,7 @@ export default {
 			type: Object,
 			default: () => ({ total: 0, indexedDB: 0, localStorage: 0 }),
 		},
+		cacheReady: Boolean,
 	},
 	data() {
 		return {

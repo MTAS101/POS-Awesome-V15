@@ -42,6 +42,7 @@ export {
 	clearAllCache,
 	forceClearAllCache,
 	getCacheUsageEstimate,
+	isCacheReady,
 } from "./cache.js";
 
 // Stock exports
@@ -97,8 +98,18 @@ export {
 
 // Customers exports
 export {
-	saveCustomerBalance,
-	getCachedCustomerBalance,
-	clearCustomerBalanceCache,
-	clearExpiredCustomerBalances,
+        saveCustomerBalance,
+        getCachedCustomerBalance,
+        clearCustomerBalanceCache,
+        clearExpiredCustomerBalances,
 } from "./customers.js";
+
+// Coupons exports
+export {
+        saveCoupons,
+        getCachedCoupons,
+        clearCoupons,
+} from "./coupons.js";
+
+// Translation cache exports
+export { getTranslationsCache, saveTranslationsCache } from "./cache.js";

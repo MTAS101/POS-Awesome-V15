@@ -27,6 +27,7 @@
 								</v-chip>
 								<v-chip
 									v-if="filters[attr.attribute]"
+									:value="null"
 									variant="text"
 									color="primary"
 									@click.stop="clearFilter(attr.attribute)"
@@ -265,7 +266,10 @@ export default {
 		}, 200),
 		clearFilter(attr) {
 			this.filters[attr] = null;
-			this.updateFiltredItems();
+			this.$nextTick(() => {
+				this.filterdItems = this.variantsItems;
+				this.displayCount = 100;
+			});
 		},
 		loadMore() {
 			if (this.displayCount < this.filterdItems.length) {

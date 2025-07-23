@@ -1,6 +1,6 @@
 import { db, persist, checkDbHealth, terminatePersistWorker, initPersistWorker } from "./core.js";
 import { getAllByCursor } from "./db-utils.js";
-import Dexie from "dexie";
+import Dexie from "dexie/dist/dexie.mjs";
 
 // Increment this number whenever the cache data structure changes
 export const CACHE_VERSION = 1;
@@ -23,13 +23,16 @@ export const memory = {
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
 	sales_persons_storage: [],
-	price_list_cache: {},
-	item_details_cache: {},
-	tax_template_cache: {},
-	// Track the current cache schema version
-	cache_version: CACHE_VERSION,
-	tax_inclusive: false,
-	manual_offline: false,
+        price_list_cache: {},
+        item_details_cache: {},
+        tax_template_cache: {},
+        translation_cache: {},
+        coupons_cache: {},
+        // Track the current cache schema version
+        cache_version: CACHE_VERSION,
+        cache_ready: false,
+        tax_inclusive: false,
+        manual_offline: false,
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
@@ -69,6 +72,9 @@ export const memoryInitPromise = (async () => {
 		} else {
 			memory.cache_version = storedVersion || CACHE_VERSION;
 		}
+		// Mark caches initialized
+		memory.cache_ready = true;
+		persist("cache_ready", true);
 	} catch (e) {
 		console.error("Failed to initialize memory from DB", e);
 	}
@@ -181,6 +187,27 @@ export function setTaxTemplate(name, doc) {
 	}
 }
 
+export function getTranslationsCache(lang) {
+	try {
+		const cache = memory.translation_cache || {};
+		return cache[lang] || null;
+	} catch (e) {
+		console.error("Failed to get cached translations", e);
+		return null;
+	}
+}
+
+export function saveTranslationsCache(lang, data) {
+	try {
+		const cache = memory.translation_cache || {};
+		cache[lang] = data;
+		memory.translation_cache = cache;
+		persist("translation_cache", memory.translation_cache);
+	} catch (e) {
+		console.error("Failed to cache translations", e);
+	}
+}
+
 export function setLastSyncTotals(totals) {
 	memory.pos_last_sync_totals = totals;
 	persist("pos_last_sync_totals", memory.pos_last_sync_totals);
@@ -197,6 +224,10 @@ export function getTaxInclusiveSetting() {
 export function setTaxInclusiveSetting(value) {
 	memory.tax_inclusive = !!value;
 	persist("tax_inclusive", memory.tax_inclusive);
+}
+
+export function isCacheReady() {
+	return !!memory.cache_ready;
 }
 
 export function isManualOffline() {
@@ -260,9 +291,10 @@ export async function clearAllCache() {
 	memory.offline_customers = [];
 	memory.offline_payments = [];
 	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
 	memory.local_stock_cache = {};
 	memory.stock_cache_ready = false;
 	memory.items_storage = [];
@@ -295,9 +327,10 @@ export async function forceClearAllCache() {
 	memory.offline_customers = [];
 	memory.offline_payments = [];
 	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
 	memory.local_stock_cache = {};
 	memory.stock_cache_ready = false;
 	memory.items_storage = [];
