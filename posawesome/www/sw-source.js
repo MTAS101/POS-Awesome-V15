@@ -1,6 +1,6 @@
-import { precacheAndRoute } from "https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-precaching.prod.js";
-import { registerRoute, setDefaultHandler } from "https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-routing.prod.js";
-import { NetworkFirst, StaleWhileRevalidate } from "https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-strategies.prod.js";
+import { precacheAndRoute } from "workbox-precaching";
+import { registerRoute, setDefaultHandler } from "workbox-routing";
+import { NetworkFirst, StaleWhileRevalidate } from "workbox-strategies";
 
 precacheAndRoute(self.__WB_MANIFEST);
 
