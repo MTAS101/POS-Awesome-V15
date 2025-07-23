@@ -93,9 +93,9 @@ frappe.PosApp.posapp = class {
 			window.location.hostname === "localhost" ||
 			window.location.hostname === "127.0.0.1"
 		) {
-			navigator.serviceWorker
-				.register("/sw.js")
-				.catch((err) => console.error("SW registration failed", err));
+                        navigator.serviceWorker
+                                .register("/sw.js", { type: "module" })
+                                .catch((err) => console.error("SW registration failed", err));
 		}
 	}
 	setup_header() {}
