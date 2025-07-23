@@ -3,6 +3,9 @@
 		<v-btn icon :title="statusText" class="status-btn-enhanced" :color="statusColor">
 			<v-icon :color="statusColor">{{ statusIcon }}</v-icon>
 		</v-btn>
+		<v-icon :color="cacheColor" :title="cacheTooltip" class="cache-status-icon">
+			{{ cacheIcon }}
+		</v-icon>
 		<div class="status-info-always-visible">
 			<div
 				class="status-title-inline"
@@ -108,6 +111,24 @@ export default {
 
 			// Network offline
 			return "mdi-wifi-off";
+		},
+		/**
+		 * Icon color representing cache readiness
+		 */
+		cacheColor() {
+			return this.cacheReady ? "green" : "orange";
+		},
+		/**
+		 * Icon name representing cache readiness
+		 */
+		cacheIcon() {
+			return this.cacheReady ? "mdi-database-check" : "mdi-database-clock";
+		},
+		/**
+		 * Tooltip text for cache readiness icon
+		 */
+		cacheTooltip() {
+			return this.cacheReady ? this.__("Offline cache ready") : this.__("Preparing offline cache...");
 		},
 		/**
 		 * Provides a descriptive text for the tooltip that appears when hovering over the status icon.
@@ -218,6 +239,10 @@ export default {
 	color: #666;
 	line-height: 1.2;
 	margin-top: 2px;
+}
+
+.cache-status-icon {
+	margin-left: 4px;
 }
 
 /* Responsive Design */
