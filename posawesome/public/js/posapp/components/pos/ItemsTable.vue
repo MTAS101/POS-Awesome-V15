@@ -11,7 +11,7 @@
 			:headers="headers"
 			:items="items"
 			:theme="$theme.current"
-			:expanded="expanded"
+			v-model:expanded="expanded"
 			show-expand
 			item-value="posa_row_id"
 			class="modern-items-table elevation-2"
@@ -21,7 +21,6 @@
 			hide-default-footer
 			:single-expand="true"
 			:header-props="headerProps"
-                        @update:expanded="val => $emit('update:expanded', val.map(v => typeof v === 'object' ? v.posa_row_id : v))"
 			:search="itemSearch"
 		>
 			<!-- Quantity column -->
@@ -513,7 +512,7 @@
 </template>
 
 <script>
-import _ from 'lodash';
+import _ from "lodash";
 export default {
 	name: "ItemsTable",
 	props: {
@@ -612,10 +611,10 @@ export default {
 		addItem(newItem) {
 			// Find a matching item (by item_code, uom, and rate)
 			const match = this.items.find(
-				item =>
+				(item) =>
 					item.item_code === newItem.item_code &&
 					item.uom === newItem.uom &&
-					item.rate === newItem.rate
+					item.rate === newItem.rate,
 			);
 			if (match) {
 				// If found, increment quantity
@@ -626,7 +625,7 @@ export default {
 				this.items.push({ ...newItem });
 			}
 		},
-		addItemDebounced: _.debounce(function(item) {
+		addItemDebounced: _.debounce(function (item) {
 			this.addItem(item);
 		}, 50),
 	},

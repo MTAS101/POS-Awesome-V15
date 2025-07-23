@@ -183,7 +183,7 @@
 						ref="itemsTable"
 						:headers="items_headers"
 						:items="items"
-						:expanded="expanded"
+						v-model:expanded="expanded"
 						:itemsPerPage="itemsPerPage"
 						:itemSearch="itemSearch"
 						:pos_profile="pos_profile"
@@ -207,7 +207,6 @@
 						:addOne="add_one"
 						:toggleOffer="toggleOffer"
 						:changePriceListRate="change_price_list_rate"
-						@update:expanded="expanded = $event"
 						@reorder-items="handleItemReorder"
 						@add-item-from-drag="handleItemDrop"
 						@show-drop-feedback="showDropFeedback"
@@ -255,7 +254,7 @@ import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
 import invoiceItemMethods from "./invoiceItemMethods";
 import invoiceComputed from "./invoiceComputed";
-import invoiceWatchers from "./invoiceWatchers"
+import invoiceWatchers from "./invoiceWatchers";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
@@ -303,7 +302,7 @@ export default {
 			selected_currency: "", // Currently selected currency
 			exchange_rate: 1, // Current exchange rate
 			conversion_rate: 1, // Currency to company rate
-                        exchange_rate_date: frappe.datetime.nowdate(), // Date of fetched exchange rate
+			exchange_rate_date: frappe.datetime.nowdate(), // Date of fetched exchange rate
 			company: null, // Company doc with default currency
 			available_currencies: [], // List of available currencies
 			price_lists: [], // Available selling price lists
@@ -1144,7 +1143,7 @@ export default {
 		this.eventBus.on("reset_posting_date", () => {
 			this.posting_date = frappe.datetime.nowdate();
 		});
-               this.eventBus.on("calc_uom", this.calc_uom);
+		this.eventBus.on("calc_uom", this.calc_uom);
 		this.eventBus.on("item-drag-start", (item) => {
 			this.showDropFeedback(true);
 		});
