@@ -31,6 +31,11 @@
 				/>
 			</template>
 
+      <!-- Slot for CPU gadget -->
+      <template #cpu-gadget>
+        <CpuGadget />
+      </template>
+
 			<!-- Slot for menu -->
 			<template #menu>
 				<NavbarMenu
@@ -99,6 +104,7 @@ import StatusIndicator from "./navbar/StatusIndicator.vue";
 import CacheUsageMeter from "./navbar/CacheUsageMeter.vue";
 import AboutDialog from "./navbar/AboutDialog.vue";
 import OfflineInvoices from "./OfflineInvoices.vue";
+import CpuGadget from "./navbar/CpuGadget.vue";
 import { forceClearAllCache } from "../../offline/cache.js";
 import { clearAllCaches } from "../../utils/clearAllCaches.js";
 import { isOffline } from "../../offline/index.js";
@@ -113,6 +119,7 @@ export default {
 		CacheUsageMeter,
 		AboutDialog,
 		OfflineInvoicesDialog: OfflineInvoices,
+		CpuGadget,
 	},
 	props: {
 		posProfile: {

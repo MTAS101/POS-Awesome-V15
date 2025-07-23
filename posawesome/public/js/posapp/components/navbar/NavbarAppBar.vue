@@ -32,6 +32,9 @@
 		<!-- Cache Usage Meter -->
 		<slot name="cache-usage-meter"></slot>
 
+    <!-- CPU Load Gadget -->
+    <slot name="cpu-gadget"></slot>
+
 		<div class="profile-section mx-1">
 			<v-chip color="primary" variant="outlined" class="profile-chip">
 				<v-icon start>mdi-account-circle</v-icon>

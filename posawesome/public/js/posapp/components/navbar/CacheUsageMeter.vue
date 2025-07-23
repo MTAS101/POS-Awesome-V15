@@ -16,6 +16,12 @@
 			</template>
 			<div class="cache-tooltip-content">
 				<div class="cache-tooltip-title">{{ __("Cache Usage") }}</div>
+          <div class="cache-tooltip-bar mb-2">
+            <div class="cache-bar-bg">
+              <div class="cache-bar-fill" :style="{ width: cacheUsage + '%' }"></div>
+            </div>
+            <span class="cache-bar-label">{{ cacheUsage }}%</span>
+          </div>
 				<div class="cache-tooltip-detail" v-if="!cacheUsageLoading">
 					<div>{{ __("Total Size") }}: {{ formatBytes(cacheUsageDetails.total) }}</div>
 					<div>{{ __("IndexedDB") }}: {{ formatBytes(cacheUsageDetails.indexedDB) }}</div>
@@ -24,7 +30,19 @@
 				<div class="cache-tooltip-detail" v-else>
 					{{ __("Calculating...") }}
 				</div>
-				<div class="cache-tooltip-action">
+          <div v-if="cacheUsage >= 80" class="cache-tooltip-warning">
+            <v-icon size="14" color="error" class="mr-1">mdi-alert</v-icon>
+            {{ __("Warning: High cache usage may affect performance.") }}
+          </div>
+          <div class="cache-tooltip-tip mt-2">
+            <v-icon size="14" color="primary" class="mr-1">mdi-lightbulb-on-outline</v-icon>
+            {{ __("Tip: Clear cache regularly to free up space and keep the app fast.") }}
+          </div>
+          <div class="cache-tooltip-explanation mt-2">
+            <v-icon size="14" color="info" class="mr-1">mdi-database</v-icon>
+            {{ __("The app stores data locally for offline use. This is called cache.") }}
+          </div>
+				<div class="cache-tooltip-action mt-2">
 					<v-icon size="14" class="mr-1">mdi-refresh</v-icon>
 					{{ __("Click to refresh") }}
 				</div>
@@ -127,5 +145,79 @@ export default {
 	align-items: center;
 	margin-top: 8px;
 	color: var(--primary);
+}
+.cache-tooltip-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.cache-bar-bg {
+  width: 80px;
+  height: 8px;
+  background: #e3f2fd;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-right: 6px;
+}
+.cache-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+.cache-bar-label {
+  font-size: 11px;
+  color: #1976d2;
+  font-weight: 600;
+}
+.cache-tooltip-warning {
+  color: #d32f2f;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.cache-tooltip-tip {
+  color: #1976d2;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+}
+.cache-tooltip-explanation {
+  color: #0288d1;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+}
+
+/* Fix tooltip background and text color in light mode */
+:deep(.v-tooltip .v-overlay__content),
+:deep(.v-overlay__content) {
+  background: #e3f2fd !important;
+  color: #1a237e !important;
+  box-shadow: 0 4px 16px rgba(25, 118, 210, 0.10) !important;
+  border: 1px solid #90caf9 !important;
+}
+
+.cache-tooltip-title,
+.cache-tooltip-action {
+  color: #1a237e !important;
+}
+
+:deep(.dark-theme) .v-tooltip .v-overlay__content,
+:deep(.v-theme--dark) .v-tooltip .v-overlay__content,
+:deep(.dark-theme) .v-overlay__content,
+:deep(.v-theme--dark) .v-overlay__content {
+  background: #26344d !important;
+  color: #fff !important;
+  border: 1px solid #1976d2 !important;
+}
+
+:deep(.dark-theme) .cache-tooltip-title,
+:deep(.v-theme--dark) .cache-tooltip-title,
+:deep(.dark-theme) .cache-tooltip-action,
+:deep(.v-theme--dark) .cache-tooltip-action {
+  color: #fff !important;
 }
 </style>
