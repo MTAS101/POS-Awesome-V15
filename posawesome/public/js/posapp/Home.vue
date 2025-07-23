@@ -47,6 +47,7 @@ import {
 	MAX_QUEUE_ITEMS,
 	initPromise,
 	memoryInitPromise,
+	isCacheReady,
 	toggleManualOffline,
 	isManualOffline,
 	syncOfflineInvoices,
@@ -119,6 +120,8 @@ export default {
 	},
 	mounted() {
 		this.remove_frappe_nav();
+		// Initialize cache ready state early from stored value
+		this.cacheReady = isCacheReady();
 		this.initializeData();
 		this.setupNetworkListeners();
 		this.setupEventListeners();
