@@ -23,15 +23,16 @@ export const memory = {
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
 	sales_persons_storage: [],
-	price_list_cache: {},
-	item_details_cache: {},
-	tax_template_cache: {},
-	translation_cache: {},
-	// Track the current cache schema version
-	cache_version: CACHE_VERSION,
-	cache_ready: false,
-	tax_inclusive: false,
-	manual_offline: false,
+        price_list_cache: {},
+        item_details_cache: {},
+        tax_template_cache: {},
+        translation_cache: {},
+        coupons_cache: {},
+        // Track the current cache schema version
+        cache_version: CACHE_VERSION,
+        cache_ready: false,
+        tax_inclusive: false,
+        manual_offline: false,
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
@@ -290,9 +291,10 @@ export async function clearAllCache() {
 	memory.offline_customers = [];
 	memory.offline_payments = [];
 	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
 	memory.local_stock_cache = {};
 	memory.stock_cache_ready = false;
 	memory.items_storage = [];
@@ -325,9 +327,10 @@ export async function forceClearAllCache() {
 	memory.offline_customers = [];
 	memory.offline_payments = [];
 	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
 	memory.local_stock_cache = {};
 	memory.stock_cache_ready = false;
 	memory.items_storage = [];
