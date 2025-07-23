@@ -255,6 +255,7 @@ def get_pos_profile_tax_inclusive(pos_profile: str):
 	return frappe.get_cached_value("POS Profile", pos_profile, "posa_tax_inclusive")
 
 
+
 @frappe.whitelist()
 def get_database_usage():
     db_size = None
@@ -321,9 +322,11 @@ def get_database_usage():
         'db_top_tables': db_top_tables,
     }
 
-@frappe.whitelist(allow_guest=True)
+
+@frappe.whitelist()
 def get_server_usage():
     try:
+
         cpu_percent = psutil.cpu_percent(interval=0.5)
         mem = psutil.virtual_memory()
         memory_percent = mem.percent
