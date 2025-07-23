@@ -32,6 +32,9 @@
 		<!-- Cache Usage Meter -->
 		<slot name="cache-usage-meter"></slot>
 
+    <!-- Database Usage Gadget -->
+    <slot name="db-usage-gadget"></slot>
+
     <!-- CPU Load Gadget -->
     <slot name="cpu-gadget"></slot>
 

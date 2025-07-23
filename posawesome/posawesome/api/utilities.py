@@ -256,10 +256,77 @@ def get_pos_profile_tax_inclusive(pos_profile: str):
 
 
 
-@frappe.whitelist(allow_guest=True)
+@frappe.whitelist()
+def get_database_usage():
+    db_size = None
+    db_connections = None
+    db_slow_queries = None
+    db_engine = None
+    db_version = None
+    db_table_count = None
+    db_total_rows = None
+    db_top_tables = []
+    try:
+        db_type = frappe.conf.get('db_type') or frappe.db.db_type
+        db_engine = db_type
+        db_version = frappe.db.sql("SELECT VERSION();")[0][0]
+        if db_type == 'postgres':
+            db_name = frappe.conf.get('db_name') or frappe.db.get_database_name()
+            db_size = frappe.db.sql("SELECT pg_database_size(%s)", (db_name,))[0][0]
+            db_size = int(db_size)
+            db_connections = frappe.db.sql("SELECT count(*) FROM pg_stat_activity;")[0][0]
+            db_slow_queries = frappe.db.sql("SELECT count(*) FROM pg_stat_activity WHERE state = 'active' AND now() - query_start > interval '1 second';")[0][0]
+            db_table_count = frappe.db.sql("SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';")[0][0]
+            db_total_rows = frappe.db.sql("SELECT sum(reltuples)::bigint FROM pg_class WHERE relkind='r';")[0][0]
+            db_top_tables = frappe.db.sql("""
+                SELECT relname, pg_total_relation_size(relid) AS size
+                FROM pg_catalog.pg_statio_user_tables
+                ORDER BY size DESC LIMIT 3
+            """)
+            db_top_tables = [{'name': t[0], 'size': int(t[1])} for t in db_top_tables]
+        elif db_type == 'mariadb' or db_type == 'mysql':
+            db_name = frappe.conf.get('db_name') or frappe.db.get_database_name()
+            db_size = frappe.db.sql("SELECT SUM(data_length + index_length) FROM information_schema.tables WHERE table_schema = %s", (db_name,))[0][0]
+            db_size = int(db_size)
+            db_connections = frappe.db.sql("SHOW STATUS WHERE variable_name = 'Threads_connected';")[0][1]
+            db_connections = int(db_connections)
+            db_slow_queries = frappe.db.sql("SHOW GLOBAL STATUS WHERE variable_name = 'Slow_queries';")[0][1]
+            db_slow_queries = int(db_slow_queries)
+            db_table_count = frappe.db.sql("SELECT count(*) FROM information_schema.tables WHERE table_schema = %s", (db_name,))[0][0]
+            db_total_rows = frappe.db.sql("SELECT SUM(TABLE_ROWS) FROM information_schema.tables WHERE table_schema = %s", (db_name,))[0][0]
+            db_top_tables = frappe.db.sql("""
+                SELECT table_name, (data_length + index_length) AS size
+                FROM information_schema.tables
+                WHERE table_schema = %s
+                ORDER BY size DESC LIMIT 3
+            """, (db_name,))
+            db_top_tables = [{'name': t[0], 'size': int(t[1])} for t in db_top_tables]
+    except Exception as db_exc:
+        frappe.log_error(f"DB stats error: {db_exc}")
+        db_size = None
+        db_connections = None
+        db_slow_queries = None
+        db_engine = None
+        db_version = None
+        db_table_count = None
+        db_total_rows = None
+        db_top_tables = []
+    return {
+        'db_size': db_size,
+        'db_connections': db_connections,
+        'db_slow_queries': db_slow_queries,
+        'db_engine': db_engine,
+        'db_version': db_version,
+        'db_table_count': db_table_count,
+        'db_total_rows': db_total_rows,
+        'db_top_tables': db_top_tables,
+    }
+
+
+@frappe.whitelist()
 def get_server_usage():
     try:
-        
+
         cpu_percent = psutil.cpu_percent(interval=0.5)
         mem = psutil.virtual_memory()
         memory_percent = mem.percent
