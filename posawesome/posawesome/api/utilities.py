@@ -321,7 +321,7 @@ def get_database_usage():
         'db_top_tables': db_top_tables,
     }
 
-@frappe.whitelist()
+@frappe.whitelist(allow_guest=True)
 def get_server_usage():
     try:
         cpu_percent = psutil.cpu_percent(interval=0.5)
@@ -356,5 +356,5 @@ def get_server_usage():
         'memory_used': memory_used,
         'memory_available': memory_available,
         'load_avg': load_avg,
-        'uptime': uptime
+        'uptime': uptime,
     } 
