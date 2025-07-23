@@ -14,6 +14,7 @@
 								v-model="filters[attr.attribute]"
 								selected-class="green--text text--accent-4"
 								column
+								@update:model-value="updateFiltredItems"
 							>
 								<v-chip
 									v-for="value in attr.values"
@@ -21,9 +22,16 @@
 									:value="value.attribute_value"
 									variant="outlined"
 									label
-									@click="updateFiltredItems"
 								>
 									{{ value.attribute_value }}
+								</v-chip>
+								<v-chip
+									v-if="filters[attr.attribute]"
+									variant="text"
+									color="primary"
+									@click.stop="clearFilter(attr.attribute)"
+								>
+									{{ __("Clear") }}
 								</v-chip>
 							</v-chip-group>
 							<v-divider class="p-0 m-0"></v-divider>
@@ -31,7 +39,7 @@
 						<div>
 							<v-row density="default" class="overflow-y-auto" style="max-height: 500px">
 								<v-col
-									v-for="(item, idx) in filterdItems"
+									v-for="(item, idx) in displayItems"
 									:key="idx"
 									xl="2"
 									lg="3"
@@ -65,6 +73,7 @@
 										</v-card-text>
 									</v-card>
 								</v-col>
+								<div v-intersect="loadMore"></div>
 							</v-row>
 						</div>
 					</v-container>
@@ -77,6 +86,7 @@
 <script>
 /* global frappe */
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
+import _ from "lodash";
 export default {
 	data: () => ({
 		varaintsDialog: false,
@@ -85,6 +95,8 @@ export default {
 		filters: {},
 		filterdItems: [],
 		pos_profile: null,
+		attributes_meta: {},
+		displayCount: 100,
 	}),
 
 	computed: {
@@ -94,17 +106,45 @@ export default {
 			}
 			return this.items.filter((item) => item.variant_of == this.parentItem.item_code);
 		},
+		displayItems() {
+			return this.filterdItems.slice(0, this.displayCount);
+		},
 	},
 
 	watch: {
 		items: {
 			handler() {
 				this.filterdItems = this.variantsItems;
+				this.displayCount = 100;
 			},
 			deep: true,
 		},
 		parentItem() {
 			this.filterdItems = this.variantsItems;
+			this.displayCount = 100;
+		},
+		attributes_meta: {
+			handler(newVal) {
+				if (this.parentItem && newVal && Object.keys(newVal).length) {
+					this.parentItem.attributes = Object.keys(newVal).map((attr) => ({
+						attribute: attr,
+						values: newVal[attr].map((v) => ({ attribute_value: v, abbr: v })),
+					}));
+				} else if (this.parentItem) {
+					this.parentItem.attributes = [];
+				}
+				this.$nextTick(() => {
+					this.filterdItems = this.variantsItems;
+					this.displayCount = 100;
+				});
+			},
+			deep: true,
+		},
+		filters: {
+			handler() {
+				this.updateFiltredItems();
+			},
+			deep: true,
 		},
 	},
 
@@ -159,8 +199,10 @@ export default {
 				});
 				console.log("variants API result", res);
 				if (res.message) {
+					const variants = res.message.variants || res.message;
+					this.attributes_meta = res.message.attributes_meta || this.attributes_meta;
 					const existingCodes = new Set((this.items || []).map((it) => it.item_code));
-					const newItems = res.message.filter((it) => !existingCodes.has(it.item_code));
+					const newItems = variants.filter((it) => !existingCodes.has(it.item_code));
 					console.log("new variant items", newItems);
 					await Promise.all(newItems.map((it) => this.fetchVariantRate(it)));
 					this.items = (this.items || []).concat(newItems);
@@ -169,8 +211,8 @@ export default {
 				console.error("Failed to fetch variants", e);
 			}
 		},
-		updateFiltredItems() {
-			this.$nextTick(function () {
+		updateFiltredItems: _.debounce(function () {
+			this.$nextTick(() => {
 				const values = [];
 				Object.entries(this.filters).forEach(([, value]) => {
 					if (value) {
@@ -185,14 +227,29 @@ export default {
 					this.filterdItems = [];
 					this.variantsItems.forEach((item) => {
 						let apply = true;
-						item.item_attributes.forEach((attr) => {
-							if (
-								this.filters[attr.attribute] &&
-								this.filters[attr.attribute] != attr.attribute_value
-							) {
-								apply = false;
+						let attrs = [];
+						if (Array.isArray(item.item_attributes)) {
+							attrs = item.item_attributes;
+						} else if (
+							typeof item.item_attributes === "string" &&
+							item.item_attributes.trim().startsWith("[")
+						) {
+							try {
+								attrs = JSON.parse(item.item_attributes);
+							} catch (e) {
+								attrs = [];
 							}
-						});
+						}
+						for (const [attrName, val] of Object.entries(this.filters)) {
+							if (!val) continue;
+							const found = attrs.find(
+								(a) => a.attribute === attrName && String(a.attribute_value) === String(val),
+							);
+							if (!found) {
+								apply = false;
+								break;
+							}
+						}
 						if (apply && !itemsList.includes(item.item_code)) {
 							this.filterdItems.push(item);
 							itemsList.push(item.item_code);
@@ -203,7 +260,17 @@ export default {
 					"filtered items",
 					this.filterdItems.map((it) => it.item_code),
 				);
+				this.displayCount = 100;
 			});
+		}, 200),
+		clearFilter(attr) {
+			this.filters[attr] = null;
+			this.updateFiltredItems();
+		},
+		loadMore() {
+			if (this.displayCount < this.filterdItems.length) {
+				this.displayCount += 100;
+			}
 		},
 		async fetchVariantRate(item) {
 			if (!this.pos_profile) {
@@ -216,7 +283,7 @@ export default {
 						args: { company: this.pos_profile.company },
 					});
 					if (res.message) {
-						this.$set(this.pos_profile, "warehouse", res.message);
+						this.pos_profile.warehouse = res.message;
 					}
 				} catch (e) {
 					console.error("Failed to fetch default warehouse", e);
@@ -271,12 +338,23 @@ export default {
 	},
 
 	created: function () {
-		this.eventBus.on("open_variants_model", async (item, items, profile) => {
-			console.log("open_variants_model", { item, items, profile });
+		this.eventBus.on("open_variants_model", async (item, items, profile, attrsMeta) => {
+			console.log("open_variants_model", { item, items, profile, attrsMeta });
 			this.varaintsDialog = true;
 			this.parentItem = item || null;
 			this.items = Array.isArray(items) ? items : [];
 			this.filters = {};
+			this.attributes_meta = attrsMeta || this.attributes_meta;
+			if (
+				!this.parentItem.attributes &&
+				this.attributes_meta &&
+				Object.keys(this.attributes_meta).length
+			) {
+				this.parentItem.attributes = Object.keys(this.attributes_meta).map((attr) => ({
+					attribute: attr,
+					values: this.attributes_meta[attr].map((v) => ({ attribute_value: v, abbr: v })),
+				}));
+			}
 			if (profile) {
 				this.pos_profile = profile;
 			} else {
@@ -288,6 +366,7 @@ export default {
 			}
 			this.$nextTick(() => {
 				this.filterdItems = this.variantsItems;
+				this.displayCount = 100;
 			});
 		});
 	},

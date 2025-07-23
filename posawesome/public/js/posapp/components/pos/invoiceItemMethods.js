@@ -26,8 +26,8 @@ export default {
 		return removeItem(item, this);
 	},
 
-	add_item(item) {
-		return addItem(item, this);
+	async add_item(item) {
+		return await addItem(item, this);
 	},
 
 	// Create a new item object with default and calculated fields
@@ -804,9 +804,9 @@ export default {
 							vm.eventBus.emit("show_message", {
 								title: __(
 									"Exchange rate date " +
-									vm.exchange_rate_date +
-									" differs from posting date " +
-									posting_backend,
+										vm.exchange_rate_date +
+										" differs from posting date " +
+										posting_backend,
 								),
 								color: "warning",
 							});
@@ -842,9 +842,9 @@ export default {
 							vm.eventBus.emit("show_message", {
 								title: __(
 									"Exchange rate date " +
-									vm.exchange_rate_date +
-									" differs from posting date " +
-									posting_backend,
+										vm.exchange_rate_date +
+										" differs from posting date " +
+										posting_backend,
 								),
 								color: "warning",
 							});
@@ -1280,6 +1280,12 @@ export default {
 		}
 		var vm = this;
 
+		// If a manual rate was set (e.g. via explicit UOM pricing), don't
+		// overwrite it on expand unless explicitly forced.
+		if (item._manual_rate_set && !force_update) {
+			return;
+		}
+
 		// Remove this block which was causing the issue - rates should persist regardless of currency
 		// if (item.price_list_rate && !item.posa_offer_applied) {
 		//   item.rate = item.price_list_rate;
@@ -1319,6 +1325,9 @@ export default {
 			callback: function (r) {
 				if (r.message) {
 					const data = r.message;
+					if (!item.warehouse) {
+						item.warehouse = vm.pos_profile.warehouse;
+					}
 					// Ensure price list currency is synced from server response
 					if (data.price_list_currency) {
 						vm.price_list_currency = data.price_list_currency;
@@ -1673,7 +1682,6 @@ export default {
 	calc_stock_qty(item, value) {
 		return calcStockQty(item, value, this);
 	},
-
 
 	// Set serial numbers for an item (and update qty)
 	set_serial_no(item) {

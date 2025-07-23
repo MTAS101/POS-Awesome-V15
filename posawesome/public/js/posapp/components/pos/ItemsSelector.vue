@@ -361,13 +361,13 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-       mixins: [format],
-       setup() {
-               return useResponsive();
-       },
-       components: {
-               CameraScanner,
-       },
+	mixins: [format],
+	setup() {
+		return useResponsive();
+	},
+	components: {
+		CameraScanner,
+	},
 	data: () => ({
 		pos_profile: "",
 		flags: {},
@@ -957,6 +957,7 @@ export default {
 			item = { ...item };
 			if (item.has_variants) {
 				let variants = this.items.filter((it) => it.variant_of == item.item_code);
+				let attrsMeta = {};
 				if (!variants.length) {
 					try {
 						const res = await frappe.call({
@@ -969,7 +970,8 @@ export default {
 							},
 						});
 						if (res.message) {
-							variants = res.message;
+							variants = res.message.variants || res.message;
+							attrsMeta = res.message.attributes_meta || {};
 							this.items.push(...variants);
 						}
 					} catch (e) {
@@ -981,7 +983,9 @@ export default {
 					color: "warning",
 				});
 				console.log("sending profile", this.pos_profile);
-				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile);
+				// Ensure attributes meta is always an object
+				attrsMeta = attrsMeta || {};
+				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile, attrsMeta);
 			} else {
 				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
 					this.eventBus.emit("show_message", {
@@ -1575,8 +1579,42 @@ export default {
 		async addScannedItemToInvoice(item, scannedCode) {
 			console.log("Adding scanned item to invoice:", item, scannedCode);
 
+			// Clone the item to avoid mutating list data
+			const newItem = { ...item };
+
+			// If the scanned barcode has a specific UOM, apply it
+			if (Array.isArray(newItem.item_barcode)) {
+				const barcodeMatch = newItem.item_barcode.find((b) => b.barcode === scannedCode);
+				if (barcodeMatch && barcodeMatch.posa_uom) {
+					newItem.uom = barcodeMatch.posa_uom;
+
+					// Try fetching the rate for this UOM from the active price list
+					try {
+						const res = await frappe.call({
+							method: "posawesome.posawesome.api.items.get_price_for_uom",
+							args: {
+								item_code: newItem.item_code,
+								price_list: this.active_price_list,
+								uom: barcodeMatch.posa_uom,
+							},
+						});
+						if (res.message) {
+							const price = parseFloat(res.message);
+							newItem.rate = price;
+							newItem.price_list_rate = price;
+							newItem.base_rate = price;
+							newItem.base_price_list_rate = price;
+							newItem._manual_rate_set = true;
+							newItem.skip_force_update = true;
+						}
+					} catch (e) {
+						console.error("Failed to fetch UOM price", e);
+					}
+				}
+			}
+
 			// Use existing add_item method with enhanced feedback
-			await this.add_item(item);
+			await this.add_item(newItem);
 
 			// Show success message
 			frappe.show_alert(
