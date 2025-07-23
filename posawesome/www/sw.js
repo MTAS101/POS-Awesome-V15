@@ -1,8 +1,8 @@
-import { precacheAndRoute } from "workbox-precaching";
-import { registerRoute, setDefaultHandler } from "workbox-routing";
-import { NetworkFirst, StaleWhileRevalidate } from "workbox-strategies";
+import { precacheAndRoute } from "https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-precaching.prod.js";
+import { registerRoute, setDefaultHandler } from "https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-routing.prod.js";
+import { NetworkFirst, StaleWhileRevalidate } from "https://storage.googleapis.com/workbox-cdn/releases/7.3.0/workbox-strategies.prod.js";
 
-precacheAndRoute([{"revision":"d882d32fc586c1c56dfb0ff4c9ca9ff9","url":"manifest.json"},{"revision":"0b2f8fe6908c2bc1aa82bc5593f15bd1","url":"offline.html"},{"revision":"b93b0f3bad1848ad38b2aa6cab11265e","url":"sw-old.js"}]);
+precacheAndRoute([{"revision":"d882d32fc586c1c56dfb0ff4c9ca9ff9","url":"manifest.json"},{"revision":"de35420b35ebe9d252e43e4802b2287b","url":"offline.html"},{"revision":"b93b0f3bad1848ad38b2aa6cab11265e","url":"sw-old.js"}]);
 
 // Cache application pages
 registerRoute(({ request }) => request.mode === "navigate", new NetworkFirst({ cacheName: "pages-cache" }));
