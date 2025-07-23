@@ -62,7 +62,7 @@ export default {
 			mini: false,
 			drawerOpen: this.drawer,
 			activeItem: this.item,
-			showSport: false, // Hide sport section by default
+			showSport: true,
 		};
 	},
 	watch: {

@@ -42,6 +42,7 @@ export {
 	clearAllCache,
 	forceClearAllCache,
 	getCacheUsageEstimate,
+	isCacheReady,
 } from "./cache.js";
 
 // Stock exports
@@ -102,3 +103,6 @@ export {
 	clearCustomerBalanceCache,
 	clearExpiredCustomerBalances,
 } from "./customers.js";
+
+// Translation cache exports
+export { getTranslationsCache, saveTranslationsCache } from "./cache.js";

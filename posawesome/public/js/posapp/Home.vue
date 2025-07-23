@@ -15,6 +15,7 @@
 				:cache-usage="cacheUsage"
 				:cache-usage-loading="cacheUsageLoading"
 				:cache-usage-details="cacheUsageDetails"
+				:cache-ready="cacheReady"
 				@change-page="setPage($event)"
 				@nav-click="handleNavClick"
 				@close-shift="handleCloseShift"
@@ -55,14 +56,14 @@ import {
 } from "../offline/index.js";
 import { silentPrint } from "./plugins/print.js";
 import {
-    setupNetworkListeners,
-    checkNetworkConnectivity,
-    detectHostType,
-    performConnectivityChecks,
-    checkFrappePing,
-    checkCurrentOrigin,
-    checkExternalConnectivity,
-    checkWebSocketConnectivity,
+	setupNetworkListeners,
+	checkNetworkConnectivity,
+	detectHostType,
+	performConnectivityChecks,
+	checkFrappePing,
+	checkCurrentOrigin,
+	checkExternalConnectivity,
+	checkWebSocketConnectivity,
 } from "./composables/useNetwork.js";
 
 export default {
@@ -88,6 +89,7 @@ export default {
 			cacheUsage: 0,
 			cacheUsageLoading: false,
 			cacheUsageDetails: { total: 0, indexedDB: 0, localStorage: 0 },
+			cacheReady: false,
 		};
 	},
 	computed: {
@@ -122,22 +124,23 @@ export default {
 		this.setupEventListeners();
 		this.handleRefreshCacheUsage();
 	},
-        methods: {
-                setupNetworkListeners,
-                checkNetworkConnectivity,
-                detectHostType,
-                performConnectivityChecks,
-                checkFrappePing,
-                checkCurrentOrigin,
-                checkExternalConnectivity,
-                checkWebSocketConnectivity,
-                setPage(page) {
-                        this.page = page;
-                },
+	methods: {
+		setupNetworkListeners,
+		checkNetworkConnectivity,
+		detectHostType,
+		performConnectivityChecks,
+		checkFrappePing,
+		checkCurrentOrigin,
+		checkExternalConnectivity,
+		checkWebSocketConnectivity,
+		setPage(page) {
+			this.page = page;
+		},
 
 		async initializeData() {
 			await initPromise;
 			await memoryInitPromise;
+			this.cacheReady = true;
 			checkDbHealth().catch(() => {});
 			// Load POS profile from cache or storage
 			const openingData = getOpeningStorage();
@@ -175,7 +178,6 @@ export default {
 				window.serverOnline = false;
 			}
 		},
-
 
 		setupEventListeners() {
 			// Listen for POS profile registration
