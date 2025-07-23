@@ -302,7 +302,7 @@ export default {
 			selected_currency: "", // Currently selected currency
 			exchange_rate: 1, // Current exchange rate
 			conversion_rate: 1, // Currency to company rate
-			exchange_rate_date: "", // Date of fetched exchange rate
+                        exchange_rate_date: frappe.datetime.nowdate(), // Date of fetched exchange rate
 			company: null, // Company doc with default currency
 			available_currencies: [], // List of available currencies
 			price_lists: [], // Available selling price lists
