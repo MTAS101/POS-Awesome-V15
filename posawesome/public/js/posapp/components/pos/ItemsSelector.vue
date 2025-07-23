@@ -369,7 +369,7 @@ export default {
 		CameraScanner,
 	},
 	data: () => ({
-		pos_profile: "",
+		pos_profile: {},
 		flags: {},
 		items_view: "list",
 		item_group: "ALL",
@@ -485,13 +485,17 @@ export default {
 			this.eventBus.emit("set_new_line", this.new_line);
 		},
 		item_group(newValue, oldValue) {
-			if (this.pos_profile.pose_use_limit_search && newValue !== oldValue) {
+			if (this.pos_profile && this.pos_profile.pose_use_limit_search && newValue !== oldValue) {
 				this.get_items();
 			}
 		},
 		filtered_items(new_value, old_value) {
 			// Update item details if items changed
-			if (!this.pos_profile.pose_use_limit_search && new_value.length !== old_value.length) {
+			if (
+				this.pos_profile &&
+				!this.pos_profile.pose_use_limit_search &&
+				new_value.length !== old_value.length
+			) {
 				this.update_items_details(new_value);
 			}
 		},
@@ -674,6 +678,7 @@ export default {
 				this.items_loaded &&
 				!force_server &&
 				!this.first_search &&
+				this.pos_profile &&
 				!this.pos_profile.pose_use_limit_search
 			) {
 				console.info("Items already loaded, skipping reload");
@@ -686,7 +691,7 @@ export default {
 			// Removed noisy debug log
 
 			// Attempt to load cached items for the current price list
-			if (!force_server && !this.pos_profile.pose_use_limit_search) {
+			if (!force_server && this.pos_profile && !this.pos_profile.pose_use_limit_search) {
 				const cached = getCachedPriceListItems(vm.customer_price_list);
 				if (cached && cached.length) {
 					vm.items = cached;
@@ -714,6 +719,7 @@ export default {
 
 			// Load from localStorage when available and not forcing
 			if (
+				vm.pos_profile &&
 				vm.pos_profile.posa_local_storage &&
 				getItemsStorage().length &&
 				!vm.pos_profile.pose_use_limit_search &&
@@ -791,7 +797,7 @@ export default {
 							vm.prePopulateStockCache(vm.items);
 
 							vm.$nextTick(() => {
-								if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
 									vm.search_onchange();
 								}
 							});
@@ -801,7 +807,11 @@ export default {
 								vm.update_items_details(vm.items);
 							}
 
-							if (vm.pos_profile.posa_local_storage && !vm.pos_profile.pose_use_limit_search) {
+							if (
+								vm.pos_profile &&
+								vm.pos_profile.posa_local_storage &&
+								!vm.pos_profile.pose_use_limit_search
+							) {
 								try {
 									setItemsStorage(vm.items);
 									vm.items.forEach((it) => {
@@ -814,7 +824,7 @@ export default {
 								}
 							}
 
-							if (vm.pos_profile.pose_use_limit_search) {
+							if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 								vm.enter_event();
 							}
 
@@ -875,7 +885,7 @@ export default {
 							vm.prePopulateStockCache(vm.items);
 
 							vm.$nextTick(() => {
-								if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
 									vm.search_onchange();
 								}
 							});
@@ -885,7 +895,11 @@ export default {
 								vm.update_items_details(vm.items);
 							}
 
-							if (vm.pos_profile.posa_local_storage && !vm.pos_profile.pose_use_limit_search) {
+							if (
+								vm.pos_profile &&
+								vm.pos_profile.posa_local_storage &&
+								!vm.pos_profile.pose_use_limit_search
+							) {
 								try {
 									setItemsStorage(r.message);
 									r.message.forEach((it) => {
@@ -897,7 +911,7 @@ export default {
 									console.error(e);
 								}
 							}
-							if (vm.pos_profile.pose_use_limit_search) {
+							if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 								vm.enter_event();
 							}
 						}
@@ -1103,7 +1117,7 @@ export default {
 
 			const fromScanner = vm.search_from_scanner;
 
-			if (vm.pos_profile.pose_use_limit_search) {
+			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 				// Only trigger search when query length meets minimum threshold
 				if (vm.search && vm.search.length >= 3) {
 					vm.get_items();
@@ -1798,7 +1812,7 @@ export default {
 		},
 		filtered_items() {
 			this.search = this.get_search(this.first_search).trim();
-			if (!this.pos_profile.pose_use_limit_search) {
+			if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
 				let filtred_list = [];
 				let filtred_group_list = [];
 				if (this.item_group != "ALL") {
@@ -2050,8 +2064,8 @@ export default {
 
 	async mounted() {
 		const profile = await ensurePosProfile();
-		if (!this.pos_profile) {
-			this.pos_profile = profile;
+		if (!this.pos_profile || Object.keys(this.pos_profile).length === 0) {
+			this.pos_profile = profile || {};
 		}
 		this.scan_barcoud();
 		// grid layout adjusts automatically with CSS, set items per page based on device size
