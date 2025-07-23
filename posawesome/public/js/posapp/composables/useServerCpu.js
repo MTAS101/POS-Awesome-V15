@@ -3,12 +3,12 @@ import { ref, onUnmounted } from "vue";
 const API_URL = "/api/method/posawesome.posawesome.api.utilities.get_server_usage";
 
 export function useServerCpu(pollInterval = 10000, windowSize = 60) {
-    const cpu = ref<number | null>(null);
-    const memory = ref<number | null>(null);
-    const history = ref<{ cpu: number | null; memory: number | null }[]>([]);
+    const cpu = ref(null);
+    const memory = ref(null);
+    const history = ref([]);
     const loading = ref(true);
-    const error = ref<string | null>(null);
-    let timer: number | null = null;
+    const error = ref(null);
+    let timer = null;
 
     async function fetchServerCpu() {
         loading.value = true;
@@ -25,7 +25,7 @@ export function useServerCpu(pollInterval = 10000, windowSize = 60) {
                 error.value = "No data from server";
             }
         } catch (e) {
-            error.value = (e as Error).message;
+            error.value = e.message;
         } finally {
             loading.value = false;
         }

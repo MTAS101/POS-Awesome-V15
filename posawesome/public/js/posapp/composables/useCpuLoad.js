@@ -6,8 +6,8 @@ import { ref, onUnmounted } from "vue";
  */
 export function useCpuLoad(interval = 1000, windowSize = 60) {
     const cpuLag = ref(0);
-    const history = ref<number[]>([]);
-    let timer: number | null = null;
+    const history = ref([]);
+    let timer = null;
     let last = performance.now();
 
     function measure() {

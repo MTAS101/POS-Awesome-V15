@@ -513,6 +513,7 @@
 </template>
 
 <script>
+import _ from 'lodash';
 export default {
 	name: "ItemsTable",
 	props: {
@@ -550,6 +551,7 @@ export default {
 			draggedIndex: null,
 			dragOverIndex: null,
 			isDragging: false,
+			pendingAdd: null,
 		};
 	},
 	computed: {
@@ -600,13 +602,33 @@ export default {
 				const dragData = JSON.parse(event.dataTransfer.getData("application/json"));
 
 				if (dragData.type === "item-from-selector") {
-					this.$emit("add-item-from-drag", dragData.item);
+					this.addItemDebounced(dragData.item);
 					this.$emit("item-dropped", false);
 				}
 			} catch (error) {
 				console.error("Error parsing drag data:", error);
 			}
 		},
+		addItem(newItem) {
+			// Find a matching item (by item_code, uom, and rate)
+			const match = this.items.find(
+				item =>
+					item.item_code === newItem.item_code &&
+					item.uom === newItem.uom &&
+					item.rate === newItem.rate
+			);
+			if (match) {
+				// If found, increment quantity
+				match.qty += newItem.qty || 1;
+				match.amount = match.qty * match.rate;
+				this.$forceUpdate();
+			} else {
+				this.items.push({ ...newItem });
+			}
+		},
+		addItemDebounced: _.debounce(function(item) {
+			this.addItem(item);
+		}, 50),
 	},
 };
 </script>
