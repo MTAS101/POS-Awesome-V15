@@ -8,8 +8,17 @@
 ---
 
 ### Update Instructions
+###🚨 Important: 'Version-15' branch was recreated.
 
-After switching branches or pulling latest changes:
+To avoid pull errors, please run the following:
+
+git branch -D Version-15
+git fetch origin
+git checkout Version-15
+
+This will reset your local branch and sync with the new one.
+
+For switching branches or pulling latest changes:
 
 1. cd apps/posawesome
 2. git pull
