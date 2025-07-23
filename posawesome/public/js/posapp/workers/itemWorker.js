@@ -1,6 +1,14 @@
-importScripts("/assets/posawesome/js/libs/dexie.min.js");
+try {
+	importScripts("/assets/posawesome/js/libs/dexie.min.js?v=1");
+} catch (e) {
+	// fallback to ESM
+}
 
-const db = new Dexie("posawesome_offline");
+const DexieLib =
+	typeof Dexie === "undefined"
+		? await import("/assets/posawesome/js/libs/dexie.min.js?v=1")
+		: { default: Dexie };
+const db = new DexieLib.default("posawesome_offline");
 db.version(1).stores({ keyval: "&key" });
 
 async function persist(key, value) {
