@@ -1,3 +1,3 @@
-import "./toConsole";
-import "./posapp/posapp";
-import "./utils/clearAllCaches";
+import "./toConsole.js";
+import "./posapp/posapp.js";
+import "./utils/clearAllCaches.js";
