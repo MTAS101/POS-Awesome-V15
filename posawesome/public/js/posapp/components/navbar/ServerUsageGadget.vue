@@ -16,7 +16,9 @@
         <div class="cpu-tooltip-section-title mb-1">{{ __("Server Metrics") }}</div>
         <div class="cpu-tooltip-peak mb-1">
           <v-icon size="14" color="success" class="mr-1">mdi-arrow-up-bold</v-icon>
-          {{ __("Peak: ") }}<b>{{ peakLag.toFixed(1) }} ms</b> ({{ peakPercent }}%)
+          {{ __("Peak:") }}
+          <b>{{ peakLag.toFixed(1) }} ms</b>
+          ({{ peakPercent }}%)
         </div>
         <div class="cpu-tooltip-sparkline mb-2">
           <svg :width="180" :height="40" class="cpu-sparkline-large">
@@ -188,6 +190,7 @@ function getAreaPoints(arr: number[], w: number, h: number) {
 
 const sparklinePointsLarge = computed(() => getSparklinePoints(history.value, 180, 40));
 const areaPointsLarge = computed(() => getAreaPoints(history.value, 180, 40));
+
 // Peak lag in ms and as a percentage (100ms = 100%)
 const peakLag = computed(() => Math.max(...history.value, 0));
 const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
