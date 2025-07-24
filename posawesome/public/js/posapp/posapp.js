@@ -1,12 +1,12 @@
-import { createVuetify } from "vuetify";
+import { createVuetify } from "vuetify/lib/framework.js";
 import { createApp } from "vue";
 import Dexie from "dexie/dist/dexie.mjs";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import eventBus from "./bus";
 import themePlugin from "./plugins/theme.js";
-import * as components from "vuetify/components";
-import * as directives from "vuetify/directives";
+import * as components from "vuetify/lib/components/index.js";
+import * as directives from "vuetify/lib/directives/index.js";
 import Home from "./Home.vue";
 
 // Expose Dexie globally for libraries that expect a global Dexie instance
