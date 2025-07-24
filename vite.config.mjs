@@ -40,7 +40,6 @@ export default defineConfig({
         resolve: {
                 alias: {
                         "@": path.resolve(__dirname, "posawesome/frontend/src"),
-                        "posapp": path.resolve(__dirname, "posawesome/public/js/posapp"),
                 },
         },
         build: {
