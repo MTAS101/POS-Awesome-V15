@@ -15,7 +15,25 @@ app_license = "GPLv3"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/posawesome/css/posawesome.css"
 # app_include_js = "/assets/posawesome/js/posawesome.js"
-app_include_js = "/assets/posawesome/dist/js/posawesome.bundle.js"
+import json
+from pathlib import Path
+
+
+def _get_bundle_path() -> str:
+    manifest_path = Path(__file__).parent / "public" / "dist" / ".vite" / "manifest.json"
+    try:
+        with open(manifest_path) as f:
+            manifest = json.load(f)
+        entry_key = "posawesome/public/js/posawesome.bundle.js"
+        bundle = manifest.get(entry_key, {}).get("file")
+        if bundle:
+            return f"/assets/posawesome/{bundle}"
+    except Exception:
+        pass
+    return "/assets/posawesome/dist/js/posawesome.bundle.js"
+
+
+app_include_js = _get_bundle_path()
 
 # include js, css files in header of web template
 # web_include_css = "/assets/posawesome/css/posawesome.css"
