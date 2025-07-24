@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+from __future__ import unicode_literals
 from . import __version__ as app_version
 
 app_name = "posawesome"
@@ -16,6 +18,7 @@ app_license = "GPLv3"
 # app_include_css = "/assets/posawesome/css/posawesome.css"
 # app_include_js = "/assets/posawesome/js/posawesome.js"
 app_include_js = "/assets/posawesome/dist/js/posawesome.bundle.js"
+
 
 # include js, css files in header of web template
 # web_include_css = "/assets/posawesome/css/posawesome.css"
