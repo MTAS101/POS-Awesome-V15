@@ -180,6 +180,7 @@
 
 					<!-- ItemsTable component with reorder event handler -->
 					<ItemsTable
+						ref="itemsTable"
 						:headers="items_headers"
 						:items="items"
 						:expanded="expanded"
@@ -252,15 +253,11 @@ import MultiCurrencyRow from "./MultiCurrencyRow.vue";
 import CancelSaleDialog from "./CancelSaleDialog.vue";
 import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
+import invoiceItemMethods from "./invoiceItemMethods";
 import invoiceComputed from "./invoiceComputed";
-import invoiceWatchers from "./invoiceWatchers";
-import itemAddition from "./invoice-item/itemAddition";
-import batchSerial from "./invoice-item/batchSerial";
-import discountMethods from "./invoice-item/discounts";
-import stockUtils from "./invoice-item/stockUtils";
+import invoiceWatchers from "./invoiceWatchers"
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
-import invoiceItemMethods from "./invoiceItemMethods";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
@@ -306,7 +303,7 @@ export default {
 			selected_currency: "", // Currently selected currency
 			exchange_rate: 1, // Current exchange rate
 			conversion_rate: 1, // Currency to company rate
-			exchange_rate_date: "", // Date of fetched exchange rate
+                        exchange_rate_date: frappe.datetime.nowdate(), // Date of fetched exchange rate
 			company: null, // Company doc with default currency
 			available_currencies: [], // List of available currencies
 			price_lists: [], // Available selling price lists
@@ -338,10 +335,6 @@ export default {
 
 	methods: {
 		...shortcutMethods,
-		...itemAddition,
-		...batchSerial,
-		...discountMethods,
-		...stockUtils,
 		...offerMethods,
 		...invoiceItemMethods,
 		initializeItemsHeaders() {
@@ -1063,7 +1056,9 @@ export default {
 			this.fetch_price_lists();
 			this.update_price_list();
 		});
-		this.eventBus.on("add_item", this.add_item);
+		this.eventBus.on("add_item", (item) => {
+			this.$refs.itemsTable.addItemDebounced(item);
+		});
 		this.eventBus.on("update_customer", (customer) => {
 			this.customer = customer;
 		});

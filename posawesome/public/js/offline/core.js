@@ -1,4 +1,4 @@
-import Dexie from "dexie";
+import Dexie from "dexie/dist/dexie.mjs";
 import { withWriteLock } from "./db-utils.js";
 
 // --- Dexie initialization ---------------------------------------------------
@@ -32,7 +32,11 @@ export function initPersistWorker() {
 		// Load the worker without a query string so the service worker
 		// can serve the cached version when offline.
 		const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-		persistWorker = new Worker(workerUrl, { type: "classic" });
+		try {
+			persistWorker = new Worker(workerUrl, { type: "classic" });
+		} catch (err) {
+			persistWorker = new Worker(workerUrl, { type: "module" });
+		}
 	} catch (e) {
 		console.error("Failed to init persist worker", e);
 		persistWorker = null;

@@ -358,15 +358,18 @@ import {
 	getCachedItemDetails,
 	saveItemDetailsCache,
 } from "../../../offline/index.js";
-import { responsiveMixin } from "../../mixins/responsive.js";
+import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-	mixins: [format, responsiveMixin],
+	mixins: [format],
+	setup() {
+		return useResponsive();
+	},
 	components: {
 		CameraScanner,
 	},
 	data: () => ({
-		pos_profile: "",
+		pos_profile: {},
 		flags: {},
 		items_view: "list",
 		item_group: "ALL",
@@ -481,9 +484,18 @@ export default {
 		new_line() {
 			this.eventBus.emit("set_new_line", this.new_line);
 		},
+		item_group(newValue, oldValue) {
+			if (this.pos_profile && this.pos_profile.pose_use_limit_search && newValue !== oldValue) {
+				this.get_items();
+			}
+		},
 		filtered_items(new_value, old_value) {
 			// Update item details if items changed
-			if (!this.pos_profile.pose_use_limit_search && new_value.length !== old_value.length) {
+			if (
+				this.pos_profile &&
+				!this.pos_profile.pose_use_limit_search &&
+				new_value.length !== old_value.length
+			) {
 				this.update_items_details(new_value);
 			}
 		},
@@ -666,6 +678,7 @@ export default {
 				this.items_loaded &&
 				!force_server &&
 				!this.first_search &&
+				this.pos_profile &&
 				!this.pos_profile.pose_use_limit_search
 			) {
 				console.info("Items already loaded, skipping reload");
@@ -678,7 +691,7 @@ export default {
 			// Removed noisy debug log
 
 			// Attempt to load cached items for the current price list
-			if (!force_server && !this.pos_profile.pose_use_limit_search) {
+			if (!force_server && this.pos_profile && !this.pos_profile.pose_use_limit_search) {
 				const cached = getCachedPriceListItems(vm.customer_price_list);
 				if (cached && cached.length) {
 					vm.items = cached;
@@ -706,6 +719,7 @@ export default {
 
 			// Load from localStorage when available and not forcing
 			if (
+				vm.pos_profile &&
 				vm.pos_profile.posa_local_storage &&
 				getItemsStorage().length &&
 				!vm.pos_profile.pose_use_limit_search &&
@@ -783,7 +797,7 @@ export default {
 							vm.prePopulateStockCache(vm.items);
 
 							vm.$nextTick(() => {
-								if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
 									vm.search_onchange();
 								}
 							});
@@ -793,7 +807,11 @@ export default {
 								vm.update_items_details(vm.items);
 							}
 
-							if (vm.pos_profile.posa_local_storage && !vm.pos_profile.pose_use_limit_search) {
+							if (
+								vm.pos_profile &&
+								vm.pos_profile.posa_local_storage &&
+								!vm.pos_profile.pose_use_limit_search
+							) {
 								try {
 									setItemsStorage(vm.items);
 									vm.items.forEach((it) => {
@@ -806,7 +824,7 @@ export default {
 								}
 							}
 
-							if (vm.pos_profile.pose_use_limit_search) {
+							if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 								vm.enter_event();
 							}
 
@@ -867,7 +885,7 @@ export default {
 							vm.prePopulateStockCache(vm.items);
 
 							vm.$nextTick(() => {
-								if (vm.search && !vm.pos_profile.pose_use_limit_search) {
+								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
 									vm.search_onchange();
 								}
 							});
@@ -877,7 +895,11 @@ export default {
 								vm.update_items_details(vm.items);
 							}
 
-							if (vm.pos_profile.posa_local_storage && !vm.pos_profile.pose_use_limit_search) {
+							if (
+								vm.pos_profile &&
+								vm.pos_profile.posa_local_storage &&
+								!vm.pos_profile.pose_use_limit_search
+							) {
 								try {
 									setItemsStorage(r.message);
 									r.message.forEach((it) => {
@@ -889,7 +911,7 @@ export default {
 									console.error(e);
 								}
 							}
-							if (vm.pos_profile.pose_use_limit_search) {
+							if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 								vm.enter_event();
 							}
 						}
@@ -954,6 +976,7 @@ export default {
 			item = { ...item };
 			if (item.has_variants) {
 				let variants = this.items.filter((it) => it.variant_of == item.item_code);
+				let attrsMeta = {};
 				if (!variants.length) {
 					try {
 						const res = await frappe.call({
@@ -966,7 +989,8 @@ export default {
 							},
 						});
 						if (res.message) {
-							variants = res.message;
+							variants = res.message.variants || res.message;
+							attrsMeta = res.message.attributes_meta || {};
 							this.items.push(...variants);
 						}
 					} catch (e) {
@@ -978,7 +1002,9 @@ export default {
 					color: "warning",
 				});
 				console.log("sending profile", this.pos_profile);
-				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile);
+				// Ensure attributes meta is always an object
+				attrsMeta = attrsMeta || {};
+				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile, attrsMeta);
 			} else {
 				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
 					this.eventBus.emit("show_message", {
@@ -1091,7 +1117,7 @@ export default {
 
 			const fromScanner = vm.search_from_scanner;
 
-			if (vm.pos_profile.pose_use_limit_search) {
+			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 				// Only trigger search when query length meets minimum threshold
 				if (vm.search && vm.search.length >= 3) {
 					vm.get_items();
@@ -1572,8 +1598,42 @@ export default {
 		async addScannedItemToInvoice(item, scannedCode) {
 			console.log("Adding scanned item to invoice:", item, scannedCode);
 
+			// Clone the item to avoid mutating list data
+			const newItem = { ...item };
+
+			// If the scanned barcode has a specific UOM, apply it
+			if (Array.isArray(newItem.item_barcode)) {
+				const barcodeMatch = newItem.item_barcode.find((b) => b.barcode === scannedCode);
+				if (barcodeMatch && barcodeMatch.posa_uom) {
+					newItem.uom = barcodeMatch.posa_uom;
+
+					// Try fetching the rate for this UOM from the active price list
+					try {
+						const res = await frappe.call({
+							method: "posawesome.posawesome.api.items.get_price_for_uom",
+							args: {
+								item_code: newItem.item_code,
+								price_list: this.active_price_list,
+								uom: barcodeMatch.posa_uom,
+							},
+						});
+						if (res.message) {
+							const price = parseFloat(res.message);
+							newItem.rate = price;
+							newItem.price_list_rate = price;
+							newItem.base_rate = price;
+							newItem.base_price_list_rate = price;
+							newItem._manual_rate_set = true;
+							newItem.skip_force_update = true;
+						}
+					} catch (e) {
+						console.error("Failed to fetch UOM price", e);
+					}
+				}
+			}
+
 			// Use existing add_item method with enhanced feedback
-			await this.add_item(item);
+			await this.add_item(newItem);
 
 			// Show success message
 			frappe.show_alert(
@@ -1752,7 +1812,7 @@ export default {
 		},
 		filtered_items() {
 			this.search = this.get_search(this.first_search).trim();
-			if (!this.pos_profile.pose_use_limit_search) {
+			if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
 				let filtred_list = [];
 				let filtred_group_list = [];
 				if (this.item_group != "ALL") {
@@ -2004,8 +2064,8 @@ export default {
 
 	async mounted() {
 		const profile = await ensurePosProfile();
-		if (!this.pos_profile) {
-			this.pos_profile = profile;
+		if (!this.pos_profile || Object.keys(this.pos_profile).length === 0) {
+			this.pos_profile = profile || {};
 		}
 		this.scan_barcoud();
 		// grid layout adjusts automatically with CSS, set items per page based on device size

@@ -1,3 +1,5 @@
+import { getOpeningStorage } from "../offline/index.js";
+
 export async function ensurePosProfile() {
 	const bootProfile = frappe?.boot?.pos_profile;
 	if (bootProfile && bootProfile.warehouse && bootProfile.selling_price_list) {
@@ -14,6 +16,10 @@ export async function ensurePosProfile() {
 		}
 	} catch (e) {
 		console.error("Failed to fetch active POS profile", e);
+	}
+	const cached = getOpeningStorage();
+	if (cached && cached.pos_profile) {
+		return cached.pos_profile;
 	}
 	return bootProfile || null;
 }

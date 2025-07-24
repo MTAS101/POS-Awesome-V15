@@ -21,7 +21,7 @@
 			hide-default-footer
 			:single-expand="true"
 			:header-props="headerProps"
-			@update:expanded="$emit('update:expanded', $event)"
+                        @update:expanded="val => $emit('update:expanded', val.map(v => typeof v === 'object' ? v.posa_row_id : v))"
 			:search="itemSearch"
 		>
 			<!-- Quantity column -->
@@ -268,15 +268,23 @@
 										density="compact"
 										variant="outlined"
 										color="primary"
-										:label="frappe._('Price list Rate')"
+										:label="frappe._('Price List Rate')"
 										:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
 										class="dark-field"
 										hide-details
-										:model-value="formatCurrency(item.price_list_rate)"
+										:model-value="formatCurrency(item.price_list_rate || 0)"
 										:disabled="!pos_profile.posa_allow_price_list_rate_change"
+										prepend-inner-icon="mdi-format-list-numbered"
 										:prefix="currencySymbol(pos_profile.currency)"
 										@change="changePriceListRate(item)"
 									></v-text-field>
+									<v-btn
+										v-if="pos_profile.posa_allow_price_list_rate_change"
+										size="x-small"
+										class="ml-1"
+										@click.stop="changePriceListRate(item)"
+										>{{ __("Change") }}</v-btn
+									>
 								</div>
 								<div class="form-field">
 									<v-text-field
@@ -347,7 +355,7 @@
 							</div>
 
 							<!-- Serial Number Section -->
-							<div class="form-section" v-if="item.has_serial_no == 1 || item.serial_no">
+							<div class="form-section" v-if="item.has_serial_no || item.serial_no">
 								<div class="form-row">
 									<div class="form-field">
 										<v-text-field
@@ -386,7 +394,7 @@
 							</div>
 
 							<!-- Batch Number Section -->
-							<div class="form-section" v-if="item.has_batch_no == 1 || item.batch_no">
+							<div class="form-section" v-if="item.has_batch_no || item.batch_no">
 								<div class="form-row">
 									<div class="form-field">
 										<v-text-field
@@ -486,28 +494,6 @@
 										density="compact"
 										variant="outlined"
 										color="primary"
-										:label="frappe._('Price List Rate')"
-										:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
-										class="dark-field"
-										hide-details
-										:model-value="formatCurrency(item.price_list_rate || 0)"
-										:disabled="!pos_profile.posa_allow_price_list_rate_change"
-										prepend-inner-icon="mdi-format-list-numbered"
-										@change="changePriceListRate(item)"
-									></v-text-field>
-									<v-btn
-										v-if="pos_profile.posa_allow_price_list_rate_change"
-										size="x-small"
-										class="ml-1"
-										@click.stop="changePriceListRate(item)"
-										>{{ __("Change") }}</v-btn
-									>
-								</div>
-								<div class="form-field">
-									<v-text-field
-										density="compact"
-										variant="outlined"
-										color="primary"
 										:label="frappe._('Amount')"
 										:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
 										class="dark-field"
@@ -527,6 +513,7 @@
 </template>
 
 <script>
+import _ from 'lodash';
 export default {
 	name: "ItemsTable",
 	props: {
@@ -564,6 +551,7 @@ export default {
 			draggedIndex: null,
 			dragOverIndex: null,
 			isDragging: false,
+			pendingAdd: null,
 		};
 	},
 	computed: {
@@ -614,13 +602,33 @@ export default {
 				const dragData = JSON.parse(event.dataTransfer.getData("application/json"));
 
 				if (dragData.type === "item-from-selector") {
-					this.$emit("add-item-from-drag", dragData.item);
+					this.addItemDebounced(dragData.item);
 					this.$emit("item-dropped", false);
 				}
 			} catch (error) {
 				console.error("Error parsing drag data:", error);
 			}
 		},
+		addItem(newItem) {
+			// Find a matching item (by item_code, uom, and rate)
+			const match = this.items.find(
+				item =>
+					item.item_code === newItem.item_code &&
+					item.uom === newItem.uom &&
+					item.rate === newItem.rate
+			);
+			if (match) {
+				// If found, increment quantity
+				match.qty += newItem.qty || 1;
+				match.amount = match.qty * match.rate;
+				this.$forceUpdate();
+			} else {
+				this.items.push({ ...newItem });
+			}
+		},
+		addItemDebounced: _.debounce(function(item) {
+			this.addItem(item);
+		}, 50),
 	},
 };
 </script>

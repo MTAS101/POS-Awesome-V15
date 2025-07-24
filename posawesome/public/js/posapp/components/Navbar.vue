@@ -17,6 +17,7 @@
 					:server-connecting="serverConnecting"
 					:is-ip-host="isIpHost"
 					:sync-totals="syncTotals"
+					:cache-ready="cacheReady"
 				/>
 			</template>
 
@@ -28,6 +29,16 @@
 					:cache-usage-details="cacheUsageDetails"
 					@refresh="refreshCacheUsage"
 				/>
+			</template>
+
+      <!-- Slot for CPU gadget -->
+      <template #cpu-gadget>
+        <ServerUsageGadget />
+      </template>
+
+			<!-- Slot for Database Usage Gadget -->
+			<template #db-usage-gadget>
+				<DatabaseUsageGadget />
 			</template>
 
 			<!-- Slot for menu -->
@@ -98,6 +109,8 @@ import StatusIndicator from "./navbar/StatusIndicator.vue";
 import CacheUsageMeter from "./navbar/CacheUsageMeter.vue";
 import AboutDialog from "./navbar/AboutDialog.vue";
 import OfflineInvoices from "./OfflineInvoices.vue";
+import ServerUsageGadget from "./navbar/ServerUsageGadget.vue";
+import DatabaseUsageGadget from "./navbar/DatabaseUsageGadget.vue";
 import { forceClearAllCache } from "../../offline/cache.js";
 import { clearAllCaches } from "../../utils/clearAllCaches.js";
 import { isOffline } from "../../offline/index.js";
@@ -112,6 +125,8 @@ export default {
 		CacheUsageMeter,
 		AboutDialog,
 		OfflineInvoicesDialog: OfflineInvoices,
+		ServerUsageGadget,
+		DatabaseUsageGadget,
 	},
 	props: {
 		posProfile: {
@@ -145,6 +160,7 @@ export default {
 			type: Object,
 			default: () => ({ total: 0, indexedDB: 0, localStorage: 0 }),
 		},
+		cacheReady: Boolean,
 	},
 	data() {
 		return {
