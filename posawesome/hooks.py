@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from . import __version__ as app_version
+import os
+import glob
 
 app_name = "posawesome"
 app_title = "POS Awesome"
@@ -17,10 +19,19 @@ app_license = "GPLv3"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/posawesome/css/posawesome.css"
 # app_include_js = "/assets/posawesome/js/posawesome.js"
-app_include_js = [
-    "/assets/posawesome/frontend/assets/index.js",
-]
-app_include_css = "/assets/posawesome/frontend/assets/index.css"
+
+# Auto-detect generated asset files under public/frontend/assets
+assets_dir = os.path.join(os.path.dirname(__file__), "public", "frontend", "assets")
+js_matches = sorted(glob.glob(os.path.join(assets_dir, "index-*.js")))
+css_matches = sorted(glob.glob(os.path.join(assets_dir, "*.css")))
+
+app_include_js = []
+if js_matches:
+    app_include_js = [f"/assets/posawesome/frontend/assets/{os.path.basename(js_matches[-1])}"]
+
+app_include_css = ""
+if css_matches:
+    app_include_css = f"/assets/posawesome/frontend/assets/{os.path.basename(css_matches[-1])}"
 
 # include js, css files in header of web template
 # web_include_css = "/assets/posawesome/css/posawesome.css"
