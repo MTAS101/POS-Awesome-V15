@@ -9,26 +9,24 @@ export default defineConfig({
                "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "production"),
                "process.env": {},
        },
-        build: {
-                target: "esnext",
-               lib: {
-                        entry: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
-                        name: "PosAwesome",
-                        fileName: () => "posawesome.bundle.js",
-                        formats: ["es"],
-                },
-                outDir: "posawesome/public/dist/js",
-                emptyOutDir: true,
+       build: {
+               target: "es2015",
+               manifest: true,
+               outDir: "posawesome/public/dist",
+               emptyOutDir: true,
                rollupOptions: {
-                        external: ["socket.io-client"],
-                        output: {
-                                inlineDynamicImports: true,
-                                globals: {
-                                        "socket.io-client": "io",
-                                },
-                        },
-                },
-	},
+                       input: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
+                       external: ["socket.io-client"],
+                       output: {
+                               format: "iife",
+                               inlineDynamicImports: true,
+                               entryFileNames: "js/[name].[hash].js",
+                               globals: {
+                                       "socket.io-client": "io",
+                               },
+                       },
+               },
+       },
 	resolve: {
 		alias: {
 			"@": resolve(__dirname, "posawesome/public/js"),
