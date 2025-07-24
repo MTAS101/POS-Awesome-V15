@@ -33,7 +33,7 @@ def _get_bundle_path() -> str:
     return "/assets/posawesome/dist/js/posawesome.bundle.js"
 
 
-# app_include_js = _get_bundle_path()
+app_include_js = _get_bundle_path()
 
 # include js, css files in header of web template
 # web_include_css = "/assets/posawesome/css/posawesome.css"
