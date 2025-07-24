@@ -26,6 +26,8 @@ workbox.routing.registerRoute(
 );
 
 workbox.routing.registerRoute(
-	({ request }) => ["script", "style", "document"].includes(request.destination),
-	new workbox.strategies.StaleWhileRevalidate(),
+        ({ request }) => ["script", "style", "document"].includes(request.destination),
+        new workbox.strategies.StaleWhileRevalidate(),
 );
+
+self.__WB_MANIFEST;

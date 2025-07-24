@@ -2,6 +2,8 @@
   "name": "posawesome",
   "scripts": {
     "dev": "vite",
+    "build": "vite build --base=/assets/posawesome/frontend/",
+    "postbuild": "cp -f posawesome/public/frontend/index.html posawesome/www/index.html",
     "prebuild": "npm install",
     "format": "prettier --write \"**/*.{js,vue,css,scss,html}\""
   },
@@ -9,11 +11,14 @@
     "@vuepic/vue-datepicker": "11.0.2",
     "@vueuse/core": "^13.4.0",
     "dexie": "^4.0.11",
+    "frappe-ui": "^0.1.178",
     "lodash": "^4.17.21",
     "mitt": "^3.0.1",
     "socket.io-client": "^4.8.1",
+    "vite-plugin-pwa": "^1.0.1",
     "vue": "^3.3.4",
     "vue-qrcode-reader": "^5.7.2",
+    "vue-router": "^4.2.5",
     "vue-virtual-scroller": "^2.0.0-beta.8",
     "vuetify": "^3.7.5"
   },
