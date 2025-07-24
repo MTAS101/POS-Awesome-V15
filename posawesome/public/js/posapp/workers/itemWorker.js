@@ -9,16 +9,22 @@
 		typeof Dexie === "undefined"
 			? await import("/assets/posawesome/js/libs/dexie.min.js?v=1")
 			: { default: Dexie };
-	const db = new DexieLib.default("posawesome_offline");
-	db.version(1).stores({ keyval: "&key" });
+        const db = new DexieLib.default("posawesome_offline");
+        db.version(1).stores({ keyval: "&key" });
+        // Keep a single open connection for the worker's lifetime to avoid
+        // "DatabaseClosedError" errors when multiple persist operations run
+        // concurrently. Dexie can handle multiple transactions on an open
+        // connection, so there is little benefit in closing after each write.
+        if (!db.isOpen()) {
+                await db.open();
+        }
 
 	async function persist(key, value) {
 		try {
 			if (!db.isOpen()) {
 				await db.open();
 			}
-			await db.table("keyval").put({ key, value });
-			await db.close();
+                        await db.table("keyval").put({ key, value });
 		} catch (e) {
 			console.error("Worker persist failed", e);
 		}
@@ -56,12 +62,11 @@
 				}
 				let cache = {};
 				try {
-					if (!db.isOpen()) {
-						await db.open();
-					}
-					const stored = await db.table("keyval").get("price_list_cache");
-					if (stored && stored.value) cache = stored.value;
-					await db.close();
+                                        if (!db.isOpen()) {
+                                                await db.open();
+                                        }
+                                        const stored = await db.table("keyval").get("price_list_cache");
+                                        if (stored && stored.value) cache = stored.value;
 				} catch (e) {
 					console.error("Failed to read cache in worker", e);
 				}
