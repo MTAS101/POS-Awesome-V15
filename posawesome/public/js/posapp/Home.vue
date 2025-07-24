@@ -229,7 +229,11 @@ export default {
 					this.serverConnecting = false;
 					console.log("Server: Disconnected from WebSocket");
 					// Trigger connectivity check to verify if it's just WebSocket or full network
-					setTimeout(() => this.checkNetworkConnectivity(), 1000);
+					setTimeout(() => {
+						if (!isManualOffline()) {
+							this.checkNetworkConnectivity();
+						}
+					}, 1000);
 				});
 
 				frappe.realtime.on("connecting", () => {
@@ -241,13 +245,15 @@ export default {
 				frappe.realtime.on("reconnect", () => {
 					console.log("Server: Reconnected to WebSocket");
 					window.serverOnline = true;
-					this.checkNetworkConnectivity();
+					if (!isManualOffline()) {
+						this.checkNetworkConnectivity();
+					}
 				});
 			}
 
 			// Listen for visibility changes to check connectivity when tab becomes active
 			document.addEventListener("visibilitychange", () => {
-				if (!document.hidden && navigator.onLine) {
+				if (!document.hidden && navigator.onLine && !isManualOffline()) {
 					this.checkNetworkConnectivity();
 				}
 			});

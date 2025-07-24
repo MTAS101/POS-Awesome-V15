@@ -43,6 +43,16 @@ export function manualNetworkRetry(vm) {
 // Enhanced periodic check with exponential backoff
 function scheduleNextCheck(vm) {
     setTimeout(async () => {
+        if (isManualOffline()) {
+            vm.serverConnecting = false;
+            vm.networkOnline = false;
+            vm.serverOnline = false;
+            window.serverOnline = false;
+            persistStatus(false, false);
+            vm.$forceUpdate();
+            scheduleNextCheck(vm);
+            return;
+        }
         vm.serverConnecting = true;
         vm.$forceUpdate();
         await vm.checkNetworkConnectivity();
@@ -161,8 +171,8 @@ export async function checkNetworkConnectivity() {
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000);
-            await fetch("https://httpbin.org/status/200", {
-                method: "HEAD",
+            await fetch("https://www.google.com/generate_204", {
+                method: "GET",
                 mode: "no-cors",
                 cache: "no-cache",
                 signal: controller.signal,
@@ -303,8 +313,8 @@ export async function checkExternalConnectivity() {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
-        await fetch("https://httpbin.org/status/200", {
-            method: "HEAD",
+        await fetch("https://www.google.com/generate_204", {
+            method: "GET",
             mode: "no-cors",
             cache: "no-cache",
             signal: controller.signal,
