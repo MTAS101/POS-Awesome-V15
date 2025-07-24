@@ -1,5 +1,6 @@
 const script = document.createElement("script");
 script.src = "/assets/posawesome/js/posawesome.bundle.js";
+script.type = "module";
 document.head.appendChild(script);
 
 // Initialize POS Awesome Vue app if available
