@@ -1,5 +1,5 @@
 const esbuild = require("esbuild");
-const vuePlugin = require("@vitejs/plugin-vue");
+const vuePlugin = require("@vitejs/plugin-vue").default;
 
 const frappeVueStyle = require("./frappe-vue-style.js");
 
