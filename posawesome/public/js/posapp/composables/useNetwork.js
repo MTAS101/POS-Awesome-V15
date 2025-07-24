@@ -1,14 +1,74 @@
 // Network-related composable functions for Home.vue
 import { isManualOffline } from '../../offline/index.js';
 
+// Debounce variables for network stability
+let consecutiveFailures = 0;
+let consecutiveSuccesses = 0;
+const FAILURE_THRESHOLD = 2; // Number of failed checks before marking as disconnected
+const SUCCESS_THRESHOLD = 1; // Number of successful checks before marking as connected
+const DESK_TIMEOUT = 8000; // 8 seconds
+const STATIC_TIMEOUT = 8000; // 8 seconds
+const ORIGIN_TIMEOUT = 8000; // 8 seconds
+
+// Exponential backoff variables
+let checkInterval = 15000; // Start with 15s
+const MAX_INTERVAL = 120000; // Max 2 minutes
+const MIN_INTERVAL = 15000; // Min 15s
+
+// Persist last known good state
+function persistStatus(networkOnline, serverOnline) {
+    localStorage.setItem('networkOnline', JSON.stringify(networkOnline));
+    localStorage.setItem('serverOnline', JSON.stringify(serverOnline));
+}
+
+function getPersistedStatus() {
+    return {
+        networkOnline: JSON.parse(localStorage.getItem('networkOnline') || 'true'),
+        serverOnline: JSON.parse(localStorage.getItem('serverOnline') || 'true'),
+    };
+}
+
+// Manual retry function (to be called from UI)
+export function manualNetworkRetry(vm) {
+    if (typeof vm.checkNetworkConnectivity === 'function') {
+        vm.serverConnecting = true;
+        vm.$forceUpdate();
+        vm.checkNetworkConnectivity().then(() => {
+            vm.serverConnecting = false;
+            vm.$forceUpdate();
+        });
+    }
+}
+
+// Enhanced periodic check with exponential backoff
+function scheduleNextCheck(vm) {
+    setTimeout(async () => {
+        vm.serverConnecting = true;
+        vm.$forceUpdate();
+        await vm.checkNetworkConnectivity();
+        vm.serverConnecting = false;
+        vm.$forceUpdate();
+        // If failed, increase interval (up to max)
+        if (!vm.serverOnline) {
+            checkInterval = Math.min(checkInterval * 2, MAX_INTERVAL);
+        } else {
+            checkInterval = MIN_INTERVAL; // Reset on success
+        }
+        scheduleNextCheck(vm);
+    }, checkInterval);
+}
+
 export function setupNetworkListeners() {
     // Listen for network status changes
     window.addEventListener("online", () => {
         if (isManualOffline()) return;
         this.networkOnline = true;
-        console.log("Network: Online");
-        // Verify actual connectivity
-        this.checkNetworkConnectivity();
+        this.serverConnecting = true;
+        this.$forceUpdate();
+        this.checkNetworkConnectivity().then(() => {
+            this.serverConnecting = false;
+            this.$forceUpdate();
+        });
     });
 
     window.addEventListener("offline", () => {
@@ -16,45 +76,53 @@ export function setupNetworkListeners() {
         this.networkOnline = false;
         this.serverOnline = false;
         window.serverOnline = false;
-        console.log("Network: Offline");
+        persistStatus(false, false);
         this.$forceUpdate();
     });
 
-    // Initial network status
+    // Initial network status from persisted state
+    const persisted = getPersistedStatus();
+    this.networkOnline = persisted.networkOnline;
+    this.serverOnline = persisted.serverOnline;
+    this.serverConnecting = false;
+    window.serverOnline = this.serverOnline;
+
     if (!isManualOffline()) {
         this.networkOnline = navigator.onLine;
-        this.checkNetworkConnectivity();
+        this.serverConnecting = true;
+        this.$forceUpdate();
+        this.checkNetworkConnectivity().then(() => {
+            this.serverConnecting = false;
+            this.$forceUpdate();
+        });
     } else {
         this.networkOnline = false;
         this.serverOnline = false;
         window.serverOnline = false;
+        persistStatus(false, false);
     }
 
-    // Periodic network check every 15 seconds
-    setInterval(() => {
-        if (isManualOffline()) return;
-        if (navigator.onLine) {
-            this.checkNetworkConnectivity();
-        }
-    }, 15000);
+    // Start enhanced periodic check
+    scheduleNextCheck(this);
 }
 
 export async function checkNetworkConnectivity() {
     try {
         let isConnected = false;
+        let isInternetReachable = false;
 
         // Strategy 1: Try Frappe's desk endpoint (always available)
         try {
             const response = await fetch("/app", {
                 method: "HEAD",
                 cache: "no-cache",
-                signal: AbortSignal.timeout(5000),
+                signal: AbortSignal.timeout(DESK_TIMEOUT),
             });
             if (response.status < 500) {
                 isConnected = true;
             }
         } catch (error) {
-            console.log("Desk endpoint check failed:", error.message);
+            console.log("Desk endpoint check failed:", error);
         }
 
         // Strategy 2: Try a static asset if desk fails
@@ -63,13 +131,13 @@ export async function checkNetworkConnectivity() {
                 const response = await fetch("/assets/frappe/images/frappe-logo.svg", {
                     method: "HEAD",
                     cache: "no-cache",
-                    signal: AbortSignal.timeout(3000),
+                    signal: AbortSignal.timeout(STATIC_TIMEOUT),
                 });
                 if (response.status < 500) {
                     isConnected = true;
                 }
             } catch (error) {
-                console.log("Static asset check failed:", error.message);
+                console.log("Static asset check failed:", error);
             }
         }
 
@@ -79,38 +147,71 @@ export async function checkNetworkConnectivity() {
                 const response = await fetch(window.location.origin, {
                     method: "HEAD",
                     cache: "no-cache",
-                    signal: AbortSignal.timeout(3000),
+                    signal: AbortSignal.timeout(ORIGIN_TIMEOUT),
                 });
                 if (response.status < 500) {
                     isConnected = true;
                 }
             } catch (error) {
-                console.log("Origin check failed:", error.message);
+                console.log("Origin check failed:", error);
             }
         }
 
+        // Check external connectivity (internet reachability)
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            await fetch("https://httpbin.org/status/200", {
+                method: "HEAD",
+                mode: "no-cors",
+                cache: "no-cache",
+                signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            isInternetReachable = true;
+        } catch (error) {
+            isInternetReachable = false;
+        }
+
+        // Debounce logic for network/server status
         if (isConnected) {
-            this.networkOnline = true;
-            this.serverOnline = true;
-            window.serverOnline = true;
-            this.serverConnecting = false;
-            console.log("Network: Connected");
+            consecutiveSuccesses++;
+            consecutiveFailures = 0;
+            if (consecutiveSuccesses >= SUCCESS_THRESHOLD) {
+                if (!this.networkOnline || !this.serverOnline) {
+                    this.networkOnline = isInternetReachable;
+                    this.serverOnline = true;
+                    window.serverOnline = true;
+                    persistStatus(this.networkOnline, true);
+                    console.log("Network: Connected");
+                    this.$forceUpdate();
+                }
+            }
         } else {
+            consecutiveFailures++;
+            consecutiveSuccesses = 0;
+            if (consecutiveFailures >= FAILURE_THRESHOLD) {
+                if (this.networkOnline || this.serverOnline) {
+                    this.networkOnline = isInternetReachable;
+                    this.serverOnline = false;
+                    window.serverOnline = false;
+                    persistStatus(this.networkOnline, false);
+                    console.log("Network: Disconnected");
+                    this.$forceUpdate();
+                }
+            }
+        }
+    } catch (error) {
+        console.warn("Network connectivity check failed:", error);
+        consecutiveFailures++;
+        consecutiveSuccesses = 0;
+        if (consecutiveFailures >= FAILURE_THRESHOLD) {
             this.networkOnline = navigator.onLine;
             this.serverOnline = false;
             window.serverOnline = false;
-            this.serverConnecting = false;
-            console.log("Network: Disconnected");
+            persistStatus(this.networkOnline, false);
+            this.$forceUpdate();
         }
-
-        this.$forceUpdate();
-    } catch (error) {
-        console.warn("Network connectivity check failed:", error);
-        this.networkOnline = navigator.onLine;
-        this.serverOnline = false;
-        window.serverOnline = false;
-        this.serverConnecting = false;
-        this.$forceUpdate();
     }
 }
 

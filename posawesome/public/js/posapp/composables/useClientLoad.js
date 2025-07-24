@@ -1,33 +1,102 @@
-import { ref, onUnmounted } from "vue";
+import { ref, reactive, onUnmounted } from 'vue';
 
-/**
- * Measures event-loop lag as a proxy for CPU load.
- * Returns a reactive ref (ms), a rolling history array, and a stop function.
- */
-export function useClientLoad(interval = 1000, windowSize = 60) {
+export function useClientLoad(
+    interval = 1_000,
+    windowSize = 60
+) {
+    // Basic lag
     const cpuLag = ref(0);
-    const history = ref([]);
-    let timer = null;
-    let last = performance.now();
+    const lagHistory = ref([]);
 
-    function measure() {
+    // Long‑tasks
+    const longTasks = ref([]);
+
+    // Memory (Chrome-only)
+    const memoryUsage = ref(0);
+
+    // Device info
+    const device = reactive({
+        cores: navigator.hardwareConcurrency || 1,
+        gbMemory: navigator.deviceMemory || undefined,
+    });
+
+    let timerId = null;
+    let last = performance.now();
+    let perfObserver = null;
+
+    function measureLag() {
         const now = performance.now();
         const lag = now - last - interval;
         cpuLag.value = Math.max(0, lag);
         last = now;
-        // Maintain rolling history
-        history.value.push(cpuLag.value);
-        if (history.value.length > windowSize) {
-            history.value.shift();
+
+        lagHistory.value.push(cpuLag.value);
+        if (lagHistory.value.length > windowSize) {
+            lagHistory.value.shift();
         }
     }
 
-    timer = window.setInterval(measure, interval);
+    function sampleMemory() {
+        // @ts-ignore: not standard, but supported in Chrome
+        if (performance.memory) {
+            memoryUsage.value = performance.memory.usedJSHeapSize;
+        }
+    }
 
-    // Cleanup on unmount
+    function start() {
+        last = performance.now();
+        timerId = window.setInterval(() => {
+            measureLag();
+            sampleMemory();
+        }, interval);
+
+        // Long‑task observer
+        if (
+            window.PerformanceObserver &&
+            PerformanceObserver.supportedEntryTypes.includes('longtask')
+        ) {
+            perfObserver = new PerformanceObserver((list) => {
+                longTasks.value.push(...list.getEntries());
+                // keep history trim if desired
+                if (longTasks.value.length > windowSize) {
+                    longTasks.value.splice(0, longTasks.value.length - windowSize);
+                }
+            });
+            perfObserver.observe({ entryTypes: ['longtask'] });
+        }
+    }
+
+    function stop() {
+        if (timerId !== null) {
+            clearInterval(timerId);
+            timerId = null;
+        }
+        if (perfObserver) {
+            perfObserver.disconnect();
+            perfObserver = null;
+        }
+    }
+
+    // Pause/resume when hidden
+    const onVisChange = () => {
+        document.hidden ? stop() : start();
+    };
+    document.addEventListener('visibilitychange', onVisChange);
+
     onUnmounted(() => {
-        if (timer) clearInterval(timer);
+        stop();
+        document.removeEventListener('visibilitychange', onVisChange);
     });
 
-    return { cpuLag, history };
-} 
+    // kick it off
+    start();
+
+    return {
+        cpuLag,
+        lagHistory,
+        longTasks,
+        memoryUsage,
+        device,
+        stop,
+    };
+}

@@ -19,20 +19,29 @@
             <v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>
             {{ __("Cache Usage") }}
           </div>
+          <v-divider class="my-2" />
+          <div class="cache-tooltip-section-title mb-1">{{ __("Usage") }}</div>
         <div class="cache-tooltip-bar mb-2">
           <div class="cache-bar-bg">
-            <div class="cache-bar-fill" :style="{ width: cacheUsage + '%' }"></div>
+            <div
+              class="cache-bar-fill"
+              :style="{ width: cacheUsage + '%', background: cacheBarGradient }"
+            >
+              <span class="cache-bar-label-inside">{{ cacheUsage }}%</span>
+            </div>
+            <span class="cache-bar-max">100%</span>
           </div>
-          <span class="cache-bar-label">{{ cacheUsage }}%</span>
         </div>
-				<div class="cache-tooltip-detail" v-if="!cacheUsageLoading">
-            <div><v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>{{ __("Total Size") }}: <b>{{ formatBytes(cacheUsageDetails.total) }}</b></div>
-            <div><v-icon size="14" color="info" class="mr-1">mdi-database</v-icon>{{ __("IndexedDB") }}: <b>{{ formatBytes(cacheUsageDetails.indexedDB) }}</b></div>
-            <div><v-icon size="14" color="info" class="mr-1">mdi-folder</v-icon>{{ __("localStorage") }}: <b>{{ formatBytes(cacheUsageDetails.localStorage) }}</b></div>
+				<div v-if="!cacheUsageLoading">
+            <div class="cache-tooltip-section-title mb-1">{{ __("Breakdown") }}</div>
+            <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-database-clock</v-icon>{{ __("Total Size") }}: <b>{{ formatBytes(cacheUsageDetails.total) }}</b></div>
+            <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-database</v-icon>{{ __("IndexedDB") }}: <b>{{ formatBytes(cacheUsageDetails.indexedDB) }}</b></div>
+            <div class="cache-tooltip-detail"><v-icon size="14" color="info" class="mr-1">mdi-folder</v-icon>{{ __("localStorage") }}: <b>{{ formatBytes(cacheUsageDetails.localStorage) }}</b></div>
 				</div>
 				<div class="cache-tooltip-detail" v-else>
 					{{ __("Calculating...") }}
 				</div>
+          <v-divider class="my-2" />
         <div v-if="cacheUsage >= 80" class="cache-tooltip-warning">
           <v-icon size="14" color="error" class="mr-1">mdi-alert</v-icon>
           {{ __("Warning: High cache usage may affect performance.") }}
@@ -81,6 +90,15 @@ export default {
 			if (this.cacheUsage < 50) return "success";
 			if (this.cacheUsage < 80) return "warning";
 			return "error";
+		},
+		cacheBarGradient() {
+			if (this.cacheUsage < 50) {
+				return 'linear-gradient(90deg, #43e97b 0%, #38f9d7 100%)';
+			} else if (this.cacheUsage < 80) {
+				return 'linear-gradient(90deg, #f7971e 0%, #ffd200 100%)';
+			} else {
+				return 'linear-gradient(90deg, #f953c6 0%, #b91d73 100%)';
+			}
 		},
 	},
 	methods: {
@@ -150,29 +168,53 @@ export default {
 	color: var(--primary);
 }
 .cache-tooltip-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  width: 100%;
 }
 .cache-bar-bg {
-  width: 80px;
-  height: 8px;
+  width: 100%;
+  height: 18px;
   background: #e3f2fd;
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
-  margin-right: 6px;
+  margin-right: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 .cache-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #1976d2 0%, #42a5f5 100%);
-  border-radius: 4px;
-  transition: width 0.3s;
-}
-.cache-bar-label {
-  font-size: 11px;
-  color: #1976d2;
+  border-radius: 8px;
+  transition: width 0.5s cubic-bezier(.4,0,.2,1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
   font-weight: 600;
+  font-size: 13px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  z-index: 1;
+}
+.cache-bar-label-inside {
+  width: 100%;
+  text-align: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+}
+.cache-bar-max {
+  position: absolute;
+  right: 8px;
+  top: 0;
+  font-size: 11px;
+  color: #bdbdbd;
+  font-weight: 400;
+  z-index: 2;
 }
 .cache-tooltip-warning {
   color: #d32f2f;
@@ -192,6 +234,13 @@ export default {
   font-size: 12px;
   display: flex;
   align-items: center;
+}
+.cache-tooltip-section-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--primary);
+  opacity: 0.85;
 }
 
 /* Fix tooltip background and text color in light mode */
