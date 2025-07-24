@@ -25,13 +25,13 @@ assets_dir = os.path.join(os.path.dirname(__file__), "public", "frontend", "asse
 js_matches = sorted(glob.glob(os.path.join(assets_dir, "index-*.js")))
 css_matches = sorted(glob.glob(os.path.join(assets_dir, "*.css")))
 
-app_include_js = []
-if js_matches:
-    app_include_js = [f"/assets/posawesome/frontend/assets/{os.path.basename(js_matches[-1])}"]
+app_include_js = [
+    f"/assets/posawesome/frontend/assets/{os.path.basename(p)}" for p in js_matches
+]
 
-app_include_css = ""
-if css_matches:
-    app_include_css = f"/assets/posawesome/frontend/assets/{os.path.basename(css_matches[-1])}"
+app_include_css = [
+    f"/assets/posawesome/frontend/assets/{os.path.basename(p)}" for p in css_matches
+]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/posawesome/css/posawesome.css"

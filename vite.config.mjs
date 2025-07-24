@@ -11,9 +11,15 @@ const manifest = JSON.parse(
 
 export default defineConfig({
         root: path.resolve(__dirname, "posawesome/frontend"),
-        server: {
-                proxy: getProxyOptions(),
-        },
+       server: {
+               proxy: getProxyOptions(),
+               fs: {
+                       allow: [
+                               path.resolve(__dirname, "posawesome/public"),
+                               path.resolve(__dirname, "posawesome/frontend")
+                       ]
+               }
+       },
         plugins: [
                 vue(),
                frappeui({
@@ -38,10 +44,11 @@ export default defineConfig({
                }),
         ],
         resolve: {
-                alias: {
-                        "@": path.resolve(__dirname, "posawesome/frontend/src"),
-                },
-        },
+               alias: {
+                       "@": path.resolve(__dirname, "posawesome/frontend/src"),
+                       "@public": path.resolve(__dirname, "posawesome/public/js"),
+               },
+       },
         build: {
                 outDir: path.resolve(__dirname, "posawesome/public/frontend"),
                 emptyOutDir: true,

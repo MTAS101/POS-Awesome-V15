@@ -1,13 +1,13 @@
-const script = document.createElement("script");
-script.src = "/assets/posawesome/js/posawesome.bundle.js";
-script.type = "module";
-document.head.appendChild(script);
+import "@public/toConsole.js";
+import "@public/posapp/posapp.js";
+import "@public/utils/clearAllCaches.js";
 
 // Initialize POS Awesome Vue app if available
-if (window.frappe && frappe.PosApp && frappe.PosApp.posapp) {
+if (window.frappe && window.frappe.PosApp && window.frappe.PosApp.posapp) {
   frappe.ready(() => {
-    if (!document.getElementById("app")) return;
-    const page = { page: { }, $el: [document.getElementById("app")] };
+    const appEl = document.getElementById("app");
+    if (!appEl) return;
+    const page = { page: {}, $el: [appEl] };
     new frappe.PosApp.posapp(page);
   });
 }
