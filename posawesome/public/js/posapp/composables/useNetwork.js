@@ -73,12 +73,9 @@ export function setupNetworkListeners() {
     window.addEventListener("online", () => {
         if (isManualOffline()) return;
         this.networkOnline = true;
-        this.serverConnecting = true;
-        this.$forceUpdate();
-        this.checkNetworkConnectivity().then(() => {
-            this.serverConnecting = false;
-            this.$forceUpdate();
-        });
+        console.log("Network: Online");
+        // Verify actual connectivity
+        this.checkNetworkConnectivity();
     });
 
     window.addEventListener("offline", () => {
@@ -86,7 +83,7 @@ export function setupNetworkListeners() {
         this.networkOnline = false;
         this.serverOnline = false;
         window.serverOnline = false;
-        persistStatus(false, false);
+        console.log("Network: Offline");
         this.$forceUpdate();
     });
 
@@ -132,7 +129,7 @@ export async function checkNetworkConnectivity() {
                 isConnected = true;
             }
         } catch (error) {
-            console.log("Desk endpoint check failed:", error);
+            console.log("Desk endpoint check failed:", error.message);
         }
 
         // Strategy 2: Try a static asset if desk fails
@@ -147,7 +144,7 @@ export async function checkNetworkConnectivity() {
                     isConnected = true;
                 }
             } catch (error) {
-                console.log("Static asset check failed:", error);
+                console.log("Static asset check failed:", error.message);
             }
         }
 
@@ -163,7 +160,7 @@ export async function checkNetworkConnectivity() {
                     isConnected = true;
                 }
             } catch (error) {
-                console.log("Origin check failed:", error);
+                console.log("Origin check failed:", error.message);
             }
         }
 
@@ -313,8 +310,8 @@ export async function checkExternalConnectivity() {
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
-        await fetch("https://www.google.com/generate_204", {
-            method: "GET",
+        await fetch("https://httpbin.org/status/200", {
+            method: "HEAD",
             mode: "no-cors",
             cache: "no-cache",
             signal: controller.signal,

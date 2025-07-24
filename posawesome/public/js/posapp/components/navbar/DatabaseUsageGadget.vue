@@ -17,6 +17,16 @@
         <div v-else-if="error" class="db-tooltip-warning">{{ error }}</div>
         <div v-else>
           <div class="db-tooltip-section-title mb-1">{{ __("Database Info") }}</div>
+          <div class="db-tooltip-sparkline mb-2">
+            <svg :width="120" :height="32" class="db-sparkline">
+              <polyline
+                :points="sparklinePoints"
+                fill="none"
+                stroke="#1976d2"
+                stroke-width="2"
+              />
+            </svg>
+          </div>
           <div class="db-tooltip-detail flex items-center mb-1">
             <v-icon size="14" color="info" class="mr-1">mdi-database-settings</v-icon>
             <b>{{ dbStats.db_engine }}</b>
@@ -130,6 +140,13 @@ const sparklinePoints = computed(() => {
   margin-bottom: 8px;
   line-height: 1.5;
 }
+.db-tooltip-section-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--primary);
+  opacity: 0.85;
+}
 .db-tooltip-subtitle {
   font-size: 12px;
   font-weight: 600;
@@ -164,13 +181,6 @@ const sparklinePoints = computed(() => {
   font-size: 12px;
   display: flex;
   align-items: center;
-}
-.db-tooltip-section-title {
-  font-weight: 600;
-  font-size: 13px;
-  margin-bottom: 4px;
-  color: var(--primary);
-  opacity: 0.85;
 }
 /* Match ServerUsageGadget tooltip background and text color */
 :deep(.v-tooltip .v-overlay__content),
