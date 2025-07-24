@@ -5,7 +5,10 @@ import { resolve } from "path";
 
 export default defineConfig({
        plugins: [vue(), vuetify({ autoImport: true })],
-        build: {
+       define: {
+               'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+       },
+       build: {
                 target: "esnext",
                lib: {
                         entry: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
