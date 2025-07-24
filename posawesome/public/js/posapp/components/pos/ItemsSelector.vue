@@ -643,11 +643,7 @@ export default {
 			if (!this.itemWorker && typeof Worker !== "undefined") {
 				try {
 					const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-					try {
-						this.itemWorker = new Worker(workerUrl, { type: "classic" });
-					} catch (err) {
-						this.itemWorker = new Worker(workerUrl, { type: "module" });
-					}
+					this.itemWorker = new Worker(workerUrl, { type: "classic" });
 				} catch (e) {
 					console.error("Failed to start item worker", e);
 					this.itemWorker = null;
@@ -1988,11 +1984,7 @@ export default {
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
 				const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-				try {
-					this.itemWorker = new Worker(workerUrl, { type: "classic" });
-				} catch (err) {
-					this.itemWorker = new Worker(workerUrl, { type: "module" });
-				}
+				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {
 					console.error("Worker error:", event);
