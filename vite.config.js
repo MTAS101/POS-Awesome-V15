@@ -5,10 +5,6 @@ import { resolve } from "path";
 
 export default defineConfig({
        plugins: [vue(), vuetify({ autoImport: true })],
-       define: {
-               "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV || "production"),
-               "process.env": {},
-       },
         build: {
                 target: "esnext",
                lib: {
