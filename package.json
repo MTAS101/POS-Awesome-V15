@@ -34,6 +34,7 @@
     "prettier": "^3.6.2",
     "vite": "^6.2.4",
     "vue": "^3.3.4",
-    "vue-eslint-parser": "^10.2.0"
+    "vue-eslint-parser": "^10.2.0",
+    "unplugin-vue": "^7.0.0"
   }
 }
