@@ -10,15 +10,13 @@
 ### Update Instructions
 
 After switching branches or pulling latest changes:
-The frontend is now built with **Vite**. Use the scripts in `package.json` for development and production builds.
 
 1. cd apps/posawesome
 2. git pull
 3. yarn install
 4. cd ../..
-5. yarn build
+5. bench build --app posawesome
 6. bench --site your.site migrate
-   - Run `yarn dev` if you want to work with hot module reloading during development.
    - If the build exits with code 143, verify that your system has enough RAM or swap space.
    - You can also try building the app in smaller parts to reduce memory usage.
 
@@ -69,7 +67,7 @@ The frontend is now built with **Vite**. Use the scripts in `package.json` for d
 
 1. `bench get-app --branch Version-15 https://github.com/defendicon/POS-Awesome-V15`
 2. `bench setup requirements`
-3. `yarn build`
+3. `bench build --app posawesome`
 4. `bench restart`
 5. `bench --site [your.site.name] install-app posawesome`
 6. `bench --site [your.site.name] migrate`
