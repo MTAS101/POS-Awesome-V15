@@ -357,6 +357,8 @@ import {
 	isStockCacheReady,
 	getCachedItemDetails,
 	saveItemDetailsCache,
+	saveItemGroups,
+	getCachedItemGroups,
 } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 
@@ -793,6 +795,15 @@ export default {
 							vm.items_loaded = true;
 							console.info("Items Loaded");
 
+							const groups = Array.from(
+								new Set(
+									vm.items
+										.map((it) => it.item_group)
+										.filter((g) => g && g !== "All Item Groups"),
+								),
+							);
+							saveItemGroups(groups);
+
 							// Pre-populate stock cache when items are freshly loaded
 							vm.prePopulateStockCache(vm.items);
 
@@ -881,6 +892,15 @@ export default {
 							savePriceListItems(vm.customer_price_list, vm.items);
 							console.info("Items Loaded");
 
+							const groups = Array.from(
+								new Set(
+									vm.items
+										.map((it) => it.item_group)
+										.filter((g) => g && g !== "All Item Groups"),
+								),
+							);
+							saveItemGroups(groups);
+
 							// Pre-populate stock cache when items are freshly loaded
 							vm.prePopulateStockCache(vm.items);
 
@@ -924,11 +944,20 @@ export default {
 				console.log("No POS Profile");
 				return;
 			}
+			this.items_group = ["ALL"];
 			if (this.pos_profile.item_groups.length > 0) {
+				const groups = [];
 				this.pos_profile.item_groups.forEach((element) => {
 					if (element.item_group !== "All Item Groups") {
 						this.items_group.push(element.item_group);
+						groups.push(element.item_group);
 					}
+				});
+				saveItemGroups(groups);
+			} else if (isOffline()) {
+				const cached = getCachedItemGroups();
+				cached.forEach((g) => {
+					this.items_group.push(g);
 				});
 			} else {
 				const vm = this;
@@ -937,9 +966,12 @@ export default {
 					args: {},
 					callback: function (r) {
 						if (r.message) {
+							const groups = [];
 							r.message.forEach((element) => {
 								vm.items_group.push(element.name);
+								groups.push(element.name);
 							});
+							saveItemGroups(groups);
 						}
 					},
 				});
