@@ -84,6 +84,10 @@ jobs:
             --admin-password frappe \
             --no-mariadb-socket
 
+          # Install ERPNext
+          bench get-app --branch version-15 https://github.com/frappe/erpnext
+          bench --site example.com install-app erpnext
+
           # Install local app using current branch
           bench get-app --branch "$BRANCH_NAME" "https://github.com/${GITHUB_REPOSITORY}.git"
           bench --site example.com install-app "$APP_NAME"
