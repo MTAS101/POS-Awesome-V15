@@ -92,9 +92,15 @@ export {
 	savePriceListItems,
 	getCachedPriceListItems,
 	clearPriceListCache,
-	saveItemDetailsCache,
-	getCachedItemDetails,
+        saveItemDetailsCache,
+        getCachedItemDetails,
 } from "./items.js";
+
+export {
+       saveItemGroups,
+       getCachedItemGroups,
+       clearItemGroups,
+} from "./item_groups.js";
 
 // Customers exports
 export {
