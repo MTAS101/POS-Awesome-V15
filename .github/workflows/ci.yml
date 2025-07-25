@@ -85,7 +85,7 @@ jobs:
             --no-mariadb-socket
 
           # Install local app using current branch
-          bench get-app "$APP_PATH"
+          bench get-app --branch "$BRANCH_NAME" "https://github.com/${GITHUB_REPOSITORY}.git"
           bench --site example.com install-app "$APP_NAME"
 
           # Build frontend assets
