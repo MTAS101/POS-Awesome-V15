@@ -27,10 +27,11 @@ export const memory = {
 	item_details_cache: {},
 	tax_template_cache: {},
 	translation_cache: {},
-	coupons_cache: {},
-	item_groups_cache: [],
-	// Track the current cache schema version
-	cache_version: CACHE_VERSION,
+        coupons_cache: {},
+        item_groups_cache: [],
+        pos_profile_cache: {},
+        // Track the current cache schema version
+        cache_version: CACHE_VERSION,
 	cache_ready: false,
 	tax_inclusive: false,
 	manual_offline: false,
@@ -236,8 +237,35 @@ export function isManualOffline() {
 }
 
 export function setManualOffline(state) {
-	memory.manual_offline = !!state;
-	persist("manual_offline", memory.manual_offline);
+        memory.manual_offline = !!state;
+        persist("manual_offline", memory.manual_offline);
+}
+
+export function savePosProfile(profile) {
+        try {
+                const cache = memory.pos_profile_cache || {};
+                const key = profile.name;
+                const clean = JSON.parse(JSON.stringify(profile));
+                cache[key] = { version: profile.modified, data: clean };
+                memory.pos_profile_cache = cache;
+                persist("pos_profile_cache", memory.pos_profile_cache);
+        } catch (e) {
+                console.error("Failed to cache POS profile", e);
+        }
+}
+
+export function getCachedPosProfile(name, version) {
+        try {
+                const cache = memory.pos_profile_cache || {};
+                const entry = cache[name];
+                if (entry && entry.version === version) {
+                        return entry.data;
+                }
+                return null;
+        } catch (e) {
+                console.error("Failed to get cached POS profile", e);
+                return null;
+        }
 }
 
 export function toggleManualOffline() {
