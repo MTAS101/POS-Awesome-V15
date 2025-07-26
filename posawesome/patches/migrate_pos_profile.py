@@ -81,9 +81,9 @@ custom_fields = [
 def execute():
     for old in frappe.get_all("POS Profile", pluck="name"):
         src = frappe.get_doc("POS Profile", old)
-        if not frappe.db.exists("POS Profile (Awesome)", src.name):
+        if not frappe.db.exists("POS Profile Awesome", src.name):
             doc = {
-                "doctype": "POS Profile (Awesome)",
+                "doctype": "POS Profile Awesome",
                 "name": src.name,
             }
             doc.update({f: src.get(f) for f in custom_fields})

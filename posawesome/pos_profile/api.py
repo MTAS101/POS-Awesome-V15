@@ -6,13 +6,13 @@ def resolve_profile(name: str):
 
     Falls back to the legacy DocType if the new one is missing.
     """
-    doctype = "POS Profile (Awesome)" if frappe.db.exists(
-        "POS Profile (Awesome)", name
+    doctype = "POS Profile Awesome" if frappe.db.exists(
+        "POS Profile Awesome", name
     ) else "POS Profile"
     return frappe.get_doc(doctype, name)
 
 
 @frappe.whitelist()
 def get_profile(name: str):
-	"""Return POS Profile (Awesome) details as dict."""
-	return frappe.get_doc("POS Profile (Awesome)", name).as_dict()
+    """Return POS Profile Awesome details as dict."""
+    return frappe.get_doc("POS Profile Awesome", name).as_dict()

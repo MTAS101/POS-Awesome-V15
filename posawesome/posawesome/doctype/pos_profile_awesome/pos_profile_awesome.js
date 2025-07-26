@@ -1,2 +1,2 @@
-frappe.ui.form.on("POS Profile (Awesome)", {
+frappe.ui.form.on("POS Profile Awesome", {
 });

@@ -1,6 +1,6 @@
 {
  "doctype": "DocType",
- "name": "POS Profile (Awesome)",
+ "name": "POS Profile Awesome",
  "module": "POSAwesome",
  "fields": [],
  "permissions": []

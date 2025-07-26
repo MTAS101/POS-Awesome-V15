@@ -17,7 +17,7 @@ After switching branches or pulling latest changes:
 4. cd ../..
 5. bench build --app posawesome
 6. bench --site your.site migrate
-7. Clear caches to load the new **POS Profile (Awesome)** DocType
+7. Clear caches to load the new **POS Profile Awesome** DocType
    - If the build exits with code 143, verify that your system has enough RAM or swap space.
    - You can also try building the app in smaller parts to reduce memory usage.
 
@@ -61,7 +61,7 @@ After switching branches or pulling latest changes:
 33. Payments Reconciliation
 34. A lot more bug fixes from the version 14
 35. Offline invoices that fail to submit are saved as draft documents
-36. New POS Profile (Awesome) DocType with offline-ready caching
+36. New POS Profile Awesome DocType with offline-ready caching
 
 ### How to Install
 
