@@ -135,17 +135,6 @@
 											density="compact"
 											color="primary"
 										></v-switch>
-											<v-text-field
-											v-model="temp_items_per_page"
-											type="number"
-											density="compact"
-											variant="outlined"
-											color="primary"
-											:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
-											hide-details
-											:label="__('Items per page')"
-											class="mb-2 dark-field"
-											></v-text-field>
 									</v-card-text>
 									<v-card-actions class="pa-4 pt-0">
 										<v-btn color="error" variant="text" @click="cancelItemSettings">{{
@@ -416,15 +405,12 @@ export default {
 		show_item_settings: false,
 		hide_qty_decimals: false,
 		temp_hide_qty_decimals: false,
-                hide_zero_rate_items: false,
-                temp_hide_zero_rate_items: false,
-                isDragging: false,
-                // Items per page configuration
-                items_per_page: 50,
-                temp_items_per_page: 50,
-                // Track if the current search was triggered by a scanner
-                search_from_scanner: false,
-        }),
+		hide_zero_rate_items: false,
+		temp_hide_zero_rate_items: false,
+		isDragging: false,
+		// Track if the current search was triggered by a scanner
+		search_from_scanner: false,
+	}),
 
 	watch: {
 		customer: _.debounce(function () {
@@ -530,17 +516,23 @@ export default {
 		exchange_rate() {
 			this.applyCurrencyConversionToItems();
 		},
-               windowWidth() {
-                       // Keep the configured items per page on resize
-                       this.itemsPerPage = this.items_per_page;
-               },
-               windowHeight() {
-                       // Maintain the configured items per page on resize
-                       this.itemsPerPage = this.items_per_page;
-               },
-       },
+		windowWidth(val) {
+			this.adjustItemsPerPage(val, this.windowHeight);
+		},
+		windowHeight(val) {
+			this.adjustItemsPerPage(this.windowWidth, val);
+		},
+	},
 
-       methods: {
+	methods: {
+		adjustItemsPerPage(width, height = this.windowHeight) {
+			const cardWidth = 200; // approximate width of each item card
+			const cardHeight = 160; // approximate height including margins
+			const containerHeight = height * 0.68; // card container is ~68% of viewport
+			const columns = Math.max(1, Math.floor(width / cardWidth));
+			const rows = Math.max(1, Math.floor(containerHeight / cardHeight));
+			this.itemsPerPage = columns * rows;
+		},
 		refreshPricesForVisibleItems() {
 			const vm = this;
 			if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -1779,23 +1771,20 @@ export default {
 			return !Number.isInteger(value);
 		},
 
-                toggleItemSettings() {
-                        this.temp_hide_qty_decimals = this.hide_qty_decimals;
-                        this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
-                        this.temp_items_per_page = this.items_per_page;
-                        this.show_item_settings = true;
-                },
+		toggleItemSettings() {
+			this.temp_hide_qty_decimals = this.hide_qty_decimals;
+			this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
+			this.show_item_settings = true;
+		},
 		cancelItemSettings() {
 			this.show_item_settings = false;
 		},
-                applyItemSettings() {
-                        this.hide_qty_decimals = this.temp_hide_qty_decimals;
-                        this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
-                        this.items_per_page = parseInt(this.temp_items_per_page) || 50;
-                        this.itemsPerPage = this.items_per_page;
-                        this.saveItemSettings();
-                        this.show_item_settings = false;
-                },
+		applyItemSettings() {
+			this.hide_qty_decimals = this.temp_hide_qty_decimals;
+			this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
+			this.saveItemSettings();
+			this.show_item_settings = false;
+		},
 		onDragStart(event, item) {
 			this.isDragging = true;
 
@@ -1820,38 +1809,33 @@ export default {
 			// Emit event to hide drop feedback
 			this.eventBus.emit("item-drag-end");
 		},
-                saveItemSettings() {
-                        try {
-                                const settings = {
-                                        hide_qty_decimals: this.hide_qty_decimals,
-                                        hide_zero_rate_items: this.hide_zero_rate_items,
-                                        items_per_page: this.items_per_page,
-                                };
-                                localStorage.setItem("posawesome_item_selector_settings", JSON.stringify(settings));
-                        } catch (e) {
-                                console.error("Failed to save item selector settings:", e);
-                        }
-                },
-                loadItemSettings() {
-                        try {
-                                const saved = localStorage.getItem("posawesome_item_selector_settings");
-                                if (saved) {
-                                        const opts = JSON.parse(saved);
-                                        if (typeof opts.hide_qty_decimals === "boolean") {
-                                                this.hide_qty_decimals = opts.hide_qty_decimals;
-                                        }
-                                        if (typeof opts.hide_zero_rate_items === "boolean") {
-                                                this.hide_zero_rate_items = opts.hide_zero_rate_items;
-                                        }
-                                        if (typeof opts.items_per_page === "number") {
-                                                this.items_per_page = opts.items_per_page;
-                                                this.itemsPerPage = this.items_per_page;
-                                        }
-                                }
-                        } catch (e) {
-                                console.error("Failed to load item selector settings:", e);
-                        }
-                },
+		saveItemSettings() {
+			try {
+				const settings = {
+					hide_qty_decimals: this.hide_qty_decimals,
+					hide_zero_rate_items: this.hide_zero_rate_items,
+				};
+				localStorage.setItem("posawesome_item_selector_settings", JSON.stringify(settings));
+			} catch (e) {
+				console.error("Failed to save item selector settings:", e);
+			}
+		},
+		loadItemSettings() {
+			try {
+				const saved = localStorage.getItem("posawesome_item_selector_settings");
+				if (saved) {
+					const opts = JSON.parse(saved);
+					if (typeof opts.hide_qty_decimals === "boolean") {
+						this.hide_qty_decimals = opts.hide_qty_decimals;
+					}
+					if (typeof opts.hide_zero_rate_items === "boolean") {
+						this.hide_zero_rate_items = opts.hide_zero_rate_items;
+					}
+				}
+			} catch (e) {
+				console.error("Failed to load item selector settings:", e);
+			}
+		},
 	},
 
 	computed: {
@@ -2116,9 +2100,9 @@ export default {
 			this.pos_profile = profile || {};
 		}
 		this.scan_barcoud();
-               // Apply the configured items per page on mount
-               this.itemsPerPage = this.items_per_page;
-       },
+		// grid layout adjusts automatically with CSS, set items per page based on device size
+		this.adjustItemsPerPage(this.windowWidth, this.windowHeight);
+	},
 
 	beforeUnmount() {
 		// Clear interval when component is destroyed
