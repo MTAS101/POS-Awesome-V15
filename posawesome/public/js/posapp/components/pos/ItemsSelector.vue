@@ -135,17 +135,35 @@
 											density="compact"
 											color="primary"
 										></v-switch>
-									</v-card-text>
-									<v-card-actions class="pa-4 pt-0">
-										<v-btn color="error" variant="text" @click="cancelItemSettings">{{
-											__("Cancel")
-										}}</v-btn>
-										<v-spacer></v-spacer>
-										<v-btn color="primary" variant="tonal" @click="applyItemSettings">{{
-											__("Apply")
-										}}</v-btn>
-									</v-card-actions>
-								</v-card>
+                                                                              <v-switch
+                                                                              v-model="temp_enable_custom_items_per_page"
+                                                                              :label="__('Custom items per page')"
+                                                                              hide-details
+                                                                              density="compact"
+                                                                              color="primary"
+                                                                              class="mb-2"
+                                                                              >
+                                                                              </v-switch>
+                                                                              <v-text-field
+                                                                              v-if="temp_enable_custom_items_per_page"
+                                                                              v-model="temp_items_per_page"
+                                                                              type="number"
+                                                                              density="compact"
+                                                                              variant="outlined"
+                                                                              color="primary"
+                                                                              :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+                                                                              hide-details
+                                                                              :label="__('Items per page')"
+                                                                              class="mb-2 dark-field"
+                                                                              >
+                                                                              </v-text-field>
+                                                                        </v-card-text>
+                                                                        <v-card-actions class="pa-4 pt-0">
+                                                                                <v-btn color="error" variant="text" @click="cancelItemSettings">{{ __("Cancel") }}</v-btn>
+                                                                                <v-spacer></v-spacer>
+                                                                                <v-btn color="primary" variant="tonal" @click="applyItemSettings">{{ __("Apply") }}</v-btn>
+                                                                        </v-card-actions>
+                                                                </v-card>
 							</v-dialog>
 						</div>
 					</v-col>
@@ -405,12 +423,17 @@ export default {
 		show_item_settings: false,
 		hide_qty_decimals: false,
 		temp_hide_qty_decimals: false,
-		hide_zero_rate_items: false,
-		temp_hide_zero_rate_items: false,
-		isDragging: false,
-		// Track if the current search was triggered by a scanner
-		search_from_scanner: false,
-	}),
+                hide_zero_rate_items: false,
+                temp_hide_zero_rate_items: false,
+                isDragging: false,
+                // Items per page configuration
+                enable_custom_items_per_page: false,
+                temp_enable_custom_items_per_page: false,
+                items_per_page: 50,
+                temp_items_per_page: 50,
+                // Track if the current search was triggered by a scanner
+                search_from_scanner: false,
+        }),
 
 	watch: {
 		customer: _.debounce(function () {
@@ -516,23 +539,17 @@ export default {
 		exchange_rate() {
 			this.applyCurrencyConversionToItems();
 		},
-		windowWidth(val) {
-			this.adjustItemsPerPage(val, this.windowHeight);
-		},
-		windowHeight(val) {
-			this.adjustItemsPerPage(this.windowWidth, val);
-		},
-	},
+               windowWidth() {
+                       // Keep the configured items per page on resize
+                       this.itemsPerPage = this.items_per_page;
+               },
+               windowHeight() {
+                       // Maintain the configured items per page on resize
+                       this.itemsPerPage = this.items_per_page;
+               },
+       },
 
-	methods: {
-		adjustItemsPerPage(width, height = this.windowHeight) {
-			const cardWidth = 200; // approximate width of each item card
-			const cardHeight = 160; // approximate height including margins
-			const containerHeight = height * 0.68; // card container is ~68% of viewport
-			const columns = Math.max(1, Math.floor(width / cardWidth));
-			const rows = Math.max(1, Math.floor(containerHeight / cardHeight));
-			this.itemsPerPage = columns * rows;
-		},
+       methods: {
 		refreshPricesForVisibleItems() {
 			const vm = this;
 			if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -1771,20 +1788,29 @@ export default {
 			return !Number.isInteger(value);
 		},
 
-		toggleItemSettings() {
-			this.temp_hide_qty_decimals = this.hide_qty_decimals;
-			this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
-			this.show_item_settings = true;
-		},
-		cancelItemSettings() {
-			this.show_item_settings = false;
-		},
-		applyItemSettings() {
-			this.hide_qty_decimals = this.temp_hide_qty_decimals;
-			this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
-			this.saveItemSettings();
-			this.show_item_settings = false;
-		},
+                toggleItemSettings() {
+                        this.temp_hide_qty_decimals = this.hide_qty_decimals;
+                        this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
+                        this.temp_enable_custom_items_per_page = this.enable_custom_items_per_page;
+                        this.temp_items_per_page = this.items_per_page;
+                        this.show_item_settings = true;
+                },
+                cancelItemSettings() {
+                        this.show_item_settings = false;
+                },
+                applyItemSettings() {
+                        this.hide_qty_decimals = this.temp_hide_qty_decimals;
+                        this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
+                        this.enable_custom_items_per_page = this.temp_enable_custom_items_per_page;
+                        if (this.enable_custom_items_per_page) {
+                                this.items_per_page = parseInt(this.temp_items_per_page) || 50;
+                        } else {
+                                this.items_per_page = 50;
+                        }
+                        this.itemsPerPage = this.items_per_page;
+                        this.saveItemSettings();
+                        this.show_item_settings = false;
+                },
 		onDragStart(event, item) {
 			this.isDragging = true;
 
@@ -1809,33 +1835,42 @@ export default {
 			// Emit event to hide drop feedback
 			this.eventBus.emit("item-drag-end");
 		},
-		saveItemSettings() {
-			try {
-				const settings = {
-					hide_qty_decimals: this.hide_qty_decimals,
-					hide_zero_rate_items: this.hide_zero_rate_items,
-				};
-				localStorage.setItem("posawesome_item_selector_settings", JSON.stringify(settings));
-			} catch (e) {
-				console.error("Failed to save item selector settings:", e);
-			}
-		},
-		loadItemSettings() {
-			try {
-				const saved = localStorage.getItem("posawesome_item_selector_settings");
-				if (saved) {
-					const opts = JSON.parse(saved);
-					if (typeof opts.hide_qty_decimals === "boolean") {
-						this.hide_qty_decimals = opts.hide_qty_decimals;
-					}
-					if (typeof opts.hide_zero_rate_items === "boolean") {
-						this.hide_zero_rate_items = opts.hide_zero_rate_items;
-					}
-				}
-			} catch (e) {
-				console.error("Failed to load item selector settings:", e);
-			}
-		},
+                saveItemSettings() {
+                        try {
+                                const settings = {
+                                        hide_qty_decimals: this.hide_qty_decimals,
+                                        hide_zero_rate_items: this.hide_zero_rate_items,
+                                        enable_custom_items_per_page: this.enable_custom_items_per_page,
+                                        items_per_page: this.items_per_page,
+                                };
+                                localStorage.setItem("posawesome_item_selector_settings", JSON.stringify(settings));
+                        } catch (e) {
+                                console.error("Failed to save item selector settings:", e);
+                        }
+                },
+                loadItemSettings() {
+                        try {
+                                const saved = localStorage.getItem("posawesome_item_selector_settings");
+                                if (saved) {
+                                        const opts = JSON.parse(saved);
+                                        if (typeof opts.hide_qty_decimals === "boolean") {
+                                                this.hide_qty_decimals = opts.hide_qty_decimals;
+                                        }
+                                        if (typeof opts.hide_zero_rate_items === "boolean") {
+                                                this.hide_zero_rate_items = opts.hide_zero_rate_items;
+                                        }
+                                        if (typeof opts.enable_custom_items_per_page === "boolean") {
+                                                this.enable_custom_items_per_page = opts.enable_custom_items_per_page;
+                                        }
+                                        if (typeof opts.items_per_page === "number") {
+                                                this.items_per_page = opts.items_per_page;
+                                                this.itemsPerPage = this.items_per_page;
+                                        }
+                                }
+                        } catch (e) {
+                                console.error("Failed to load item selector settings:", e);
+                        }
+                },
 	},
 
 	computed: {
@@ -2100,9 +2135,9 @@ export default {
 			this.pos_profile = profile || {};
 		}
 		this.scan_barcoud();
-		// grid layout adjusts automatically with CSS, set items per page based on device size
-		this.adjustItemsPerPage(this.windowWidth, this.windowHeight);
-	},
+               // Apply the configured items per page on mount
+               this.itemsPerPage = this.items_per_page;
+       },
 
 	beforeUnmount() {
 		// Clear interval when component is destroyed
