@@ -531,7 +531,8 @@ export default {
 			const containerHeight = height * 0.68; // card container is ~68% of viewport
 			const columns = Math.max(1, Math.floor(width / cardWidth));
 			const rows = Math.max(1, Math.floor(containerHeight / cardHeight));
-			this.itemsPerPage = columns * rows;
+			// Ensure at least 50 items are shown regardless of device size
+			this.itemsPerPage = Math.max(50, columns * rows);
 		},
 		refreshPricesForVisibleItems() {
 			const vm = this;
