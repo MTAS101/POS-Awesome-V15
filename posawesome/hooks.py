@@ -34,7 +34,7 @@ app_include_js = [
 
 # include js in doctype views
 doctype_js = {
-	"POS Profile": "posawesome/api/pos_profile.js",
+	"POS Profile": "posawesome/posawesome/doctype/pos_profile/pos_profile.js",
 	"Sales Invoice": "posawesome/api/invoice.js",
 	"Company": "posawesome/api/company.js",
 }
@@ -282,5 +282,8 @@ fixtures = [
 				],
 			]
 		],
+	},
+	{
+		"doctype": "POS Profile",
 	},
 ]
