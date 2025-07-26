@@ -66,7 +66,8 @@ jobs:
           cd frappe-bench
 
           # Detect the branch name that triggered the workflow
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          # Use GITHUB_HEAD_REF for pull request events, otherwise fall back to GITHUB_REF
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
 
           # Find the app path dynamically (search for hooks.py)
           APP_PATH=$(find ../ -maxdepth 2 -type f -name "hooks.py" | head -n 1 | xargs dirname)
