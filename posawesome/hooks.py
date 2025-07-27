@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 from . import __version__ as app_version
 
 app_name = "posawesome"
@@ -34,9 +32,9 @@ app_include_js = [
 
 # include js in doctype views
 doctype_js = {
-	"POS Profile": "posawesome/api/pos_profile.js",
-	"Sales Invoice": "posawesome/api/invoice.js",
-	"Company": "posawesome/api/company.js",
+       "POS Profile Awesome": "posawesome/posawesome/doctype/pos_profile_awesome/pos_profile_awesome.js",
+       "Sales Invoice": "posawesome/api/invoice.js",
+       "Company": "posawesome/api/company.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -133,9 +131,10 @@ doc_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "posawesome.event.get_events"
-# }
+override_whitelisted_methods = {
+	"erpnext.accounts.doctype.pos_profile.pos_profile.get_profile": "posawesome.pos_profile.api.get_profile",
+}
+
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
@@ -153,10 +152,10 @@ doc_events = {
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
 
 fixtures = [
-	{
-		"doctype": "Custom Field",
-		"filters": [
-			[
+       {
+               "doctype": "Custom Field",
+               "filters": [
+                       [
 				"name",
 				"in",
 				(
@@ -283,4 +282,11 @@ fixtures = [
 			]
 		],
 	},
+       {
+               "doctype": "POS Profile Awesome",
+       },
+       {
+               "doctype": "Workspace",
+               "filters": [["name", "=", "POS Profile Awesome"]],
+       },
 ]

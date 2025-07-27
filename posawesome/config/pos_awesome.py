@@ -1,4 +1,3 @@
-from __future__ import unicode_literals
 from frappe import _
 
 
@@ -13,11 +12,11 @@ def get_data():
 					"label": "POSAPP",
 					"type": "page",
 				},
-				{
-					"type": "doctype",
-					"description": "POS Profile",
-					"name": "POS Profile",
-				},
+                                {
+                                        "type": "doctype",
+                                        "description": "POS Profile Awesome",
+                                        "name": "POS Profile Awesome",
+                                },
 				{
 					"type": "doctype",
 					"description": "POS Opening Shift",

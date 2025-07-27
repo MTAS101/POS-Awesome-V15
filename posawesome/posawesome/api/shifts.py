@@ -1,59 +1,64 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2020, Youssef Restom and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
 import json
+
 import frappe
-from frappe.utils import nowdate
 from frappe import _
+from frappe.utils import nowdate
+
+from posawesome.pos_profile.api import resolve_profile
+
 from .utilities import get_version
 
 
 @frappe.whitelist()
 def get_opening_dialog_data():
-	data = {}
+    data = {}
 
-	# Get only POS Profiles where current user is defined in POS Profile User table
-	pos_profiles_data = frappe.db.sql(
-		"""
-        SELECT DISTINCT p.name, p.company, p.currency 
-        FROM `tabPOS Profile` p
-        INNER JOIN `tabPOS Profile User` u ON u.parent = p.name
-        WHERE p.disabled = 0 AND u.user = %s
-        ORDER BY p.name
-    """,
-		frappe.session.user,
-		as_dict=1,
-	)
+    profile_names = frappe.get_all(
+        "POS Profile User",
+        filters={"user": frappe.session.user},
+        pluck="parent",
+    )
 
-	data["pos_profiles_data"] = pos_profiles_data
+    pos_profiles_data: list[dict] = []
+    for name in profile_names:
+        profile = resolve_profile(name)
+        if getattr(profile, "disabled", 0):
+            continue
+        pos_profiles_data.append(
+            {
+                "name": profile.name,
+                "company": profile.company,
+                "currency": profile.currency,
+            }
+        )
 
-	# Derive companies from accessible POS Profiles
-	company_names = []
-	for profile in pos_profiles_data:
-		if profile.company and profile.company not in company_names:
-			company_names.append(profile.company)
-	data["companies"] = [{"name": c} for c in company_names]
+    data["pos_profiles_data"] = pos_profiles_data
 
-	pos_profiles_list = []
-	for i in data["pos_profiles_data"]:
-		pos_profiles_list.append(i.name)
+    company_names: list[str] = []
+    for profile in pos_profiles_data:
+        if profile["company"] and profile["company"] not in company_names:
+            company_names.append(profile["company"])
+    data["companies"] = [{"name": c} for c in company_names]
 
-	payment_method_table = "POS Payment Method" if get_version() == 13 else "Sales Invoice Payment"
-	data["payments_method"] = frappe.get_list(
-		payment_method_table,
-		filters={"parent": ["in", pos_profiles_list]},
-		fields=["*"],
-		limit_page_length=0,
-		order_by="parent",
-		ignore_permissions=True,
-	)
-	# set currency from pos profile
-	for mode in data["payments_method"]:
-		mode["currency"] = frappe.get_cached_value("POS Profile", mode["parent"], "currency")
+    pos_profiles_list = [p["name"] for p in pos_profiles_data]
 
-	return data
+    payment_method_table = "POS Payment Method" if get_version() == 13 else "Sales Invoice Payment"
+    data["payments_method"] = frappe.get_list(
+        payment_method_table,
+        filters={"parent": ["in", pos_profiles_list]},
+        fields=["*"],
+        limit_page_length=0,
+        order_by="parent",
+        ignore_permissions=True,
+    )
+    for mode in data["payments_method"]:
+        profile_doc = resolve_profile(mode["parent"])
+        mode["currency"] = profile_doc.currency
+
+    return data
 
 
 @frappe.whitelist()
@@ -102,10 +107,11 @@ def check_opening_shift(user):
 
 
 def update_opening_shift_data(data, pos_profile):
-	data["pos_profile"] = frappe.get_doc("POS Profile", pos_profile)
-	if data["pos_profile"].get("posa_language"):
-		frappe.local.lang = data["pos_profile"].posa_language
-	data["company"] = frappe.get_doc("Company", data["pos_profile"].company)
-	allow_negative_stock = frappe.get_value("Stock Settings", None, "allow_negative_stock")
-	data["stock_settings"] = {}
-	data["stock_settings"].update({"allow_negative_stock": allow_negative_stock})
+    profile_doc = resolve_profile(pos_profile)
+    data["pos_profile"] = profile_doc
+    if profile_doc.get("posa_language"):
+        frappe.local.lang = profile_doc.posa_language
+    data["company"] = frappe.get_doc("Company", profile_doc.company)
+    allow_negative_stock = frappe.get_value("Stock Settings", None, "allow_negative_stock")
+    data["stock_settings"] = {}
+    data["stock_settings"].update({"allow_negative_stock": allow_negative_stock})

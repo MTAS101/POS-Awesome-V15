@@ -1,0 +1,9 @@
+{
+  "doctype": "Workspace",
+  "name": "POS Profile Awesome",
+  "extends": "List",
+  "for_doctype": "POS Profile Awesome",
+  "public": 1,
+  "label": "POS Profile Awesome",
+  "module": "POSAwesome"
+}
