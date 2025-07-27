@@ -86,7 +86,7 @@
 
 <script>
 /* global frappe */
-import { ensurePosProfile } from "../../../utils/pos_profile.js";
+import { usePosProfile } from "../../composables/usePosProfile.js";
 import _ from "lodash";
 export default {
 	data: () => ({
@@ -276,10 +276,11 @@ export default {
 				this.displayCount += 100;
 			}
 		},
-		async fetchVariantRate(item) {
-			if (!this.pos_profile) {
-				this.pos_profile = await ensurePosProfile();
-			}
+                async fetchVariantRate(item) {
+                        if (!this.pos_profile) {
+                                const { loadProfile } = usePosProfile();
+                                this.pos_profile = await loadProfile(frappe.boot?.pos_profile?.name);
+                        }
 			if (!this.pos_profile.warehouse) {
 				try {
 					const res = await frappe.call({
@@ -359,11 +360,12 @@ export default {
 					values: this.attributes_meta[attr].map((v) => ({ attribute_value: v, abbr: v })),
 				}));
 			}
-			if (profile) {
-				this.pos_profile = profile;
-			} else {
-				this.pos_profile = await ensurePosProfile();
-			}
+                        if (profile) {
+                                this.pos_profile = profile;
+                        } else {
+                                const { loadProfile } = usePosProfile();
+                                this.pos_profile = await loadProfile(frappe.boot?.pos_profile?.name);
+                        }
 			if (!this.items || this.items.length === 0) {
 				const parentCode = item.item_code || item.code || item.name;
 				await this.fetchVariants(parentCode, this.pos_profile);

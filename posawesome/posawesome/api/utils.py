@@ -1,5 +1,10 @@
 from __future__ import annotations
+
 import frappe
+from frappe import _
+
+from posawesome.pos_profile.api import resolve_profile
+
 
 @frappe.whitelist()
 def get_active_pos_profile(user=None):
@@ -10,7 +15,10 @@ def get_active_pos_profile(user=None):
         profile = frappe.db.get_single_value("POS Settings", "pos_profile")
     if not profile:
         return None
-    return frappe.get_doc("POS Profile", profile).as_dict()
+    doc = resolve_profile(profile)
+    if not frappe.has_permission(doc.doctype, "read", doc.name):
+        frappe.throw(_("Not permitted"), frappe.PermissionError)
+    return doc.as_dict()
 
 @frappe.whitelist()
 def get_default_warehouse(company=None):

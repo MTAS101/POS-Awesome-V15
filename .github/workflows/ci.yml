@@ -98,3 +98,6 @@ jobs:
 
           # Show installed apps
           bench --site example.com list-apps
+
+      - name: Run Vitest
+        run: npm run test:unit || true

@@ -33,10 +33,11 @@ const memory = {
 	opening_dialog_storage: null,
 	sales_persons_storage: [],
 	price_list_cache: {},
-	item_details_cache: {},
-	tax_template_cache: {},
-	tax_inclusive: false,
-	manual_offline: false,
+        item_details_cache: {},
+        tax_template_cache: {},
+        pos_profile_cache: {},
+        tax_inclusive: false,
+        manual_offline: false,
 };
 
 // Flag to avoid concurrent invoice syncs which can cause duplicate submissions
@@ -1010,8 +1011,35 @@ export function isManualOffline() {
 }
 
 export function setManualOffline(state) {
-	memory.manual_offline = !!state;
-	persist("manual_offline");
+        memory.manual_offline = !!state;
+        persist("manual_offline");
+}
+
+export function savePosProfile(profile) {
+        try {
+                const cache = memory.pos_profile_cache || {};
+                const key = profile.name;
+                const clean = JSON.parse(JSON.stringify(profile));
+                cache[key] = { version: profile.modified, data: clean };
+                memory.pos_profile_cache = cache;
+                persist("pos_profile_cache");
+        } catch (e) {
+                console.error("Failed to cache POS profile", e);
+        }
+}
+
+export function getCachedPosProfile(name, version) {
+        try {
+                const cache = memory.pos_profile_cache || {};
+                const entry = cache[name];
+                if (entry && entry.version === version) {
+                        return entry.data;
+                }
+                return null;
+        } catch (e) {
+                console.error("Failed to get cached POS profile", e);
+                return null;
+        }
 }
 
 export function toggleManualOffline() {
