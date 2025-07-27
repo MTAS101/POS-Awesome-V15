@@ -152,10 +152,10 @@ override_whitelisted_methods = {
 # auto_cancel_exempted_doctypes = ["Auto Repeat"]
 
 fixtures = [
-	{
-		"doctype": "Custom Field",
-		"filters": [
-			[
+       {
+               "doctype": "Custom Field",
+               "filters": [
+                       [
 				"name",
 				"in",
 				(
@@ -284,5 +284,9 @@ fixtures = [
 	},
        {
                "doctype": "POS Profile Awesome",
+       },
+       {
+               "doctype": "Workspace",
+               "filters": [["name", "=", "POS Profile Awesome"]],
        },
 ]
