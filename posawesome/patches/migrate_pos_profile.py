@@ -1,5 +1,13 @@
 import frappe
 
+
+def ensure_doctype_loaded():
+    """Load the POS Profile Awesome DocType before inserting records."""
+    try:
+        frappe.reload_doc("posawesome", "doctype", "pos_profile_awesome")
+    except Exception:
+        pass
+
 custom_fields = [
     "posa_pos_awesome_settings",
     "posa_cash_mode_of_payment",
@@ -79,6 +87,7 @@ custom_fields = [
 ]
 
 def execute():
+    ensure_doctype_loaded()
     for old in frappe.get_all("POS Profile", pluck="name"):
         src = frappe.get_doc("POS Profile", old)
         if not frappe.db.exists("POS Profile Awesome", src.name):
