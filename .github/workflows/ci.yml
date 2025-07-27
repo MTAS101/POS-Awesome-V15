@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        node: [18, 20]
 
     services:
       mariadb:
@@ -40,7 +43,7 @@ jobs:
           sudo apt-get install -y python3-dev python3-pip python3-setuptools python3-venv \
               libmysqlclient-dev redis-server curl software-properties-common git
 
-          curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+          curl -sL https://deb.nodesource.com/setup_${{ matrix.node }}.x | sudo -E bash -
           sudo apt-get install -y nodejs yarn
 
       - name: Cache pip dependencies
@@ -98,3 +101,11 @@ jobs:
 
           # Show installed apps
           bench --site example.com list-apps
+
+      - name: Run lint
+        run: ruff check .
+
+      - name: Run frontend unit tests
+        run: |
+          npm install
+          npx vitest run
