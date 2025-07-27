@@ -1,10 +1,13 @@
 # Copyright (c) 2022, Youssef Restom and contributors
 # For license information, please see license.txt
 
+import json
+
 import frappe
 from frappe import _
-import json
 from frappe.model.document import Document
+
+from posawesome.pos_profile.api import resolve_profile
 
 
 class DeliveryCharges(Document):
@@ -16,6 +19,7 @@ class DeliveryCharges(Document):
 	def validate_profiles(self):
 		profiles = []
 		for row in self.profiles:
+			resolve_profile(row.pos_profile)
 			if row.pos_profile not in profiles:
 				profiles.append(row.pos_profile)
 			else:
@@ -78,6 +82,7 @@ def get_applicable_delivery_charges(
 
 	delivery_profiels_filters = {"parent": ("in", delivery_charges_list)}
 	if pos_profile:
+		resolve_profile(pos_profile)
 		delivery_profiels_filters["pos_profile"] = pos_profile
 	delivery_profiels = frappe.get_all(
 		"Delivery Charges POS Profile",

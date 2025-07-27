@@ -1,0 +1,1 @@
+from ..pos_profile_awesome.pos_profile_awesome import POSProfileAwesome
