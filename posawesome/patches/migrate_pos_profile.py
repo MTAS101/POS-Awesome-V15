@@ -75,6 +75,7 @@ custom_fields = [
     "posa_display_discount_amount",
     "posa_silent_print",
     "posa_language",
+    "posa_currency",
     "posa_default_country",
 ]
 
@@ -88,10 +89,22 @@ def execute():
             doc = {
                 "doctype": "POS Profile Awesome",
                 "name": src.name,
+                "currency": src.get("currency"),
+                "posa_language": src.get("posa_language"),
+                "posa_currency": src.get("posa_currency"),
             }
             doc.update({f: src.get(f) for f in custom_fields})
             tgt = frappe.get_doc(doc)
             tgt.insert(ignore_permissions=True)
+        else:
+            tgt = frappe.get_doc("POS Profile Awesome", src.name)
+            updated = False
+            for field in ["posa_language", "posa_currency", "currency"]:
+                if not tgt.get(field) and src.get(field):
+                    tgt.set(field, src.get(field))
+                    updated = True
+            if updated:
+                tgt.save(ignore_permissions=True)
 
         # mark old custom fields read only
         for field in custom_fields:

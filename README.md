@@ -62,6 +62,8 @@ After switching branches or pulling latest changes:
 34. A lot more bug fixes from the version 14
 35. Offline invoices that fail to submit are saved as draft documents
 36. New POS Profile Awesome DocType with offline-ready caching
+37. Role **POS Profile Manager** required to create or edit profiles. API
+    endpoints validate read permission on "POS Profile Awesome".
 
 ### How to Install
 

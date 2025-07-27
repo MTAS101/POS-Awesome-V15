@@ -1,37 +1,36 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2020, Youssef Restom and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
 import json
+
 import frappe
-from frappe.utils import nowdate, flt, cstr, getdate, cint, money_in_words
-from erpnext.setup.utils import get_exchange_rate
-from frappe import _
-from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
-from erpnext.stock.get_item_details import get_item_details
-from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
-from frappe.utils.background_jobs import enqueue
-from erpnext.accounts.party import get_party_bank_account
-from erpnext.stock.doctype.batch.batch import (
-	get_batch_no,
-	get_batch_qty,
+from erpnext.accounts.doctype.loyalty_program.loyalty_program import (
+	get_loyalty_program_details_with_points,
 )
 from erpnext.accounts.doctype.payment_request.payment_request import (
 	get_dummy_message,
 	get_existing_payment_request_amount,
 )
-
+from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
+from erpnext.accounts.party import get_party_bank_account
 from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
-from erpnext.accounts.doctype.loyalty_program.loyalty_program import (
-	get_loyalty_program_details_with_points,
+from erpnext.setup.utils import get_exchange_rate
+from erpnext.stock.doctype.batch.batch import (
+	get_batch_no,
+	get_batch_qty,
 )
-from posawesome.posawesome.doctype.pos_coupon.pos_coupon import check_coupon_code
+from erpnext.stock.get_item_details import get_item_details
+from frappe import _
+from frappe.utils import cint, cstr, flt, getdate, money_in_words, nowdate
+from frappe.utils.background_jobs import enqueue
+from frappe.utils.caching import redis_cache
+
+from posawesome.pos_profile.api import resolve_profile
 from posawesome.posawesome.doctype.delivery_charges.delivery_charges import (
 	get_applicable_delivery_charges as _get_applicable_delivery_charges,
 )
-from frappe.utils.caching import redis_cache
-from typing import List, Dict
+from posawesome.posawesome.doctype.pos_coupon.pos_coupon import check_coupon_code
 
 
 def ensure_child_doctype(doc, table_field, child_doctype):
@@ -43,48 +42,51 @@ def ensure_child_doctype(doc, table_field, child_doctype):
 
 @frappe.whitelist()
 def get_opening_dialog_data():
-	data = {}
+    data = {}
 
-	# Get only POS Profiles where current user is defined in POS Profile User table
-	pos_profiles_data = frappe.db.sql(
-		"""
-        SELECT DISTINCT p.name, p.company, p.currency 
-        FROM `tabPOS Profile` p
-        INNER JOIN `tabPOS Profile User` u ON u.parent = p.name
-        WHERE p.disabled = 0 AND u.user = %s
-        ORDER BY p.name
-    """,
-		frappe.session.user,
-		as_dict=1,
-	)
+    profile_names = frappe.get_all(
+        "POS Profile User",
+        filters={"user": frappe.session.user},
+        pluck="parent",
+    )
 
-	data["pos_profiles_data"] = pos_profiles_data
+    pos_profiles_data: list[dict] = []
+    for name in profile_names:
+        profile = resolve_profile(name)
+        if getattr(profile, "disabled", 0):
+            continue
+        pos_profiles_data.append(
+            {
+                "name": profile.name,
+                "company": profile.company,
+                "currency": profile.currency,
+            }
+        )
 
-	# Derive companies from accessible POS Profiles
-	company_names = []
-	for profile in pos_profiles_data:
-		if profile.company and profile.company not in company_names:
-			company_names.append(profile.company)
-	data["companies"] = [{"name": c} for c in company_names]
+    data["pos_profiles_data"] = pos_profiles_data
 
-	pos_profiles_list = []
-	for i in data["pos_profiles_data"]:
-		pos_profiles_list.append(i.name)
+    company_names: list[str] = []
+    for profile in pos_profiles_data:
+        if profile["company"] and profile["company"] not in company_names:
+            company_names.append(profile["company"])
+    data["companies"] = [{"name": c} for c in company_names]
 
-	payment_method_table = "POS Payment Method" if get_version() == 13 else "Sales Invoice Payment"
-	data["payments_method"] = frappe.get_list(
-		payment_method_table,
-		filters={"parent": ["in", pos_profiles_list]},
-		fields=["*"],
-		limit_page_length=0,
-		order_by="parent",
-		ignore_permissions=True,
-	)
-	# set currency from pos profile
-	for mode in data["payments_method"]:
-		mode["currency"] = frappe.get_cached_value("POS Profile", mode["parent"], "currency")
+    pos_profiles_list = [p["name"] for p in pos_profiles_data]
 
-	return data
+    payment_method_table = "POS Payment Method" if get_version() == 13 else "Sales Invoice Payment"
+    data["payments_method"] = frappe.get_list(
+        payment_method_table,
+        filters={"parent": ["in", pos_profiles_list]},
+        fields=["*"],
+        limit_page_length=0,
+        order_by="parent",
+        ignore_permissions=True,
+    )
+    for mode in data["payments_method"]:
+        profile_doc = resolve_profile(mode["parent"])
+        mode["currency"] = profile_doc.currency
+
+    return data
 
 
 @frappe.whitelist()
@@ -133,11 +135,12 @@ def check_opening_shift(user):
 
 
 def update_opening_shift_data(data, pos_profile):
-	data["pos_profile"] = frappe.get_doc("POS Profile", pos_profile)
-	data["company"] = frappe.get_doc("Company", data["pos_profile"].company)
-	allow_negative_stock = frappe.get_value("Stock Settings", None, "allow_negative_stock")
-	data["stock_settings"] = {}
-	data["stock_settings"].update({"allow_negative_stock": allow_negative_stock})
+    profile_doc = resolve_profile(pos_profile)
+    data["pos_profile"] = profile_doc
+    data["company"] = frappe.get_doc("Company", profile_doc.company)
+    allow_negative_stock = frappe.get_value("Stock Settings", None, "allow_negative_stock")
+    data["stock_settings"] = {}
+    data["stock_settings"].update({"allow_negative_stock": allow_negative_stock})
 
 
 @frappe.whitelist()
@@ -192,7 +195,7 @@ def get_items(
 			elif frappe.cache().get_value("bin_qty_cache"):
 				frappe.cache().delete_value("bin_qty_cache")
 		except Exception as e:
-			frappe.log_error(f"Error clearing bin_qty_cache: {str(e)}", "POS Awesome")
+			frappe.log_error(f"Error clearing bin_qty_cache: {e!s}", "POS Awesome")
 
 		today = nowdate()
 		warehouse = pos_profile.get("warehouse")
@@ -241,10 +244,10 @@ def get_items(
 			if item_group:
 				# Escape item_group to avoid SQL errors with special characters
 				safe_item_group = frappe.db.escape("%" + item_group + "%")
-				condition += " AND item_group like {item_group}".format(item_group=safe_item_group)
+				condition += f" AND item_group like {safe_item_group}"
 
 			# Always apply a search limit when limit search is enabled
-			limit_clause = " LIMIT {search_limit}".format(search_limit=search_limit)
+			limit_clause = f" LIMIT {search_limit}"
 
 			# If force reload is enabled and the user is explicitly searching,
 			# remove the limit to return all matching items
@@ -474,10 +477,10 @@ def get_item_group_condition(pos_profile):
 def get_root_of(doctype):
 	"""Get root element of a DocType with a tree structure"""
 	result = frappe.db.sql(
-		"""select t1.name from `tab{0}` t1 where
-		(select count(*) from `tab{1}` t2 where
+		f"""select t1.name from `tab{doctype}` t1 where
+		(select count(*) from `tab{doctype}` t2 where
 			t2.lft < t1.lft and t2.rgt > t1.rgt) = 0
-		and t1.rgt > t1.lft""".format(doctype, doctype)
+		and t1.rgt > t1.lft"""
 	)
 	return result[0][0] if result else None
 
@@ -582,8 +585,8 @@ def get_sales_person_names():
 		print(f"Found {len(sales_persons)} sales persons: {json.dumps(sales_persons)}")
 		return sales_persons
 	except Exception as e:
-		print(f"Error fetching sales persons: {str(e)}")
-		frappe.log_error(f"Error fetching sales persons: {str(e)}", "POS Sales Person Error")
+		print(f"Error fetching sales persons: {e!s}")
+		frappe.log_error(f"Error fetching sales persons: {e!s}", "POS Sales Person Error")
 		return []
 
 
@@ -1008,7 +1011,7 @@ def redeeming_customer_credit(invoice_doc, data, is_payment_entry, total_cash, c
 				try:
 					jv_doc.save()
 					jv_doc.submit()
-				except Exception as e:
+				except Exception:
 					frappe.log_error(frappe.get_traceback(), "POSAwesome JV Error")
 					frappe.throw(_("Unable to create Journal Entry for customer credit."))
 
@@ -1208,7 +1211,7 @@ def get_items_details(pos_profile, items_data, price_list=None):
 			elif frappe.cache().get_value("bin_qty_cache"):
 				frappe.cache().delete_value("bin_qty_cache")
 		except Exception as e:
-			frappe.log_error(f"Error clearing bin_qty_cache: {str(e)}", "POS Awesome")
+			frappe.log_error(f"Error clearing bin_qty_cache: {e!s}", "POS Awesome")
 
 		if len(items_data) > 0:
 			for item in items_data:
@@ -1882,7 +1885,7 @@ def get_app_branch(app):
 
 	try:
 		branch = subprocess.check_output(
-			"cd ../apps/{0} && git rev-parse --abbrev-ref HEAD".format(app), shell=True
+			f"cd ../apps/{app} && git rev-parse --abbrev-ref HEAD", shell=True
 		)
 		branch = branch.decode("utf-8")
 		branch = branch.strip()
@@ -1926,7 +1929,7 @@ def get_offers(profile):
 @frappe.whitelist()
 def get_customer_addresses(customer):
 	return frappe.db.sql(
-		"""
+		f"""
         SELECT 
             address.name,
             address.address_line1,
@@ -1940,10 +1943,10 @@ def get_customer_addresses(customer):
         INNER JOIN `tabDynamic Link` AS link
 				ON address.name = link.parent
         WHERE link.link_doctype = 'Customer'
-            AND link.link_name = '{0}'
+            AND link.link_name = '{customer}'
             AND address.disabled = 0
         ORDER BY address.name
-        """.format(customer),
+        """,
 		as_dict=1,
 	)
 
@@ -2348,7 +2351,7 @@ def get_applicable_delivery_charges(company, pos_profile, customer, shipping_add
 def auto_create_items():
 	# create 20000 items
 	for i in range(20000):
-		item_code = "AUTO-ITEM-{}".format(i)
+		item_code = f"AUTO-ITEM-{i}"
 		item = frappe.get_doc(
 			{
 				"doctype": "Item",
@@ -2375,7 +2378,7 @@ def auto_create_items():
 				"standard_rate": 100 + i,
 			}
 		)
-		print("Creating Item: {}".format(item_code))
+		print(f"Creating Item: {item_code}")
 		item.insert(ignore_permissions=True)
 		frappe.db.commit()
 
@@ -2413,7 +2416,7 @@ def get_seearch_items_conditions(item_code, serial_no, batch_no, barcode):
 	item_code = item_code or ""
 
 	if serial_no or batch_no or barcode:
-		return " and name = {0}".format(frappe.db.escape(item_code))
+		return f" and name = {frappe.db.escape(item_code)}"
 
 	return """ and (name like {item_code} or item_name like {item_code})""".format(
 		item_code=frappe.db.escape("%" + item_code + "%")
@@ -2510,7 +2513,7 @@ def get_selling_price_lists():
 
 
 @frappe.whitelist()
-def get_app_info() -> Dict[str, List[Dict[str, str]]]:
+def get_app_info() -> dict[str, list[dict[str, str]]]:
 	"""
 	Return a list of installed apps and their versions.
 	"""

@@ -3,7 +3,8 @@
   "scripts": {
     "dev": "vite",
     "prebuild": "npm install",
-    "format": "prettier --write \"**/*.{js,vue,css,scss,html}\""
+    "format": "prettier --write \"**/*.{js,vue,css,scss,html}\"",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@vuepic/vue-datepicker": "11.0.2",
@@ -29,6 +30,9 @@
     "prettier": "^3.6.2",
     "vite": "^6.2.4",
     "vue": "^3.3.4",
-    "vue-eslint-parser": "^10.2.0"
+    "vue-eslint-parser": "^10.2.0",
+    "vitest": "^1.4.0",
+    "@testing-library/vue": "^7.1.0",
+    "@vue/test-utils": "^2.4.1"
   }
 }
