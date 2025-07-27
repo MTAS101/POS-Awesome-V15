@@ -1,8 +1,11 @@
 {
   "name": "posawesome",
+  "type": "module",
   "scripts": {
     "dev": "vite",
-    "prebuild": "npm install",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prebuild": "yarn install",
     "format": "prettier --write \"**/*.{js,vue,css,scss,html}\""
   },
   "dependencies": {
@@ -21,7 +24,6 @@
   "devDependencies": {
     "@eslint/js": "^9.16.0",
     "@vitejs/plugin-vue": "^5.2.3",
-    "esbuild": "^0.25.5",
     "eslint": "^9.16.0",
     "eslint-plugin-vue": "^9.32.0",
     "eslint-plugin-vuetify": "^2.5.1",
