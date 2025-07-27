@@ -22,7 +22,7 @@ def get_profile(name: str | None = None):
     if not name:
         name = frappe.defaults.get_user_default("pos_profile")
         if not name:
-            frappe.throw(_("POS profile not specified"), frappe.MandatoryError)
+            return None
 
     profile = resolve_profile(name)
 
