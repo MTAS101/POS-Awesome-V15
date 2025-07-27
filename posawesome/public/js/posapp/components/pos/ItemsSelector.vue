@@ -356,7 +356,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
-import { ensurePosProfile } from "../../../utils/pos_profile.js";
+import { usePosProfile } from "../../composables/usePosProfile.js";
 import {
 	saveItemUOMs,
 	getItemUOMs,
@@ -2129,12 +2129,13 @@ export default {
 		});
 	},
 
-	async mounted() {
-		const profile = await ensurePosProfile();
-		if (!this.pos_profile || Object.keys(this.pos_profile).length === 0) {
-			this.pos_profile = profile || {};
-		}
-		this.scan_barcoud();
+        async mounted() {
+                const { loadProfile } = usePosProfile();
+                const profile = await loadProfile(frappe.boot?.pos_profile?.name);
+                if (!this.pos_profile || Object.keys(this.pos_profile).length === 0) {
+                        this.pos_profile = profile || {};
+                }
+                this.scan_barcoud();
                // Apply the configured items per page on mount
                this.itemsPerPage = this.items_per_page;
        },

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 from . import __version__ as app_version
 
 app_name = "posawesome"
@@ -34,7 +32,7 @@ app_include_js = [
 
 # include js in doctype views
 doctype_js = {
-	"POS Profile": "posawesome/api/pos_profile.js",
+	"POS Profile": "posawesome/posawesome/doctype/pos_profile/pos_profile.js",
 	"Sales Invoice": "posawesome/api/invoice.js",
 	"Company": "posawesome/api/company.js",
 }
@@ -133,9 +131,10 @@ doc_events = {
 # Overriding Methods
 # ------------------------------
 #
-# override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "posawesome.event.get_events"
-# }
+override_whitelisted_methods = {
+	"erpnext.accounts.doctype.pos_profile.pos_profile.get_profile": "posawesome.pos_profile.api.get_profile",
+}
+
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
@@ -282,5 +281,8 @@ fixtures = [
 				],
 			]
 		],
+	},
+	{
+		"doctype": "POS Profile",
 	},
 ]
