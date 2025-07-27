@@ -1,13 +1,14 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2020, Youssef Restom and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
-import frappe
 import json
+
+import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
+
+from posawesome.pos_profile.api import resolve_profile
 
 
 class POSClosingShift(Document):
@@ -62,7 +63,8 @@ class POSClosingShift(Document):
 				opening_entry.save()
 
 	def delete_draft_invoices(self):
-		if frappe.get_value("POS Profile", self.pos_profile, "posa_allow_delete"):
+		doctype = resolve_profile(self.pos_profile)
+		if frappe.get_value(doctype, self.pos_profile, "posa_allow_delete"):
 			data = frappe.db.sql(
 				"""
                 select
@@ -206,8 +208,9 @@ def make_closing_shift_from_opening(opening_shift):
 		for p in d.payments:
 			existing_pay = [pay for pay in payments if pay.mode_of_payment == p.mode_of_payment]
 			if existing_pay:
+				doctype = resolve_profile(opening_shift.get("pos_profile"))
 				cash_mode_of_payment = frappe.get_value(
-					"POS Profile",
+					doctype,
 					opening_shift.get("pos_profile"),
 					"posa_cash_mode_of_payment",
 				)

@@ -1,0 +1,7 @@
+{
+ "doctype": "DocType",
+ "name": "POS Profile",
+ "module": "POSAwesome",
+ "fields": [],
+ "permissions": []
+}
