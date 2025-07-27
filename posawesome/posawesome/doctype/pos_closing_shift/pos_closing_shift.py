@@ -1,13 +1,14 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2020, Youssef Restom and contributors
 # For license information, please see license.txt
 
-from __future__ import unicode_literals
-import frappe
 import json
+
+import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
+
+from posawesome.pos_profile.api import resolve_profile
 
 
 class POSClosingShift(Document):
@@ -62,18 +63,19 @@ class POSClosingShift(Document):
 				opening_entry.save()
 
 	def delete_draft_invoices(self):
-		if frappe.get_value("POS Profile", self.pos_profile, "posa_allow_delete"):
+		profile = resolve_profile(self.pos_profile)
+		if profile.get("posa_allow_delete"):
 			data = frappe.db.sql(
-				"""
-                select
-                    name
-                from
-                    `tabSales Invoice`
-                where
-                    docstatus = 0 and posa_is_printed = 0 and posa_pos_opening_shift = %s
-                """,
-				(self.pos_opening_shift),
-				as_dict=1,
+			"""
+			select
+			name
+			from
+			`tabSales Invoice`
+			where
+			docstatus = 0 and posa_is_printed = 0 and posa_pos_opening_shift = %s
+			""",
+			(self.pos_opening_shift),
+			as_dict=1,
 			)
 
 			for invoice in data:
@@ -206,11 +208,8 @@ def make_closing_shift_from_opening(opening_shift):
 		for p in d.payments:
 			existing_pay = [pay for pay in payments if pay.mode_of_payment == p.mode_of_payment]
 			if existing_pay:
-				cash_mode_of_payment = frappe.get_value(
-					"POS Profile",
-					opening_shift.get("pos_profile"),
-					"posa_cash_mode_of_payment",
-				)
+				profile_doc = resolve_profile(opening_shift.get("pos_profile"))
+				cash_mode_of_payment = profile_doc.get("posa_cash_mode_of_payment")
 				if not cash_mode_of_payment:
 					cash_mode_of_payment = "Cash"
 				if existing_pay[0].mode_of_payment == cash_mode_of_payment:
