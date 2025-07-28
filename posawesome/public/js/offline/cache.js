@@ -393,7 +393,7 @@ export async function getCacheUsageEstimate() {
 		}
 
 		const totalSize = localStorageSize + indexedDBSize;
-		const maxSize = 10 * 1024 * 1024; // Assume 10MB as max size
+		const maxSize = 50 * 1024 * 1024; // Assume 50MB as max size
 		const usagePercentage = Math.min(100, Math.round((totalSize / maxSize) * 100));
 
 		return {
