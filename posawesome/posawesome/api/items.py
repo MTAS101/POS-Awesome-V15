@@ -61,10 +61,10 @@ def get_items(
 	price_list=None,
 	item_group="",
 	search_value="",
-        customer=None,
-        limit=None,
-        offset=None,
-        modified_after=None,
+	customer=None,
+	limit=None,
+	offset=None,
+	modified_after=None,
 ):
 	_pos_profile = json.loads(pos_profile)
 	use_price_list = _pos_profile.get("posa_use_server_cache")
@@ -75,32 +75,32 @@ def get_items(
 		price_list,
 		item_group,
 		search_value,
-                customer=None,
-                limit=None,
-                offset=None,
-                modified_after=None,
-        ):
-                return _get_items(
-                        pos_profile,
-                        price_list,
-                        item_group,
-                        search_value,
-                        customer,
-                        limit,
-                        offset,
-                        modified_after,
-                )
+		customer=None,
+		limit=None,
+		offset=None,
+		modified_after=None,
+	):
+		return _get_items(
+		        pos_profile,
+		        price_list,
+		        item_group,
+		        search_value,
+		        customer,
+		        limit,
+		        offset,
+		        modified_after,
+		)
 
 	def _get_items(
 		pos_profile,
 		price_list,
 		item_group,
 		search_value,
-                customer=None,
-                limit=None,
-                offset=None,
-                modified_after=None,
-        ):
+		customer=None,
+		limit=None,
+		offset=None,
+		modified_after=None,
+	):
 		pos_profile = json.loads(pos_profile)
 		condition = ""
 
@@ -176,9 +176,9 @@ def get_items(
 		result = []
 
 		# Build ORM filters
-                filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
-                if modified_after:
-                        filters["modified"] = [">", modified_after]
+		filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
+		if modified_after:
+		        filters["modified"] = [">", modified_after]
 
 		# Add item group filter
 		item_groups = get_item_groups(pos_profile.get("name"))
@@ -362,28 +362,28 @@ def get_items(
 					result.append(row)
 		return result
 
-        if use_price_list:
-                return __get_items(
-                        pos_profile,
-                        price_list,
-                        item_group,
-                        search_value,
-                        customer,
-                        limit,
-                        offset,
-                        modified_after,
-                )
-        else:
-                return _get_items(
-                        pos_profile,
-                        price_list,
-                        item_group,
-                        search_value,
-                        customer,
-                        limit,
-                        offset,
-                        modified_after,
-                )
+	if use_price_list:
+		return __get_items(
+		        pos_profile,
+		        price_list,
+		        item_group,
+		        search_value,
+		        customer,
+		        limit,
+		        offset,
+		        modified_after,
+		)
+	else:
+		return _get_items(
+		        pos_profile,
+		        price_list,
+		        item_group,
+		        search_value,
+		        customer,
+		        limit,
+		        offset,
+		        modified_after,
+		)
 
 
 @frappe.whitelist()
