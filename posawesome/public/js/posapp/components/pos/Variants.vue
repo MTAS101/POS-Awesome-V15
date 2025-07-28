@@ -263,7 +263,7 @@ export default {
 				);
 				this.displayCount = 100;
 			});
-		}, 200),
+		}, 100),
 		clearFilter(attr) {
 			this.filters[attr] = null;
 			this.$nextTick(() => {
