@@ -736,7 +736,9 @@ export default {
 					vm.items_loaded = true;
 
 					if (vm.items && vm.items.length > 0) {
-						vm.prePopulateStockCache(vm.items);
+						if (vm.items.length <= 500) {
+							vm.prePopulateStockCache(vm.items);
+						}
 						vm.update_items_details(vm.items);
 					}
 					return;
@@ -768,7 +770,9 @@ export default {
 				vm.items_loaded = true;
 
 				if (vm.items && vm.items.length > 0) {
-					await vm.prePopulateStockCache(vm.items);
+					if (vm.items.length <= 500) {
+						await vm.prePopulateStockCache(vm.items);
+					}
 					vm.update_items_details(vm.items);
 				}
 				return;
@@ -838,7 +842,9 @@ export default {
 							saveItemGroups(groups);
 
 							// Pre-populate stock cache when items are freshly loaded
-							vm.prePopulateStockCache(vm.items);
+							if (vm.items.length <= 500) {
+								vm.prePopulateStockCache(vm.items);
+							}
 
 							vm.$nextTick(() => {
 								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
@@ -944,7 +950,9 @@ export default {
 							saveItemGroups(groups);
 
 							// Pre-populate stock cache when items are freshly loaded
-							vm.prePopulateStockCache(vm.items);
+							if (vm.items.length <= 500) {
+								vm.prePopulateStockCache(vm.items);
+							}
 
 							vm.$nextTick(() => {
 								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
@@ -1444,6 +1452,13 @@ export default {
 		},
 		async prePopulateStockCache(items) {
 			if (this.prePopulateInProgress) {
+				return;
+			}
+			if (!Array.isArray(items) || items.length === 0) {
+				return;
+			}
+			if (items.length > 500) {
+				console.info("Skipping stock pre-population for", items.length, "items");
 				return;
 			}
 			this.prePopulateInProgress = true;

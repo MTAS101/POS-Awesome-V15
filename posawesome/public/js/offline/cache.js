@@ -146,6 +146,7 @@ export function setItemsStorage(items) {
 			actual_qty: it.actual_qty,
 			has_batch_no: it.has_batch_no,
 			has_serial_no: it.has_serial_no,
+			has_variants: !!it.has_variants,
 		}));
 	} catch (e) {
 		console.error("Failed to trim items for storage", e);
