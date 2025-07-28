@@ -4,6 +4,15 @@ export default {
 	// Watch for customer change and update related data
 	customer() {
 		this.close_payments();
+
+		// If an invoice doc already exists, clear its name so a new one is
+		// created when paying again and update the customer field
+		if (this.invoice_doc) {
+			if (this.invoice_doc.name) delete this.invoice_doc.name;
+			this.invoice_doc.customer = this.customer;
+			this.invoice_doc.customer_name = this.customer;
+		}
+
 		this.eventBus.emit("set_customer", this.customer);
 		this.fetch_customer_details();
 		this.fetch_customer_balance();
