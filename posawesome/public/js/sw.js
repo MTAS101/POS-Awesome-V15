@@ -14,7 +14,7 @@ workbox.core.clientsClaim();
 
 const SW_REVISION = "1";
 workbox.precaching.precacheAndRoute([
-	{ url: "/assets/posawesome/js/posawesome.bundle.js", revision: SW_REVISION },
+        { url: "/assets/posawesome/dist/js/posawesome.bundle.js", revision: SW_REVISION },
 	{ url: "/assets/posawesome/js/offline/index.js", revision: SW_REVISION },
 	{ url: "/manifest.json", revision: SW_REVISION },
 	{ url: "/offline.html", revision: SW_REVISION },
