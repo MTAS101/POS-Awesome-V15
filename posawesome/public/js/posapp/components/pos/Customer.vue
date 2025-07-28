@@ -17,7 +17,7 @@
 			:no-data-text="__('Customers not found')"
 			hide-details
 			:customFilter="() => true"
-                        :disabled="effectiveReadonly || loadingCustomers"
+			:disabled="effectiveReadonly || loadingCustomers"
 			:menu-props="{ closeOnContentClick: false }"
 			@update:menu="onCustomerMenuToggle"
 			@update:modelValue="onCustomerChange"
@@ -157,7 +157,13 @@
 
 <script>
 import UpdateCustomer from "./UpdateCustomer.vue";
-import { getCustomerStorage, setCustomerStorage, memoryInitPromise } from "../../../offline/index.js";
+import {
+	getCustomerStorage,
+	setCustomerStorage,
+	memoryInitPromise,
+	getCustomersLastSync,
+	setCustomersLastSync,
+} from "../../../offline/index.js";
 
 export default {
 	props: {
@@ -171,8 +177,8 @@ export default {
 		internalCustomer: null, // Model bound to the dropdown
 		tempSelectedCustomer: null, // Temporarily holds customer selected from dropdown
 		isMenuOpen: false, // Tracks whether dropdown menu is open
-                readonly: false,
-                effectiveReadonly: false,
+		readonly: false,
+		effectiveReadonly: false,
 		customer_info: {}, // Used for edit modal
 		loadingCustomers: false, // ? New state to track loading status
 		customerSearch: "", // Search text
@@ -182,14 +188,14 @@ export default {
 		UpdateCustomer,
 	},
 
-        computed: {
+	computed: {
 		isDarkTheme() {
 			return this.$theme.current === "dark";
 		},
 
-                filteredCustomers() {
-                        const search = this.customerSearch.toLowerCase();
-                        let results = this.customers;
+		filteredCustomers() {
+			const search = this.customerSearch.toLowerCase();
+			let results = this.customers;
 			if (search) {
 				results = results.filter((cust) => {
 					return (
@@ -201,15 +207,15 @@ export default {
 					);
 				});
 			}
-                        return results;
-                },
-        },
+			return results;
+		},
+	},
 
-        watch: {
-                readonly(val) {
-                        this.effectiveReadonly = val && navigator.onLine;
-                },
-        },
+	watch: {
+		readonly(val) {
+			this.effectiveReadonly = val && navigator.onLine;
+		},
+	},
 
 	methods: {
 		// Called when dropdown opens or closes
@@ -282,7 +288,9 @@ export default {
 			var vm = this;
 			if (this.customers.length > 0) return;
 
-                        if (getCustomerStorage().length) {
+			const lastSync = getCustomersLastSync();
+
+			if (getCustomerStorage().length) {
 				try {
 					vm.customers = getCustomerStorage();
 				} catch (e) {
@@ -296,29 +304,43 @@ export default {
 				method: "posawesome.posawesome.api.customers.get_customer_names",
 				args: {
 					pos_profile: this.pos_profile.pos_profile,
+					modified_after: lastSync,
 				},
 				callback: function (r) {
 					if (r.message) {
-						vm.customers = r.message;
+						const newCust = r.message;
+						if (lastSync && vm.customers.length) {
+							newCust.forEach((c) => {
+								const idx = vm.customers.findIndex((x) => x.name === c.name);
+								if (idx !== -1) {
+									vm.customers.splice(idx, 1, c);
+								} else {
+									vm.customers.push(c);
+								}
+							});
+						} else {
+							vm.customers = newCust;
+						}
 
-                                                setCustomerStorage(r.message);
+						setCustomerStorage(vm.customers);
+						setCustomersLastSync(new Date().toISOString());
 					}
 					vm.loadingCustomers = false; // ? Stop loading
 				},
-                                error: function (err) {
-                                        console.error("Failed to fetch customers:", err);
-                                        if (getCustomerStorage().length) {
-                                                try {
-                                                        vm.customers = getCustomerStorage();
-                                                } catch (e) {
-                                                        console.error("Failed to load cached customers", e);
-                                                        vm.customers = [];
-                                                }
-                                        }
-                                        vm.loadingCustomers = false;
-                                },
-                        });
-                },
+				error: function (err) {
+					console.error("Failed to fetch customers:", err);
+					if (getCustomerStorage().length) {
+						try {
+							vm.customers = getCustomerStorage();
+						} catch (e) {
+							console.error("Failed to load cached customers", e);
+							vm.customers = [];
+						}
+					}
+					vm.loadingCustomers = false;
+				},
+			});
+		},
 
 		new_customer() {
 			this.eventBus.emit("open_update_customer", null);
@@ -329,29 +351,29 @@ export default {
 		},
 	},
 
-        created() {
-                // Load cached customers immediately for offline use
-                if (getCustomerStorage().length) {
-                        try {
-                                this.customers = getCustomerStorage();
-                        } catch (e) {
-                                console.error("Failed to parse customer cache:", e);
-                                this.customers = [];
-                        }
-                }
+	created() {
+		// Load cached customers immediately for offline use
+		if (getCustomerStorage().length) {
+			try {
+				this.customers = getCustomerStorage();
+			} catch (e) {
+				console.error("Failed to parse customer cache:", e);
+				this.customers = [];
+			}
+		}
 
-                memoryInitPromise.then(() => {
-                        if (getCustomerStorage().length) {
-                                try {
-                                        this.customers = getCustomerStorage();
-                                } catch (e) {
-                                        console.error("Failed to load cached customers", e);
-                                }
-                        }
-                        this.effectiveReadonly = this.readonly && navigator.onLine;
-                });
+		memoryInitPromise.then(() => {
+			if (getCustomerStorage().length) {
+				try {
+					this.customers = getCustomerStorage();
+				} catch (e) {
+					console.error("Failed to load cached customers", e);
+				}
+			}
+			this.effectiveReadonly = this.readonly && navigator.onLine;
+		});
 
-                this.effectiveReadonly = this.readonly && navigator.onLine;
+		this.effectiveReadonly = this.readonly && navigator.onLine;
 
 		this.$nextTick(() => {
 			this.eventBus.on("register_pos_profile", (pos_profile) => {
@@ -364,10 +386,10 @@ export default {
 				this.get_customer_names();
 			});
 
-                        this.eventBus.on("set_customer", (customer) => {
-                                this.customer = customer;
-                                this.internalCustomer = customer;
-                        });
+			this.eventBus.on("set_customer", (customer) => {
+				this.customer = customer;
+				this.internalCustomer = customer;
+			});
 
 			this.eventBus.on("add_customer_to_list", (customer) => {
 				const index = this.customers.findIndex((c) => c.name === customer.name);
@@ -377,7 +399,7 @@ export default {
 				} else {
 					this.customers.push(customer);
 				}
-                                setCustomerStorage(this.customers);
+				setCustomerStorage(this.customers);
 				this.customer = customer.name;
 				this.internalCustomer = customer.name;
 				this.eventBus.emit("update_customer", customer.name);

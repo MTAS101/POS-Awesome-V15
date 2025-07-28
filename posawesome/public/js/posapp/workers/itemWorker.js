@@ -9,7 +9,11 @@ let db;
 		DexieLib = await import("/assets/posawesome/js/libs/dexie.min.js?v=1");
 	}
 	db = new DexieLib.default("posawesome_offline");
-	db.version(1).stores({ keyval: "&key" });
+	db.version(2).stores({
+		keyval: "&key",
+		queue: "&key",
+		cache: "&key",
+	});
 	try {
 		await db.open();
 	} catch (err) {
@@ -17,12 +21,27 @@ let db;
 	}
 })();
 
+const KEY_TABLE_MAP = {
+	offline_invoices: "queue",
+	offline_customers: "queue",
+	offline_payments: "queue",
+	price_list_cache: "cache",
+	item_details_cache: "cache",
+	items_storage: "cache",
+	customer_storage: "cache",
+};
+
+function tableForKey(key) {
+	return KEY_TABLE_MAP[key] || "keyval";
+}
+
 async function persist(key, value) {
 	try {
 		if (!db.isOpen()) {
 			await db.open();
 		}
-		await db.table("keyval").put({ key, value });
+		const table = tableForKey(key);
+		await db.table(table).put({ key, value });
 	} catch (e) {
 		console.error("Worker persist failed", e);
 	}
@@ -58,19 +77,35 @@ self.onmessage = async (event) => {
 				self.postMessage({ type: "error", error: e.message });
 				return;
 			}
+			const trimmed = items.map((it) => ({
+				item_code: it.item_code,
+				item_name: it.item_name,
+				description: it.description,
+				stock_uom: it.stock_uom,
+				image: it.image,
+				item_group: it.item_group,
+				rate: it.rate,
+				price_list_rate: it.price_list_rate,
+				currency: it.currency,
+				item_barcode: it.item_barcode,
+				item_uoms: it.item_uoms,
+				actual_qty: it.actual_qty,
+				has_batch_no: it.has_batch_no,
+				has_serial_no: it.has_serial_no,
+			}));
 			let cache = {};
 			try {
 				if (!db.isOpen()) {
 					await db.open();
 				}
-				const stored = await db.table("keyval").get("price_list_cache");
+				const stored = await db.table(tableForKey("price_list_cache")).get("price_list_cache");
 				if (stored && stored.value) cache = stored.value;
 			} catch (e) {
 				console.error("Failed to read cache in worker", e);
 			}
-			cache[data.priceList] = { items, timestamp: Date.now() };
+			cache[data.priceList] = { items: trimmed, timestamp: Date.now() };
 			await persist("price_list_cache", cache);
-			self.postMessage({ type: "parsed", items });
+			self.postMessage({ type: "parsed", items: trimmed });
 		} catch (err) {
 			console.log(err);
 			self.postMessage({ type: "error", error: err.message });
