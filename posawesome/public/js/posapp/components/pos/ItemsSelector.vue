@@ -437,6 +437,8 @@ export default {
 		temp_enable_custom_items_per_page: false,
 		items_per_page: 50,
 		temp_items_per_page: 50,
+		// Page size for incremental item loading
+		itemsPageLimit: 500,
 		// Track if the current search was triggered by a scanner
 		search_from_scanner: false,
 	}),
@@ -795,6 +797,8 @@ export default {
 							search_value: sr,
 							customer: vm.customer,
 							modified_after: lastSync,
+							limit: this.itemsPageLimit,
+							offset: 0,
 						}),
 					});
 
@@ -827,6 +831,9 @@ export default {
 								}
 							});
 							vm.eventBus.emit("set_all_items", vm.items);
+							if (newItems.length === this.itemsPageLimit) {
+								this.backgroundLoadItems(this.itemsPageLimit);
+							}
 							vm.loading = false;
 							vm.items_loaded = true;
 							setItemsLastSync(new Date().toISOString());
@@ -908,6 +915,8 @@ export default {
 						search_value: sr,
 						customer: vm.customer,
 						modified_after: lastSync,
+						limit: vm.itemsPageLimit,
+						offset: 0,
 					},
 					callback: async function (r) {
 						if (vm.items_request_token !== request_token) return;
@@ -934,6 +943,9 @@ export default {
 								}
 							});
 							vm.eventBus.emit("set_all_items", vm.items);
+							if (newItems.length === this.itemsPageLimit) {
+								this.backgroundLoadItems(this.itemsPageLimit);
+							}
 							vm.loading = false;
 							vm.items_loaded = true;
 							setItemsLastSync(new Date().toISOString());
@@ -985,6 +997,74 @@ export default {
 								vm.enter_event();
 							}
 						}
+					},
+				});
+			}
+		},
+		async backgroundLoadItems(offset) {
+			const limit = this.itemsPageLimit;
+			const lastSync = getItemsLastSync();
+			if (this.itemWorker) {
+				try {
+					const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-Frappe-CSRF-Token": frappe.csrf_token,
+						},
+						credentials: "same-origin",
+						body: JSON.stringify({
+							pos_profile: JSON.stringify(this.pos_profile),
+							price_list: this.customer_price_list,
+							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+							search_value: this.search || "",
+							customer: this.customer,
+							modified_after: lastSync,
+							limit,
+							offset,
+						}),
+					});
+					const text = await res.text();
+					const parsed = JSON.parse(text).message || [];
+					parsed.forEach((it) => {
+						const existing = this.items.find((i) => i.item_code === it.item_code);
+						if (existing) Object.assign(existing, it);
+						else this.items.push(it);
+					});
+					this.eventBus.emit("set_all_items", this.items);
+					if (parsed.length === limit) {
+						this.backgroundLoadItems(offset + limit);
+					}
+				} catch (err) {
+					console.error("Failed to background load items", err);
+				}
+			} else {
+				frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: {
+						pos_profile: JSON.stringify(this.pos_profile),
+						price_list: this.customer_price_list,
+						item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+						search_value: this.search || "",
+						customer: this.customer,
+						modified_after: lastSync,
+						limit,
+						offset,
+					},
+					callback: (r) => {
+						const rows = r.message || [];
+						rows.forEach((it) => {
+							const existing = this.items.find((i) => i.item_code === it.item_code);
+							if (existing) Object.assign(existing, it);
+							else this.items.push(it);
+						});
+						this.eventBus.emit("set_all_items", this.items);
+						if (rows.length === limit) {
+							this.backgroundLoadItems(offset + limit);
+						}
+					},
+					error: (err) => {
+						console.error("Failed to background load items", err);
 					},
 				});
 			}

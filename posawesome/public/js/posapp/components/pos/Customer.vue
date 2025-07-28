@@ -182,6 +182,7 @@ export default {
 		customer_info: {}, // Used for edit modal
 		loadingCustomers: false, // ? New state to track loading status
 		customerSearch: "", // Search text
+		customersPageLimit: 500,
 	}),
 
 	components: {
@@ -283,6 +284,37 @@ export default {
 			}
 		},
 
+		backgroundLoadCustomers(offset) {
+			const limit = this.customersPageLimit;
+			const lastSync = getCustomersLastSync();
+			frappe.call({
+				method: "posawesome.posawesome.api.customers.get_customer_names",
+				args: {
+					pos_profile: this.pos_profile.pos_profile,
+					modified_after: lastSync,
+					limit,
+					offset,
+				},
+				callback: (r) => {
+					const rows = r.message || [];
+					rows.forEach((c) => {
+						const idx = this.customers.findIndex((x) => x.name === c.name);
+						if (idx !== -1) {
+							this.customers.splice(idx, 1, c);
+						} else {
+							this.customers.push(c);
+						}
+					});
+					setCustomerStorage(this.customers);
+					if (rows.length === limit) {
+						this.backgroundLoadCustomers(offset + limit);
+					}
+				},
+				error: (err) => {
+					console.error("Failed to background load customers", err);
+				},
+			});
+		},
 		// Fetch customers list
 		get_customer_names() {
 			var vm = this;
@@ -305,6 +337,8 @@ export default {
 				args: {
 					pos_profile: this.pos_profile.pos_profile,
 					modified_after: lastSync,
+					limit: this.customersPageLimit,
+					offset: 0,
 				},
 				callback: function (r) {
 					if (r.message) {
@@ -324,6 +358,9 @@ export default {
 
 						setCustomerStorage(vm.customers);
 						setCustomersLastSync(new Date().toISOString());
+						if (newCust.length === vm.customersPageLimit) {
+							vm.backgroundLoadCustomers(vm.customersPageLimit);
+						}
 					}
 					vm.loadingCustomers = false; // ? Stop loading
 				},
