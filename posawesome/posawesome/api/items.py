@@ -489,18 +489,18 @@ def get_items_details(pos_profile, items_data, price_list=None):
 	if items_data:
 		for item in items_data:
 			item_code = item.get("item_code")
-				if item_code:
-					if item.get("has_variants"):
-						# Skip template items to avoid ValidationError
-						continue
-					item_detail = get_item_detail(
-						json.dumps(item),
-							warehouse=warehouse,
-							price_list=price_list or pos_profile.get("selling_price_list"),
-							company=company,
-						)
-					if item_detail:
-				result.append(item_detail)
+			if item_code:
+				if item.get("has_variants"):
+					# Skip template items to avoid ValidationError
+					continue
+				item_detail = get_item_detail(
+					json.dumps(item),
+						warehouse=warehouse,
+						price_list=price_list or pos_profile.get("selling_price_list"),
+						company=company,
+					)
+				if item_detail:
+			result.append(item_detail)
 
 	return result
 
