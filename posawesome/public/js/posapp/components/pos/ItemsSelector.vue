@@ -470,7 +470,7 @@ export default {
 			} else {
 				this.get_items();
 			}
-		}, 300),
+		}, 100),
 		customer_price_list: _.debounce(function () {
 			if (this.pos_profile.posa_force_reload_items) {
 				if (this.pos_profile.posa_smart_reload_mode) {
@@ -513,7 +513,7 @@ export default {
 			// No cache found - force a reload so prices are updated
 			this.items_loaded = false;
 			this.get_items(true);
-		}, 300),
+		}, 100),
 		new_line() {
 			this.eventBus.emit("set_new_line", this.new_line);
 		},
@@ -536,7 +536,7 @@ export default {
 		first_search: _.debounce(function (val) {
 			// Call without arguments so search_onchange treats it like an Enter key
 			this.search_onchange();
-		}, 300),
+		}, 100),
 
 		// Refresh item prices whenever the user changes currency
 		selected_currency() {
@@ -1306,7 +1306,7 @@ export default {
 				if (vm.filtered_items && vm.filtered_items.length > 0) {
 					setTimeout(() => {
 						vm.update_items_details(vm.filtered_items);
-					}, 300);
+					}, 100);
 				}
 			}
 
@@ -1316,7 +1316,7 @@ export default {
 				vm.$refs.debounce_search && vm.$refs.debounce_search.focus();
 				vm.search_from_scanner = false;
 			}
-		}, 300),
+		}, 100),
 		get_item_qty(first_search) {
 			const qtyVal = this.qty != null ? this.qty : 1;
 			let scal_qty = Math.abs(qtyVal);
@@ -1621,7 +1621,7 @@ export default {
 					onScan: function (sCode) {
 						setTimeout(() => {
 							vm.trigger_onscan(sCode);
-						}, 300);
+						}, 100);
 					},
 				});
 
@@ -1732,7 +1732,7 @@ export default {
 			// Enhanced item search and submission logic
 			setTimeout(() => {
 				this.processScannedItem(scannedCode);
-			}, 300);
+			}, 100);
 		},
 		processScannedItem(scannedCode) {
 			// First try to find exact match by barcode
@@ -2147,7 +2147,7 @@ export default {
 			},
 			set: _.debounce(function (newValue) {
 				this.first_search = (newValue || "").trim();
-			}, 200),
+			}, 100),
 		},
 		debounce_qty: {
 			get() {
@@ -2164,7 +2164,7 @@ export default {
 					parsed = Math.trunc(parsed);
 				}
 				this.qty = parsed;
-			}, 200),
+			}, 100),
 		},
 		isDarkTheme() {
 			return this.$theme.current === "dark";
