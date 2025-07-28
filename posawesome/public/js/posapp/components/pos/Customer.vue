@@ -181,6 +181,7 @@ export default {
 		effectiveReadonly: false,
 		customer_info: {}, // Used for edit modal
 		loadingCustomers: false, // ? New state to track loading status
+		customers_loaded: false,
 		customerSearch: "", // Search text
 		customersPageLimit: 500,
 	}),
@@ -215,6 +216,11 @@ export default {
 	watch: {
 		readonly(val) {
 			this.effectiveReadonly = val && navigator.onLine;
+		},
+		customers_loaded(val) {
+			if (val) {
+				this.eventBus.emit("customers_loaded");
+			}
 		},
 	},
 
@@ -320,7 +326,10 @@ export default {
 		// Fetch customers list
 		get_customer_names() {
 			var vm = this;
-			if (this.customers.length > 0) return;
+			if (this.customers.length > 0) {
+				this.customers_loaded = true;
+				return;
+			}
 
 			const syncSince = getCustomersLastSync();
 
@@ -366,6 +375,7 @@ export default {
 						}
 					}
 					vm.loadingCustomers = false; // ? Stop loading
+					vm.customers_loaded = true;
 				},
 				error: function (err) {
 					console.error("Failed to fetch customers:", err);
@@ -378,6 +388,7 @@ export default {
 						}
 					}
 					vm.loadingCustomers = false;
+					vm.customers_loaded = true;
 				},
 			});
 		},

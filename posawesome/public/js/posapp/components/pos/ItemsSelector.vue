@@ -555,6 +555,11 @@ export default {
 			// Maintain the configured items per page on resize
 			this.itemsPerPage = this.items_per_page;
 		},
+		items_loaded(val) {
+			if (val) {
+				this.eventBus.emit("items_loaded");
+			}
+		},
 	},
 
 	methods: {
