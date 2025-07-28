@@ -500,7 +500,7 @@ def get_items_details(pos_profile, items_data, price_list=None):
 						company=company,
 					)
 				if item_detail:
-			result.append(item_detail)
+					result.append(item_detail)
 
 	return result
 
