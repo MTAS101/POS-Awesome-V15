@@ -284,9 +284,9 @@ export default {
 			}
 		},
 
-		backgroundLoadCustomers(offset) {
+		backgroundLoadCustomers(offset, syncSince) {
 			const limit = this.customersPageLimit;
-			const lastSync = getCustomersLastSync();
+			const lastSync = syncSince;
 			frappe.call({
 				method: "posawesome.posawesome.api.customers.get_customer_names",
 				args: {
@@ -307,7 +307,9 @@ export default {
 					});
 					setCustomerStorage(this.customers);
 					if (rows.length === limit) {
-						this.backgroundLoadCustomers(offset + limit);
+						this.backgroundLoadCustomers(offset + limit, syncSince);
+					} else {
+						setCustomersLastSync(new Date().toISOString());
 					}
 				},
 				error: (err) => {
@@ -320,7 +322,7 @@ export default {
 			var vm = this;
 			if (this.customers.length > 0) return;
 
-			const lastSync = getCustomersLastSync();
+			const syncSince = getCustomersLastSync();
 
 			if (getCustomerStorage().length) {
 				try {
@@ -336,14 +338,14 @@ export default {
 				method: "posawesome.posawesome.api.customers.get_customer_names",
 				args: {
 					pos_profile: this.pos_profile.pos_profile,
-					modified_after: lastSync,
+					modified_after: syncSince,
 					limit: this.customersPageLimit,
 					offset: 0,
 				},
 				callback: function (r) {
 					if (r.message) {
 						const newCust = r.message;
-						if (lastSync && vm.customers.length) {
+						if (syncSince && vm.customers.length) {
 							newCust.forEach((c) => {
 								const idx = vm.customers.findIndex((x) => x.name === c.name);
 								if (idx !== -1) {
@@ -357,9 +359,10 @@ export default {
 						}
 
 						setCustomerStorage(vm.customers);
-						setCustomersLastSync(new Date().toISOString());
 						if (newCust.length === vm.customersPageLimit) {
-							vm.backgroundLoadCustomers(vm.customersPageLimit);
+							vm.backgroundLoadCustomers(vm.customersPageLimit, syncSince);
+						} else {
+							setCustomersLastSync(new Date().toISOString());
 						}
 					}
 					vm.loadingCustomers = false; // ? Stop loading

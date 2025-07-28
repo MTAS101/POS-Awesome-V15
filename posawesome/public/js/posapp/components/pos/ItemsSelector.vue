@@ -694,7 +694,7 @@ export default {
 
 			const vm = this;
 			this.loading = true;
-			const lastSync = getItemsLastSync();
+			const syncSince = getItemsLastSync();
 
 			// Removed noisy debug log
 			let search = this.get_search(this.first_search);
@@ -796,7 +796,7 @@ export default {
 							item_group: gr,
 							search_value: sr,
 							customer: vm.customer,
-							modified_after: lastSync,
+							modified_after: syncSince,
 							limit: this.itemsPageLimit,
 							offset: 0,
 						}),
@@ -809,7 +809,7 @@ export default {
 						if (ev.data.type === "parsed") {
 							const parsed = ev.data.items;
 							const newItems = parsed.message || parsed;
-							if (lastSync && vm.items && vm.items.length) {
+							if (syncSince && vm.items && vm.items.length) {
 								const map = new Map(vm.items.map((it) => [it.item_code, it]));
 								newItems.forEach((it) => map.set(it.item_code, it));
 								vm.items = Array.from(map.values());
@@ -832,11 +832,12 @@ export default {
 							});
 							vm.eventBus.emit("set_all_items", vm.items);
 							if (newItems.length === this.itemsPageLimit) {
-								this.backgroundLoadItems(this.itemsPageLimit);
+								this.backgroundLoadItems(this.itemsPageLimit, syncSince);
+							} else {
+								setItemsLastSync(new Date().toISOString());
 							}
 							vm.loading = false;
 							vm.items_loaded = true;
-							setItemsLastSync(new Date().toISOString());
 							console.info("Items Loaded");
 
 							const groups = Array.from(
@@ -914,7 +915,7 @@ export default {
 						item_group: gr,
 						search_value: sr,
 						customer: vm.customer,
-						modified_after: lastSync,
+						modified_after: syncSince,
 						limit: vm.itemsPageLimit,
 						offset: 0,
 					},
@@ -944,11 +945,12 @@ export default {
 							});
 							vm.eventBus.emit("set_all_items", vm.items);
 							if (newItems.length === this.itemsPageLimit) {
-								this.backgroundLoadItems(this.itemsPageLimit);
+								this.backgroundLoadItems(this.itemsPageLimit, syncSince);
+							} else {
+								setItemsLastSync(new Date().toISOString());
 							}
 							vm.loading = false;
 							vm.items_loaded = true;
-							setItemsLastSync(new Date().toISOString());
 							savePriceListItems(vm.customer_price_list, vm.items);
 							console.info("Items Loaded");
 
@@ -1001,9 +1003,9 @@ export default {
 				});
 			}
 		},
-		async backgroundLoadItems(offset) {
+		async backgroundLoadItems(offset, syncSince) {
 			const limit = this.itemsPageLimit;
-			const lastSync = getItemsLastSync();
+			const lastSync = syncSince;
 			if (this.itemWorker) {
 				try {
 					const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
@@ -1033,7 +1035,9 @@ export default {
 					});
 					this.eventBus.emit("set_all_items", this.items);
 					if (parsed.length === limit) {
-						this.backgroundLoadItems(offset + limit);
+						this.backgroundLoadItems(offset + limit, syncSince);
+					} else {
+						setItemsLastSync(new Date().toISOString());
 					}
 				} catch (err) {
 					console.error("Failed to background load items", err);
@@ -1060,7 +1064,9 @@ export default {
 						});
 						this.eventBus.emit("set_all_items", this.items);
 						if (rows.length === limit) {
-							this.backgroundLoadItems(offset + limit);
+							this.backgroundLoadItems(offset + limit, syncSince);
+						} else {
+							setItemsLastSync(new Date().toISOString());
 						}
 					},
 					error: (err) => {
