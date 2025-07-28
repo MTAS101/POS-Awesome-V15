@@ -85,9 +85,24 @@ def update_invoice(data):
 	data = json.loads(data)
 	if data.get("name"):
 		invoice_doc = frappe.get_doc("Sales Invoice", data.get("name"))
+		previous_customer = invoice_doc.get("customer")
 		invoice_doc.update(data)
 	else:
 		invoice_doc = frappe.get_doc(data)
+		previous_customer = None
+
+	# Clear old contact details if customer changed and no new contact provided
+	new_customer = invoice_doc.get("customer")
+	if previous_customer and new_customer != previous_customer and not data.get("contact_person"):
+		for field in (
+			"contact_person",
+			"contact_display",
+			"contact_email",
+			"contact_mobile",
+			"contact_phone",
+		):
+			if invoice_doc.meta.has_field(field):
+				invoice_doc.set(field, None)
 
 	# Set currency from data before set_missing_values
 	# Validate return items if this is a return invoice
