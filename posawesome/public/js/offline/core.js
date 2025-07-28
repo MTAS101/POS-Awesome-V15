@@ -3,11 +3,29 @@ import { withWriteLock } from "./db-utils.js";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
-db.version(1).stores({ keyval: "&key" });
+db.version(2).stores({
+	keyval: "&key",
+	queue: "&key",
+	cache: "&key",
+});
+
+export const KEY_TABLE_MAP = {
+	offline_invoices: "queue",
+	offline_customers: "queue",
+	offline_payments: "queue",
+	price_list_cache: "cache",
+	item_details_cache: "cache",
+	items_storage: "cache",
+	customer_storage: "cache",
+};
+
+export function tableForKey(key) {
+	return KEY_TABLE_MAP[key] || "keyval";
+}
 
 export async function checkDbHealth() {
 	try {
-		await db.table("keyval").get("health_check");
+		await db.table(tableForKey("health_check")).get("health_check");
 		return true;
 	} catch (e) {
 		console.error("IndexedDB health check failed", e);
@@ -98,9 +116,10 @@ export function persist(key, value) {
 		return;
 	}
 
+	const table = tableForKey(key);
 	withWriteLock(() =>
 		db
-			.table("keyval")
+			.table(table)
 			.put({ key, value })
 			.catch((e) => console.error(`Failed to persist ${key}`, e)),
 	);

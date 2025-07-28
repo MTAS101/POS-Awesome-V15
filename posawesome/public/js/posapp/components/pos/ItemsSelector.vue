@@ -135,35 +135,39 @@
 											density="compact"
 											color="primary"
 										></v-switch>
-                                                                              <v-switch
-                                                                              v-model="temp_enable_custom_items_per_page"
-                                                                              :label="__('Custom items per page')"
-                                                                              hide-details
-                                                                              density="compact"
-                                                                              color="primary"
-                                                                              class="mb-2"
-                                                                              >
-                                                                              </v-switch>
-                                                                              <v-text-field
-                                                                              v-if="temp_enable_custom_items_per_page"
-                                                                              v-model="temp_items_per_page"
-                                                                              type="number"
-                                                                              density="compact"
-                                                                              variant="outlined"
-                                                                              color="primary"
-                                                                              :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
-                                                                              hide-details
-                                                                              :label="__('Items per page')"
-                                                                              class="mb-2 dark-field"
-                                                                              >
-                                                                              </v-text-field>
-                                                                        </v-card-text>
-                                                                        <v-card-actions class="pa-4 pt-0">
-                                                                                <v-btn color="error" variant="text" @click="cancelItemSettings">{{ __("Cancel") }}</v-btn>
-                                                                                <v-spacer></v-spacer>
-                                                                                <v-btn color="primary" variant="tonal" @click="applyItemSettings">{{ __("Apply") }}</v-btn>
-                                                                        </v-card-actions>
-                                                                </v-card>
+										<v-switch
+											v-model="temp_enable_custom_items_per_page"
+											:label="__('Custom items per page')"
+											hide-details
+											density="compact"
+											color="primary"
+											class="mb-2"
+										>
+										</v-switch>
+										<v-text-field
+											v-if="temp_enable_custom_items_per_page"
+											v-model="temp_items_per_page"
+											type="number"
+											density="compact"
+											variant="outlined"
+											color="primary"
+											:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+											hide-details
+											:label="__('Items per page')"
+											class="mb-2 dark-field"
+										>
+										</v-text-field>
+									</v-card-text>
+									<v-card-actions class="pa-4 pt-0">
+										<v-btn color="error" variant="text" @click="cancelItemSettings">{{
+											__("Cancel")
+										}}</v-btn>
+										<v-spacer></v-spacer>
+										<v-btn color="primary" variant="tonal" @click="applyItemSettings">{{
+											__("Apply")
+										}}</v-btn>
+									</v-card-actions>
+								</v-card>
 							</v-dialog>
 						</div>
 					</v-col>
@@ -377,6 +381,8 @@ import {
 	saveItemDetailsCache,
 	saveItemGroups,
 	getCachedItemGroups,
+	getItemsLastSync,
+	setItemsLastSync,
 } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 
@@ -423,17 +429,19 @@ export default {
 		show_item_settings: false,
 		hide_qty_decimals: false,
 		temp_hide_qty_decimals: false,
-                hide_zero_rate_items: false,
-                temp_hide_zero_rate_items: false,
-                isDragging: false,
-                // Items per page configuration
-                enable_custom_items_per_page: false,
-                temp_enable_custom_items_per_page: false,
-                items_per_page: 50,
-                temp_items_per_page: 50,
-                // Track if the current search was triggered by a scanner
-                search_from_scanner: false,
-        }),
+		hide_zero_rate_items: false,
+		temp_hide_zero_rate_items: false,
+		isDragging: false,
+		// Items per page configuration
+		enable_custom_items_per_page: false,
+		temp_enable_custom_items_per_page: false,
+		items_per_page: 50,
+		temp_items_per_page: 50,
+		// Page size for incremental item loading
+		itemsPageLimit: 500,
+		// Track if the current search was triggered by a scanner
+		search_from_scanner: false,
+	}),
 
 	watch: {
 		customer: _.debounce(function () {
@@ -539,17 +547,17 @@ export default {
 		exchange_rate() {
 			this.applyCurrencyConversionToItems();
 		},
-               windowWidth() {
-                       // Keep the configured items per page on resize
-                       this.itemsPerPage = this.items_per_page;
-               },
-               windowHeight() {
-                       // Maintain the configured items per page on resize
-                       this.itemsPerPage = this.items_per_page;
-               },
-       },
+		windowWidth() {
+			// Keep the configured items per page on resize
+			this.itemsPerPage = this.items_per_page;
+		},
+		windowHeight() {
+			// Maintain the configured items per page on resize
+			this.itemsPerPage = this.items_per_page;
+		},
+	},
 
-       methods: {
+	methods: {
 		refreshPricesForVisibleItems() {
 			const vm = this;
 			if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -686,6 +694,7 @@ export default {
 
 			const vm = this;
 			this.loading = true;
+			const syncSince = getItemsLastSync();
 
 			// Removed noisy debug log
 			let search = this.get_search(this.first_search);
@@ -729,7 +738,9 @@ export default {
 					vm.items_loaded = true;
 
 					if (vm.items && vm.items.length > 0) {
-						vm.prePopulateStockCache(vm.items);
+						if (vm.items.length <= 500) {
+							vm.prePopulateStockCache(vm.items);
+						}
 						vm.update_items_details(vm.items);
 					}
 					return;
@@ -761,7 +772,9 @@ export default {
 				vm.items_loaded = true;
 
 				if (vm.items && vm.items.length > 0) {
-					await vm.prePopulateStockCache(vm.items);
+					if (vm.items.length <= 500) {
+						await vm.prePopulateStockCache(vm.items);
+					}
 					vm.update_items_details(vm.items);
 				}
 				return;
@@ -783,6 +796,9 @@ export default {
 							item_group: gr,
 							search_value: sr,
 							customer: vm.customer,
+							modified_after: syncSince,
+							limit: this.itemsPageLimit,
+							offset: 0,
 						}),
 					});
 
@@ -792,7 +808,14 @@ export default {
 						if (this.items_request_token !== request_token) return;
 						if (ev.data.type === "parsed") {
 							const parsed = ev.data.items;
-							vm.items = parsed.message || parsed;
+							const newItems = parsed.message || parsed;
+							if (syncSince && vm.items && vm.items.length) {
+								const map = new Map(vm.items.map((it) => [it.item_code, it]));
+								newItems.forEach((it) => map.set(it.item_code, it));
+								vm.items = Array.from(map.values());
+							} else {
+								vm.items = newItems;
+							}
 							savePriceListItems(vm.customer_price_list, vm.items);
 							// Ensure UOMs are available for each item
 							vm.items.forEach((it) => {
@@ -808,6 +831,11 @@ export default {
 								}
 							});
 							vm.eventBus.emit("set_all_items", vm.items);
+							if (newItems.length === this.itemsPageLimit) {
+								this.backgroundLoadItems(this.itemsPageLimit, syncSince);
+							} else {
+								setItemsLastSync(new Date().toISOString());
+							}
 							vm.loading = false;
 							vm.items_loaded = true;
 							console.info("Items Loaded");
@@ -822,7 +850,9 @@ export default {
 							saveItemGroups(groups);
 
 							// Pre-populate stock cache when items are freshly loaded
-							vm.prePopulateStockCache(vm.items);
+							if (vm.items.length <= 500) {
+								vm.prePopulateStockCache(vm.items);
+							}
 
 							vm.$nextTick(() => {
 								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
@@ -885,11 +915,21 @@ export default {
 						item_group: gr,
 						search_value: sr,
 						customer: vm.customer,
+						modified_after: syncSince,
+						limit: vm.itemsPageLimit,
+						offset: 0,
 					},
 					callback: async function (r) {
 						if (vm.items_request_token !== request_token) return;
 						if (r.message) {
-							vm.items = r.message;
+							const newItems = r.message;
+							if (lastSync && vm.items && vm.items.length) {
+								const map = new Map(vm.items.map((it) => [it.item_code, it]));
+								newItems.forEach((it) => map.set(it.item_code, it));
+								vm.items = Array.from(map.values());
+							} else {
+								vm.items = newItems;
+							}
 							// Ensure UOMs are available for each item
 							vm.items.forEach((it) => {
 								if (it.item_uoms && it.item_uoms.length > 0) {
@@ -904,6 +944,11 @@ export default {
 								}
 							});
 							vm.eventBus.emit("set_all_items", vm.items);
+							if (newItems.length === this.itemsPageLimit) {
+								this.backgroundLoadItems(this.itemsPageLimit, syncSince);
+							} else {
+								setItemsLastSync(new Date().toISOString());
+							}
 							vm.loading = false;
 							vm.items_loaded = true;
 							savePriceListItems(vm.customer_price_list, vm.items);
@@ -919,7 +964,9 @@ export default {
 							saveItemGroups(groups);
 
 							// Pre-populate stock cache when items are freshly loaded
-							vm.prePopulateStockCache(vm.items);
+							if (vm.items.length <= 500) {
+								vm.prePopulateStockCache(vm.items);
+							}
 
 							vm.$nextTick(() => {
 								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
@@ -952,6 +999,78 @@ export default {
 								vm.enter_event();
 							}
 						}
+					},
+				});
+			}
+		},
+		async backgroundLoadItems(offset, syncSince) {
+			const limit = this.itemsPageLimit;
+			const lastSync = syncSince;
+			if (this.itemWorker) {
+				try {
+					const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-Frappe-CSRF-Token": frappe.csrf_token,
+						},
+						credentials: "same-origin",
+						body: JSON.stringify({
+							pos_profile: JSON.stringify(this.pos_profile),
+							price_list: this.customer_price_list,
+							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+							search_value: this.search || "",
+							customer: this.customer,
+							modified_after: lastSync,
+							limit,
+							offset,
+						}),
+					});
+					const text = await res.text();
+					const parsed = JSON.parse(text).message || [];
+					parsed.forEach((it) => {
+						const existing = this.items.find((i) => i.item_code === it.item_code);
+						if (existing) Object.assign(existing, it);
+						else this.items.push(it);
+					});
+					this.eventBus.emit("set_all_items", this.items);
+					if (parsed.length === limit) {
+						this.backgroundLoadItems(offset + limit, syncSince);
+					} else {
+						setItemsLastSync(new Date().toISOString());
+					}
+				} catch (err) {
+					console.error("Failed to background load items", err);
+				}
+			} else {
+				frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: {
+						pos_profile: JSON.stringify(this.pos_profile),
+						price_list: this.customer_price_list,
+						item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+						search_value: this.search || "",
+						customer: this.customer,
+						modified_after: lastSync,
+						limit,
+						offset,
+					},
+					callback: (r) => {
+						const rows = r.message || [];
+						rows.forEach((it) => {
+							const existing = this.items.find((i) => i.item_code === it.item_code);
+							if (existing) Object.assign(existing, it);
+							else this.items.push(it);
+						});
+						this.eventBus.emit("set_all_items", this.items);
+						if (rows.length === limit) {
+							this.backgroundLoadItems(offset + limit, syncSince);
+						} else {
+							setItemsLastSync(new Date().toISOString());
+						}
+					},
+					error: (err) => {
+						console.error("Failed to background load items", err);
 					},
 				});
 			}
@@ -1421,6 +1540,13 @@ export default {
 			if (this.prePopulateInProgress) {
 				return;
 			}
+			if (!Array.isArray(items) || items.length === 0) {
+				return;
+			}
+			if (items.length > 500) {
+				console.info("Skipping stock pre-population for", items.length, "items");
+				return;
+			}
 			this.prePopulateInProgress = true;
 			try {
 				// Use the new isStockCacheReady function
@@ -1788,29 +1914,29 @@ export default {
 			return !Number.isInteger(value);
 		},
 
-                toggleItemSettings() {
-                        this.temp_hide_qty_decimals = this.hide_qty_decimals;
-                        this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
-                        this.temp_enable_custom_items_per_page = this.enable_custom_items_per_page;
-                        this.temp_items_per_page = this.items_per_page;
-                        this.show_item_settings = true;
-                },
-                cancelItemSettings() {
-                        this.show_item_settings = false;
-                },
-                applyItemSettings() {
-                        this.hide_qty_decimals = this.temp_hide_qty_decimals;
-                        this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
-                        this.enable_custom_items_per_page = this.temp_enable_custom_items_per_page;
-                        if (this.enable_custom_items_per_page) {
-                                this.items_per_page = parseInt(this.temp_items_per_page) || 50;
-                        } else {
-                                this.items_per_page = 50;
-                        }
-                        this.itemsPerPage = this.items_per_page;
-                        this.saveItemSettings();
-                        this.show_item_settings = false;
-                },
+		toggleItemSettings() {
+			this.temp_hide_qty_decimals = this.hide_qty_decimals;
+			this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
+			this.temp_enable_custom_items_per_page = this.enable_custom_items_per_page;
+			this.temp_items_per_page = this.items_per_page;
+			this.show_item_settings = true;
+		},
+		cancelItemSettings() {
+			this.show_item_settings = false;
+		},
+		applyItemSettings() {
+			this.hide_qty_decimals = this.temp_hide_qty_decimals;
+			this.hide_zero_rate_items = this.temp_hide_zero_rate_items;
+			this.enable_custom_items_per_page = this.temp_enable_custom_items_per_page;
+			if (this.enable_custom_items_per_page) {
+				this.items_per_page = parseInt(this.temp_items_per_page) || 50;
+			} else {
+				this.items_per_page = 50;
+			}
+			this.itemsPerPage = this.items_per_page;
+			this.saveItemSettings();
+			this.show_item_settings = false;
+		},
 		onDragStart(event, item) {
 			this.isDragging = true;
 
@@ -1835,42 +1961,42 @@ export default {
 			// Emit event to hide drop feedback
 			this.eventBus.emit("item-drag-end");
 		},
-                saveItemSettings() {
-                        try {
-                                const settings = {
-                                        hide_qty_decimals: this.hide_qty_decimals,
-                                        hide_zero_rate_items: this.hide_zero_rate_items,
-                                        enable_custom_items_per_page: this.enable_custom_items_per_page,
-                                        items_per_page: this.items_per_page,
-                                };
-                                localStorage.setItem("posawesome_item_selector_settings", JSON.stringify(settings));
-                        } catch (e) {
-                                console.error("Failed to save item selector settings:", e);
-                        }
-                },
-                loadItemSettings() {
-                        try {
-                                const saved = localStorage.getItem("posawesome_item_selector_settings");
-                                if (saved) {
-                                        const opts = JSON.parse(saved);
-                                        if (typeof opts.hide_qty_decimals === "boolean") {
-                                                this.hide_qty_decimals = opts.hide_qty_decimals;
-                                        }
-                                        if (typeof opts.hide_zero_rate_items === "boolean") {
-                                                this.hide_zero_rate_items = opts.hide_zero_rate_items;
-                                        }
-                                        if (typeof opts.enable_custom_items_per_page === "boolean") {
-                                                this.enable_custom_items_per_page = opts.enable_custom_items_per_page;
-                                        }
-                                        if (typeof opts.items_per_page === "number") {
-                                                this.items_per_page = opts.items_per_page;
-                                                this.itemsPerPage = this.items_per_page;
-                                        }
-                                }
-                        } catch (e) {
-                                console.error("Failed to load item selector settings:", e);
-                        }
-                },
+		saveItemSettings() {
+			try {
+				const settings = {
+					hide_qty_decimals: this.hide_qty_decimals,
+					hide_zero_rate_items: this.hide_zero_rate_items,
+					enable_custom_items_per_page: this.enable_custom_items_per_page,
+					items_per_page: this.items_per_page,
+				};
+				localStorage.setItem("posawesome_item_selector_settings", JSON.stringify(settings));
+			} catch (e) {
+				console.error("Failed to save item selector settings:", e);
+			}
+		},
+		loadItemSettings() {
+			try {
+				const saved = localStorage.getItem("posawesome_item_selector_settings");
+				if (saved) {
+					const opts = JSON.parse(saved);
+					if (typeof opts.hide_qty_decimals === "boolean") {
+						this.hide_qty_decimals = opts.hide_qty_decimals;
+					}
+					if (typeof opts.hide_zero_rate_items === "boolean") {
+						this.hide_zero_rate_items = opts.hide_zero_rate_items;
+					}
+					if (typeof opts.enable_custom_items_per_page === "boolean") {
+						this.enable_custom_items_per_page = opts.enable_custom_items_per_page;
+					}
+					if (typeof opts.items_per_page === "number") {
+						this.items_per_page = opts.items_per_page;
+						this.itemsPerPage = this.items_per_page;
+					}
+				}
+			} catch (e) {
+				console.error("Failed to load item selector settings:", e);
+			}
+		},
 	},
 
 	computed: {
@@ -2135,9 +2261,9 @@ export default {
 			this.pos_profile = profile || {};
 		}
 		this.scan_barcoud();
-               // Apply the configured items per page on mount
-               this.itemsPerPage = this.items_per_page;
-       },
+		// Apply the configured items per page on mount
+		this.itemsPerPage = this.items_per_page;
+	},
 
 	beforeUnmount() {
 		// Clear interval when component is destroyed

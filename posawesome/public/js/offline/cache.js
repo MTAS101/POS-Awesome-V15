@@ -1,4 +1,11 @@
-import { db, persist, checkDbHealth, terminatePersistWorker, initPersistWorker } from "./core.js";
+import {
+	db,
+	persist,
+	checkDbHealth,
+	terminatePersistWorker,
+	initPersistWorker,
+	tableForKey,
+} from "./core.js";
 import { getAllByCursor } from "./db-utils.js";
 import Dexie from "dexie/dist/dexie.mjs";
 
@@ -29,6 +36,8 @@ export const memory = {
 	translation_cache: {},
 	coupons_cache: {},
 	item_groups_cache: [],
+	items_last_sync: null,
+	customers_last_sync: null,
 	// Track the current cache schema version
 	cache_version: CACHE_VERSION,
 	cache_ready: false,
@@ -41,7 +50,7 @@ export const memoryInitPromise = (async () => {
 	try {
 		await checkDbHealth();
 		for (const key of Object.keys(memory)) {
-			const stored = await db.table("keyval").get(key);
+			const stored = await db.table(tableForKey(key)).get(key);
 			if (stored && stored.value !== undefined) {
 				memory[key] = stored.value;
 				continue;
@@ -60,7 +69,7 @@ export const memoryInitPromise = (async () => {
 		}
 
 		// Verify cache version and clear outdated caches
-		const versionEntry = await db.table("keyval").get("cache_version");
+		const versionEntry = await db.table(tableForKey("cache_version")).get("cache_version");
 		let storedVersion = versionEntry ? versionEntry.value : null;
 		if (!storedVersion && typeof localStorage !== "undefined") {
 			const v = localStorage.getItem("posa_cache_version");
@@ -94,6 +103,27 @@ export function resetOfflineState() {
 	persist("pos_last_sync_totals", memory.pos_last_sync_totals);
 }
 
+export function reduceCacheUsage() {
+	memory.price_list_cache = {};
+	memory.item_details_cache = {};
+	memory.uom_cache = {};
+	memory.offers_cache = [];
+	memory.customer_balance_cache = {};
+	memory.local_stock_cache = {};
+	memory.stock_cache_ready = false;
+	memory.coupons_cache = {};
+	memory.item_groups_cache = [];
+	persist("price_list_cache", memory.price_list_cache);
+	persist("item_details_cache", memory.item_details_cache);
+	persist("uom_cache", memory.uom_cache);
+	persist("offers_cache", memory.offers_cache);
+	persist("customer_balance_cache", memory.customer_balance_cache);
+	persist("local_stock_cache", memory.local_stock_cache);
+	persist("stock_cache_ready", memory.stock_cache_ready);
+	persist("coupons_cache", memory.coupons_cache);
+	persist("item_groups_cache", memory.item_groups_cache);
+}
+
 // --- Generic getters and setters for cached data ----------------------------
 export function getItemsStorage() {
 	return memory.items_storage || [];
@@ -101,9 +131,25 @@ export function getItemsStorage() {
 
 export function setItemsStorage(items) {
 	try {
-		memory.items_storage = JSON.parse(JSON.stringify(items));
+		memory.items_storage = items.map((it) => ({
+			item_code: it.item_code,
+			item_name: it.item_name,
+			description: it.description,
+			stock_uom: it.stock_uom,
+			image: it.image,
+			item_group: it.item_group,
+			rate: it.rate,
+			price_list_rate: it.price_list_rate,
+			currency: it.currency,
+			item_barcode: it.item_barcode,
+			item_uoms: it.item_uoms,
+			actual_qty: it.actual_qty,
+			has_batch_no: it.has_batch_no,
+			has_serial_no: it.has_serial_no,
+			has_variants: !!it.has_variants,
+		}));
 	} catch (e) {
-		console.error("Failed to serialize items for storage", e);
+		console.error("Failed to trim items for storage", e);
 		memory.items_storage = [];
 	}
 	persist("items_storage", memory.items_storage);
@@ -114,8 +160,38 @@ export function getCustomerStorage() {
 }
 
 export function setCustomerStorage(customers) {
-	memory.customer_storage = customers;
+	try {
+		memory.customer_storage = customers.map((c) => ({
+			name: c.name,
+			customer_name: c.customer_name,
+			mobile_no: c.mobile_no,
+			email_id: c.email_id,
+			primary_address: c.primary_address,
+			tax_id: c.tax_id,
+		}));
+	} catch (e) {
+		console.error("Failed to trim customers for storage", e);
+		memory.customer_storage = [];
+	}
 	persist("customer_storage", memory.customer_storage);
+}
+
+export function getItemsLastSync() {
+	return memory.items_last_sync || null;
+}
+
+export function setItemsLastSync(ts) {
+	memory.items_last_sync = ts;
+	persist("items_last_sync", memory.items_last_sync);
+}
+
+export function getCustomersLastSync() {
+	return memory.customers_last_sync || null;
+}
+
+export function setCustomersLastSync(ts) {
+	memory.customers_last_sync = ts;
+	persist("customers_last_sync", memory.customers_last_sync);
 }
 
 export function getSalesPersonsStorage() {
@@ -300,6 +376,8 @@ export async function clearAllCache() {
 	memory.stock_cache_ready = false;
 	memory.items_storage = [];
 	memory.customer_storage = [];
+	memory.items_last_sync = null;
+	memory.customers_last_sync = null;
 	memory.pos_opening_storage = null;
 	memory.opening_dialog_storage = null;
 	memory.sales_persons_storage = [];
@@ -337,6 +415,8 @@ export async function forceClearAllCache() {
 	memory.stock_cache_ready = false;
 	memory.items_storage = [];
 	memory.customer_storage = [];
+	memory.items_last_sync = null;
+	memory.customers_last_sync = null;
 	memory.pos_opening_storage = null;
 	memory.opening_dialog_storage = null;
 	memory.sales_persons_storage = [];
@@ -382,11 +462,13 @@ export async function getCacheUsageEstimate() {
 		let indexedDBSize = 0;
 		try {
 			if (db.isOpen()) {
-				const entries = await getAllByCursor("keyval");
-				indexedDBSize = entries.reduce((size, item) => {
-					const itemSize = JSON.stringify(item).length * 2; // UTF-16 characters are 2 bytes each
-					return size + itemSize;
-				}, 0);
+				for (const table of db.tables) {
+					const entries = await getAllByCursor(table.name);
+					indexedDBSize += entries.reduce((size, item) => {
+						const itemSize = JSON.stringify(item).length * 2; // UTF-16 characters
+						return size + itemSize;
+					}, 0);
+				}
 			}
 		} catch (e) {
 			console.error("Failed to calculate IndexedDB size", e);

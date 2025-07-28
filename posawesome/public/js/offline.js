@@ -166,6 +166,27 @@ export function resetOfflineState() {
 	persist("pos_last_sync_totals");
 }
 
+export function reduceCacheUsage() {
+	memory.price_list_cache = {};
+	memory.item_details_cache = {};
+	memory.uom_cache = {};
+	memory.offers_cache = [];
+	memory.customer_balance_cache = {};
+	memory.local_stock_cache = {};
+	memory.stock_cache_ready = false;
+	memory.coupons_cache = {};
+	memory.item_groups_cache = [];
+	persist("price_list_cache");
+	persist("item_details_cache");
+	persist("uom_cache");
+	persist("offers_cache");
+	persist("customer_balance_cache");
+	persist("local_stock_cache");
+	persist("stock_cache_ready");
+	persist("coupons_cache");
+	persist("item_groups_cache");
+}
+
 // Add new validation function
 export function validateStockForOfflineInvoice(items) {
 	const allowNegativeStock = memory.pos_opening_storage?.stock_settings?.allow_negative_stock;
@@ -468,6 +489,9 @@ export async function syncOfflineInvoices() {
 			persist("offline_invoices");
 		} else {
 			clearOfflineInvoices();
+			if (synced > 0 && drafted === 0) {
+				reduceCacheUsage();
+			}
 		}
 
 		const totals = { pending: pendingLeft, synced, drafted };
@@ -931,9 +955,24 @@ export function getItemsStorage() {
 
 export function setItemsStorage(items) {
 	try {
-		memory.items_storage = JSON.parse(JSON.stringify(items));
+		memory.items_storage = items.map((it) => ({
+			item_code: it.item_code,
+			item_name: it.item_name,
+			description: it.description,
+			stock_uom: it.stock_uom,
+			image: it.image,
+			item_group: it.item_group,
+			rate: it.rate,
+			price_list_rate: it.price_list_rate,
+			currency: it.currency,
+			item_barcode: it.item_barcode,
+			item_uoms: it.item_uoms,
+			actual_qty: it.actual_qty,
+			has_batch_no: it.has_batch_no,
+			has_serial_no: it.has_serial_no,
+		}));
 	} catch (e) {
-		console.error("Failed to serialize items for storage", e);
+		console.error("Failed to trim items for storage", e);
 		memory.items_storage = [];
 	}
 	persist("items_storage");
@@ -944,7 +983,19 @@ export function getCustomerStorage() {
 }
 
 export function setCustomerStorage(customers) {
-	memory.customer_storage = customers;
+	try {
+		memory.customer_storage = customers.map((c) => ({
+			name: c.name,
+			customer_name: c.customer_name,
+			mobile_no: c.mobile_no,
+			email_id: c.email_id,
+			primary_address: c.primary_address,
+			tax_id: c.tax_id,
+		}));
+	} catch (e) {
+		console.error("Failed to trim customers for storage", e);
+		memory.customer_storage = [];
+	}
 	persist("customer_storage");
 }
 
