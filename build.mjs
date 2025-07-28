@@ -5,8 +5,9 @@ import { resolve, join } from "path";
 // Configuration
 const CONFIG = {
     distDir: "posawesome/public/dist/js",
+    finalDir: "posawesome/public/js",
     bundlePrefix: "posawesome.bundle.",
-    bundleSuffix: ".js",
+    bundleSuffix: ".umd.cjs",
     targetBundle: "posawesome.bundle.js",
     commands: {
         install: "yarn install",
@@ -119,7 +120,7 @@ const main = async () => {
 
         // Copy to expected name
         const sourcePath = resolve(distDir, bundleFile);
-        const targetPath = resolve(distDir, CONFIG.targetBundle);
+        const targetPath = resolve(CONFIG.finalDir, CONFIG.targetBundle);
         copyBundleFile(sourcePath, targetPath);
 
         // Cleanup old files (optional)
