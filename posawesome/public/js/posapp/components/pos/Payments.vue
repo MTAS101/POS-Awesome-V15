@@ -1063,11 +1063,6 @@ export default {
 		back_to_invoice() {
 			this.eventBus.emit("show_payment", "false");
 			this.eventBus.emit("set_customer_readonly", false);
-			// Clear invoice name so a new invoice is created if
-			// customer changes before paying again
-			if (this.invoice_doc && this.invoice_doc.name) {
-				delete this.invoice_doc.name;
-			}
 		},
 		// Reset all cash payments to zero
 		reset_cash_payments() {
@@ -1951,11 +1946,6 @@ export default {
 					this.redeem_customer_credit = false;
 					this.is_cashback = true;
 					this.is_credit_return = false;
-				}
-				// keep invoice_doc in sync with changed customer
-				if (this.invoice_doc) {
-					this.invoice_doc.customer = customer;
-					this.invoice_doc.customer_name = customer;
 				}
 			});
 			this.eventBus.on("set_pos_settings", (data) => {
