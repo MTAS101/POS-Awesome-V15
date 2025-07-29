@@ -695,7 +695,12 @@ export default {
 			}
 
 			if (force_server && this.pos_profile.posa_local_storage) {
-				localStorage.setItem("items_storage", "");
+				if (typeof localStorage !== "undefined") {
+					localStorage.removeItem("posa_items_storage");
+				}
+				if (typeof sessionStorage !== "undefined") {
+					sessionStorage.removeItem("posa_items_storage");
+				}
 			}
 
 			const vm = this;
@@ -877,7 +882,9 @@ export default {
 								!vm.pos_profile.pose_use_limit_search
 							) {
 								try {
-									setItemsStorage(vm.items);
+									if (!sr) {
+										setItemsStorage(vm.items);
+									}
 									vm.items.forEach((it) => {
 										if (it.item_uoms && it.item_uoms.length > 0) {
 											saveItemUOMs(it.item_code, it.item_uoms);
@@ -991,7 +998,9 @@ export default {
 								!vm.pos_profile.pose_use_limit_search
 							) {
 								try {
-									setItemsStorage(vm.items);
+									if (!sr) {
+										setItemsStorage(vm.items);
+									}
 									vm.items.forEach((it) => {
 										if (it.item_uoms && it.item_uoms.length > 0) {
 											saveItemUOMs(it.item_code, it.item_uoms);
@@ -1045,7 +1054,9 @@ export default {
 						this.pos_profile.posa_local_storage &&
 						!this.pos_profile.pose_use_limit_search
 					) {
-						setItemsStorage(this.items);
+						if (!this.search) {
+							setItemsStorage(this.items);
+						}
 					}
 					if (parsed.length === limit) {
 						this.backgroundLoadItems(offset + limit, syncSince);
@@ -1081,7 +1092,9 @@ export default {
 							this.pos_profile.posa_local_storage &&
 							!this.pos_profile.pose_use_limit_search
 						) {
-							setItemsStorage(this.items);
+							if (!this.search) {
+								setItemsStorage(this.items);
+							}
 						}
 						if (rows.length === limit) {
 							this.backgroundLoadItems(offset + limit, syncSince);
