@@ -371,9 +371,9 @@ import {
 	setItemsStorage,
 	getLocalStockCache,
 	setLocalStockCache,
-        initPromise,
-        memoryInitPromise,
-        checkDbHealth,
+	initPromise,
+	memoryInitPromise,
+	checkDbHealth,
 	getCachedPriceListItems,
 	savePriceListItems,
 	updateLocalStockCache,
@@ -443,6 +443,19 @@ export default {
 		// Track if the current search was triggered by a scanner
 		search_from_scanner: false,
 	}),
+
+	async created() {
+		await memoryInitPromise;
+		if (getItemsStorage().length) {
+			try {
+				this.items = getItemsStorage();
+				this.eventBus.emit("set_all_items", this.items);
+				this.items_loaded = true;
+			} catch (e) {
+				console.error("Failed to load cached items", e);
+			}
+		}
+	},
 
 	watch: {
 		customer: _.debounce(function () {
@@ -2198,10 +2211,10 @@ export default {
 			}
 		}
 		this.$nextTick(function () {});
-                this.eventBus.on("register_pos_profile", async (data) => {
-                        await initPromise;
-                        await memoryInitPromise;
-                        await checkDbHealth();
+		this.eventBus.on("register_pos_profile", async (data) => {
+			await initPromise;
+			await memoryInitPromise;
+			await checkDbHealth();
 			this.pos_profile = data.pos_profile;
 			if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
 				await this.get_items(true);
