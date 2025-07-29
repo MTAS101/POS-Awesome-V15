@@ -19,7 +19,10 @@
 </template>
 
 <script>
-const DEBUG = import.meta.env ? import.meta.env.DEV : false;
+// Avoid relying on `import.meta` so the file can be bundled with older
+// JavaScript targets without warnings from esbuild. Debug logging can be
+// toggled by changing this flag during development.
+const DEBUG = false;
 
 export default {
         name: "StatusIndicator",
