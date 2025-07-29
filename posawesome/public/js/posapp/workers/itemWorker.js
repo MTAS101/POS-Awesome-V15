@@ -1,24 +1,38 @@
 let db;
+let DexieLib;
+
+async function ensureDb() {
+        if (!DexieLib) {
+                try {
+                        importScripts("/assets/posawesome/js/libs/dexie.min.js?v=1");
+                        DexieLib = { default: Dexie };
+                } catch (e) {
+                        // Fallback to dynamic import when importScripts fails
+                        DexieLib = await import("/assets/posawesome/js/libs/dexie.min.js?v=1");
+                }
+        }
+
+        if (!db) {
+                db = new DexieLib.default("posawesome_offline");
+                db.version(2).stores({
+                        keyval: "&key",
+                        queue: "&key",
+                        cache: "&key",
+                });
+        }
+
+        if (!db.isOpen()) {
+                try {
+                        await db.open();
+                } catch (err) {
+                        console.error("Failed to open IndexedDB in worker", err);
+                }
+        }
+}
+
+// Initialize DB when the worker starts
 (async () => {
-	let DexieLib;
-	try {
-		importScripts("/assets/posawesome/js/libs/dexie.min.js?v=1");
-		DexieLib = { default: Dexie };
-	} catch (e) {
-		// Fallback to dynamic import when importScripts fails
-		DexieLib = await import("/assets/posawesome/js/libs/dexie.min.js?v=1");
-	}
-	db = new DexieLib.default("posawesome_offline");
-	db.version(2).stores({
-		keyval: "&key",
-		queue: "&key",
-		cache: "&key",
-	});
-	try {
-		await db.open();
-	} catch (err) {
-		console.error("Failed to open IndexedDB in worker", err);
-	}
+        await ensureDb();
 })();
 
 const KEY_TABLE_MAP = {
@@ -36,26 +50,24 @@ function tableForKey(key) {
 }
 
 async function persist(key, value) {
-	try {
-		if (!db.isOpen()) {
-			await db.open();
-		}
-		const table = tableForKey(key);
-		await db.table(table).put({ key, value });
-	} catch (e) {
-		if (e && e.name === "DatabaseClosedError") {
-			try {
-				await db.open();
-				const table = tableForKey(key);
-				await db.table(table).put({ key, value });
-				return;
-			} catch (err) {
-				console.error("Worker persist retry failed", err);
-			}
-		}
+        try {
+                await ensureDb();
+                const table = tableForKey(key);
+                await db.table(table).put({ key, value });
+        } catch (e) {
+                if (e && e.name === "DatabaseClosedError") {
+                        try {
+                                await ensureDb();
+                                const table = tableForKey(key);
+                                await db.table(table).put({ key, value });
+                                return;
+                        } catch (err) {
+                                console.error("Worker persist retry failed", err);
+                        }
+                }
 
-		console.error("Worker persist failed", e);
-	}
+                console.error("Worker persist failed", e);
+        }
 
 	if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
 		try {
