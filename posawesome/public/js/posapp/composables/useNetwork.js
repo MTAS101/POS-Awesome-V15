@@ -125,7 +125,7 @@ export async function checkNetworkConnectivity() {
 			signal: AbortSignal.timeout(DESK_TIMEOUT),
 		}).then((r) => r.status < 500);
 
-		const staticRequest = fetch("/assets/frappe/images/frappe-logo.svg", {
+               const staticRequest = fetch("/assets/frappe/images/frappe-logo.png", {
 			method: "HEAD",
 			cache: "no-cache",
 			signal: AbortSignal.timeout(STATIC_TIMEOUT),
