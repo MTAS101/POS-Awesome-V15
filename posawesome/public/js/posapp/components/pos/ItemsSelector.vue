@@ -384,6 +384,7 @@ import {
 	getCachedItemGroups,
 	getItemsLastSync,
 	setItemsLastSync,
+	memory,
 } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 
@@ -696,6 +697,7 @@ export default {
 
 			if (force_server && this.pos_profile.posa_local_storage) {
 				localStorage.setItem("items_storage", "");
+				memory.items_storage = [];
 			}
 
 			const vm = this;
@@ -877,7 +879,7 @@ export default {
 								!vm.pos_profile.pose_use_limit_search
 							) {
 								try {
-									setItemsStorage(vm.items);
+									setItemsStorage(vm.items, !force_server);
 									vm.items.forEach((it) => {
 										if (it.item_uoms && it.item_uoms.length > 0) {
 											saveItemUOMs(it.item_code, it.item_uoms);
@@ -991,7 +993,7 @@ export default {
 								!vm.pos_profile.pose_use_limit_search
 							) {
 								try {
-									setItemsStorage(vm.items);
+									setItemsStorage(vm.items, !force_server);
 									vm.items.forEach((it) => {
 										if (it.item_uoms && it.item_uoms.length > 0) {
 											saveItemUOMs(it.item_code, it.item_uoms);
@@ -1045,7 +1047,7 @@ export default {
 						this.pos_profile.posa_local_storage &&
 						!this.pos_profile.pose_use_limit_search
 					) {
-						setItemsStorage(this.items);
+						setItemsStorage(this.items, true);
 					}
 					if (parsed.length === limit) {
 						this.backgroundLoadItems(offset + limit, syncSince);
@@ -1081,7 +1083,7 @@ export default {
 							this.pos_profile.posa_local_storage &&
 							!this.pos_profile.pose_use_limit_search
 						) {
-							setItemsStorage(this.items);
+							setItemsStorage(this.items, true);
 						}
 						if (rows.length === limit) {
 							this.backgroundLoadItems(offset + limit, syncSince);

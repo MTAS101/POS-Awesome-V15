@@ -953,9 +953,10 @@ export function getItemsStorage() {
 	return memory.items_storage || [];
 }
 
-export function setItemsStorage(items) {
+export function setItemsStorage(items, merge = true) {
+	let trimmed = [];
 	try {
-		memory.items_storage = items.map((it) => ({
+		trimmed = items.map((it) => ({
 			item_code: it.item_code,
 			item_name: it.item_name,
 			description: it.description,
@@ -973,8 +974,16 @@ export function setItemsStorage(items) {
 		}));
 	} catch (e) {
 		console.error("Failed to trim items for storage", e);
-		memory.items_storage = [];
 	}
+
+	if (merge && Array.isArray(memory.items_storage) && memory.items_storage.length) {
+		const map = new Map(memory.items_storage.map((it) => [it.item_code, it]));
+		trimmed.forEach((it) => map.set(it.item_code, it));
+		memory.items_storage = Array.from(map.values());
+	} else {
+		memory.items_storage = trimmed;
+	}
+
 	persist("items_storage");
 }
 
