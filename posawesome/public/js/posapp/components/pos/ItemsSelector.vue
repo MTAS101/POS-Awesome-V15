@@ -376,6 +376,7 @@ import {
 	checkDbHealth,
 	getCachedPriceListItems,
 	savePriceListItems,
+	clearPriceListCache,
 	updateLocalStockCache,
 	isStockCacheReady,
 	getCachedItemDetails,
@@ -671,6 +672,9 @@ export default {
 			this.eventBus.emit("show_coupons", "true");
 		},
 		forceReloadItems() {
+			// Clear cached price list items so the reload always
+			// fetches the latest data from the server
+			clearPriceListCache();
 			// Always recreate the worker when forcing a reload so
 			// subsequent reloads fetch fresh data from the server.
 			if (!this.itemWorker && typeof Worker !== "undefined") {
