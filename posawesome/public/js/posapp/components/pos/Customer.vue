@@ -427,15 +427,17 @@ export default {
 		this.effectiveReadonly = this.readonly && navigator.onLine;
 
 		this.$nextTick(() => {
-			this.eventBus.on("register_pos_profile", (pos_profile) => {
-				this.pos_profile = pos_profile;
-				this.get_customer_names();
-			});
+                        this.eventBus.on("register_pos_profile", async (pos_profile) => {
+                                await memoryInitPromise;
+                                this.pos_profile = pos_profile;
+                                this.get_customer_names();
+                        });
 
-			this.eventBus.on("payments_register_pos_profile", (pos_profile) => {
-				this.pos_profile = pos_profile;
-				this.get_customer_names();
-			});
+                        this.eventBus.on("payments_register_pos_profile", async (pos_profile) => {
+                                await memoryInitPromise;
+                                this.pos_profile = pos_profile;
+                                this.get_customer_names();
+                        });
 
 			this.eventBus.on("set_customer", (customer) => {
 				this.customer = customer;

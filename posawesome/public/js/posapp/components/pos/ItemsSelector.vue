@@ -371,8 +371,9 @@ import {
 	setItemsStorage,
 	getLocalStockCache,
 	setLocalStockCache,
-	initPromise,
-	checkDbHealth,
+        initPromise,
+        memoryInitPromise,
+        checkDbHealth,
 	getCachedPriceListItems,
 	savePriceListItems,
 	updateLocalStockCache,
@@ -2197,9 +2198,10 @@ export default {
 			}
 		}
 		this.$nextTick(function () {});
-		this.eventBus.on("register_pos_profile", async (data) => {
-			await initPromise;
-			await checkDbHealth();
+                this.eventBus.on("register_pos_profile", async (data) => {
+                        await initPromise;
+                        await memoryInitPromise;
+                        await checkDbHealth();
 			this.pos_profile = data.pos_profile;
 			if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
 				await this.get_items(true);
