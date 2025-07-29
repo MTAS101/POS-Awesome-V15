@@ -130,8 +130,14 @@ export function getItemsStorage() {
 }
 
 export function setItemsStorage(items) {
+	if (!Array.isArray(items)) {
+		console.warn("setItemsStorage called with invalid data", items);
+		return;
+	}
+
+	let trimmed;
 	try {
-		memory.items_storage = items.map((it) => ({
+		trimmed = items.map((it) => ({
 			item_code: it.item_code,
 			item_name: it.item_name,
 			description: it.description,
@@ -150,8 +156,21 @@ export function setItemsStorage(items) {
 		}));
 	} catch (e) {
 		console.error("Failed to trim items for storage", e);
-		memory.items_storage = [];
+		trimmed = [];
 	}
+
+	// Avoid overwriting an existing larger cache with a smaller one
+	if (
+		memory.items_storage &&
+		memory.items_storage.length > 0 &&
+		trimmed.length > 0 &&
+		trimmed.length < memory.items_storage.length
+	) {
+		console.warn("Skipping items_storage update as new data has fewer items than existing cache");
+		return;
+	}
+
+	memory.items_storage = trimmed;
 	persist("items_storage", memory.items_storage);
 }
 
