@@ -991,8 +991,8 @@ export default {
 								!vm.pos_profile.pose_use_limit_search
 							) {
 								try {
-									setItemsStorage(r.message);
-									r.message.forEach((it) => {
+									setItemsStorage(vm.items);
+									vm.items.forEach((it) => {
 										if (it.item_uoms && it.item_uoms.length > 0) {
 											saveItemUOMs(it.item_code, it.item_uoms);
 										}
@@ -1040,6 +1040,13 @@ export default {
 						else this.items.push(it);
 					});
 					this.eventBus.emit("set_all_items", this.items);
+					if (
+						this.pos_profile &&
+						this.pos_profile.posa_local_storage &&
+						!this.pos_profile.pose_use_limit_search
+					) {
+						setItemsStorage(this.items);
+					}
 					if (parsed.length === limit) {
 						this.backgroundLoadItems(offset + limit, syncSince);
 					} else {
@@ -1069,6 +1076,13 @@ export default {
 							else this.items.push(it);
 						});
 						this.eventBus.emit("set_all_items", this.items);
+						if (
+							this.pos_profile &&
+							this.pos_profile.posa_local_storage &&
+							!this.pos_profile.pose_use_limit_search
+						) {
+							setItemsStorage(this.items);
+						}
 						if (rows.length === limit) {
 							this.backgroundLoadItems(offset + limit, syncSince);
 						} else {
