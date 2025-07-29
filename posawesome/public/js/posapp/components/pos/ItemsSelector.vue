@@ -444,19 +444,6 @@ export default {
 		search_from_scanner: false,
 	}),
 
-	async created() {
-		await memoryInitPromise;
-		if (getItemsStorage().length) {
-			try {
-				this.items = getItemsStorage();
-				this.eventBus.emit("set_all_items", this.items);
-				this.items_loaded = true;
-			} catch (e) {
-				console.error("Failed to load cached items", e);
-			}
-		}
-	},
-
 	watch: {
 		customer: _.debounce(function () {
 			if (this.pos_profile.posa_force_reload_items) {
@@ -2188,7 +2175,18 @@ export default {
 		},
 	},
 
-	created: function () {
+	async created() {
+		await memoryInitPromise;
+		if (getItemsStorage().length) {
+			try {
+				this.items = getItemsStorage();
+				this.eventBus.emit("set_all_items", this.items);
+				this.items_loaded = true;
+			} catch (e) {
+				console.error("Failed to load cached items", e);
+			}
+		}
+
 		this.loadItemSettings();
 		if (typeof Worker !== "undefined") {
 			try {
