@@ -43,6 +43,17 @@ async function persist(key, value) {
 		const table = tableForKey(key);
 		await db.table(table).put({ key, value });
 	} catch (e) {
+		if (e && e.name === "DatabaseClosedError") {
+			try {
+				await db.open();
+				const table = tableForKey(key);
+				await db.table(table).put({ key, value });
+				return;
+			} catch (err) {
+				console.error("Worker persist retry failed", err);
+			}
+		}
+
 		console.error("Worker persist failed", e);
 	}
 

@@ -4,8 +4,21 @@ import { persist } from "./core.js";
 // Modify initializeStockCache function to set the flag
 export async function initializeStockCache(items, pos_profile) {
 	try {
+		// If a cache already exists with more items than the new list,
+		// assume it's still valid and avoid overwriting it with a
+		// smaller dataset. This guards against cases where the
+		// stock_cache_ready flag wasn't persisted yet but the data is
+		// available from a previous session.
+		const existingCount = Object.keys(memory.local_stock_cache || {}).length;
+		if (existingCount > items.length) {
+			memory.stock_cache_ready = true;
+			persist("stock_cache_ready", memory.stock_cache_ready);
+			console.debug("Existing stock cache detected, skipping reinitialization");
+			return true;
+		}
+
 		// If stock cache is already initialized, skip
-		if (memory.stock_cache_ready && Object.keys(memory.local_stock_cache || {}).length > 0) {
+		if (memory.stock_cache_ready && existingCount > 0) {
 			console.debug("Stock cache already initialized, skipping");
 			return true;
 		}
