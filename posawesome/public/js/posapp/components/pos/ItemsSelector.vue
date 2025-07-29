@@ -2175,17 +2175,18 @@ export default {
 		},
 	},
 
-	async created() {
-		await memoryInitPromise;
-		if (getItemsStorage().length) {
-			try {
-				this.items = getItemsStorage();
-				this.eventBus.emit("set_all_items", this.items);
-				this.items_loaded = true;
-			} catch (e) {
-				console.error("Failed to load cached items", e);
+	created() {
+		memoryInitPromise.then(() => {
+			if (getItemsStorage().length) {
+				try {
+					this.items = getItemsStorage();
+					this.eventBus.emit("set_all_items", this.items);
+					this.items_loaded = true;
+				} catch (e) {
+					console.error("Failed to load cached items", e);
+				}
 			}
-		}
+		});
 
 		this.loadItemSettings();
 		if (typeof Worker !== "undefined") {

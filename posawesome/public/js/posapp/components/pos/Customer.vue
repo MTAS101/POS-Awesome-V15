@@ -402,17 +402,18 @@ export default {
 		},
 	},
 
-	async created() {
-		await memoryInitPromise;
-		// Load cached customers immediately for offline use
-		if (getCustomerStorage().length) {
-			try {
-				this.customers = getCustomerStorage();
-			} catch (e) {
-				console.error("Failed to parse customer cache:", e);
-				this.customers = [];
+	created() {
+		memoryInitPromise.then(() => {
+			if (getCustomerStorage().length) {
+				try {
+					this.customers = getCustomerStorage();
+				} catch (e) {
+					console.error("Failed to parse customer cache:", e);
+					this.customers = [];
+				}
 			}
-		}
+			this.effectiveReadonly = this.readonly && navigator.onLine;
+		});
 
 		this.effectiveReadonly = this.readonly && navigator.onLine;
 
