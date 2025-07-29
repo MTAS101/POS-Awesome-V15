@@ -403,22 +403,13 @@ export default {
 	},
 
 	created() {
-		// Load cached customers immediately for offline use
-		if (getCustomerStorage().length) {
-			try {
-				this.customers = getCustomerStorage();
-			} catch (e) {
-				console.error("Failed to parse customer cache:", e);
-				this.customers = [];
-			}
-		}
-
 		memoryInitPromise.then(() => {
 			if (getCustomerStorage().length) {
 				try {
 					this.customers = getCustomerStorage();
 				} catch (e) {
-					console.error("Failed to load cached customers", e);
+					console.error("Failed to parse customer cache:", e);
+					this.customers = [];
 				}
 			}
 			this.effectiveReadonly = this.readonly && navigator.onLine;
@@ -427,12 +418,14 @@ export default {
 		this.effectiveReadonly = this.readonly && navigator.onLine;
 
 		this.$nextTick(() => {
-			this.eventBus.on("register_pos_profile", (pos_profile) => {
+			this.eventBus.on("register_pos_profile", async (pos_profile) => {
+				await memoryInitPromise;
 				this.pos_profile = pos_profile;
 				this.get_customer_names();
 			});
 
-			this.eventBus.on("payments_register_pos_profile", (pos_profile) => {
+			this.eventBus.on("payments_register_pos_profile", async (pos_profile) => {
+				await memoryInitPromise;
 				this.pos_profile = pos_profile;
 				this.get_customer_names();
 			});
