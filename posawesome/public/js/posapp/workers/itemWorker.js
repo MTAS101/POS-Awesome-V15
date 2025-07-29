@@ -51,6 +51,19 @@ async function persist(key, value) {
 			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
 		} catch (err) {
 			console.error("Worker localStorage failed", err);
+			if (typeof sessionStorage !== "undefined") {
+				try {
+					sessionStorage.setItem(`posa_${key}`, JSON.stringify(value));
+				} catch (ssErr) {
+					console.error("Worker sessionStorage failed", ssErr);
+				}
+			}
+		}
+	} else if (typeof sessionStorage !== "undefined" && key !== "price_list_cache") {
+		try {
+			sessionStorage.setItem(`posa_${key}`, JSON.stringify(value));
+		} catch (err) {
+			console.error("Worker sessionStorage failed", err);
 		}
 	}
 }
