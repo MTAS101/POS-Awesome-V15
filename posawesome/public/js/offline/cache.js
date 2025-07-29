@@ -66,6 +66,17 @@ export const memoryInitPromise = (async () => {
 					}
 				}
 			}
+			if (typeof sessionStorage !== "undefined") {
+				const ss = sessionStorage.getItem(`posa_${key}`);
+				if (ss) {
+					try {
+						memory[key] = JSON.parse(ss);
+						continue;
+					} catch (err) {
+						console.error("Failed to parse sessionStorage for", key, err);
+					}
+				}
+			}
 		}
 
 		// Verify cache version and clear outdated caches
@@ -73,6 +84,10 @@ export const memoryInitPromise = (async () => {
 		let storedVersion = versionEntry ? versionEntry.value : null;
 		if (!storedVersion && typeof localStorage !== "undefined") {
 			const v = localStorage.getItem("posa_cache_version");
+			if (v) storedVersion = parseInt(v, 10);
+		}
+		if (!storedVersion && typeof sessionStorage !== "undefined") {
+			const v = sessionStorage.getItem("posa_cache_version");
 			if (v) storedVersion = parseInt(v, 10);
 		}
 		if (storedVersion !== CACHE_VERSION) {
@@ -399,6 +414,13 @@ export async function forceClearAllCache() {
 		Object.keys(localStorage).forEach((key) => {
 			if (key.startsWith("posa_")) {
 				localStorage.removeItem(key);
+			}
+		});
+	}
+	if (typeof sessionStorage !== "undefined") {
+		Object.keys(sessionStorage).forEach((key) => {
+			if (key.startsWith("posa_")) {
+				sessionStorage.removeItem(key);
 			}
 		});
 	}

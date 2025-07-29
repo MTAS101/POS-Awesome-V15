@@ -129,6 +129,13 @@ export function persist(key, value) {
 			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
 		} catch (err) {
 			console.error("Failed to persist", key, "to localStorage", err);
+			if (typeof sessionStorage !== "undefined") {
+				try {
+					sessionStorage.setItem(`posa_${key}`, JSON.stringify(value));
+				} catch (sesErr) {
+					console.error("Failed to persist", key, "to sessionStorage", sesErr);
+				}
+			}
 		}
 	}
 }
