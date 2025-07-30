@@ -1105,6 +1105,9 @@ export default {
 							this.itemWorker.terminate();
 							this.itemWorker = null;
 						}
+						if (this.items && this.items.length > 0) {
+							await this.prePopulateStockCache(this.items);
+						}
 					}
 				} catch (err) {
 					console.error("Failed to background load items", err);
@@ -1141,6 +1144,9 @@ export default {
 							this.backgroundLoadItems(offset + limit, syncSince);
 						} else {
 							setItemsLastSync(new Date().toISOString());
+							if (this.items && this.items.length > 0) {
+								await this.prePopulateStockCache(this.items);
+							}
 						}
 					},
 					error: (err) => {
@@ -1619,19 +1625,22 @@ export default {
 			if (!Array.isArray(items) || items.length === 0) {
 				return;
 			}
-			if (items.length > 500) {
-				console.info("Skipping stock pre-population for", items.length, "items");
-				return;
-			}
 			this.prePopulateInProgress = true;
 			try {
-				// Use the new isStockCacheReady function
-				if (isStockCacheReady()) {
+				const cache = getLocalStockCache();
+				const cacheSize = Object.keys(cache).length;
+
+				if (isStockCacheReady() && cacheSize >= items.length) {
 					console.debug("Stock cache already initialized");
 					return;
 				}
 
-				console.info("Pre-populating stock cache for", items.length, "items");
+				if (items.length > 500) {
+					console.info("Pre-populating stock cache for", items.length, "items in batches");
+				} else {
+					console.info("Pre-populating stock cache for", items.length, "items");
+				}
+
 				await initializeStockCache(items, this.pos_profile);
 			} catch (error) {
 				console.error("Failed to pre-populate stock cache:", error);
