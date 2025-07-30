@@ -2,17 +2,25 @@ import { memory } from "./cache.js";
 import { persist, db, checkDbHealth } from "./core.js";
 
 export function saveItemUOMs(itemCode, uoms) {
-	try {
-		const cache = memory.uom_cache;
-		// Clone to avoid persisting reactive objects which cause
-		// DataCloneError when stored in IndexedDB
-		const cleanUoms =
-			typeof structuredClone === "function" ? structuredClone(uoms) : JSON.parse(JSON.stringify(uoms));
-		cache[itemCode] = cleanUoms;
-		memory.uom_cache = cache;
-		persist("uom_cache", memory.uom_cache);
-	} catch (e) {
-		console.error("Failed to cache UOMs", e);
+        try {
+                const cache = memory.uom_cache;
+                // Clone to avoid persisting reactive objects which cause
+                // DataCloneError when stored in IndexedDB
+                let cleanUoms;
+                try {
+                        cleanUoms =
+                                typeof structuredClone === "function"
+                                        ? structuredClone(uoms)
+                                        : JSON.parse(JSON.stringify(uoms));
+                } catch (err) {
+                        // Fallback to JSON serialization when structuredClone fails
+                        cleanUoms = JSON.parse(JSON.stringify(uoms));
+                }
+                cache[itemCode] = cleanUoms;
+                memory.uom_cache = cache;
+                persist("uom_cache", memory.uom_cache);
+        } catch (e) {
+                console.error("Failed to cache UOMs", e);
 	}
 }
 
@@ -44,9 +52,10 @@ export function getCachedOffers() {
 
 // Price list rate storage using dedicated table
 export async function savePriceListItems(priceList, items) {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
+        try {
+                if (!priceList) return;
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
 		const rates = items.map((it) => ({
 			price_list,
 			item_code: it.item_code,
@@ -61,9 +70,10 @@ export async function savePriceListItems(priceList, items) {
 }
 
 export async function getCachedPriceListItems(priceList, ttl = 24 * 60 * 60 * 1000) {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
+        try {
+                if (!priceList) return null;
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
 		const now = Date.now();
 		const prices = await db.table("item_prices").where("price_list").equals(priceList).toArray();
 		if (!prices.length) return null;
@@ -106,21 +116,25 @@ export async function clearPriceListCache(priceList = null) {
 
 // Item details caching functions
 export function saveItemDetailsCache(profileName, priceList, items) {
-	try {
-		const cache = memory.item_details_cache || {};
-		const profileCache = cache[profileName] || {};
-		const priceCache = profileCache[priceList] || {};
+        try {
+                const cache = memory.item_details_cache || {};
+                const profileCache = cache[profileName] || {};
+                const priceCache = profileCache[priceList] || {};
 
-		let cleanItems;
-		try {
-			cleanItems =
-				typeof structuredClone === "function"
-					? structuredClone(items)
-					: JSON.parse(JSON.stringify(items));
-		} catch (err) {
-			console.error("Failed to serialize item details", err);
-			cleanItems = [];
-		}
+                let cleanItems;
+                try {
+                        cleanItems =
+                                typeof structuredClone === "function"
+                                        ? structuredClone(items)
+                                        : JSON.parse(JSON.stringify(items));
+                } catch (err) {
+                        console.error("Failed to serialize item details", err);
+                        try {
+                                cleanItems = JSON.parse(JSON.stringify(items));
+                        } catch (e2) {
+                                cleanItems = [];
+                        }
+                }
 
 		cleanItems.forEach((item) => {
 			priceCache[item.item_code] = {

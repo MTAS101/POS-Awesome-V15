@@ -932,11 +932,11 @@ export default {
 							vm.loading = false;
 						}
 					};
-					this.itemWorker.postMessage({
-						type: "parse_and_cache",
-						json: text,
-						priceList: vm.customer_price_list,
-					});
+                                        this.itemWorker.postMessage({
+                                                type: "parse_and_cache",
+                                                json: text,
+                                                priceList: vm.customer_price_list || "",
+                                        });
 				} catch (err) {
 					console.error("Failed to fetch items", err);
 					vm.loading = false;
@@ -1071,11 +1071,11 @@ export default {
 								resolve(0);
 							}
 						};
-						this.itemWorker.postMessage({
-							type: "parse_and_cache",
-							json: text,
-							priceList: this.customer_price_list,
-						});
+                                                this.itemWorker.postMessage({
+                                                        type: "parse_and_cache",
+                                                        json: text,
+                                                        priceList: this.customer_price_list || "",
+                                                });
 					});
 					if (count === limit) {
 						await this.backgroundLoadItems(offset + limit, syncSince);
