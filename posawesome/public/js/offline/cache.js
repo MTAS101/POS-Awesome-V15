@@ -77,6 +77,9 @@ export const memoryInitPromise = (async () => {
 		if (storedVersion !== CACHE_VERSION) {
 			await forceClearAllCache();
 			memory.cache_version = CACHE_VERSION;
+			if (typeof localStorage !== "undefined") {
+				localStorage.setItem("posa_cache_version", CACHE_VERSION);
+			}
 			persist("cache_version", CACHE_VERSION);
 		} else {
 			memory.cache_version = storedVersion || CACHE_VERSION;
@@ -136,20 +139,20 @@ export async function getStoredItems() {
 }
 
 export async function saveItems(items) {
-        try {
-                await checkDbHealth();
-                if (!db.isOpen()) await db.open();
-                let cleanItems;
-                try {
-                        cleanItems = JSON.parse(JSON.stringify(items));
-                } catch (err) {
-                        console.error("Failed to serialize items", err);
-                        cleanItems = [];
-                }
-                await db.table("items").bulkPut(cleanItems);
-        } catch (e) {
-                console.error("Failed to save items", e);
-        }
+	try {
+		await checkDbHealth();
+		if (!db.isOpen()) await db.open();
+		let cleanItems;
+		try {
+			cleanItems = JSON.parse(JSON.stringify(items));
+		} catch (err) {
+			console.error("Failed to serialize items", err);
+			cleanItems = [];
+		}
+		await db.table("items").bulkPut(cleanItems);
+	} catch (e) {
+		console.error("Failed to save items", e);
+	}
 }
 
 export async function clearStoredItems() {
@@ -459,6 +462,10 @@ export async function forceClearAllCache() {
 	memory.cache_version = CACHE_VERSION;
 	memory.tax_inclusive = false;
 	memory.manual_offline = false;
+
+	if (typeof localStorage !== "undefined") {
+		localStorage.setItem("posa_cache_version", CACHE_VERSION);
+	}
 
 	await clearPriceListCache();
 
