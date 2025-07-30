@@ -458,6 +458,7 @@ export async function forceClearAllCache() {
 	// Delete the IndexedDB database in the background
 	try {
 		await Dexie.delete("posawesome_offline");
+		await db.open();
 		initPersistWorker();
 	} catch (e) {
 		console.error("Failed to clear IndexedDB cache", e);
