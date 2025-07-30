@@ -7,9 +7,10 @@ let consecutiveFailures = 0;
 let consecutiveSuccesses = 0;
 const FAILURE_THRESHOLD = 2; // Number of failed checks before marking as disconnected
 const SUCCESS_THRESHOLD = 1; // Number of successful checks before marking as connected
-const DESK_TIMEOUT = 2500; // Reduced to ~2.5 seconds
-const STATIC_TIMEOUT = 2500; // Reduced to ~2.5 seconds
-const ORIGIN_TIMEOUT = 2500; // Reduced to ~2.5 seconds
+// Increase timeouts to avoid premature aborts on slower networks
+const DESK_TIMEOUT = 8000; // 8 seconds
+const STATIC_TIMEOUT = 8000; // 8 seconds
+const ORIGIN_TIMEOUT = 8000; // 8 seconds
 
 // Exponential backoff variables
 let checkInterval = 15000; // Start with 15s
