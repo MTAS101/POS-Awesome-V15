@@ -3,19 +3,19 @@ import { withWriteLock } from "./db-utils.js";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
-db.version(2).stores({
+db.version(4).stores({
 	keyval: "&key",
 	queue: "&key",
 	cache: "&key",
+	items: "&item_code,item_name,item_group",
+	item_prices: "&[price_list+item_code],price_list,item_code",
 });
 
 export const KEY_TABLE_MAP = {
 	offline_invoices: "queue",
 	offline_customers: "queue",
 	offline_payments: "queue",
-	price_list_cache: "cache",
 	item_details_cache: "cache",
-	items_storage: "cache",
 	customer_storage: "cache",
 };
 
@@ -104,7 +104,10 @@ export function persist(key, value) {
 	if (persistWorker) {
 		let cleanValue = value;
 		try {
-			cleanValue = JSON.parse(JSON.stringify(value));
+			cleanValue =
+				typeof structuredClone === "function"
+					? structuredClone(value)
+					: JSON.parse(JSON.stringify(value));
 		} catch (e) {
 			console.error("Failed to serialize", key, e);
 		}

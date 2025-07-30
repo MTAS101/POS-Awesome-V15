@@ -178,6 +178,7 @@
 							ref="itemsContainer"
 							v-if="items_view == 'card'"
 							:style="{ maxHeight: 'calc(100% - 80px)' }"
+							@scroll.passive="onCardScroll"
 						>
 							<v-card
 								v-for="item in filtered_items"
@@ -247,6 +248,7 @@
 								:style="{ maxHeight: 'calc(100% - 80px)' }"
 								item-key="item_code"
 								@click:row="click_item_row"
+								@scroll.passive="onListScroll"
 							>
 								<template v-slot:item.rate="{ item }">
 									<div>
@@ -367,8 +369,9 @@ import {
 	getLocalStock,
 	isOffline,
 	initializeStockCache,
-	getItemsStorage,
-	setItemsStorage,
+	searchStoredItems,
+	saveItems,
+	clearStoredItems,
 	getLocalStockCache,
 	setLocalStockCache,
 	initPromise,
@@ -443,6 +446,7 @@ export default {
 		itemsPageLimit: 500,
 		// Track if the current search was triggered by a scanner
 		search_from_scanner: false,
+		currentPage: 0,
 	}),
 
 	watch: {
@@ -473,7 +477,7 @@ export default {
 				this.get_items();
 			}
 		}, 300),
-		customer_price_list: _.debounce(function () {
+		customer_price_list: _.debounce(async function () {
 			if (this.pos_profile.posa_force_reload_items) {
 				if (this.pos_profile.posa_smart_reload_mode) {
 					// When limit search is enabled there may be no items yet.
@@ -494,7 +498,7 @@ export default {
 			}
 			// Apply cached rates if available for immediate update
 			if (this.items_loaded && this.items && this.items.length > 0) {
-				const cached = getCachedPriceListItems(this.customer_price_list);
+				const cached = await getCachedPriceListItems(this.customer_price_list);
 				if (cached && cached.length) {
 					const map = {};
 					cached.forEach((ci) => {
@@ -522,6 +526,8 @@ export default {
 		item_group(newValue, oldValue) {
 			if (this.pos_profile && this.pos_profile.pose_use_limit_search && newValue !== oldValue) {
 				this.get_items();
+			} else if (this.pos_profile && this.pos_profile.posa_local_storage && newValue !== oldValue) {
+				this.loadVisibleItems(true);
 			}
 		},
 		filtered_items(new_value, old_value) {
@@ -565,6 +571,41 @@ export default {
 	},
 
 	methods: {
+		async loadVisibleItems(reset = false) {
+			await initPromise;
+			await checkDbHealth();
+			if (reset) {
+				this.currentPage = 0;
+				this.items = [];
+			}
+			const search = this.get_search(this.first_search);
+			const itemGroup = this.item_group !== "ALL" ? this.item_group.toLowerCase() : "";
+			const pageItems = await searchStoredItems({
+				search,
+				itemGroup,
+				limit: this.itemsPerPage,
+				offset: this.currentPage * this.itemsPerPage,
+			});
+			if (reset) this.items = pageItems;
+			else this.items = [...this.items, ...pageItems];
+			this.eventBus.emit("set_all_items", this.items);
+			if (pageItems.length) this.update_items_details(pageItems);
+		},
+		onCardScroll() {
+			const el = this.$refs.itemsContainer;
+			if (!el) return;
+			if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+				this.currentPage += 1;
+				this.loadVisibleItems();
+			}
+		},
+		onListScroll(event) {
+			const el = event.target;
+			if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+				this.currentPage += 1;
+				this.loadVisibleItems();
+			}
+		},
 		refreshPricesForVisibleItems() {
 			const vm = this;
 			if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -671,10 +712,10 @@ export default {
 		show_coupons() {
 			this.eventBus.emit("show_coupons", "true");
 		},
-		forceReloadItems() {
+		async forceReloadItems() {
 			// Clear cached price list items so the reload always
 			// fetches the latest data from the server
-			clearPriceListCache();
+			await clearPriceListCache();
 			// Always recreate the worker when forcing a reload so
 			// subsequent reloads fetch fresh data from the server.
 			if (!this.itemWorker && typeof Worker !== "undefined") {
@@ -699,7 +740,7 @@ export default {
 			}
 
 			if (force_server && this.pos_profile.posa_local_storage) {
-				localStorage.setItem("items_storage", "");
+				await clearStoredItems();
 			}
 
 			const vm = this;
@@ -730,7 +771,7 @@ export default {
 
 			// Attempt to load cached items for the current price list
 			if (!force_server && this.pos_profile && !this.pos_profile.pose_use_limit_search) {
-				const cached = getCachedPriceListItems(vm.customer_price_list);
+				const cached = await getCachedPriceListItems(vm.customer_price_list);
 				if (cached && cached.length) {
 					vm.items = cached;
 					vm.items.forEach((it) => {
@@ -761,33 +802,39 @@ export default {
 			if (
 				vm.pos_profile &&
 				vm.pos_profile.posa_local_storage &&
-				getItemsStorage().length &&
 				!vm.pos_profile.pose_use_limit_search &&
 				!force_server
 			) {
-				vm.items = getItemsStorage();
-				// Fallback to cached UOMs when loading from storage
-				vm.items.forEach((it) => {
-					if (!it.item_uoms || it.item_uoms.length === 0) {
-						const cached = getItemUOMs(it.item_code);
-						if (cached.length > 0) {
-							it.item_uoms = cached;
-						} else if (it.stock_uom) {
-							it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
-						}
-					}
+				const stored = await searchStoredItems({
+					search: sr,
+					itemGroup: gr,
+					limit: this.itemsPageLimit,
 				});
-				this.eventBus.emit("set_all_items", vm.items);
-				vm.loading = false;
-				vm.items_loaded = true;
+				if (stored.length) {
+					vm.items = stored;
+					// Fallback to cached UOMs when loading from storage
+					vm.items.forEach((it) => {
+						if (!it.item_uoms || it.item_uoms.length === 0) {
+							const cached = getItemUOMs(it.item_code);
+							if (cached.length > 0) {
+								it.item_uoms = cached;
+							} else if (it.stock_uom) {
+								it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
+							}
+						}
+					});
+					this.eventBus.emit("set_all_items", vm.items);
+					vm.loading = false;
+					vm.items_loaded = true;
 
-				if (vm.items && vm.items.length > 0) {
-					if (vm.items.length <= 500) {
-						await vm.prePopulateStockCache(vm.items);
+					if (vm.items && vm.items.length > 0) {
+						if (vm.items.length <= 500) {
+							await vm.prePopulateStockCache(vm.items);
+						}
+						vm.update_items_details(vm.items);
 					}
-					vm.update_items_details(vm.items);
+					return;
 				}
-				return;
 			}
 			// Removed noisy debug log
 
@@ -826,7 +873,6 @@ export default {
 							} else {
 								vm.items = newItems;
 							}
-							savePriceListItems(vm.customer_price_list, vm.items);
 							// Ensure UOMs are available for each item
 							vm.items.forEach((it) => {
 								if (it.item_uoms && it.item_uoms.length > 0) {
@@ -845,6 +891,10 @@ export default {
 								this.backgroundLoadItems(this.itemsPageLimit, syncSince);
 							} else {
 								setItemsLastSync(new Date().toISOString());
+								if (vm.itemWorker) {
+									vm.itemWorker.terminate();
+									vm.itemWorker = null;
+								}
 							}
 							vm.loading = false;
 							vm.items_loaded = true;
@@ -874,33 +924,8 @@ export default {
 							if (vm.items && vm.items.length > 0) {
 								vm.update_items_details(vm.items);
 							}
-
-							if (
-								vm.pos_profile &&
-								vm.pos_profile.posa_local_storage &&
-								!vm.pos_profile.pose_use_limit_search
-							) {
-								try {
-									setItemsStorage(vm.items);
-									vm.items.forEach((it) => {
-										if (it.item_uoms && it.item_uoms.length > 0) {
-											saveItemUOMs(it.item_code, it.item_uoms);
-										}
-									});
-								} catch (e) {
-									console.error(e);
-								}
-							}
-
 							if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 								vm.enter_event();
-							}
-
-							// Terminate the worker after items are parsed to
-							// release memory held by the worker thread.
-							if (vm.itemWorker) {
-								vm.itemWorker.terminate();
-								vm.itemWorker = null;
 							}
 						} else if (ev.data.type === "error") {
 							console.error("Item worker parse error:", ev.data.error);
@@ -961,7 +986,7 @@ export default {
 							}
 							vm.loading = false;
 							vm.items_loaded = true;
-							savePriceListItems(vm.customer_price_list, vm.items);
+							await savePriceListItems(vm.customer_price_list, vm.items);
 							console.info("Items Loaded");
 
 							const groups = Array.from(
@@ -995,7 +1020,7 @@ export default {
 								!vm.pos_profile.pose_use_limit_search
 							) {
 								try {
-									setItemsStorage(vm.items);
+									await saveItems(vm.items);
 									vm.items.forEach((it) => {
 										if (it.item_uoms && it.item_uoms.length > 0) {
 											saveItemUOMs(it.item_code, it.item_uoms);
@@ -1037,24 +1062,29 @@ export default {
 						}),
 					});
 					const text = await res.text();
-					const parsed = JSON.parse(text).message || [];
-					parsed.forEach((it) => {
-						const existing = this.items.find((i) => i.item_code === it.item_code);
-						if (existing) Object.assign(existing, it);
-						else this.items.push(it);
+					const count = await new Promise((resolve) => {
+						this.itemWorker.onmessage = (ev) => {
+							if (ev.data.type === "parsed") {
+								resolve(ev.data.items.length);
+							} else if (ev.data.type === "error") {
+								console.error("Item worker parse error:", ev.data.error);
+								resolve(0);
+							}
+						};
+						this.itemWorker.postMessage({
+							type: "parse_and_cache",
+							json: text,
+							priceList: this.customer_price_list,
+						});
 					});
-					this.eventBus.emit("set_all_items", this.items);
-					if (
-						this.pos_profile &&
-						this.pos_profile.posa_local_storage &&
-						!this.pos_profile.pose_use_limit_search
-					) {
-						setItemsStorage(this.items);
-					}
-					if (parsed.length === limit) {
-						this.backgroundLoadItems(offset + limit, syncSince);
+					if (count === limit) {
+						await this.backgroundLoadItems(offset + limit, syncSince);
 					} else {
 						setItemsLastSync(new Date().toISOString());
+						if (this.itemWorker) {
+							this.itemWorker.terminate();
+							this.itemWorker = null;
+						}
 					}
 				} catch (err) {
 					console.error("Failed to background load items", err);
@@ -1072,7 +1102,7 @@ export default {
 						limit,
 						offset,
 					},
-					callback: (r) => {
+					callback: async (r) => {
 						const rows = r.message || [];
 						rows.forEach((it) => {
 							const existing = this.items.find((i) => i.item_code === it.item_code);
@@ -1085,7 +1115,7 @@ export default {
 							this.pos_profile.posa_local_storage &&
 							!this.pos_profile.pose_use_limit_search
 						) {
-							setItemsStorage(this.items);
+							await saveItems(this.items);
 						}
 						if (rows.length === limit) {
 							this.backgroundLoadItems(offset + limit, syncSince);
@@ -1314,6 +1344,8 @@ export default {
 				if (vm.search && vm.search.length >= 3) {
 					vm.get_items();
 				}
+			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
+				vm.loadVisibleItems(true);
 			} else {
 				// Save the current filtered items before search to maintain quantity data
 				const current_items = [...vm.filtered_items];
@@ -1883,7 +1915,7 @@ export default {
 				html += `
           <div class="item-option p-3 mb-2 border rounded cursor-pointer" data-item-index="${index}" style="border: 1px solid #ddd; cursor: pointer;">
             <div class="d-flex align-items-center">
-              <img src="${item.image || "/assets/posawesome/js/posapp/components/pos/placeholder-image.png"}" 
+              <img src="${item.image || "/assets/posawesome/js/posapp/components/pos/placeholder-image.png"}"
                    style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;" />
               <div>
                 <div class="font-weight-bold">${item.item_name}</div>
@@ -2195,15 +2227,7 @@ export default {
 
 	created() {
 		memoryInitPromise.then(() => {
-			if (getItemsStorage().length) {
-				try {
-					this.items = getItemsStorage();
-					this.eventBus.emit("set_all_items", this.items);
-					this.items_loaded = true;
-				} catch (e) {
-					console.error("Failed to load cached items", e);
-				}
-			}
+			this.loadVisibleItems(true);
 		});
 
 		this.loadItemSettings();
