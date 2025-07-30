@@ -49,17 +49,17 @@ export function getCachedOffers() {
 
 // Price list rate storage using dedicated table
 export async function savePriceListItems(priceList, items) {
-        try {
-                if (!priceList) return;
-                await checkDbHealth();
-                if (!db.isOpen()) await db.open();
-                const rates = items.map((it) => ({
-                        price_list: priceList,
-                        item_code: it.item_code,
-                        rate: it.rate,
-                        price_list_rate: it.price_list_rate || it.rate,
-                        timestamp: Date.now(),
-                }));
+	try {
+		if (!priceList) return;
+		await checkDbHealth();
+		if (!db.isOpen()) await db.open();
+		const rates = items.map((it) => ({
+			price_list: priceList,
+			item_code: it.item_code,
+			rate: it.rate,
+			price_list_rate: it.price_list_rate || it.rate,
+			timestamp: Date.now(),
+		}));
 		await db.table("item_prices").bulkPut(rates);
 	} catch (e) {
 		console.error("Failed to save price list items", e);
@@ -79,7 +79,7 @@ export async function getCachedPriceListItems(priceList, ttl = 24 * 60 * 60 * 10
 		const itemCodes = valid.map((p) => p.item_code);
 		const items = await db.table("items").where("item_code").anyOf(itemCodes).toArray();
 		const map = new Map(items.map((it) => [it.item_code, it]));
-		return valid
+		const result = valid
 			.map((p) => {
 				const it = map.get(p.item_code);
 				return it
@@ -91,6 +91,13 @@ export async function getCachedPriceListItems(priceList, ttl = 24 * 60 * 60 * 10
 					: null;
 			})
 			.filter(Boolean);
+		if (result.length) {
+			console.log(
+				"[POSAwesome] Loaded items from price list cache:",
+				result.map((it) => it.item_code),
+			);
+		}
+		return result;
 	} catch (e) {
 		console.error("Failed to get cached price list items", e);
 		return null;
@@ -156,6 +163,12 @@ export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15
 				missing.push(code);
 			}
 		});
+		if (cached.length) {
+			console.log(
+				"[POSAwesome] Loaded item details from cache:",
+				cached.map((it) => it.item_code),
+			);
+		}
 		return { cached, missing };
 	} catch (e) {
 		console.error("Failed to get cached item details", e);
@@ -166,20 +179,20 @@ export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15
 // Persistent item storage helpers
 
 export async function saveItemsBulk(items) {
-        try {
-                await checkDbHealth();
-                if (!db.isOpen()) await db.open();
-                let cleanItems;
-                try {
-                        cleanItems = JSON.parse(JSON.stringify(items));
-                } catch (err) {
-                        console.error("Failed to serialize items", err);
-                        cleanItems = [];
-                }
-                await db.table("items").bulkPut(cleanItems);
-        } catch (e) {
-                console.error("Failed to save items", e);
-        }
+	try {
+		await checkDbHealth();
+		if (!db.isOpen()) await db.open();
+		let cleanItems;
+		try {
+			cleanItems = JSON.parse(JSON.stringify(items));
+		} catch (err) {
+			console.error("Failed to serialize items", err);
+			cleanItems = [];
+		}
+		await db.table("items").bulkPut(cleanItems);
+	} catch (e) {
+		console.error("Failed to save items", e);
+	}
 }
 
 export async function getAllStoredItems() {
@@ -209,7 +222,14 @@ export async function searchStoredItems({ search = "", itemGroup = "", limit = 1
 					(it.item_code && it.item_code.toLowerCase().includes(term)),
 			);
 		}
-		return await collection.offset(offset).limit(limit).toArray();
+		const res = await collection.offset(offset).limit(limit).toArray();
+		if (res.length) {
+			console.log(
+				"[POSAwesome] Loaded items from local storage:",
+				res.map((it) => it.item_code),
+			);
+		}
+		return res;
 	} catch (e) {
 		console.error("Failed to query stored items", e);
 		return [];
