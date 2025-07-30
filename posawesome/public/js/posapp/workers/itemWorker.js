@@ -67,10 +67,13 @@ async function bulkPutItems(items) {
 }
 
 async function bulkPutPrices(priceList, items) {
-	try {
-		if (!db.isOpen()) {
-			await db.open();
-		}
+        try {
+                if (!priceList) {
+                        return;
+                }
+                if (!db.isOpen()) {
+                        await db.open();
+                }
 		const records = items.map((it) => ({
 			price_list: priceList,
 			item_code: it.item_code,
@@ -106,7 +109,7 @@ self.onmessage = async (event) => {
 				self.postMessage({ type: "error", error: e.message });
 				return;
 			}
-			const trimmed = items.map((it) => ({
+                        let trimmed = items.map((it) => ({
 				item_code: it.item_code,
 				item_name: it.item_name,
 				description: it.description,
