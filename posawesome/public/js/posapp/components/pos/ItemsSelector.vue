@@ -759,9 +759,8 @@ export default {
 				return;
 			}
 
-			if (force_server && this.pos_profile.posa_local_storage && !isOffline()) {
-				await clearStoredItems();
-			}
+			const shouldClear = force_server && this.pos_profile.posa_local_storage && !isOffline();
+			let cleared = false;
 
 			const vm = this;
 			this.loading = true;
@@ -908,7 +907,7 @@ export default {
 							});
 							vm.eventBus.emit("set_all_items", vm.items);
 							if (newItems.length === this.itemsPageLimit) {
-								this.backgroundLoadItems(this.itemsPageLimit, syncSince);
+								this.backgroundLoadItems(this.itemsPageLimit, syncSince, shouldClear);
 							} else {
 								setItemsLastSync(new Date().toISOString());
 								if (vm.itemWorker) {
@@ -1000,7 +999,7 @@ export default {
 							});
 							vm.eventBus.emit("set_all_items", vm.items);
 							if (newItems.length === this.itemsPageLimit) {
-								this.backgroundLoadItems(this.itemsPageLimit, syncSince);
+								this.backgroundLoadItems(this.itemsPageLimit, syncSince, shouldClear);
 							} else {
 								setItemsLastSync(new Date().toISOString());
 							}
@@ -1040,6 +1039,10 @@ export default {
 								!vm.pos_profile.pose_use_limit_search
 							) {
 								try {
+									if (shouldClear && !cleared) {
+										await clearStoredItems();
+										cleared = true;
+									}
 									await saveItems(vm.items);
 									vm.items.forEach((it) => {
 										if (it.item_uoms && it.item_uoms.length > 0) {
@@ -1058,7 +1061,7 @@ export default {
 				});
 			}
 		},
-		async backgroundLoadItems(offset, syncSince) {
+		async backgroundLoadItems(offset, syncSince, clearBefore = false) {
 			const limit = this.itemsPageLimit;
 			const lastSync = syncSince;
 			if (this.itemWorker) {
@@ -1098,7 +1101,7 @@ export default {
 						});
 					});
 					if (count === limit) {
-						await this.backgroundLoadItems(offset + limit, syncSince);
+						await this.backgroundLoadItems(offset + limit, syncSince, clearBefore);
 					} else {
 						setItemsLastSync(new Date().toISOString());
 						if (this.itemWorker) {
@@ -1138,10 +1141,14 @@ export default {
 							this.pos_profile.posa_local_storage &&
 							!this.pos_profile.pose_use_limit_search
 						) {
+							if (clearBefore) {
+								await clearStoredItems();
+								clearBefore = false;
+							}
 							await saveItems(this.items);
 						}
 						if (rows.length === limit) {
-							this.backgroundLoadItems(offset + limit, syncSince);
+							this.backgroundLoadItems(offset + limit, syncSince, clearBefore);
 						} else {
 							setItemsLastSync(new Date().toISOString());
 							if (this.items && this.items.length > 0) {
