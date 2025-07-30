@@ -74,6 +74,7 @@ export function setupNetworkListeners() {
 	window.addEventListener("online", () => {
 		if (isManualOffline()) return;
 		this.networkOnline = true;
+		this.internetReachable = true;
 		console.log("Network: Online");
 		// Verify actual connectivity
 		this.checkNetworkConnectivity();
@@ -82,6 +83,7 @@ export function setupNetworkListeners() {
 	window.addEventListener("offline", () => {
 		if (isManualOffline()) return;
 		this.networkOnline = false;
+		this.internetReachable = false;
 		this.serverOnline = false;
 		window.serverOnline = false;
 		console.log("Network: Offline");
@@ -92,6 +94,7 @@ export function setupNetworkListeners() {
 	const persisted = getPersistedStatus();
 	this.networkOnline = persisted.networkOnline;
 	this.serverOnline = persisted.serverOnline;
+	this.internetReachable = false;
 	this.serverConnecting = false;
 	window.serverOnline = this.serverOnline;
 
@@ -105,6 +108,7 @@ export function setupNetworkListeners() {
 		});
 	} else {
 		this.networkOnline = false;
+		this.internetReachable = false;
 		this.serverOnline = false;
 		window.serverOnline = false;
 		persistStatus(false, false);
@@ -125,7 +129,7 @@ export async function checkNetworkConnectivity() {
 			signal: AbortSignal.timeout(DESK_TIMEOUT),
 		}).then((r) => r.status < 500);
 
-               const staticRequest = fetch("/assets/frappe/images/frappe-logo.png", {
+		const staticRequest = fetch("/assets/frappe/images/frappe-logo.png", {
 			method: "HEAD",
 			cache: "no-cache",
 			signal: AbortSignal.timeout(STATIC_TIMEOUT),
@@ -166,7 +170,8 @@ export async function checkNetworkConnectivity() {
 			consecutiveFailures = 0;
 			if (consecutiveSuccesses >= SUCCESS_THRESHOLD) {
 				if (!this.networkOnline || !this.serverOnline) {
-					this.networkOnline = isInternetReachable;
+					this.networkOnline = isConnected;
+					this.internetReachable = isInternetReachable;
 					this.serverOnline = true;
 					window.serverOnline = true;
 					persistStatus(this.networkOnline, true);
@@ -179,7 +184,8 @@ export async function checkNetworkConnectivity() {
 			consecutiveSuccesses = 0;
 			if (consecutiveFailures >= FAILURE_THRESHOLD) {
 				if (this.networkOnline || this.serverOnline) {
-					this.networkOnline = isInternetReachable;
+					this.networkOnline = isConnected;
+					this.internetReachable = isInternetReachable;
 					this.serverOnline = false;
 					window.serverOnline = false;
 					persistStatus(this.networkOnline, false);
@@ -194,6 +200,7 @@ export async function checkNetworkConnectivity() {
 		consecutiveSuccesses = 0;
 		if (consecutiveFailures >= FAILURE_THRESHOLD) {
 			this.networkOnline = navigator.onLine;
+			this.internetReachable = false;
 			this.serverOnline = false;
 			window.serverOnline = false;
 			persistStatus(this.networkOnline, false);
