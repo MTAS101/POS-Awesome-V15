@@ -49,17 +49,17 @@ export function getCachedOffers() {
 
 // Price list rate storage using dedicated table
 export async function savePriceListItems(priceList, items) {
-	try {
-		if (!priceList) return;
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
-		const rates = items.map((it) => ({
-			price_list,
-			item_code: it.item_code,
-			rate: it.rate,
-			price_list_rate: it.price_list_rate || it.rate,
-			timestamp: Date.now(),
-		}));
+        try {
+                if (!priceList) return;
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                const rates = items.map((it) => ({
+                        price_list: priceList,
+                        item_code: it.item_code,
+                        rate: it.rate,
+                        price_list_rate: it.price_list_rate || it.rate,
+                        timestamp: Date.now(),
+                }));
 		await db.table("item_prices").bulkPut(rates);
 	} catch (e) {
 		console.error("Failed to save price list items", e);
@@ -166,13 +166,20 @@ export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15
 // Persistent item storage helpers
 
 export async function saveItemsBulk(items) {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
-		await db.table("items").bulkPut(items);
-	} catch (e) {
-		console.error("Failed to save items", e);
-	}
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                let cleanItems;
+                try {
+                        cleanItems = JSON.parse(JSON.stringify(items));
+                } catch (err) {
+                        console.error("Failed to serialize items", err);
+                        cleanItems = [];
+                }
+                await db.table("items").bulkPut(cleanItems);
+        } catch (e) {
+                console.error("Failed to save items", e);
+        }
 }
 
 export async function getAllStoredItems() {

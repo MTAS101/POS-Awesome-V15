@@ -136,13 +136,20 @@ export async function getStoredItems() {
 }
 
 export async function saveItems(items) {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
-		await db.table("items").bulkPut(items);
-	} catch (e) {
-		console.error("Failed to save items", e);
-	}
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                let cleanItems;
+                try {
+                        cleanItems = JSON.parse(JSON.stringify(items));
+                } catch (err) {
+                        console.error("Failed to serialize items", err);
+                        cleanItems = [];
+                }
+                await db.table("items").bulkPut(cleanItems);
+        } catch (e) {
+                console.error("Failed to save items", e);
+        }
 }
 
 export async function clearStoredItems() {
