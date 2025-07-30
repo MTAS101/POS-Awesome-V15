@@ -91,7 +91,7 @@ self.onmessage = async (event) => {
 	const data = event.data || {};
 	if (data.type === "parse_and_cache") {
 		try {
-			const parsed = JSON.parse(data.json);
+			let parsed = JSON.parse(data.json);
 			let itemsRaw = parsed.message || parsed;
 			let items;
 			try {
