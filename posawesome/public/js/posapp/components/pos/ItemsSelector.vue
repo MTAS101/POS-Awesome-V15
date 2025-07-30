@@ -457,7 +457,11 @@ export default {
 					// Fallback to full reload if nothing is loaded
 					if (!this.items_loaded || !this.filtered_items.length) {
 						this.items_loaded = false;
-						this.get_items(true);
+						if (!isOffline()) {
+							this.get_items(true);
+						} else {
+							this.get_items();
+						}
 					} else {
 						// Only refresh prices for visible items when smart reload is enabled
 						this.$nextTick(() => this.refreshPricesForVisibleItems());
@@ -465,7 +469,11 @@ export default {
 				} else {
 					// Fall back to full reload
 					this.items_loaded = false;
-					this.get_items(true);
+					if (!isOffline()) {
+						this.get_items(true);
+					} else {
+						this.get_items();
+					}
 				}
 				return;
 			}
@@ -484,7 +492,11 @@ export default {
 					// Fallback to full reload if nothing is loaded
 					if (!this.items_loaded || !this.items.length) {
 						this.items_loaded = false;
-						this.get_items(true);
+						if (!isOffline()) {
+							this.get_items(true);
+						} else {
+							this.get_items();
+						}
 					} else {
 						// Only refresh prices for visible items when smart reload is enabled
 						this.$nextTick(() => this.refreshPricesForVisibleItems());
@@ -492,7 +504,11 @@ export default {
 				} else {
 					// Fall back to full reload
 					this.items_loaded = false;
-					this.get_items(true);
+					if (!isOffline()) {
+						this.get_items(true);
+					} else {
+						this.get_items();
+					}
 				}
 				return;
 			}
@@ -518,7 +534,11 @@ export default {
 			}
 			// No cache found - force a reload so prices are updated
 			this.items_loaded = false;
-			this.get_items(true);
+			if (!isOffline()) {
+				this.get_items(true);
+			} else {
+				this.get_items();
+			}
 		}, 300),
 		new_line() {
 			this.eventBus.emit("set_new_line", this.new_line);
@@ -739,7 +759,7 @@ export default {
 				return;
 			}
 
-			if (force_server && this.pos_profile.posa_local_storage) {
+			if (force_server && this.pos_profile.posa_local_storage && !isOffline()) {
 				await clearStoredItems();
 			}
 
@@ -932,11 +952,11 @@ export default {
 							vm.loading = false;
 						}
 					};
-                                        this.itemWorker.postMessage({
-                                                type: "parse_and_cache",
-                                                json: text,
-                                                priceList: vm.customer_price_list || "",
-                                        });
+					this.itemWorker.postMessage({
+						type: "parse_and_cache",
+						json: text,
+						priceList: vm.customer_price_list || "",
+					});
 				} catch (err) {
 					console.error("Failed to fetch items", err);
 					vm.loading = false;
@@ -1071,11 +1091,11 @@ export default {
 								resolve(0);
 							}
 						};
-                                                this.itemWorker.postMessage({
-                                                        type: "parse_and_cache",
-                                                        json: text,
-                                                        priceList: this.customer_price_list || "",
-                                                });
+						this.itemWorker.postMessage({
+							type: "parse_and_cache",
+							json: text,
+							priceList: this.customer_price_list || "",
+						});
 					});
 					if (count === limit) {
 						await this.backgroundLoadItems(offset + limit, syncSince);
@@ -2258,7 +2278,11 @@ export default {
 			await checkDbHealth();
 			this.pos_profile = data.pos_profile;
 			if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
-				await this.get_items(true);
+				if (!isOffline()) {
+					await this.get_items(true);
+				} else {
+					await this.get_items();
+				}
 			} else {
 				await this.get_items();
 			}
@@ -2286,7 +2310,11 @@ export default {
 		// Manually trigger a full item reload when requested
 		this.eventBus.on("force_reload_items", async () => {
 			this.items_loaded = false;
-			await this.get_items(true);
+			if (!isOffline()) {
+				await this.get_items(true);
+			} else {
+				await this.get_items();
+			}
 		});
 
 		// Refresh item quantities when connection to server is restored
