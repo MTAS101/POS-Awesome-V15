@@ -23,6 +23,14 @@ export function tableForKey(key) {
 	return KEY_TABLE_MAP[key] || "keyval";
 }
 
+function isCorruptionError(err) {
+	if (!err) return false;
+	const msg = err.message ? err.message.toLowerCase() : "";
+	return (
+		["VersionError", "InvalidStateError", "NotFoundError"].includes(err.name) || msg.includes("corrupt")
+	);
+}
+
 export async function checkDbHealth() {
 	try {
 		await db.table(tableForKey("health_check")).get("health_check");
@@ -33,12 +41,25 @@ export async function checkDbHealth() {
 			if (db.isOpen()) {
 				await db.close();
 			}
-			await Dexie.delete("posawesome_offline");
+			console.log("Attempting to reopen IndexedDB without deleting");
 			await db.open();
+			console.log("IndexedDB reopened successfully");
+			return true;
 		} catch (re) {
-			console.error("Failed to recover IndexedDB", re);
+			console.error("Failed to reopen IndexedDB", re);
+			if (isCorruptionError(re)) {
+				console.log("IndexedDB appears corrupted. Recreating database...");
+				try {
+					await Dexie.delete("posawesome_offline");
+					await db.open();
+					console.log("IndexedDB recreated and opened successfully");
+					return true;
+				} catch (recreateErr) {
+					console.error("Failed to recreate IndexedDB", recreateErr);
+				}
+			}
+			return false;
 		}
-		return false;
 	}
 }
 
