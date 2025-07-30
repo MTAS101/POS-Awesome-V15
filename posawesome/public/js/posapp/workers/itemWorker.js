@@ -133,8 +133,8 @@ self.onmessage = async (event) => {
 			itemsRaw = null;
 			data.json = null;
 			parsed = null;
-			const out = trimmed;
-			self.postMessage({ type: "parsed", items: out });
+                       let out = trimmed;
+                       self.postMessage({ type: "parsed", items: out });
 			trimmed.length = 0;
 			trimmed = null;
 		} catch (err) {
