@@ -200,8 +200,14 @@ export function getSalesPersonsStorage() {
 
 export function setSalesPersonsStorage(data) {
 	try {
-		memory.sales_persons_storage =
-			typeof structuredClone === "function" ? structuredClone(data) : JSON.parse(JSON.stringify(data));
+		let clean;
+		try {
+			clean = JSON.parse(JSON.stringify(data));
+		} catch (err) {
+			console.error("Failed to serialize sales persons", err);
+			clean = [];
+		}
+		memory.sales_persons_storage = clean;
 		persist("sales_persons_storage", memory.sales_persons_storage);
 	} catch (e) {
 		console.error("Failed to set sales persons storage", e);
@@ -214,8 +220,14 @@ export function getOpeningStorage() {
 
 export function setOpeningStorage(data) {
 	try {
-		memory.pos_opening_storage =
-			typeof structuredClone === "function" ? structuredClone(data) : JSON.parse(JSON.stringify(data));
+		let clean;
+		try {
+			clean = JSON.parse(JSON.stringify(data));
+		} catch (err) {
+			console.error("Failed to serialize opening storage", err);
+			clean = {};
+		}
+		memory.pos_opening_storage = clean;
 		persist("pos_opening_storage", memory.pos_opening_storage);
 	} catch (e) {
 		console.error("Failed to set opening storage", e);
@@ -237,8 +249,14 @@ export function getOpeningDialogStorage() {
 
 export function setOpeningDialogStorage(data) {
 	try {
-		memory.opening_dialog_storage =
-			typeof structuredClone === "function" ? structuredClone(data) : JSON.parse(JSON.stringify(data));
+		let clean;
+		try {
+			clean = JSON.parse(JSON.stringify(data));
+		} catch (err) {
+			console.error("Failed to serialize opening dialog", err);
+			clean = {};
+		}
+		memory.opening_dialog_storage = clean;
 		persist("opening_dialog_storage", memory.opening_dialog_storage);
 	} catch (e) {
 		console.error("Failed to set opening dialog storage", e);
@@ -258,8 +276,13 @@ export function getTaxTemplate(name) {
 export function setTaxTemplate(name, doc) {
 	try {
 		const cache = memory.tax_template_cache || {};
-		const cleanDoc =
-			typeof structuredClone === "function" ? structuredClone(doc) : JSON.parse(JSON.stringify(doc));
+		let cleanDoc;
+		try {
+			cleanDoc = JSON.parse(JSON.stringify(doc));
+		} catch (err) {
+			console.error("Failed to serialize tax template", err);
+			cleanDoc = doc ? { ...doc } : {};
+		}
 		cache[name] = cleanDoc;
 		memory.tax_template_cache = cache;
 		persist("tax_template_cache", memory.tax_template_cache);
