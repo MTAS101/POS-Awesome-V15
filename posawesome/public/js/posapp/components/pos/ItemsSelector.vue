@@ -978,7 +978,7 @@ export default {
 						if (vm.items_request_token !== request_token) return;
 						if (r.message) {
 							const newItems = r.message;
-							if (lastSync && vm.items && vm.items.length) {
+							if (syncSince && vm.items && vm.items.length) {
 								const map = new Map(vm.items.map((it) => [it.item_code, it]));
 								newItems.forEach((it) => map.set(it.item_code, it));
 								vm.items = Array.from(map.values());
