@@ -809,6 +809,9 @@ export default {
 					vm.items_loaded = true;
 
 					if (vm.items && vm.items.length > 0) {
+						if (vm.items.length <= 500) {
+							vm.prePopulateStockCache(vm.items);
+						}
 						vm.update_items_details(vm.items);
 					}
 					return;
@@ -845,6 +848,9 @@ export default {
 					vm.items_loaded = true;
 
 					if (vm.items && vm.items.length > 0) {
+						if (vm.items.length <= 500) {
+							await vm.prePopulateStockCache(vm.items);
+						}
 						vm.update_items_details(vm.items);
 					}
 					return;
@@ -922,6 +928,11 @@ export default {
 								),
 							);
 							saveItemGroups(groups);
+
+							// Pre-populate stock cache when items are freshly loaded
+							if (vm.items.length <= 500) {
+								vm.prePopulateStockCache(vm.items);
+							}
 
 							vm.$nextTick(() => {
 								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
@@ -1008,6 +1019,9 @@ export default {
 							saveItemGroups(groups);
 
 							// Pre-populate stock cache when items are freshly loaded
+							if (vm.items.length <= 500) {
+								vm.prePopulateStockCache(vm.items);
+							}
 
 							vm.$nextTick(() => {
 								if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
@@ -1091,7 +1105,6 @@ export default {
 							this.itemWorker.terminate();
 							this.itemWorker = null;
 						}
-						await this.prePopulateStockCache(this.items);
 					}
 				} catch (err) {
 					console.error("Failed to background load items", err);
@@ -1128,7 +1141,6 @@ export default {
 							this.backgroundLoadItems(offset + limit, syncSince);
 						} else {
 							setItemsLastSync(new Date().toISOString());
-							await this.prePopulateStockCache(this.items);
 						}
 					},
 					error: (err) => {
@@ -1605,6 +1617,10 @@ export default {
 				return;
 			}
 			if (!Array.isArray(items) || items.length === 0) {
+				return;
+			}
+			if (items.length > 500) {
+				console.info("Skipping stock pre-population for", items.length, "items");
 				return;
 			}
 			this.prePopulateInProgress = true;
