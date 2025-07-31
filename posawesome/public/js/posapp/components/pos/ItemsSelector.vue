@@ -443,8 +443,10 @@ export default {
 		temp_enable_custom_items_per_page: false,
 		items_per_page: 50,
 		temp_items_per_page: 50,
-		// Page size for incremental item loading
-		itemsPageLimit: 500,
+		// Page size for incremental item loading. Set high (~10000) so
+		// items are fetched in a single request and background loading
+		// never triggers.
+		itemsPageLimit: 10000,
 		// Track if the current search was triggered by a scanner
 		search_from_scanner: false,
 		currentPage: 0,
@@ -1089,6 +1091,11 @@ export default {
 		},
 		async backgroundLoadItems(offset, syncSince, clearBefore = false) {
 			const limit = this.itemsPageLimit;
+			// When the limit is extremely high, treat it as
+			// "no incremental loading" and exit early.
+			if (!limit || limit >= 10000) {
+				return;
+			}
 			const lastSync = syncSince;
 			if (this.itemWorker) {
 				try {
