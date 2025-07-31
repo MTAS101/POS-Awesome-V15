@@ -443,9 +443,10 @@ export default {
 		temp_enable_custom_items_per_page: false,
 		items_per_page: 50,
 		temp_items_per_page: 50,
-		// Page size for incremental item loading. Set high (~10000) so
-		// items are fetched in a single request and background loading
-		// never triggers.
+		// Page size for incremental item loading. When browser local
+		// storage is enabled this will be adjusted to 500 so items are
+		// fetched in manageable batches. Otherwise a high limit
+		// effectively disables incremental loading.
 		itemsPageLimit: 10000,
 		// Track if the current search was triggered by a scanner
 		search_from_scanner: false,
@@ -2302,6 +2303,8 @@ export default {
 		memoryInitPromise.then(async () => {
 			const profile = await ensurePosProfile();
 			if (profile) {
+				// Adjust page limit based on local storage setting
+				this.itemsPageLimit = profile.posa_local_storage ? 500 : 10000;
 				if (profile.posa_local_storage) {
 					this.loadVisibleItems(true);
 				} else {
@@ -2338,6 +2341,8 @@ export default {
 			await memoryInitPromise;
 			await checkDbHealth();
 			this.pos_profile = data.pos_profile;
+			// Update page limit whenever profile is registered
+			this.itemsPageLimit = this.pos_profile.posa_local_storage ? 500 : 10000;
 			if (!this.pos_profile.posa_local_storage) {
 				await forceClearAllCache();
 				await this.get_items(true);
@@ -2421,6 +2426,8 @@ export default {
 		if (!this.pos_profile || Object.keys(this.pos_profile).length === 0) {
 			this.pos_profile = profile || {};
 		}
+		// Apply correct page limit based on local storage option
+		this.itemsPageLimit = this.pos_profile.posa_local_storage ? 500 : 10000;
 		if (this.pos_profile && !this.pos_profile.posa_local_storage && !this.items_loaded) {
 			await forceClearAllCache();
 			await this.get_items(true);
