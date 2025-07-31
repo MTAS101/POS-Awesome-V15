@@ -460,11 +460,7 @@ export default {
 						if (!isOffline()) {
 							this.get_items(true);
 						} else {
-							if (this.pos_profile && !this.pos_profile.posa_local_storage) {
-								this.get_items(true);
-							} else {
-								this.get_items();
-							}
+							this.get_items();
 						}
 					} else {
 						// Only refresh prices for visible items when smart reload is enabled
@@ -476,11 +472,7 @@ export default {
 					if (!isOffline()) {
 						this.get_items(true);
 					} else {
-						if (this.pos_profile && !this.pos_profile.posa_local_storage) {
-							this.get_items(true);
-						} else {
-							this.get_items();
-						}
+						this.get_items();
 					}
 				}
 				return;
@@ -490,11 +482,7 @@ export default {
 			if (this.items_loaded && this.filtered_items && this.filtered_items.length > 0) {
 				this.$nextTick(() => this.refreshPricesForVisibleItems());
 			} else {
-				if (this.pos_profile && !this.pos_profile.posa_local_storage) {
-					this.get_items(true);
-				} else {
-					this.get_items();
-				}
+				this.get_items();
 			}
 		}, 300),
 		customer_price_list: _.debounce(async function () {
@@ -549,11 +537,7 @@ export default {
 			if (!isOffline()) {
 				this.get_items(true);
 			} else {
-				if (this.pos_profile && !this.pos_profile.posa_local_storage) {
-					this.get_items(true);
-				} else {
-					this.get_items();
-				}
+				this.get_items();
 			}
 		}, 300),
 		new_line() {
@@ -561,11 +545,7 @@ export default {
 		},
 		item_group(newValue, oldValue) {
 			if (this.pos_profile && this.pos_profile.pose_use_limit_search && newValue !== oldValue) {
-				if (this.pos_profile && !this.pos_profile.posa_local_storage) {
-					this.get_items(true);
-				} else {
-					this.get_items();
-				}
+				this.get_items();
 			} else if (this.pos_profile && this.pos_profile.posa_local_storage && newValue !== oldValue) {
 				this.loadVisibleItems(true);
 			}
@@ -809,12 +789,7 @@ export default {
 			// Removed noisy debug log
 
 			// Attempt to load cached items for the current price list
-			if (
-				!force_server &&
-				this.pos_profile &&
-				this.pos_profile.posa_local_storage &&
-				!this.pos_profile.pose_use_limit_search
-			) {
+			if (!force_server && this.pos_profile && !this.pos_profile.pose_use_limit_search) {
 				const cached = await getCachedPriceListItems(vm.customer_price_list);
 				if (cached && cached.length) {
 					vm.items = cached;
@@ -1400,11 +1375,7 @@ export default {
 			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 				// Only trigger search when query length meets minimum threshold
 				if (vm.search && vm.search.length >= 3) {
-					if (vm.pos_profile && !vm.pos_profile.posa_local_storage) {
-						vm.get_items(true);
-					} else {
-						vm.get_items();
-					}
+					vm.get_items();
 				}
 			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
 				vm.loadVisibleItems(true);
@@ -2291,13 +2262,8 @@ export default {
 	},
 
 	created() {
-		memoryInitPromise.then(async () => {
-			const profile = await ensurePosProfile();
-			if (profile && profile.posa_local_storage) {
-				this.loadVisibleItems(true);
-			} else if (profile) {
-				await this.get_items(true);
-			}
+		memoryInitPromise.then(() => {
+			this.loadVisibleItems(true);
 		});
 
 		this.loadItemSettings();
@@ -2327,9 +2293,7 @@ export default {
 			await memoryInitPromise;
 			await checkDbHealth();
 			this.pos_profile = data.pos_profile;
-			if (!this.pos_profile.posa_local_storage) {
-				await this.get_items(true);
-			} else if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
+			if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
 				if (!isOffline()) {
 					await this.get_items(true);
 				} else {
@@ -2365,11 +2329,7 @@ export default {
 			if (!isOffline()) {
 				await this.get_items(true);
 			} else {
-				if (this.pos_profile && !this.pos_profile.posa_local_storage) {
-					await this.get_items(true);
-				} else {
-					await this.get_items();
-				}
+				await this.get_items();
 			}
 		});
 
