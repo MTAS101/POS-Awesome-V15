@@ -91,13 +91,7 @@ export async function getCachedPriceListItems(priceList, ttl = 24 * 60 * 60 * 10
 					: null;
 			})
 			.filter(Boolean);
-		if (result.length) {
-			console.log(
-				"[POSAwesome] Loaded items from price list cache:",
-				result.map((it) => it.item_code),
-			);
-		}
-		return result;
+               return result;
 	} catch (e) {
 		console.error("Failed to get cached price list items", e);
 		return null;
@@ -163,13 +157,7 @@ export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15
 				missing.push(code);
 			}
 		});
-		if (cached.length) {
-			console.log(
-				"[POSAwesome] Loaded item details from cache:",
-				cached.map((it) => it.item_code),
-			);
-		}
-		return { cached, missing };
+               return { cached, missing };
 	} catch (e) {
 		console.error("Failed to get cached item details", e);
 		return { cached: [], missing: itemCodes };
@@ -223,13 +211,7 @@ export async function searchStoredItems({ search = "", itemGroup = "", limit = 1
 			);
 		}
 		const res = await collection.offset(offset).limit(limit).toArray();
-		if (res.length) {
-			console.log(
-				"[POSAwesome] Loaded items from local storage:",
-				res.map((it) => it.item_code),
-			);
-		}
-		return res;
+               return res;
 	} catch (e) {
 		console.error("Failed to query stored items", e);
 		return [];

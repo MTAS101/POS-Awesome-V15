@@ -132,13 +132,7 @@ export async function getStoredItems() {
 		await checkDbHealth();
 		if (!db.isOpen()) await db.open();
 		const items = await db.table("items").toArray();
-		if (items.length) {
-			console.log(
-				"[POSAwesome] Loaded items from IndexedDB:",
-				items.map((it) => it.item_code),
-			);
-		}
-		return items;
+               return items;
 	} catch (e) {
 		console.error("Failed to get stored items", e);
 		return [];
