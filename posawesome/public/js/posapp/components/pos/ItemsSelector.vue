@@ -2262,11 +2262,8 @@ export default {
 	},
 
 	created() {
-		memoryInitPromise.then(async () => {
-			const profile = await ensurePosProfile();
-			if (profile && profile.posa_local_storage) {
-				this.loadVisibleItems(true);
-			}
+		memoryInitPromise.then(() => {
+			this.loadVisibleItems(true);
 		});
 
 		this.loadItemSettings();
@@ -2296,9 +2293,7 @@ export default {
 			await memoryInitPromise;
 			await checkDbHealth();
 			this.pos_profile = data.pos_profile;
-			if (!this.pos_profile.posa_local_storage) {
-				await this.get_items(true);
-			} else if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
+			if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
 				if (!isOffline()) {
 					await this.get_items(true);
 				} else {
