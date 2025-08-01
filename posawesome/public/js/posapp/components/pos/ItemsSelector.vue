@@ -1391,7 +1391,7 @@ export default {
 				this.$refs.debounce_search.focus();
 			}
 		},
-		search_onchange: _.debounce(function (newSearchTerm) {
+		search_onchange: _.debounce(async function (newSearchTerm) {
 			const vm = this;
 
 			// Determine the actual query string and trim whitespace
@@ -1416,7 +1416,10 @@ export default {
 					}
 				}
 			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
-				vm.loadVisibleItems(true);
+				await vm.loadVisibleItems(true);
+				if (vm.search && vm.search.length >= 3) {
+					vm.enter_event();
+				}
 			} else {
 				// Save the current filtered items before search to maintain quantity data
 				const current_items = [...vm.filtered_items];
