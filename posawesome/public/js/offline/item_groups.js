@@ -5,10 +5,7 @@ export function saveItemGroups(groups) {
 	try {
 		let clean;
 		try {
-			clean =
-				typeof structuredClone === "function"
-					? structuredClone(groups)
-					: JSON.parse(JSON.stringify(groups));
+			clean = JSON.parse(JSON.stringify(groups));
 		} catch (e) {
 			console.error("Failed to serialize item groups", e);
 			clean = [];

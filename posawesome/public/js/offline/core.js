@@ -3,32 +3,24 @@ import { withWriteLock } from "./db-utils.js";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
-db.version(4).stores({
+db.version(2).stores({
 	keyval: "&key",
 	queue: "&key",
 	cache: "&key",
-	items: "&item_code,item_name,item_group",
-	item_prices: "&[price_list+item_code],price_list,item_code",
 });
 
 export const KEY_TABLE_MAP = {
 	offline_invoices: "queue",
 	offline_customers: "queue",
 	offline_payments: "queue",
+	price_list_cache: "cache",
 	item_details_cache: "cache",
+	items_storage: "cache",
 	customer_storage: "cache",
 };
 
 export function tableForKey(key) {
 	return KEY_TABLE_MAP[key] || "keyval";
-}
-
-function isCorruptionError(err) {
-	if (!err) return false;
-	const msg = err.message ? err.message.toLowerCase() : "";
-	return (
-		["VersionError", "InvalidStateError", "NotFoundError"].includes(err.name) || msg.includes("corrupt")
-	);
 }
 
 export async function checkDbHealth() {
@@ -41,25 +33,12 @@ export async function checkDbHealth() {
 			if (db.isOpen()) {
 				await db.close();
 			}
-			console.log("Attempting to reopen IndexedDB without deleting");
+			await Dexie.delete("posawesome_offline");
 			await db.open();
-			console.log("IndexedDB reopened successfully");
-			return true;
 		} catch (re) {
-			console.error("Failed to reopen IndexedDB", re);
-			if (isCorruptionError(re)) {
-				console.log("IndexedDB appears corrupted. Recreating database...");
-				try {
-					await Dexie.delete("posawesome_offline");
-					await db.open();
-					console.log("IndexedDB recreated and opened successfully");
-					return true;
-				} catch (recreateErr) {
-					console.error("Failed to recreate IndexedDB", recreateErr);
-				}
-			}
-			return false;
+			console.error("Failed to recover IndexedDB", re);
 		}
+		return false;
 	}
 }
 
@@ -125,10 +104,7 @@ export function persist(key, value) {
 	if (persistWorker) {
 		let cleanValue = value;
 		try {
-			cleanValue =
-				typeof structuredClone === "function"
-					? structuredClone(value)
-					: JSON.parse(JSON.stringify(value));
+			cleanValue = JSON.parse(JSON.stringify(value));
 		} catch (e) {
 			console.error("Failed to serialize", key, e);
 		}

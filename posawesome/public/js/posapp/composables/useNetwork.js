@@ -7,10 +7,9 @@ let consecutiveFailures = 0;
 let consecutiveSuccesses = 0;
 const FAILURE_THRESHOLD = 2; // Number of failed checks before marking as disconnected
 const SUCCESS_THRESHOLD = 1; // Number of successful checks before marking as connected
-// Increase timeouts to avoid premature aborts on slower networks
-const DESK_TIMEOUT = 8000; // 8 seconds
-const STATIC_TIMEOUT = 8000; // 8 seconds
-const ORIGIN_TIMEOUT = 8000; // 8 seconds
+const DESK_TIMEOUT = 2500; // Reduced to ~2.5 seconds
+const STATIC_TIMEOUT = 2500; // Reduced to ~2.5 seconds
+const ORIGIN_TIMEOUT = 2500; // Reduced to ~2.5 seconds
 
 // Exponential backoff variables
 let checkInterval = 15000; // Start with 15s
@@ -75,7 +74,6 @@ export function setupNetworkListeners() {
 	window.addEventListener("online", () => {
 		if (isManualOffline()) return;
 		this.networkOnline = true;
-		this.internetReachable = true;
 		console.log("Network: Online");
 		// Verify actual connectivity
 		this.checkNetworkConnectivity();
@@ -84,7 +82,6 @@ export function setupNetworkListeners() {
 	window.addEventListener("offline", () => {
 		if (isManualOffline()) return;
 		this.networkOnline = false;
-		this.internetReachable = false;
 		this.serverOnline = false;
 		window.serverOnline = false;
 		console.log("Network: Offline");
@@ -95,7 +92,6 @@ export function setupNetworkListeners() {
 	const persisted = getPersistedStatus();
 	this.networkOnline = persisted.networkOnline;
 	this.serverOnline = persisted.serverOnline;
-	this.internetReachable = false;
 	this.serverConnecting = false;
 	window.serverOnline = this.serverOnline;
 
@@ -109,7 +105,6 @@ export function setupNetworkListeners() {
 		});
 	} else {
 		this.networkOnline = false;
-		this.internetReachable = false;
 		this.serverOnline = false;
 		window.serverOnline = false;
 		persistStatus(false, false);
@@ -130,7 +125,7 @@ export async function checkNetworkConnectivity() {
 			signal: AbortSignal.timeout(DESK_TIMEOUT),
 		}).then((r) => r.status < 500);
 
-		const staticRequest = fetch("/assets/frappe/images/frappe-logo.png", {
+               const staticRequest = fetch("/assets/frappe/images/frappe-logo.png", {
 			method: "HEAD",
 			cache: "no-cache",
 			signal: AbortSignal.timeout(STATIC_TIMEOUT),
@@ -171,8 +166,7 @@ export async function checkNetworkConnectivity() {
 			consecutiveFailures = 0;
 			if (consecutiveSuccesses >= SUCCESS_THRESHOLD) {
 				if (!this.networkOnline || !this.serverOnline) {
-					this.networkOnline = isConnected;
-					this.internetReachable = isInternetReachable;
+					this.networkOnline = isInternetReachable;
 					this.serverOnline = true;
 					window.serverOnline = true;
 					persistStatus(this.networkOnline, true);
@@ -185,8 +179,7 @@ export async function checkNetworkConnectivity() {
 			consecutiveSuccesses = 0;
 			if (consecutiveFailures >= FAILURE_THRESHOLD) {
 				if (this.networkOnline || this.serverOnline) {
-					this.networkOnline = isConnected;
-					this.internetReachable = isInternetReachable;
+					this.networkOnline = isInternetReachable;
 					this.serverOnline = false;
 					window.serverOnline = false;
 					persistStatus(this.networkOnline, false);
@@ -201,7 +194,6 @@ export async function checkNetworkConnectivity() {
 		consecutiveSuccesses = 0;
 		if (consecutiveFailures >= FAILURE_THRESHOLD) {
 			this.networkOnline = navigator.onLine;
-			this.internetReachable = false;
 			this.serverOnline = false;
 			window.serverOnline = false;
 			persistStatus(this.networkOnline, false);
