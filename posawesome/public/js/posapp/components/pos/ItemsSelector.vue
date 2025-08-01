@@ -1859,35 +1859,20 @@ export default {
 				this.processScannedItem(scannedCode);
 			}, 300);
 		},
-                 async processScannedItem(scannedCode) {
-                         // First try to find exact match by barcode
-                         let foundItem = this.items.find(
-                                 (item) =>
-                                         item.barcode === scannedCode ||
-                                         item.item_code === scannedCode ||
-                                         (item.barcodes && item.barcodes.some((bc) => bc.barcode === scannedCode)),
-                         );
+		processScannedItem(scannedCode) {
+			// First try to find exact match by barcode
+			let foundItem = this.items.find(
+				(item) =>
+					item.barcode === scannedCode ||
+					item.item_code === scannedCode ||
+					(item.barcodes && item.barcodes.some((bc) => bc.barcode === scannedCode)),
+			);
 
-                         if (foundItem) {
+			if (foundItem) {
 				console.log("Found item by exact match:", foundItem);
 				this.addScannedItemToInvoice(foundItem, scannedCode);
 				return;
-                         }
-
-                         // Attempt lookup from stored items when using local storage
-                         if (!foundItem && this.pos_profile && this.pos_profile.posa_local_storage) {
-                                 try {
-                                         const stored = await searchStoredItems({ search: scannedCode, limit: 1 });
-                                         if (stored && stored.length) {
-                                                 foundItem = stored[0];
-                                                 // Keep list in sync for UI rendering
-                                                 this.items = [foundItem, ...this.items];
-                                                 this.eventBus.emit("set_all_items", this.items);
-                                         }
-                                 } catch (e) {
-                                         console.error("Failed to search stored items", e);
-                                 }
-                         }
+			}
 
 			// If no exact match, try partial search
 			const searchResults = this.searchItemsByCode(scannedCode);
