@@ -1831,7 +1831,7 @@ export default {
 				this.$refs.cameraScanner.startScanning();
 			}
 		},
-		async onBarcodeScanned(scannedCode) {
+		onBarcodeScanned(scannedCode) {
 			console.log("Barcode scanned:", scannedCode);
 
 			// mark this search as coming from a scanner
@@ -1854,17 +1854,10 @@ export default {
 				2,
 			);
 
-			// When local storage is enabled, ensure the search
-			// results are loaded before processing the scanned code
-			if (this.pos_profile && this.pos_profile.posa_local_storage) {
-				await this.loadVisibleItems(true);
+			// Enhanced item search and submission logic
+			setTimeout(() => {
 				this.processScannedItem(scannedCode);
-			} else {
-				// Enhanced item search and submission logic
-				setTimeout(() => {
-					this.processScannedItem(scannedCode);
-				}, 300);
-			}
+			}, 300);
 		},
 		processScannedItem(scannedCode) {
 			// First try to find exact match by barcode
