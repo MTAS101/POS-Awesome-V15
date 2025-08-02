@@ -2561,14 +2561,13 @@ export default {
 }
 
 .dynamic-item-card {
-        margin: var(--dynamic-xs);
-        transition: var(--transition-normal);
-        background-color: var(--surface-secondary);
-        display: flex;
-        flex-direction: column;
-        height: var(--card-height);
-        max-width: 180px;
-        box-sizing: border-box;
+	transition: var(--transition-normal);
+	background-color: var(--surface-secondary);
+	display: flex;
+	flex-direction: column;
+	height: auto;
+	max-width: 180px;
+	box-sizing: border-box;
 }
 
 .dynamic-item-card .v-img {
