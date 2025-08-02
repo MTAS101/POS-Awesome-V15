@@ -2,7 +2,7 @@
 	<div :style="responsiveStyles">
 		<v-card
 			:class="[
-				'selection mx-auto my-0 py-0 mt-3 dynamic-card resizable',
+                               'selection mx-auto my-0 py-0 mt-3 pos-card dynamic-card resizable',
 				isDarkTheme ? '' : 'bg-grey-lighten-5',
 			]"
 			:style="{
@@ -2493,10 +2493,7 @@ export default {
 </script>
 
 <style scoped>
-.dynamic-card {
-	composes: pos-card;
-}
-
+/* "dynamic-card" no longer composes from pos-card; the pos-card class is added directly in the template */
 .dynamic-padding {
 	/* Equal spacing on all sides for consistent alignment */
 	padding: var(--dynamic-sm);
