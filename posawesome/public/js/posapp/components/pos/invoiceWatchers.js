@@ -1,3 +1,5 @@
+/* global frappe */
+
 import { clearPriceListCache } from "../../../offline/index.js";
 
 export default {
@@ -32,7 +34,7 @@ export default {
 	// Watch for items array changes (deep) and re-handle offers
 	items: {
 		deep: true,
-		handler(items) {
+		handler() {
 			this.handelOffers();
 			this.$forceUpdate();
 		},
@@ -69,12 +71,13 @@ export default {
 	},
 
 	selected_price_list(newVal) {
-		// Clear cached price list items to avoid mixing rates
-		clearPriceListCache();
-
-		const price_list = newVal === this.pos_profile.selling_price_list ? null : newVal;
-		this.eventBus.emit("update_customer_price_list", price_list);
 		const applied = newVal || this.pos_profile.selling_price_list;
+
+		// Clear cached price list items to avoid mixing rates
+		clearPriceListCache(applied);
+
+		// Always emit the actual price list name
+		this.eventBus.emit("update_customer_price_list", applied);
 		this.apply_cached_price_list(applied);
 
 		// If multi-currency is enabled, sync currency with the price list currency
@@ -96,7 +99,7 @@ export default {
 
 	// Reactively update item prices when currency changes
 	selected_currency() {
-		clearPriceListCache();
+		clearPriceListCache(this.selected_price_list || this.pos_profile.selling_price_list);
 		if (this.items && this.items.length) {
 			this.update_item_rates();
 		}

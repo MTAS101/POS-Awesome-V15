@@ -1,9 +1,10 @@
+/* global frappe, __, flt */
+
 import {
 	isOffline,
 	saveCustomerBalance,
 	getCachedCustomerBalance,
 	getCachedPriceListItems,
-	getItemUOMs,
 	getCustomerStorage,
 	getOfflineCustomers,
 	getTaxTemplate,
@@ -210,6 +211,7 @@ export default {
 	// Save and clear the current invoice (draft logic)
 	save_and_clear_invoice() {
 		const doc = this.get_invoice_doc();
+		let old_invoice;
 		if (doc.name) {
 			old_invoice = this.update_invoice(doc);
 		} else {
@@ -1573,7 +1575,7 @@ export default {
 		if (this.selected_price_list !== price_list) {
 			this.selected_price_list = price_list;
 			// Clear any customer specific price list to avoid reloading items
-			this.eventBus.emit("update_customer_price_list", null);
+			this.eventBus.emit("update_customer_price_list", price_list);
 		}
 	},
 
