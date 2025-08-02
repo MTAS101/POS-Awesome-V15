@@ -337,9 +337,9 @@ export default {
 }
 
 /* Dark theme adjustments for the offline invoices card */
-:deep(.dark-theme) .offline-invoices-card,
+:deep([data-theme="dark"]) .offline-invoices-card,
 :deep(.v-theme--dark) .offline-invoices-card,
-::v-deep(.dark-theme) .offline-invoices-card,
+::v-deep([data-theme="dark"]) .offline-invoices-card,
 ::v-deep(.v-theme--dark) .offline-invoices-card {
 	background-color: #1e1e1e !important;
 	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
@@ -354,9 +354,9 @@ export default {
 }
 
 /* Dark theme adjustments for the header */
-:deep(.dark-theme) .offline-header,
+:deep([data-theme="dark"]) .offline-header,
 :deep(.v-theme--dark) .offline-header,
-::v-deep(.dark-theme) .offline-header,
+::v-deep([data-theme="dark"]) .offline-header,
 ::v-deep(.v-theme--dark) .offline-header {
 	background-color: #1e1e1e !important;
 	color: #fff !important;
@@ -443,9 +443,9 @@ export default {
 }
 
 /* Dark theme for the card content */
-:deep(.dark-theme) .white-background,
+:deep([data-theme="dark"]) .white-background,
 :deep(.v-theme--dark) .white-background,
-::v-deep(.dark-theme) .white-background,
+::v-deep([data-theme="dark"]) .white-background,
 ::v-deep(.v-theme--dark) .white-background {
 	background-color: #121212 !important;
 }
@@ -457,9 +457,9 @@ export default {
 }
 
 /* Dark theme for the empty state */
-:deep(.dark-theme) .empty-state,
+:deep([data-theme="dark"]) .empty-state,
 :deep(.v-theme--dark) .empty-state,
-::v-deep(.dark-theme) .empty-state,
+::v-deep([data-theme="dark"]) .empty-state,
 ::v-deep(.v-theme--dark) .empty-state {
 	background-color: #121212 !important;
 }
@@ -481,9 +481,9 @@ export default {
 }
 
 /* Dark theme for table container */
-:deep(.dark-theme) .table-container,
+:deep([data-theme="dark"]) .table-container,
 :deep(.v-theme--dark) .table-container,
-::v-deep(.dark-theme) .table-container,
+::v-deep([data-theme="dark"]) .table-container,
 ::v-deep(.v-theme--dark) .table-container {
 	background-color: #121212 !important;
 }
@@ -493,9 +493,9 @@ export default {
 }
 
 /* Dark theme for table header text */
-:deep(.dark-theme) .table-header,
+:deep([data-theme="dark"]) .table-header,
 :deep(.v-theme--dark) .table-header,
-::v-deep(.dark-theme) .table-header,
+::v-deep([data-theme="dark"]) .table-header,
 ::v-deep(.v-theme--dark) .table-header {
 	color: #e0e0e0 !important;
 }
@@ -509,20 +509,20 @@ export default {
 }
 
 /* Dark mode adjustments for invoice table */
-:deep(.dark-theme) .white-table,
+:deep([data-theme="dark"]) .white-table,
 :deep(.v-theme--dark) .white-table,
-::v-deep(.dark-theme) .white-table,
+::v-deep([data-theme="dark"]) .white-table,
 ::v-deep(.v-theme--dark) .white-table {
 	background-color: #121212 !important;
 }
 
-:deep(.dark-theme) .white-table :deep(th),
+:deep([data-theme="dark"]) .white-table :deep(th),
 :deep(.v-theme--dark) .white-table :deep(th),
-:deep(.dark-theme) .white-table :deep(td),
+:deep([data-theme="dark"]) .white-table :deep(td),
 :deep(.v-theme--dark) .white-table :deep(td),
-::v-deep(.dark-theme) .white-table th,
+::v-deep([data-theme="dark"]) .white-table th,
 ::v-deep(.v-theme--dark) .white-table th,
-::v-deep(.dark-theme) .white-table td,
+::v-deep([data-theme="dark"]) .white-table td,
 ::v-deep(.v-theme--dark) .white-table td {
 	color: #fff !important;
 	background-color: #1e1e1e !important;
@@ -530,26 +530,26 @@ export default {
 }
 
 /* Ensure table headings are dark themed */
-:deep(.dark-theme) .white-table :deep(thead th),
+:deep([data-theme="dark"]) .white-table :deep(thead th),
 :deep(.v-theme--dark) .white-table :deep(thead th),
-::v-deep(.dark-theme) .white-table thead th,
+::v-deep([data-theme="dark"]) .white-table thead th,
 ::v-deep(.v-theme--dark) .white-table thead th {
 	background-color: #121212 !important;
 	color: #fff !important;
 }
 
 /* Ensure internal header content is also dark */
-:deep(.dark-theme) .white-table :deep(.v-data-table-header__content),
+:deep([data-theme="dark"]) .white-table :deep(.v-data-table-header__content),
 :deep(.v-theme--dark) .white-table :deep(.v-data-table-header__content),
-::v-deep(.dark-theme) .white-table .v-data-table-header__content,
+::v-deep([data-theme="dark"]) .white-table .v-data-table-header__content,
 ::v-deep(.v-theme--dark) .white-table .v-data-table-header__content {
 	background-color: #121212 !important;
 }
 
 /* Ensure thead background is dark */
-:deep(.dark-theme) .white-table :deep(thead),
+:deep([data-theme="dark"]) .white-table :deep(thead),
 :deep(.v-theme--dark) .white-table :deep(thead),
-::v-deep(.dark-theme) .white-table thead,
+::v-deep([data-theme="dark"]) .white-table thead,
 ::v-deep(.v-theme--dark) .white-table thead {
 	background-color: #121212 !important;
 }
@@ -642,9 +642,9 @@ export default {
 }
 
 /* Dark theme for dialog footer */
-:deep(.dark-theme) .dialog-actions-container,
+:deep([data-theme="dark"]) .dialog-actions-container,
 :deep(.v-theme--dark) .dialog-actions-container,
-::v-deep(.dark-theme) .dialog-actions-container,
+::v-deep([data-theme="dark"]) .dialog-actions-container,
 ::v-deep(.v-theme--dark) .dialog-actions-container {
 	background: #1e1e1e !important;
 	border-top-color: #333 !important;
