@@ -2,7 +2,7 @@
 	<div :style="responsiveStyles">
 		<v-card
 			:class="[
-				'selection mx-auto my-0 py-0 mt-3 dynamic-card resizable',
+                               'selection mx-auto my-0 py-0 mt-3 pos-card dynamic-card resizable',
 				isDarkTheme ? '' : 'bg-grey-lighten-5',
 			]"
 			:style="{
@@ -179,14 +179,14 @@
 				</div>
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
-						<div
-							fluid
-							class="items-grid dynamic-scroll"
-							ref="itemsContainer"
-							v-if="items_view == 'card'"
-							:style="{ height: 'calc(100% - 80px)', overflowY: 'auto' }"
-							@scroll.passive="onCardScroll"
-						>
+                                               <div
+                                                       fluid
+                                                       class="items-grid dynamic-scroll"
+                                                       ref="itemsContainer"
+                                                       v-if="items_view == 'card'"
+                                                       :class="{ 'item-container': isOverflowing }"
+                                                       @scroll.passive="onCardScroll"
+                                               >
 							<v-card
 								v-for="item in filtered_items"
 								:key="item.item_code"
@@ -458,9 +458,10 @@ export default {
 		// effectively disables incremental loading.
 		itemsPageLimit: 10000,
 		// Track if the current search was triggered by a scanner
-		search_from_scanner: false,
-		currentPage: 0,
-	}),
+                search_from_scanner: false,
+                currentPage: 0,
+                isOverflowing: false,
+        }),
 
 	watch: {
 		customer: _.debounce(function () {
@@ -583,16 +584,17 @@ export default {
 				this.loadVisibleItems(true);
 			}
 		},
-		filtered_items(new_value, old_value) {
-			// Update item details if items changed
-			if (
-				this.pos_profile &&
-				!this.pos_profile.pose_use_limit_search &&
-				new_value.length !== old_value.length
-			) {
-				this.update_items_details(new_value);
-			}
-		},
+                filtered_items(new_value, old_value) {
+                        // Update item details if items changed
+                        if (
+                                this.pos_profile &&
+                                !this.pos_profile.pose_use_limit_search &&
+                                new_value.length !== old_value.length
+                        ) {
+                                this.update_items_details(new_value);
+                        }
+                        this.$nextTick(this.checkItemContainerOverflow);
+                },
 		// Automatically search and add item whenever the query changes
 		first_search: _.debounce(function (val) {
 			// Call without arguments so search_onchange treats it like an Enter key
@@ -616,12 +618,21 @@ export default {
 			// Maintain the configured items per page on resize
 			this.itemsPerPage = this.items_per_page;
 		},
-		items_loaded(val) {
-			if (val) {
-				this.eventBus.emit("items_loaded");
-			}
-		},
-	},
+                items_loaded(val) {
+                        if (val) {
+                                this.eventBus.emit("items_loaded");
+                        }
+                },
+                items_view() {
+                        this.$nextTick(() => {
+                                if (this.items_view === "card") {
+                                        this.checkItemContainerOverflow();
+                                } else {
+                                        this.isOverflowing = false;
+                                }
+                        });
+                },
+        },
 
 	methods: {
 		async loadVisibleItems(reset = false) {
@@ -652,16 +663,31 @@ export default {
 				this.loadVisibleItems();
 			}
 		},
-		onListScroll(event) {
-			const el = event.target;
-			if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
-				this.currentPage += 1;
-				this.loadVisibleItems();
-			}
-		},
-		refreshPricesForVisibleItems() {
-			const vm = this;
-			if (!vm.filtered_items || vm.filtered_items.length === 0) return;
+                onListScroll(event) {
+                        const el = event.target;
+                        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+                                this.currentPage += 1;
+                                this.loadVisibleItems();
+                        }
+                },
+                checkItemContainerOverflow() {
+                        const el = this.$refs.itemsContainer;
+                        if (!el) {
+                                this.isOverflowing = false;
+                                return;
+                        }
+                        const maxHeight = parseFloat(
+                                getComputedStyle(el).getPropertyValue("--container-height")
+                        );
+                        if (isNaN(maxHeight)) {
+                                this.isOverflowing = false;
+                                return;
+                        }
+                        this.isOverflowing = el.scrollHeight > maxHeight;
+                },
+                refreshPricesForVisibleItems() {
+                        const vm = this;
+                        if (!vm.filtered_items || vm.filtered_items.length === 0) return;
 
 			vm.loading = true;
 
@@ -2444,10 +2470,12 @@ export default {
 			await forceClearAllCache();
 			await this.get_items(true);
 		}
-		this.scan_barcoud();
-		// Apply the configured items per page on mount
-		this.itemsPerPage = this.items_per_page;
-	},
+                this.scan_barcoud();
+                // Apply the configured items per page on mount
+                this.itemsPerPage = this.items_per_page;
+                window.addEventListener("resize", this.checkItemContainerOverflow);
+                this.$nextTick(this.checkItemContainerOverflow);
+        },
 
 	beforeUnmount() {
 		// Clear interval when component is destroyed
@@ -2485,18 +2513,16 @@ export default {
 		this.eventBus.off("update_cur_items_details");
 		this.eventBus.off("update_offers_counters");
 		this.eventBus.off("update_coupons_counters");
-		this.eventBus.off("update_customer_price_list");
-		this.eventBus.off("update_customer");
-		this.eventBus.off("force_reload_items");
-	},
+                this.eventBus.off("update_customer_price_list");
+                this.eventBus.off("update_customer");
+                this.eventBus.off("force_reload_items");
+                window.removeEventListener("resize", this.checkItemContainerOverflow);
+        },
 };
 </script>
 
 <style scoped>
-.dynamic-card {
-	composes: pos-card;
-}
-
+/* "dynamic-card" no longer composes from pos-card; the pos-card class is added directly in the template */
 .dynamic-padding {
 	/* Equal spacing on all sides for consistent alignment */
 	padding: var(--dynamic-sm);
@@ -2515,10 +2541,14 @@ export default {
 }
 
 .dynamic-scroll {
-	transition: max-height var(--transition-normal);
-	padding-bottom: var(--dynamic-xs);
-	overflow-y: auto;
-	scrollbar-gutter: stable;
+       transition: max-height var(--transition-normal);
+       padding-bottom: var(--dynamic-xs);
+}
+
+.item-container {
+       max-height: var(--container-height);
+       overflow-y: auto;
+       scrollbar-gutter: stable;
 }
 
 .items-grid {
@@ -2531,7 +2561,6 @@ export default {
 }
 
 .dynamic-item-card {
-	margin: var(--dynamic-xs);
 	transition: var(--transition-normal);
 	background-color: var(--surface-secondary);
 	display: flex;
