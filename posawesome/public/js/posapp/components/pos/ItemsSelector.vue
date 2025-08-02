@@ -25,152 +25,159 @@
 			</v-overlay>
 			<!-- Add dynamic-padding wrapper like Invoice component -->
 			<div class="dynamic-padding">
-				<v-row class="items">
-					<v-col class="pb-0">
-						<v-text-field
-							density="compact"
-							clearable
-							autofocus
-							variant="solo"
-							color="primary"
-							:label="frappe._('Search Items')"
-							hint="Search by item code, serial number, batch no or barcode"
-							hide-details
-							v-model="debounce_search"
-							@keydown.esc="esc_event"
-							@keydown.enter="search_onchange"
-							@click:clear="clearSearch"
-							prepend-inner-icon="mdi-magnify"
-							@focus="handleItemSearchFocus"
-							ref="debounce_search"
-						>
-							<!-- Add camera scan button if enabled -->
-							<template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
+				<div class="sticky-header">
+					<v-row class="items">
+						<v-col class="pb-0">
+							<v-text-field
+								density="compact"
+								clearable
+								autofocus
+								variant="solo"
+								color="primary"
+								:label="frappe._('Search Items')"
+								hint="Search by item code, serial number, batch no or barcode"
+								hide-details
+								v-model="debounce_search"
+								@keydown.esc="esc_event"
+								@keydown.enter="search_onchange"
+								@click:clear="clearSearch"
+								prepend-inner-icon="mdi-magnify"
+								@focus="handleItemSearchFocus"
+								ref="debounce_search"
+							>
+								<!-- Add camera scan button if enabled -->
+								<template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
+									<v-btn
+										icon="mdi-camera"
+										size="small"
+										color="primary"
+										variant="text"
+										@click="startCameraScanning"
+										:title="__('Scan with Camera')"
+									>
+									</v-btn>
+								</template>
+							</v-text-field>
+						</v-col>
+						<v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
+							<v-text-field
+								density="compact"
+								variant="solo"
+								color="primary"
+								:label="frappe._('QTY')"
+								hide-details
+								v-model="debounce_qty"
+								type="text"
+								@keydown.enter="enter_event"
+								@keydown.esc="esc_event"
+								@focus="clearQty"
+							></v-text-field>
+						</v-col>
+						<v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
+							<v-checkbox
+								v-model="new_line"
+								color="accent"
+								value="true"
+								label="NLine"
+								density="default"
+								hide-details
+							></v-checkbox>
+						</v-col>
+						<v-col cols="12" class="dynamic-margin-xs">
+							<div class="settings-container">
 								<v-btn
-									icon="mdi-camera"
-									size="small"
-									color="primary"
+									density="compact"
 									variant="text"
-									@click="startCameraScanning"
-									:title="__('Scan with Camera')"
+									color="primary"
+									prepend-icon="mdi-cog-outline"
+									@click="toggleItemSettings"
+									class="settings-btn"
 								>
+									{{ __("Settings") }}
 								</v-btn>
-							</template>
-						</v-text-field>
-					</v-col>
-					<v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
-						<v-text-field
-							density="compact"
-							variant="solo"
-							color="primary"
-							:label="frappe._('QTY')"
-							hide-details
-							v-model="debounce_qty"
-							type="text"
-							@keydown.enter="enter_event"
-							@keydown.esc="esc_event"
-							@focus="clearQty"
-						></v-text-field>
-					</v-col>
-					<v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
-						<v-checkbox
-							v-model="new_line"
-							color="accent"
-							value="true"
-							label="NLine"
-							density="default"
-							hide-details
-						></v-checkbox>
-					</v-col>
-					<v-col cols="12" class="dynamic-margin-xs">
-						<div class="settings-container">
-							<v-btn
-								density="compact"
-								variant="text"
-								color="primary"
-								prepend-icon="mdi-cog-outline"
-								@click="toggleItemSettings"
-								class="settings-btn"
-							>
-								{{ __("Settings") }}
-							</v-btn>
-							<v-spacer></v-spacer>
-							<v-btn
-								density="compact"
-								variant="text"
-								color="primary"
-								prepend-icon="mdi-refresh"
-								@click="forceReloadItems"
-								class="settings-btn"
-							>
-								{{ __("Reload Items") }}
-							</v-btn>
+								<v-spacer></v-spacer>
+								<v-btn
+									density="compact"
+									variant="text"
+									color="primary"
+									prepend-icon="mdi-refresh"
+									@click="forceReloadItems"
+									class="settings-btn"
+								>
+									{{ __("Reload Items") }}
+								</v-btn>
 
-							<v-dialog v-model="show_item_settings" max-width="400px">
-								<v-card>
-									<v-card-title class="text-h6 pa-4 d-flex align-center">
-										<span>{{ __("Item Selector Settings") }}</span>
-										<v-spacer></v-spacer>
-										<v-btn
-											icon="mdi-close"
-											variant="text"
-											density="compact"
-											@click="show_item_settings = false"
-										></v-btn>
-									</v-card-title>
-									<v-divider></v-divider>
-									<v-card-text class="pa-4">
-										<v-switch
-											v-model="temp_hide_qty_decimals"
-											:label="__('Hide quantity decimals')"
-											hide-details
-											density="compact"
-											color="primary"
-											class="mb-2"
-										></v-switch>
-										<v-switch
-											v-model="temp_hide_zero_rate_items"
-											:label="__('Hide zero rated items')"
-											hide-details
-											density="compact"
-											color="primary"
-										></v-switch>
-										<v-switch
-											v-model="temp_enable_custom_items_per_page"
-											:label="__('Custom items per page')"
-											hide-details
-											density="compact"
-											color="primary"
-											class="mb-2"
-										>
-										</v-switch>
-										<v-text-field
-											v-if="temp_enable_custom_items_per_page"
-											v-model="temp_items_per_page"
-											type="number"
-											density="compact"
-											variant="outlined"
-											color="primary"
-											:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
-											hide-details
-											:label="__('Items per page')"
-											class="mb-2 dark-field"
-										>
-										</v-text-field>
-									</v-card-text>
-									<v-card-actions class="pa-4 pt-0">
-										<v-btn color="error" variant="text" @click="cancelItemSettings">{{
-											__("Cancel")
-										}}</v-btn>
-										<v-spacer></v-spacer>
-										<v-btn color="primary" variant="tonal" @click="applyItemSettings">{{
-											__("Apply")
-										}}</v-btn>
-									</v-card-actions>
-								</v-card>
-							</v-dialog>
-						</div>
-					</v-col>
+								<v-dialog v-model="show_item_settings" max-width="400px">
+									<v-card>
+										<v-card-title class="text-h6 pa-4 d-flex align-center">
+											<span>{{ __("Item Selector Settings") }}</span>
+											<v-spacer></v-spacer>
+											<v-btn
+												icon="mdi-close"
+												variant="text"
+												density="compact"
+												@click="show_item_settings = false"
+											></v-btn>
+										</v-card-title>
+										<v-divider></v-divider>
+										<v-card-text class="pa-4">
+											<v-switch
+												v-model="temp_hide_qty_decimals"
+												:label="__('Hide quantity decimals')"
+												hide-details
+												density="compact"
+												color="primary"
+												class="mb-2"
+											></v-switch>
+											<v-switch
+												v-model="temp_hide_zero_rate_items"
+												:label="__('Hide zero rated items')"
+												hide-details
+												density="compact"
+												color="primary"
+											></v-switch>
+											<v-switch
+												v-model="temp_enable_custom_items_per_page"
+												:label="__('Custom items per page')"
+												hide-details
+												density="compact"
+												color="primary"
+												class="mb-2"
+											>
+											</v-switch>
+											<v-text-field
+												v-if="temp_enable_custom_items_per_page"
+												v-model="temp_items_per_page"
+												type="number"
+												density="compact"
+												variant="outlined"
+												color="primary"
+												:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+												hide-details
+												:label="__('Items per page')"
+												class="mb-2 dark-field"
+											>
+											</v-text-field>
+										</v-card-text>
+										<v-card-actions class="pa-4 pt-0">
+											<v-btn color="error" variant="text" @click="cancelItemSettings">{{
+												__("Cancel")
+											}}</v-btn>
+											<v-spacer></v-spacer>
+											<v-btn
+												color="primary"
+												variant="tonal"
+												@click="applyItemSettings"
+												>{{ __("Apply") }}</v-btn
+											>
+										</v-card-actions>
+									</v-card>
+								</v-dialog>
+							</div>
+						</v-col>
+					</v-row>
+				</div>
+				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
 						<div
 							fluid
@@ -2491,6 +2498,13 @@ export default {
 .dynamic-padding {
 	/* Equal spacing on all sides for consistent alignment */
 	padding: var(--dynamic-sm);
+}
+
+.sticky-header {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	background-color: var(--surface-primary);
 }
 
 .dynamic-scroll {
