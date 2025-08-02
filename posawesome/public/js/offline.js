@@ -30,12 +30,13 @@ const memory = {
 	customer_storage: [],
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
-	sales_persons_storage: [],
-	price_list_cache: {},
-	item_details_cache: {},
-	tax_template_cache: {},
-	tax_inclusive: false,
-	manual_offline: false,
+        sales_persons_storage: [],
+        price_list_cache: {},
+        item_details_cache: {},
+        items_last_sync: null,
+        tax_template_cache: {},
+        tax_inclusive: false,
+        manual_offline: false,
 };
 
 // Flag to avoid concurrent invoice syncs which can cause duplicate submissions
@@ -131,28 +132,28 @@ export const initPromise = new Promise((resolve) => {
 	}
 });
 
-function persist(key) {
-	if (persistWorker) {
-		let clean = memory[key];
-		try {
-			clean = JSON.parse(JSON.stringify(memory[key]));
-		} catch (e) {
-			console.error("Failed to serialize", key, e);
-		}
-		persistWorker.postMessage({ type: "persist", key, value: clean });
-		return;
-	}
-	db.table("keyval")
-		.put({ key, value: memory[key] })
-		.catch((e) => console.error(`Failed to persist ${key}`, e));
+function persist(key, value = memory[key]) {
+        if (persistWorker) {
+                let clean = value;
+                try {
+                        clean = JSON.parse(JSON.stringify(value));
+                } catch (e) {
+                        console.error("Failed to serialize", key, e);
+                }
+                persistWorker.postMessage({ type: "persist", key, value: clean });
+                return;
+        }
+        db.table("keyval")
+                .put({ key, value })
+                .catch((e) => console.error(`Failed to persist ${key}`, e));
 
-	if (typeof localStorage !== "undefined") {
-		try {
-			localStorage.setItem(`posa_${key}`, JSON.stringify(memory[key]));
-		} catch (err) {
-			console.error("Failed to persist", key, "to localStorage", err);
-		}
-	}
+        if (typeof localStorage !== "undefined") {
+                try {
+                        localStorage.setItem(`posa_${key}`, JSON.stringify(value));
+                } catch (err) {
+                        console.error("Failed to persist", key, "to localStorage", err);
+                }
+        }
 }
 
 // Reset cached invoices and customers after syncing
@@ -1001,13 +1002,15 @@ export async function saveItems(items) {
 }
 
 export async function clearStoredItems() {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
-		await db.table("items").clear();
-	} catch (e) {
-		console.error("Failed to clear stored items", e);
-	}
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                await db.table("items").clear();
+                memory.items_last_sync = null;
+                persist("items_last_sync", null);
+        } catch (e) {
+                console.error("Failed to clear stored items", e);
+        }
 }
 
 export function getCustomerStorage() {
