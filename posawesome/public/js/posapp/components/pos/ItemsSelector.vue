@@ -10,7 +10,7 @@
 				maxHeight: responsiveStyles['--container-height'],
 				backgroundColor: isDarkTheme ? '#121212' : '',
 				resize: 'vertical',
-				overflow: 'auto',
+				overflow: 'hidden',
 			}"
 		>
 			<v-progress-linear
@@ -184,7 +184,7 @@
 							class="items-grid dynamic-scroll"
 							ref="itemsContainer"
 							v-if="items_view == 'card'"
-							:style="{ maxHeight: 'calc(100% - 80px)' }"
+							:style="{ height: 'calc(100% - 80px)', overflowY: 'auto' }"
 							@scroll.passive="onCardScroll"
 						>
 							<v-card
@@ -252,7 +252,7 @@
 								:headers="headers"
 								:items="filtered_items"
 								class="sleek-data-table overflow-y-auto"
-								:style="{ maxHeight: 'calc(100% - 80px)' }"
+								:style="{ height: 'calc(100% - 80px)' }"
 								item-key="item_code"
 								@click:row="click_item_row"
 								@scroll.passive="onListScroll"
@@ -2503,11 +2503,11 @@ export default {
 }
 
 .sticky-header {
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background-color: var(--surface-primary, #fff);
-        box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.1));
+	position: sticky;
+	top: 0;
+	z-index: 100;
+	background-color: var(--surface-primary, #fff);
+	box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 [data-theme="dark"] .sticky-header {
