@@ -157,13 +157,14 @@ export async function saveItems(items) {
 }
 
 export async function clearStoredItems() {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
-		await db.table("items").clear();
-	} catch (e) {
-		console.error("Failed to clear stored items", e);
-	}
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                await db.table("items").clear();
+                setItemsLastSync(null);
+        } catch (e) {
+                console.error("Failed to clear stored items", e);
+        }
 }
 
 export function getCustomerStorage() {
