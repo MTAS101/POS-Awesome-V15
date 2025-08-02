@@ -1,7 +1,7 @@
 <template>
 	<v-row justify="center">
 		<v-dialog v-model="dialog" max-width="1000px" persistent>
-			<v-card class="offline-invoices-card">
+                       <v-card class="pos-card offline-invoices-card">
 				<!-- Enhanced White Header -->
 				<v-card-title class="offline-header pa-6">
 					<div class="header-content">
@@ -243,11 +243,10 @@ export default {
 </script>
 
 <style>
-/* Replace with standardized pos-card class */
+/* Uses standardized pos-card class directly in the template */
 .offline-invoices-card {
-	composes: pos-card;
-	border-radius: var(--border-radius-xl) !important;
-	overflow: hidden;
+       border-radius: var(--border-radius-xl) !important;
+       overflow: hidden;
 }
 
 /* Header styling */
