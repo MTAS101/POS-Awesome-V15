@@ -32,11 +32,11 @@
 		<!-- Cache Usage Meter -->
 		<slot name="cache-usage-meter"></slot>
 
-		<!-- Database Usage Gadget -->
-		<slot name="db-usage-gadget"></slot>
+    <!-- Database Usage Gadget -->
+    <slot name="db-usage-gadget" v-if="posProfile?.posa_show_database_usage_gadget"></slot>
 
-		<!-- CPU Load Gadget -->
-		<slot name="cpu-gadget"></slot>
+    <!-- CPU Load Gadget -->
+    <slot name="cpu-gadget" v-if="posProfile?.posa_show_cpu_load_gadget"></slot>
 
 		<div class="profile-section mx-1">
 			<v-chip color="primary" variant="outlined" class="profile-chip">

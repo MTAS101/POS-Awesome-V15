@@ -70,6 +70,11 @@ doctype_js = {
 # before_uninstall = "posawesome.uninstall.before_uninstall"
 after_uninstall = "posawesome.uninstall.after_uninstall"
 
+# Migration
+# ---------
+
+before_migrate = "posawesome.migration.before_migrate"
+
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
