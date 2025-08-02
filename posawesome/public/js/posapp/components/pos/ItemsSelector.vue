@@ -1,20 +1,18 @@
 <template>
 	<div :style="responsiveStyles">
-               <v-card
-                       :class="[
+		<v-card
+			:class="[
                                'selection mx-auto my-0 py-0 mt-3 pos-card dynamic-card resizable',
-                                isDarkTheme ? '' : 'bg-grey-lighten-5',
-                       ]"
-                       :style="{
-                               height: responsiveStyles['--container-height'],
-                               maxHeight: responsiveStyles['--container-height'],
-                               backgroundColor: isDarkTheme ? '#121212' : '',
-                               resize: 'vertical',
-                               overflow: 'auto',
-                       }"
-                       ref="itemsContainer"
-                       @scroll.passive="onCardScroll"
-               >
+				isDarkTheme ? '' : 'bg-grey-lighten-5',
+			]"
+			:style="{
+				height: responsiveStyles['--container-height'],
+				maxHeight: responsiveStyles['--container-height'],
+				backgroundColor: isDarkTheme ? '#121212' : '',
+				resize: 'vertical',
+				overflow: 'auto',
+			}"
+		>
 			<v-progress-linear
 				:active="loading"
 				:indeterminate="loading"
@@ -181,11 +179,14 @@
 				</div>
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
-                                              <div
-                                                      fluid
-                                                      class="items-grid dynamic-scroll"
-                                                      v-if="items_view == 'card'"
-                                              >
+                                               <div
+                                                       fluid
+                                                       class="items-grid dynamic-scroll"
+                                                       ref="itemsContainer"
+                                                       v-if="items_view == 'card'"
+                                                       :class="{ 'item-container': isOverflowing }"
+                                                       @scroll.passive="onCardScroll"
+                                               >
 							<v-card
 								v-for="item in filtered_items"
 								:key="item.item_code"
@@ -459,6 +460,7 @@ export default {
 		// Track if the current search was triggered by a scanner
                 search_from_scanner: false,
                 currentPage: 0,
+                isOverflowing: false,
         }),
 
 	watch: {
@@ -591,8 +593,9 @@ export default {
                         ) {
                                 this.update_items_details(new_value);
                         }
-               },
-               // Automatically search and add item whenever the query changes
+                        this.$nextTick(this.checkItemContainerOverflow);
+                },
+		// Automatically search and add item whenever the query changes
 		first_search: _.debounce(function (val) {
 			// Call without arguments so search_onchange treats it like an Enter key
 			this.search_onchange();
@@ -620,7 +623,16 @@ export default {
                                 this.eventBus.emit("items_loaded");
                         }
                 },
-       },
+                items_view() {
+                        this.$nextTick(() => {
+                                if (this.items_view === "card") {
+                                        this.checkItemContainerOverflow();
+                                } else {
+                                        this.isOverflowing = false;
+                                }
+                        });
+                },
+        },
 
 	methods: {
 		async loadVisibleItems(reset = false) {
@@ -643,25 +655,39 @@ export default {
 			this.eventBus.emit("set_all_items", this.items);
 			if (pageItems.length) this.update_items_details(pageItems);
 		},
-               onCardScroll() {
-                       if (this.items_view !== "card") return;
-                       const el = this.$refs.itemsContainer;
-                       if (!el) return;
-                       if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
-                               this.currentPage += 1;
-                               this.loadVisibleItems();
-                       }
-               },
-               onListScroll(event) {
-                       const el = event.target;
-                       if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
-                               this.currentPage += 1;
-                               this.loadVisibleItems();
-                       }
-               },
-               refreshPricesForVisibleItems() {
-                       const vm = this;
-                       if (!vm.filtered_items || vm.filtered_items.length === 0) return;
+		onCardScroll() {
+			const el = this.$refs.itemsContainer;
+			if (!el) return;
+			if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+				this.currentPage += 1;
+				this.loadVisibleItems();
+			}
+		},
+                onListScroll(event) {
+                        const el = event.target;
+                        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
+                                this.currentPage += 1;
+                                this.loadVisibleItems();
+                        }
+                },
+                checkItemContainerOverflow() {
+                        const el = this.$refs.itemsContainer;
+                        if (!el) {
+                                this.isOverflowing = false;
+                                return;
+                        }
+                        const maxHeight = parseFloat(
+                                getComputedStyle(el).getPropertyValue("--container-height")
+                        );
+                        if (isNaN(maxHeight)) {
+                                this.isOverflowing = false;
+                                return;
+                        }
+                        this.isOverflowing = el.scrollHeight > maxHeight;
+                },
+                refreshPricesForVisibleItems() {
+                        const vm = this;
+                        if (!vm.filtered_items || vm.filtered_items.length === 0) return;
 
 			vm.loading = true;
 
@@ -2446,8 +2472,10 @@ export default {
 		}
                 this.scan_barcoud();
                 // Apply the configured items per page on mount
-               this.itemsPerPage = this.items_per_page;
-       },
+                this.itemsPerPage = this.items_per_page;
+                window.addEventListener("resize", this.checkItemContainerOverflow);
+                this.$nextTick(this.checkItemContainerOverflow);
+        },
 
 	beforeUnmount() {
 		// Clear interval when component is destroyed
@@ -2484,11 +2512,12 @@ export default {
 		this.eventBus.off("register_pos_profile");
 		this.eventBus.off("update_cur_items_details");
 		this.eventBus.off("update_offers_counters");
-               this.eventBus.off("update_coupons_counters");
-               this.eventBus.off("update_customer_price_list");
-               this.eventBus.off("update_customer");
-               this.eventBus.off("force_reload_items");
-       },
+		this.eventBus.off("update_coupons_counters");
+                this.eventBus.off("update_customer_price_list");
+                this.eventBus.off("update_customer");
+                this.eventBus.off("force_reload_items");
+                window.removeEventListener("resize", this.checkItemContainerOverflow);
+        },
 };
 </script>
 
@@ -2516,11 +2545,17 @@ export default {
        padding-bottom: var(--dynamic-xs);
 }
 
+.item-container {
+       max-height: var(--container-height);
+       overflow-y: auto;
+       scrollbar-gutter: stable;
+}
+
 .items-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: var(--dynamic-sm);
-        align-items: start;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	gap: var(--dynamic-sm);
+	align-items: start;
 	align-content: start;
 	justify-content: flex-start;
 }
