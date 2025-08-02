@@ -818,12 +818,14 @@ export default {
 				return;
 			}
 
-			const shouldClear = force_server && this.pos_profile.posa_local_storage && !isOffline();
-			let cleared = false;
+                        const shouldClear =
+                                force_server && this.pos_profile.posa_local_storage && !isOffline();
+                        let cleared = false;
 
-			const vm = this;
-			this.loading = true;
-			const syncSince = getItemsLastSync();
+                        const vm = this;
+                        this.loading = true;
+                        const syncSince = shouldClear ? null : getItemsLastSync();
+                        if (shouldClear) setItemsLastSync(null);
 
 			// Removed noisy debug log
 			let search = this.get_search(this.first_search);
@@ -949,7 +951,7 @@ export default {
 						if (ev.data.type === "parsed") {
 							const parsed = ev.data.items;
 							const newItems = parsed.message || parsed;
-							if (syncSince && vm.items && vm.items.length) {
+                                                        if (syncSince !== null && vm.items && vm.items.length) {
 								const map = new Map(vm.items.map((it) => [it.item_code, it]));
 								newItems.forEach((it) => map.set(it.item_code, it));
 								vm.items = Array.from(map.values());
@@ -1041,7 +1043,7 @@ export default {
 						if (vm.items_request_token !== request_token) return;
 						if (r.message) {
 							const newItems = r.message;
-							if (syncSince && vm.items && vm.items.length) {
+                                                        if (syncSince !== null && vm.items && vm.items.length) {
 								const map = new Map(vm.items.map((it) => [it.item_code, it]));
 								newItems.forEach((it) => map.set(it.item_code, it));
 								vm.items = Array.from(map.values());
