@@ -2524,14 +2524,13 @@ export default {
 .items-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(180px, 180px));
-	gap: var(--dynamic-sm);
+	gap: var(--dynamic-md);
 	align-items: start;
 	align-content: start;
 	justify-content: flex-start;
 }
 
 .dynamic-item-card {
-	margin: var(--dynamic-xs);
 	transition: var(--transition-normal);
 	background-color: var(--surface-secondary);
 	display: flex;
