@@ -172,21 +172,21 @@ export default {
 }
 
 /* Dark Theme Adjustments */
-:deep(.dark-theme) .drawer-custom,
+:deep([data-theme="dark"]) .drawer-custom,
 :deep(.v-theme--dark) .drawer-custom {
 	background-color: var(--surface-primary, #1e1e1e) !important;
 	color: var(--text-primary, #ffffff) !important;
 }
 
-:deep(.dark-theme) .drawer-header,
-:deep(.dark-theme) .drawer-header-mini,
+:deep([data-theme="dark"]) .drawer-header,
+:deep([data-theme="dark"]) .drawer-header-mini,
 :deep(.v-theme--dark) .drawer-header,
 :deep(.v-theme--dark) .drawer-header-mini {
 	background: linear-gradient(135deg, #2d2d2d 0%, #1e1e1e 100%);
 	border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
 
-:deep(.dark-theme) .drawer-item-title,
+:deep([data-theme="dark"]) .drawer-item-title,
 :deep(.v-theme--dark) .drawer-item-title {
 	color: #000000 !important;
 	font-weight: 500;
@@ -194,7 +194,7 @@ export default {
 	font-family: "Roboto", sans-serif;
 }
 
-:deep(.dark-theme) .drawer-company,
+:deep([data-theme="dark"]) .drawer-company,
 :deep(.v-theme--dark) .drawer-company {
 	color: var(--text-primary, #ffffff) !important;
 	font-weight: 500;
@@ -202,24 +202,24 @@ export default {
 	font-family: "Roboto", sans-serif;
 }
 
-:deep(.dark-theme) .drawer-icon,
+:deep([data-theme="dark"]) .drawer-icon,
 :deep(.v-theme--dark) .drawer-icon {
 	color: var(--primary-light, #90caf9) !important;
 	font-size: 24px;
 }
 
-:deep(.dark-theme) .v-list-item:hover,
+:deep([data-theme="dark"]) .v-list-item:hover,
 :deep(.v-theme--dark) .v-list-item:hover {
 	background-color: rgba(144, 202, 249, 0.08) !important;
 }
 
-:deep(.dark-theme) .active-item,
+:deep([data-theme="dark"]) .active-item,
 :deep(.v-theme--dark) .active-item {
 	background-color: rgba(144, 202, 249, 0.12) !important;
 	border-right: 3px solid #90caf9;
 }
 
-:deep(.dark-theme) .v-divider,
+:deep([data-theme="dark"]) .v-divider,
 :deep(.v-theme--dark) .v-divider {
 	border-color: rgba(255, 255, 255, 0.12) !important;
 }
@@ -252,7 +252,7 @@ export default {
 }
 
 @media (max-width: 1024px) {
-	:deep(.dark-theme) .drawer-custom.drawer-visible,
+	:deep([data-theme="dark"]) .drawer-custom.drawer-visible,
 	:deep(.v-theme--dark) .drawer-custom.drawer-visible {
 		background-color: var(--surface-primary, #1e1e1e) !important;
 	}
