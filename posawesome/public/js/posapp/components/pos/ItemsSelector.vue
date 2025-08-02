@@ -2523,7 +2523,7 @@ export default {
 
 .items-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(180px, 180px));
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 	gap: var(--dynamic-sm);
 	align-items: start;
 	align-content: start;
