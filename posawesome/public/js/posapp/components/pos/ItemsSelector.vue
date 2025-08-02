@@ -2501,11 +2501,15 @@ export default {
 }
 
 .sticky-header {
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background-color: var(--surface-primary, #fff);
-        box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.1));
+	position: sticky;
+	top: 0;
+	z-index: 100;
+	background-color: var(--surface-primary);
+	box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+[data-theme="dark"] .sticky-header {
+	background-color: var(--surface-primary, #1e1e1e);
 }
 
 .dynamic-scroll {
