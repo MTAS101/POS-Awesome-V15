@@ -2523,10 +2523,11 @@ export default {
 
 .items-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(180px, 180px));
 	gap: var(--dynamic-sm);
 	align-items: start;
 	align-content: start;
+	justify-content: flex-start;
 }
 
 .dynamic-item-card {
@@ -2536,6 +2537,7 @@ export default {
 	display: flex;
 	flex-direction: column;
 	height: auto;
+	max-width: 180px;
 	box-sizing: border-box;
 }
 
