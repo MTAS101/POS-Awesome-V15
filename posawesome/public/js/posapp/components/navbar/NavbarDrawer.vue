@@ -1,14 +1,14 @@
 <template>
 	<v-navigation-drawer
 		v-model="drawerOpen"
-		:mini-variant="mini"
+		:rail="mini"
 		expand-on-hover
 		width="220"
 		:class="['drawer-custom', { 'drawer-visible': drawerOpen }]"
 		@mouseleave="handleMouseLeave"
 		temporary
 		location="left"
-		:scrim="true"
+		:scrim="scrimColor"
 	>
 		<div v-if="!mini" class="drawer-header">
 			<v-avatar size="40">
@@ -24,20 +24,19 @@
 
 		<v-divider />
 
-		<v-list dense nav>
-			<v-list-item-group v-model="activeItem" active-class="active-item">
-				<v-list-item
-					v-for="(item, index) in items"
-					:key="item.text"
-					@click="changePage(item.text)"
-					class="drawer-item"
-				>
-					<template v-slot:prepend>
-						<v-icon class="drawer-icon">{{ item.icon }}</v-icon>
-					</template>
-					<v-list-item-title class="drawer-item-title">{{ item.text }}</v-list-item-title>
-				</v-list-item>
-			</v-list-item-group>
+		<v-list density="compact" nav v-model:selected="activeItem" selected-class="active-item">
+			<v-list-item
+				v-for="(item, index) in items"
+				:key="item.text"
+				:value="index"
+				@click="changePage(item.text)"
+				class="drawer-item"
+			>
+				<template v-slot:prepend>
+					<v-icon class="drawer-icon">{{ item.icon }}</v-icon>
+				</template>
+				<v-list-item-title class="drawer-item-title">{{ item.text }}</v-list-item-title>
+			</v-list-item>
 		</v-list>
 		<!-- Sport section, hidden by default -->
 		<div v-if="showSport">
@@ -65,6 +64,13 @@ export default {
 			showSport: true,
 		};
 	},
+	computed: {
+		scrimColor() {
+			// Use an opaque background in light mode so that
+			// underlying content doesn't show through the drawer
+			return this.isDark ? true : "rgba(255,255,255,1)";
+		},
+	},
 	watch: {
 		drawer(val) {
 			this.drawerOpen = val;
@@ -73,6 +79,7 @@ export default {
 			}
 		},
 		drawerOpen(val) {
+			document.body.style.overflow = val ? "hidden" : "";
 			this.$emit("update:drawer", val);
 		},
 		item(val) {
