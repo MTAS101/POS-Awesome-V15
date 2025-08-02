@@ -590,9 +590,9 @@ export default {
 			}
 		},
 
-		onDragEnterFromSelector(event) {
-			this.$emit("show-drop-feedback", true);
-		},
+                onDragEnterFromSelector() {
+                        this.$emit("show-drop-feedback", true);
+                },
 
 		onDragLeaveFromSelector(event) {
 			// Only hide feedback if leaving the entire table area
@@ -674,8 +674,11 @@ export default {
 	letter-spacing: 0.5px;
 	padding: 12px 16px;
 	transition: background-color var(--transition-normal);
-	border-bottom: 2px solid var(--table-header-border);
-	background-color: var(--table-header-bg);
+        border-bottom: 2px solid var(--table-header-border);
+        background-color: var(
+                --table-header-bg,
+                var(--surface-secondary, #f5f5f5)
+        );
 	color: var(--table-header-text);
 	position: sticky;
 	top: 0;
