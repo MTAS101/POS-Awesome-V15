@@ -30,13 +30,12 @@ const memory = {
 	customer_storage: [],
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
-        sales_persons_storage: [],
-        price_list_cache: {},
-        item_details_cache: {},
-        items_last_sync: null,
-        tax_template_cache: {},
-        tax_inclusive: false,
-        manual_offline: false,
+	sales_persons_storage: [],
+	price_list_cache: {},
+	item_details_cache: {},
+	tax_template_cache: {},
+	tax_inclusive: false,
+	manual_offline: false,
 };
 
 // Flag to avoid concurrent invoice syncs which can cause duplicate submissions
@@ -1002,15 +1001,13 @@ export async function saveItems(items) {
 }
 
 export async function clearStoredItems() {
-        try {
-                await checkDbHealth();
-                if (!db.isOpen()) await db.open();
-                await db.table("items").clear();
-                memory.items_last_sync = null;
-                persist("items_last_sync");
-        } catch (e) {
-                console.error("Failed to clear stored items", e);
-        }
+	try {
+		await checkDbHealth();
+		if (!db.isOpen()) await db.open();
+		await db.table("items").clear();
+	} catch (e) {
+		console.error("Failed to clear stored items", e);
+	}
 }
 
 export function getCustomerStorage() {
