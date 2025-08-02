@@ -147,7 +147,8 @@
 					</v-btn>
 					<v-spacer></v-spacer>
 					<v-btn
-						theme="dark"
+						color="error"
+						variant="flat"
 						@click="dialog = false"
 						class="pos-action-btn cancel-action-btn"
 						size="large"
@@ -465,12 +466,12 @@ export default {
 	padding: var(--dynamic-md) var(--dynamic-xl) !important;
 	min-width: 120px !important;
 	transition: all 0.3s ease !important;
-	color: white !important;
+	color: var(--text-primary) !important;
 }
 
 .pos-action-btn .v-icon,
 .pos-action-btn span {
-	color: white !important;
+	color: var(--text-primary) !important;
 }
 
 .cancel-action-btn {
@@ -502,6 +503,6 @@ export default {
 
 .pos-action-btn:disabled .v-icon,
 .pos-action-btn:disabled span {
-	color: white !important;
+	color: var(--text-primary) !important;
 }
 </style>
