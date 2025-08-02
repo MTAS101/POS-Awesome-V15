@@ -281,11 +281,12 @@ fixtures = [
 			[
 				"name",
 				"in",
-				[
-					"POS Profile-posa_allow_multi_currency",
-					"POS Profile-posa_decimal_precision",
-				],
-			]
-		],
-	},
+                                [
+                                        "POS Profile-posa_allow_multi_currency",
+                                        "POS Profile-posa_decimal_precision",
+                                        "POS Profile-posa_enable_price_list_dropdown",
+                                ],
+                        ]
+                ],
+        },
 ]

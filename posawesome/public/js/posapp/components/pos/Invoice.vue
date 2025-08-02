@@ -627,7 +627,7 @@ export default {
 		},
 
 		async fetch_price_lists() {
-			if (this.pos_profile.posa_enable_price_list_dropdown) {
+			if (this.pos_profile.posa_enable_price_list_dropdown !== false) {
 				try {
 					const r = await frappe.call({
 						method: "posawesome.posawesome.api.posapp.get_selling_price_lists",

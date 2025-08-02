@@ -13,7 +13,7 @@
 			/>
 		</v-col>
 		<v-col
-			v-if="pos_profile.posa_enable_price_list_dropdown"
+			v-if="pos_profile.posa_enable_price_list_dropdown !== false"
 			cols="12"
 			sm="6"
 			class="pb-2 d-flex align-center"
