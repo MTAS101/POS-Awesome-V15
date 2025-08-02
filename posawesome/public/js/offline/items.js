@@ -222,13 +222,11 @@ export async function searchStoredItems({ search = "", itemGroup = "", limit = 1
 }
 
 export async function clearStoredItems() {
-        try {
-                await checkDbHealth();
-                if (!db.isOpen()) await db.open();
-                await db.table("items").clear();
-                memory.items_last_sync = null;
-                persist("items_last_sync", null);
-        } catch (e) {
-                console.error("Failed to clear stored items", e);
-        }
+	try {
+		await checkDbHealth();
+		if (!db.isOpen()) await db.open();
+		await db.table("items").clear();
+	} catch (e) {
+		console.error("Failed to clear stored items", e);
+	}
 }
