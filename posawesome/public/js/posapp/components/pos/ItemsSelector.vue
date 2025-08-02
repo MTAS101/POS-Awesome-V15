@@ -8,11 +8,11 @@
 			:style="{
 				height: responsiveStyles['--container-height'],
 				maxHeight: responsiveStyles['--container-height'],
-				backgroundColor: isDarkTheme ? '#121212' : '',
-				resize: 'vertical',
-				overflow: 'auto',
-			}"
-		>
+                               backgroundColor: isDarkTheme ? '#121212' : '',
+                               resize: 'vertical',
+                                overflow: items_view === 'card' ? 'hidden' : 'auto',
+                        }"
+                >
 			<v-progress-linear
 				:active="loading"
 				:indeterminate="loading"
