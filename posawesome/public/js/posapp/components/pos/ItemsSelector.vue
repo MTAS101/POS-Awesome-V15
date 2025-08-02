@@ -10,7 +10,7 @@
 				maxHeight: responsiveStyles['--container-height'],
 				backgroundColor: isDarkTheme ? '#121212' : '',
 				resize: 'vertical',
-				overflow: 'hidden',
+				overflow: 'auto',
 			}"
 		>
 			<v-progress-linear
