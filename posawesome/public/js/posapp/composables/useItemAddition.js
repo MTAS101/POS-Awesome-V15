@@ -72,8 +72,8 @@ export function useItemAddition() {
 					method: "posawesome.posawesome.api.items.get_price_for_uom",
 					args: {
 						item_code: new_item.item_code,
-						price_list: context.get_price_list ? context.get_price_list() : null,
 						uom: new_item.uom,
+						price_list: context.get_price_list ? context.get_price_list() : null,
 					},
 				});
 				if (r.message) {

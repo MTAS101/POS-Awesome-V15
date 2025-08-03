@@ -3,6 +3,17 @@
 import { clearPriceListCache } from "../../../offline/index.js";
 
 export default {
+	// Watch for changes in POS profile to update headers
+	safePosProfile: {
+		handler(newProfile) {
+			if (newProfile && Object.keys(newProfile).length > 0) {
+				// Re-initialize headers when POS profile is loaded
+				this.initializeItemsHeaders();
+			}
+		},
+		deep: true
+	},
+
 	// Watch for customer change and update related data
 	customer() {
 		this.close_payments();
