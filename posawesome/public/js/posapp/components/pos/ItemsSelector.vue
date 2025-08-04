@@ -761,6 +761,10 @@ export default {
 		},
 		async loadVisibleItems(reset = false) {
 			console.log("🔍 loadVisibleItems called with reset:", reset);
+			const previousItems = [...this.items];
+			const previousPage = this.currentPage;
+			const fetchPage = reset ? 0 : this.currentPage;
+			this.loading = true;
 			try {
 				console.log("⏳ Waiting for initPromise...");
 				await initPromise;
@@ -789,16 +793,13 @@ export default {
 					}
 					try {
 						await this.get_items(true);
+						if (reset) this.currentPage = 0;
 					} catch (e) {
 						console.error("Failed to load items from server after DB failure", e);
+						this.items = previousItems;
+						this.currentPage = previousPage;
 					}
 					return;
-				}
-
-				if (reset) {
-					console.log("🔄 Resetting items array");
-					this.currentPage = 0;
-					this.items = [];
 				}
 
 				console.log("🔍 Getting search parameters...");
@@ -808,7 +809,23 @@ export default {
 
 				// If local storage is disabled, fetch directly from server once and exit
 				if (!this.pos_profile.posa_local_storage) {
-					await this.get_items(true);
+					try {
+						await this.get_items(true);
+						if (reset) this.currentPage = 0;
+					} catch (e) {
+						console.warn("Failed to load items from server", e);
+						if (typeof frappe !== "undefined" && frappe.show_alert) {
+							frappe.show_alert(
+								{
+									message: __("Failed to load items from server"),
+									indicator: "red",
+								},
+								5,
+							);
+						}
+						this.items = previousItems;
+						this.currentPage = previousPage;
+					}
 					return;
 				}
 
@@ -818,20 +835,42 @@ export default {
 					search,
 					itemGroup,
 					limit: this.itemsPerPage,
-					offset: this.currentPage * this.itemsPerPage,
+					offset: fetchPage * this.itemsPerPage,
 				});
 				console.log("✅ searchStoredItems returned:", pageItems.length, "items");
 
 				if (!pageItems.length && !isOffline()) {
 					if (!this.fallbackAttempted) {
 						this.fallbackAttempted = true;
-						await this.get_items(true);
+						try {
+							await this.get_items(true);
+							if (reset) this.currentPage = 0;
+						} catch (e) {
+							console.warn("Server fallback failed", e);
+							if (typeof frappe !== "undefined" && frappe.show_alert) {
+								frappe.show_alert(
+									{
+										message: __("Failed to load items from server"),
+										indicator: "red",
+									},
+									5,
+								);
+							} else {
+								console.warn("Failed to load items from server storage");
+							}
+							this.items = previousItems;
+							this.currentPage = previousPage;
+						}
 					}
 					return;
 				}
 
-				if (reset) this.items = pageItems;
-				else this.items = [...this.items, ...pageItems];
+				if (reset) {
+					this.currentPage = 0;
+					this.items = pageItems;
+				} else {
+					this.items = [...this.items, ...pageItems];
+				}
 
 				// Reset fallback flag after successful fetch
 				this.fallbackAttempted = false;
@@ -852,7 +891,13 @@ export default {
 				console.log("✅ loadVisibleItems completed successfully");
 			} catch (error) {
 				console.error("❌ Error in loadVisibleItems:", error);
-				throw error; // Re-throw to be caught by the timeout handler
+				this.items = previousItems;
+				this.currentPage = previousPage;
+				if (typeof frappe !== "undefined" && frappe.show_alert) {
+					frappe.show_alert({ message: __("Failed to load items"), indicator: "red" }, 5);
+				}
+			} finally {
+				this.loading = false;
 			}
 		},
 		checkItemContainerOverflow() {
