@@ -2,6 +2,9 @@
 import Dexie from "dexie/dist/dexie.mjs";
 
 export { getStoredItems, saveItems, clearStoredItems, searchStoredItems } from "./offline/items.js";
+export { getCustomerStorage } from "./offline/cache.js";
+import { setCustomerStorage as cacheSetCustomerStorage, memory as cacheMemory } from "./offline/cache.js";
+import { persist as cachePersist } from "./offline/core.js";
 
 // --- Dexie initialization ---------------------------------------------------
 const db = new Dexie("posawesome_offline");
@@ -957,25 +960,9 @@ export function updateLocalStockWithActualQuantities(invoiceItems, serverItems) 
 }
 
 // --- Generic getters and setters for cached data ----------------------------
-export function getCustomerStorage() {
-	return memory.customer_storage || [];
-}
-
 export function setCustomerStorage(customers) {
-	try {
-		memory.customer_storage = customers.map((c) => ({
-			name: c.name,
-			customer_name: c.customer_name,
-			mobile_no: c.mobile_no,
-			email_id: c.email_id,
-			primary_address: c.primary_address,
-			tax_id: c.tax_id,
-		}));
-	} catch (e) {
-		console.error("Failed to trim customers for storage", e);
-		memory.customer_storage = [];
-	}
-	persist("customer_storage");
+        cacheSetCustomerStorage(customers, false);
+        cachePersist("customer_storage", cacheMemory.customer_storage);
 }
 
 export function getSalesPersonsStorage() {
