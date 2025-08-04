@@ -89,6 +89,7 @@ export default {
 		new_coupon: null,
 		itemsPerPage: 1000,
 		singleExpand: true,
+		expanded: [], // Array of expanded row IDs
 		items_headers: [
 			{ title: __("Coupon"), value: "coupon_code", align: "start" },
 			{ title: __("Type"), value: "type", align: "start" },

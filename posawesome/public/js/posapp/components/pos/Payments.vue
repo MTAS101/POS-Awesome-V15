@@ -766,7 +766,6 @@ export default {
 			is_return: false, // Is this a return invoice?
 			loyalty_amount: 0, // Loyalty points to redeem
 			redeemed_customer_credit: 0, // Customer credit to redeem
-			credit_change: 0, // Change to be given as credit
 			paid_change: 0, // Change to be given as paid
 			is_credit_sale: false, // Is this a credit sale?
 			is_write_off_change: false, // Write-off for change enabled
@@ -789,15 +788,10 @@ export default {
 			sales_person: "", // Selected sales person
 			addresses: [], // List of customer addresses
 			is_user_editing_paid_change: false, // User interaction flag
+			readonly: false, // Readonly mode for the component
 		};
 	},
 	computed: {
-		// Get currency symbol for given or current currency
-		currencySymbol() {
-			return (currency) => {
-				return get_currency_symbol(currency || this.invoice_doc.currency);
-			};
-		},
 		// Display currency for invoice
 		displayCurrency() {
 			return this.invoice_doc ? this.invoice_doc.currency : "";

@@ -26,12 +26,12 @@
 			<div class="dynamic-padding">
 				<!-- Top Row: Customer Selection and Invoice Type -->
 				<v-row align="center" class="items px-3 py-2">
-					<v-col :cols="pos_profile.posa_allow_sales_order ? 9 : 12" class="pb-0 pr-0">
+					<v-col :cols="safePosProfile.posa_allow_sales_order ? 9 : 12" class="pb-0 pr-0">
 						<!-- Customer selection component -->
 						<Customer />
 					</v-col>
 					<!-- Invoice Type Selection (Only shown if sales orders are allowed) -->
-					<v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-4">
+					<v-col v-if="safePosProfile.posa_allow_sales_order" cols="3" class="pb-4">
 						<v-select
 							density="compact"
 							hide-details
@@ -49,7 +49,7 @@
 
 				<!-- Delivery Charges Section (Only if enabled in POS profile) -->
 				<DeliveryCharges
-					:pos_profile="pos_profile"
+					:pos_profile="safePosProfile"
 					:delivery_charges="delivery_charges"
 					:selected_delivery_charge="selected_delivery_charge"
 					:delivery_charges_rate="delivery_charges_rate"
@@ -67,7 +67,7 @@
 
 				<!-- Posting Date and Customer Balance Section -->
 				<PostingDateRow
-					:pos_profile="pos_profile"
+					:pos_profile="safePosProfile"
 					:posting_date_display="posting_date_display"
 					:customer_balance="customer_balance"
 					:price-list="selected_price_list"
@@ -87,7 +87,7 @@
 
 				<!-- Multi-Currency Section (Only if enabled in POS profile) -->
 				<MultiCurrencyRow
-					:pos_profile="pos_profile"
+					:pos_profile="safePosProfile"
 					:selected_currency="selected_currency"
 					:plc_conversion_rate="exchange_rate"
 					:conversion_rate="conversion_rate"
@@ -186,8 +186,8 @@
 						v-model:expanded="expanded"
 						:itemsPerPage="itemsPerPage"
 						:itemSearch="itemSearch"
-						:pos_profile="pos_profile"
-						:invoice_doc="invoice_doc"
+						:pos_profile="safePosProfile"
+						:invoice_doc="safeInvoiceDoc"
 						:invoiceType="invoiceType"
 						:displayCurrency="displayCurrency"
 						:formatFloat="formatFloat"
@@ -218,7 +218,7 @@
 		</v-card>
 		<!-- Payment Section -->
 		<InvoiceSummary
-			:pos_profile="pos_profile"
+			:pos_profile="safePosProfile"
 			:total_qty="total_qty"
 			:additional_discount="additional_discount"
 			:additional_discount_percentage="additional_discount_percentage"
@@ -266,10 +266,10 @@ export default {
 	data() {
 		return {
 			// POS profile settings
-			pos_profile: "",
+			pos_profile: {},
 			pos_opening_shift: "",
 			stock_settings: "",
-			invoice_doc: "",
+			invoice_doc: {},
 			return_doc: "",
 			customer: "",
 			customer_info: "",
@@ -314,6 +314,8 @@ export default {
 			available_columns: [], // All available columns
 			show_column_selector: false, // Column selector dialog visibility
 			invoiceHeight: null,
+			readonly: false, // Readonly mode for the invoice
+			itemSearch: "", // Search term for items table
 		};
 	},
 
@@ -331,6 +333,14 @@ export default {
 		isDarkTheme() {
 			return this.$theme.current === "dark";
 		},
+		// Ensure pos_profile is always an object
+		safePosProfile() {
+			return this.pos_profile && typeof this.pos_profile === 'object' ? this.pos_profile : {};
+		},
+		// Ensure invoice_doc is always an object
+		safeInvoiceDoc() {
+			return this.invoice_doc && typeof this.invoice_doc === 'object' ? this.invoice_doc : {};
+		},
 	},
 
 	methods: {
@@ -338,6 +348,8 @@ export default {
 		...offerMethods,
 		...invoiceItemMethods,
 		initializeItemsHeaders() {
+			console.log("Initializing items headers...");
+			
 			// Define all available columns
 			this.available_columns = [
 				{ title: __("Name"), align: "start", sortable: true, key: "item_name", required: true },
@@ -352,18 +364,21 @@ export default {
 
 			// Initialize selected columns if empty
 			if (!this.selected_columns || this.selected_columns.length === 0) {
+				console.log("No selected columns found, initializing defaults...");
 				// By default, select all required columns and those enabled in POS profile
 				this.selected_columns = this.available_columns
 					.filter((col) => {
 						if (col.required) return true;
-						if (col.key === "discount_value" && this.pos_profile.posa_display_discount_percentage)
+						if (col.key === "discount_value" && this.safePosProfile.posa_display_discount_percentage)
 							return true;
-						if (col.key === "discount_amount" && this.pos_profile.posa_display_discount_amount)
+						if (col.key === "discount_amount" && this.safePosProfile.posa_display_discount_amount)
 							return true;
 						return false;
 					})
 					.map((col) => col.key);
 			}
+
+			console.log("Selected columns:", this.selected_columns);
 
 			// Generate headers based on selected columns
 			this.updateHeadersFromSelection();
@@ -410,6 +425,14 @@ export default {
 			this.items_headers = this.available_columns.filter(
 				(col) => this.selected_columns.includes(col.key) || col.required,
 			);
+			
+			// Debug logging
+			console.log("Headers updated:", {
+				available_columns: this.available_columns.length,
+				selected_columns: this.selected_columns,
+				items_headers: this.items_headers.length,
+				headers: this.items_headers
+			});
 		},
 
 		updateSelectedColumns() {
@@ -1010,6 +1033,8 @@ export default {
 				item.idx = index + 1;
 			});
 		},
+
+
 	},
 
 	mounted() {
@@ -1017,6 +1042,10 @@ export default {
 		this.loadColumnPreferences();
 		// Restore saved invoice height
 		this.loadInvoiceHeight();
+		
+		// Initialize headers with default values to ensure they're always available
+		this.initializeItemsHeaders();
+		
 		this.eventBus.on("item-drag-start", (item) => {
 			this.showDropFeedback(true);
 		});
@@ -1026,11 +1055,12 @@ export default {
 
 		// Register event listeners for POS profile, items, customer, offers, etc.
 		this.eventBus.on("register_pos_profile", (data) => {
-			this.pos_profile = data.pos_profile;
+			// Ensure pos_profile is always an object, never an empty string
+			this.pos_profile = data.pos_profile && typeof data.pos_profile === 'object' ? data.pos_profile : {};
 			this.company = data.company || null;
-			this.customer = data.pos_profile.customer;
-			this.pos_opening_shift = data.pos_opening_shift;
-			this.stock_settings = data.stock_settings;
+			this.customer = this.pos_profile.customer || "";
+			this.pos_opening_shift = data.pos_opening_shift || "";
+			this.stock_settings = data.stock_settings || "";
 			const prec = parseInt(data.pos_profile.posa_decimal_precision);
 			if (!isNaN(prec)) {
 				this.float_precision = prec;

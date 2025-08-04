@@ -773,10 +773,16 @@ def update_price_list_rate(item_code, price_list, rate, uom=None):
 
 
 @frappe.whitelist()
-def get_price_for_uom(item_code, price_list, uom):
+def get_price_for_uom(item_code, uom, price_list=None):
 	"""Return Item Price for the given item, price list and UOM if it exists."""
-	if not (item_code and price_list and uom):
+	if not (item_code and uom):
 		return None
+
+	# If no price_list provided, try to get from default selling price list
+	if not price_list:
+		price_list = frappe.db.get_single_value("Selling Settings", "selling_price_list")
+		if not price_list:
+			return None
 
 	price = frappe.db.get_value(
 		"Item Price",
