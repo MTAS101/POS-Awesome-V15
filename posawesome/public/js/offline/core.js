@@ -3,12 +3,12 @@ import { withWriteLock } from "./db-utils.js";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
-db.version(4).stores({
-	keyval: "&key",
-	queue: "&key",
-	cache: "&key",
-	items: "&item_code,item_name,item_group",
-	item_prices: "&[price_list+item_code],price_list,item_code",
+db.version(5).stores({
+        keyval: "&key",
+        queue: "&key",
+        cache: "&key",
+        items: "&item_code,item_name,item_group,serial_no,batch_no",
+        item_prices: "&[price_list+item_code],price_list,item_code",
 });
 
 export const KEY_TABLE_MAP = {
