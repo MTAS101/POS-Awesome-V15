@@ -131,21 +131,23 @@ export function getCustomerStorage() {
 	return memory.customer_storage || [];
 }
 
-export function setCustomerStorage(customers) {
-	try {
-		memory.customer_storage = customers.map((c) => ({
-			name: c.name,
-			customer_name: c.customer_name,
-			mobile_no: c.mobile_no,
-			email_id: c.email_id,
-			primary_address: c.primary_address,
-			tax_id: c.tax_id,
-		}));
-	} catch (e) {
-		console.error("Failed to trim customers for storage", e);
-		memory.customer_storage = [];
-	}
-	persist("customer_storage", memory.customer_storage);
+export function setCustomerStorage(customers, shouldPersist = true) {
+        try {
+                memory.customer_storage = customers.map((c) => ({
+                        name: c.name,
+                        customer_name: c.customer_name,
+                        mobile_no: c.mobile_no,
+                        email_id: c.email_id,
+                        primary_address: c.primary_address,
+                        tax_id: c.tax_id,
+                }));
+        } catch (e) {
+                console.error("Failed to trim customers for storage", e);
+                memory.customer_storage = [];
+        }
+        if (shouldPersist) {
+                persist("customer_storage", memory.customer_storage);
+        }
 }
 
 export function getItemsLastSync() {
