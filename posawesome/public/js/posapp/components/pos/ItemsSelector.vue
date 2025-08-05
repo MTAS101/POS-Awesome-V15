@@ -1035,55 +1035,51 @@ export default {
 
 				// Go directly to API call for simplicity
 				console.log("🌐 Making direct API call to load items");
-                                const requestBody = {
-                                        pos_profile: JSON.stringify(this.pos_profile),
-                                        price_list: this.customer_price_list || this.pos_profile.selling_price_list,
-                                        item_group: "",
-                                        search_value: "",
-                                        customer: this.customer,
-                                        limit: 50,
-                                        offset: 0,
-                                };
-                                frappe.freeze();
-                                frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_items",
-                                        args: requestBody,
-                                        callback: (res) => {
-                                                frappe.unfreeze();
-                                                if (!res.exc && Array.isArray(res.message)) {
-                                                        this.items = res.message;
-                                                        console.log(
-                                                                "✅ Items loaded successfully:",
-                                                                this.items.length,
-                                                                "items"
-                                                        );
+				const requestBody = {
+					pos_profile: JSON.stringify(this.pos_profile),
+					price_list: this.customer_price_list || this.pos_profile.selling_price_list,
+					item_group: "",
+					search_value: "",
+					customer: this.customer,
+					limit: 50,
+					offset: 0,
+				};
+				frappe.dom.freeze();
+				frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: requestBody,
+					callback: (res) => {
+						frappe.dom.unfreeze();
+						if (!res.exc && Array.isArray(res.message)) {
+							this.items = res.message;
+							console.log("✅ Items loaded successfully:", this.items.length, "items");
 
-                                                        // Set default quantities immediately for instant display
-                                                        this.items.forEach((item) => {
-                                                                item.actual_qty = 0; // Set default quantity
-                                                        });
+							// Set default quantities immediately for instant display
+							this.items.forEach((item) => {
+								item.actual_qty = 0; // Set default quantity
+							});
 
-                                                        // Clear search cache when new items are loaded
-                                                        if (this.searchCache) {
-                                                                this.searchCache.clear();
-                                                        }
+							// Clear search cache when new items are loaded
+							if (this.searchCache) {
+								this.searchCache.clear();
+							}
 
-                                                        this.eventBus.emit("set_all_items", this.items);
+							this.eventBus.emit("set_all_items", this.items);
 
-                                                        // Force a reactive update immediately
-                                                        this.$nextTick(() => {
-                                                                this.$forceUpdate();
-                                                        });
+							// Force a reactive update immediately
+							this.$nextTick(() => {
+								this.$forceUpdate();
+							});
 
-                                                        // Load quantities in background (non-blocking)
-                                                        setTimeout(() => {
-                                                                this.update_items_details(this.items);
-                                                        }, 100);
-                                                } else {
-                                                        console.error("❌ Invalid response format");
-                                                }
-                                        },
-                                });
+							// Load quantities in background (non-blocking)
+							setTimeout(() => {
+								this.update_items_details(this.items);
+							}, 100);
+						} else {
+							console.error("❌ Invalid response format");
+						}
+					},
+				});
 			} catch (error) {
 				console.error("❌ Error in forceLoadItems:", error.message);
 			}
@@ -1321,7 +1317,7 @@ export default {
 
 			if (this.itemWorker) {
 				try {
-					frappe.freeze();
+					frappe.dom.freeze();
 					const res = await frappe.call({
 						method: "posawesome.posawesome.api.items.get_items",
 						args: {
@@ -1425,7 +1421,7 @@ export default {
 					console.error("Failed to fetch items", err);
 					vm.loading = false;
 				} finally {
-					frappe.unfreeze();
+					frappe.dom.unfreeze();
 				}
 			} else {
 				frappe.call({
