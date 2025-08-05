@@ -4,11 +4,11 @@ import { withWriteLock } from "./db-utils.js";
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
 db.version(5).stores({
-        keyval: "&key",
-        queue: "&key",
-        cache: "&key",
-        items: "&item_code,item_name,item_group,serial_no,batch_no",
-        item_prices: "&[price_list+item_code],price_list,item_code",
+	keyval: "&key",
+	queue: "&key",
+	cache: "&key",
+	items: "&item_code,item_name,item_group,serial_no,batch_no",
+	item_prices: "&[price_list+item_code],price_list,item_code",
 });
 
 export const KEY_TABLE_MAP = {
@@ -67,8 +67,23 @@ export async function checkDbHealth(timeoutMs = 5000) {
 	const timeoutPromise = new Promise((_, reject) =>
 		setTimeout(() => reject(new Error("IndexedDB health check timed out")), timeoutMs),
 	);
-
-	return Promise.race([healthPromise, timeoutPromise]);
+	try {
+		return await Promise.race([healthPromise, timeoutPromise]);
+	} catch (err) {
+		// If the race rejects, most likely due to a timeout, attempt a retry
+		console.warn("IndexedDB health check timed out, retrying", err);
+		try {
+			if (db.isOpen()) {
+				await db.close();
+			}
+			await db.open();
+			await db.table(tableForKey("health_check")).get("health_check");
+			return true;
+		} catch (retryErr) {
+			console.error("IndexedDB still unresponsive after retry", retryErr);
+			return false;
+		}
+	}
 }
 
 let persistWorker = null;
@@ -108,8 +123,8 @@ initPersistWorker();
 const persistQueue = {};
 let persistTimeout = null;
 
-export function addToPersistQueue(key, value) {
-	persistQueue[key] = value;
+export function addToPersistQueue(key, value, timeoutMs) {
+	persistQueue[key] = { value, timeoutMs };
 
 	if (!persistTimeout) {
 		persistTimeout = setTimeout(flushPersistQueue, 100);
@@ -120,16 +135,17 @@ function flushPersistQueue() {
 	const keys = Object.keys(persistQueue);
 	if (keys.length) {
 		keys.forEach((key) => {
-			persist(key, persistQueue[key]);
+			const entry = persistQueue[key];
+			persist(key, entry.value, entry.timeoutMs);
 			delete persistQueue[key];
 		});
 	}
 	persistTimeout = null;
 }
 
-export function persist(key, value) {
+export function persist(key, value, timeoutMs) {
 	// Run health check in background; ignore errors
-	checkDbHealth().catch(() => {});
+	checkDbHealth(timeoutMs).catch(() => {});
 	if (persistWorker) {
 		let cleanValue = value;
 		try {
