@@ -259,6 +259,7 @@ import invoiceWatchers from "./invoiceWatchers";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
+import { usePriceRefresh } from "../../composables/usePriceRefresh.js";
 
 export default {
 	name: "POSInvoice",
@@ -309,15 +310,16 @@ export default {
 			price_lists: [], // Available selling price lists
 			selected_price_list: "", // Currently selected price list
 			price_list_currency: "", // Currency of the selected price list
-			selected_columns: [], // Selected columns for items table
-			temp_selected_columns: [], // Temporary array for column selection
-			available_columns: [], // All available columns
-			show_column_selector: false, // Column selector dialog visibility
-			invoiceHeight: null,
-			readonly: false, // Readonly mode for the invoice
-			itemSearch: "", // Search term for items table
-		};
-	},
+                        selected_columns: [], // Selected columns for items table
+                        temp_selected_columns: [], // Temporary array for column selection
+                        available_columns: [], // All available columns
+                        show_column_selector: false, // Column selector dialog visibility
+                        invoiceHeight: null,
+                        readonly: false, // Readonly mode for the invoice
+                        itemSearch: "", // Search term for items table
+                        refreshPrices: () => {}, // Debounced price refresh handler
+                };
+        },
 
 	components: {
 		Customer,
@@ -343,7 +345,7 @@ export default {
 		},
 	},
 
-	methods: {
+        methods: {
 		...shortcutMethods,
 		...offerMethods,
 		...invoiceItemMethods,
@@ -715,7 +717,7 @@ export default {
 			this.sync_exchange_rate();
 		},
 
-		update_item_rates() {
+                update_item_rates() {
 			console.log("Updating item rates with exchange rate:", this.exchange_rate);
 
 			this.items.forEach((item) => {
@@ -799,7 +801,16 @@ export default {
 
 			// Force UI update after all calculations
 			this.$forceUpdate();
-		},
+                },
+
+                handleCustomerChange(customer) {
+                        this.customer = customer;
+                        this.close_payments();
+                        this.eventBus.emit("set_customer", this.customer);
+                        this.fetch_customer_details();
+                        this.fetch_customer_balance();
+                        this.set_delivery_charges();
+                },
 
 		formatCurrency(value, precision = null) {
 			const prec = precision != null ? precision : this.currency_precision;
@@ -1037,7 +1048,7 @@ export default {
 
 	},
 
-	mounted() {
+        mounted() {
 		// Load saved column preferences
 		this.loadColumnPreferences();
 		// Restore saved invoice height
@@ -1093,9 +1104,9 @@ export default {
 		this.eventBus.on("add_item", (item) => {
 			this.add_item(item);
 		});
-		this.eventBus.on("update_customer", (customer) => {
-			this.customer = customer;
-		});
+                this.eventBus.on("update_customer", (customer) => {
+                        this.handleCustomerChange(customer);
+                });
 		this.eventBus.on("fetch_customer_details", () => {
 			this.fetch_customer_details();
 		});
@@ -1198,12 +1209,14 @@ export default {
 		this.eventBus.off("reset_posting_date");
 	},
 	// Register global keyboard shortcuts when component is created
-	created() {
-		document.addEventListener("keydown", this.shortOpenPayment.bind(this));
-		document.addEventListener("keydown", this.shortDeleteFirstItem.bind(this));
-		document.addEventListener("keydown", this.shortOpenFirstItem.bind(this));
-		document.addEventListener("keydown", this.shortSelectDiscount.bind(this));
-	},
+        created() {
+                const { refreshPrices } = usePriceRefresh(() => this.update_item_rates());
+                this.refreshPrices = refreshPrices;
+                document.addEventListener("keydown", this.shortOpenPayment.bind(this));
+                document.addEventListener("keydown", this.shortDeleteFirstItem.bind(this));
+                document.addEventListener("keydown", this.shortOpenFirstItem.bind(this));
+                document.addEventListener("keydown", this.shortSelectDiscount.bind(this));
+        },
 	// Remove global keyboard shortcuts when component is unmounted
 	unmounted() {
 		document.removeEventListener("keydown", this.shortOpenPayment);
