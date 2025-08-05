@@ -1,4 +1,5 @@
 import { ref, getCurrentInstance } from "vue";
+import { usePosStore } from "../stores/usePosStore.js";
 import {
     initPromise,
     checkDbHealth,
@@ -11,6 +12,7 @@ import {
 export function usePosShift(openDialog) {
     const { proxy } = getCurrentInstance();
     const eventBus = proxy?.eventBus;
+    const posStore = usePosStore();
 
     const pos_profile = ref(null);
     const pos_opening_shift = ref(null);
@@ -26,6 +28,8 @@ export function usePosShift(openDialog) {
                 if (r.message) {
                     pos_profile.value = r.message.pos_profile;
                     pos_opening_shift.value = r.message.pos_opening_shift;
+                    posStore.setProfile(pos_profile.value);
+                    posStore.setShift(pos_opening_shift.value);
                     if (pos_profile.value.taxes_and_charges) {
                         frappe.call({
                             method: "frappe.client.get",
@@ -61,6 +65,8 @@ export function usePosShift(openDialog) {
                     if (data) {
                         pos_profile.value = data.pos_profile;
                         pos_opening_shift.value = data.pos_opening_shift;
+                        posStore.setProfile(pos_profile.value);
+                        posStore.setShift(pos_opening_shift.value);
                         eventBus?.emit("register_pos_profile", data);
                         eventBus?.emit("set_company", data.company);
                         try {
@@ -79,6 +85,8 @@ export function usePosShift(openDialog) {
                 if (data) {
                     pos_profile.value = data.pos_profile;
                     pos_opening_shift.value = data.pos_opening_shift;
+                    posStore.setProfile(pos_profile.value);
+                    posStore.setShift(pos_opening_shift.value);
                     eventBus?.emit("register_pos_profile", data);
                     eventBus?.emit("set_company", data.company);
                     try {
@@ -116,6 +124,8 @@ export function usePosShift(openDialog) {
                 if (r.message) {
                     pos_opening_shift.value = null;
                     pos_profile.value = null;
+                    posStore.setShift(null);
+                    posStore.setProfile(null);
                     clearOpeningStorage();
                     eventBus?.emit("show_message", {
                         title: `POS Shift Closed`,

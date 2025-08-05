@@ -59,25 +59,36 @@ import {
 	checkDbHealth,
 	setTaxTemplate,
 } from "../../../offline/index.js";
-import { getCurrentInstance } from "vue";
+import { getCurrentInstance, watch } from "vue";
 import { usePosShift } from "../../composables/usePosShift.js";
 import { useOffers } from "../../composables/useOffers.js";
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
+import { usePosStore } from "../../stores/usePosStore.js";
 
 export default {
 	setup() {
 		const instance = getCurrentInstance();
-		const responsive = useResponsive();
-		const shift = usePosShift(() => {
-			if (instance && instance.proxy) {
-				instance.proxy.dialog = true;
-			}
-		});
-		const offers = useOffers();
-		return { ...responsive, ...shift, ...offers };
-	},
+                const responsive = useResponsive();
+                const shift = usePosShift(() => {
+                        if (instance && instance.proxy) {
+                                instance.proxy.dialog = true;
+                        }
+                });
+                const offers = useOffers();
+                const posStore = usePosStore();
+                watch(
+                        () => posStore.profile,
+                        (profile) => {
+                                if (profile && profile.name) {
+                                        offers.get_offers(profile.name, profile);
+                                }
+                        },
+                        { immediate: true },
+                );
+                return { ...responsive, ...shift, ...offers, posStore };
+        },
 	data: function () {
 		return {
 			dialog: false,
@@ -130,20 +141,15 @@ export default {
 			this.eventBus.on("close_opening_dialog", () => {
 				this.dialog = false;
 			});
-			this.eventBus.on("register_pos_data", (data) => {
-				this.pos_profile = data.pos_profile;
-				this.get_offers(this.pos_profile.name, this.pos_profile);
-				this.pos_opening_shift = data.pos_opening_shift;
-				this.eventBus.emit("register_pos_profile", data);
-				console.info("LoadPosProfile");
-			});
-			// When profile is registered directly from composables,
-			// ensure offers are fetched as well
-			this.eventBus.on("register_pos_profile", (data) => {
-				if (data && data.pos_profile) {
-					this.get_offers(data.pos_profile.name, data.pos_profile);
-				}
-			});
+                        this.eventBus.on("register_pos_data", (data) => {
+                                this.pos_profile = data.pos_profile;
+                                this.pos_opening_shift = data.pos_opening_shift;
+                                this.posStore.setProfile(data.pos_profile);
+                                this.posStore.setShift(data.pos_opening_shift);
+                                this.get_offers(data.pos_profile.name, data.pos_profile);
+                                this.eventBus.emit("register_pos_profile", data);
+                                console.info("LoadPosProfile");
+                        });
 			this.eventBus.on("show_payment", (data) => {
 				this.payment = data === "true";
 				this.showOffers = false;
@@ -179,7 +185,6 @@ export default {
 	beforeUnmount() {
 		this.eventBus.off("close_opening_dialog");
 		this.eventBus.off("register_pos_data");
-		this.eventBus.off("register_pos_profile");
 		this.eventBus.off("LoadPosProfile");
 		this.eventBus.off("show_offers");
 		this.eventBus.off("show_coupons");
