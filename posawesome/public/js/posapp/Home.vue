@@ -46,7 +46,7 @@ import {
 	purgeOldQueueEntries,
 	MAX_QUEUE_ITEMS,
 	initPromise,
-	memoryInitPromise,
+	initMemoryCache,
 	isCacheReady,
 	toggleManualOffline,
 	isManualOffline,
@@ -143,7 +143,7 @@ export default {
 
 		async initializeData() {
 			await initPromise;
-			await memoryInitPromise;
+			await initMemoryCache();
 			this.cacheReady = true;
 			checkDbHealth().catch(() => {});
 			// Load POS profile from cache or storage

@@ -160,7 +160,7 @@ import UpdateCustomer from "./UpdateCustomer.vue";
 import {
 	getCustomerStorage,
 	setCustomerStorage,
-	memoryInitPromise,
+	initMemoryCache,
 	getCustomersLastSync,
 	setCustomersLastSync,
 } from "../../../offline/index.js";
@@ -403,7 +403,7 @@ export default {
 	},
 
 	created() {
-		memoryInitPromise.then(() => {
+		initMemoryCache().then(() => {
 			if (getCustomerStorage().length) {
 				try {
 					this.customers = getCustomerStorage();
@@ -419,13 +419,13 @@ export default {
 
 		this.$nextTick(() => {
 			this.eventBus.on("register_pos_profile", async (pos_profile) => {
-				await memoryInitPromise;
+				await initMemoryCache();
 				this.pos_profile = pos_profile;
 				this.get_customer_names();
 			});
 
 			this.eventBus.on("payments_register_pos_profile", async (pos_profile) => {
-				await memoryInitPromise;
+				await initMemoryCache();
 				this.pos_profile = pos_profile;
 				this.get_customer_names();
 			});

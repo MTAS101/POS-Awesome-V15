@@ -8,6 +8,7 @@ import themePlugin from "./plugins/theme.js";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
 import Home from "./Home.vue";
+import { initMemoryCache } from "../offline/index.js";
 
 // Expose Dexie globally for libraries that expect a global Dexie instance
 if (typeof window !== "undefined" && !window.Dexie) {
@@ -96,6 +97,12 @@ frappe.PosApp.posapp = class {
 			navigator.serviceWorker
 				.register("/sw.js")
 				.catch((err) => console.error("SW registration failed", err));
+		}
+
+		if (typeof requestIdleCallback === "function") {
+			requestIdleCallback(() => initMemoryCache());
+		} else {
+			setTimeout(() => initMemoryCache(), 0);
 		}
 	}
 	setup_header() {}
