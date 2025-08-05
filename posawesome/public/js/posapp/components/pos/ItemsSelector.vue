@@ -41,7 +41,8 @@
 								@keydown.esc="esc_event"
 								@keydown.enter="search_onchange"
 								@click:clear="clearSearch"
-								prepend-inner-icon="mdi-magnify"
+                                                                prepend-inner-icon="mdi-magnify"
+                                                                @click:prepend-inner="search_onchange"
 								@focus="handleItemSearchFocus"
 								ref="debounce_search"
 							>
@@ -470,6 +471,7 @@ export default {
 		renderBuffer: 10,
 		lastScrollTop: 0,
 		scrollThrottle: null,
+                searchDebounce: null,
 		// Prevent repeated server fetches when local storage is empty
 		fallbackAttempted: false,
 	}),
@@ -611,11 +613,10 @@ export default {
 			}
 			this.$nextTick(this.checkItemContainerOverflow);
 		},
-		// Automatically search and add item whenever the query changes
-		first_search: _.debounce(function (val) {
-			// Call without arguments so search_onchange treats it like an Enter key
-			this.search_onchange();
-		}, 300),
+		// Automatically trigger search when input is idle
+                first_search() {
+                        this.searchDebounce();
+                },
 
 		// Refresh item prices whenever the user changes currency
 		selected_currency() {
@@ -1895,56 +1896,59 @@ export default {
 				this.$refs.debounce_search.focus();
 			}
 		},
-		search_onchange: _.debounce(async function (newSearchTerm) {
-			const vm = this;
+		async search_onchange(newSearchTerm) {
+                        if (this.searchDebounce && this.searchDebounce.cancel) {
+                                this.searchDebounce.cancel();
+                        }
+                        const vm = this;
 
-			// Determine the actual query string and trim whitespace
-			const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
-			const searchTerm = (query || "").trim();
+                        // Determine the actual query string and trim whitespace
+                        const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
+                        const searchTerm = (query || "").trim();
 
-			if (!searchTerm) {
-				vm.search_from_scanner = false;
-				return;
-			}
+                        if (!searchTerm) {
+                                vm.search_from_scanner = false;
+                                return;
+                        }
 
-			const fromScanner = vm.search_from_scanner;
+                        const fromScanner = vm.search_from_scanner;
 
-			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
-				// Only trigger search when query length meets minimum threshold
-				if (searchTerm.length >= 3) {
-					if (vm.pos_profile && !vm.pos_profile.posa_local_storage) {
-						vm.get_items(true);
-					} else {
-						vm.get_items();
-					}
-				}
-			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
-				await vm.loadVisibleItems(true);
-				if (searchTerm.length >= 3) {
-					vm.enter_event();
-				}
-			} else {
-				// Save the current filtered items before search to maintain quantity data
-				const current_items = [...vm.filtered_items];
-				if (searchTerm.length >= 3) {
-					vm.enter_event();
-				}
+                        if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
+                                // Only trigger search when query length meets minimum threshold
+                                if (searchTerm.length >= 3) {
+                                        if (vm.pos_profile && !vm.pos_profile.posa_local_storage) {
+                                                vm.get_items(true);
+                                        } else {
+                                                vm.get_items();
+                                        }
+                                }
+                        } else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
+                                await vm.loadVisibleItems(true);
+                                if (searchTerm.length >= 3) {
+                                        vm.enter_event();
+                                }
+                        } else {
+                                // Save the current filtered items before search to maintain quantity data
+                                const current_items = [...vm.filtered_items];
+                                if (searchTerm.length >= 3) {
+                                        vm.enter_event();
+                                }
 
-				// After search, update quantities for newly filtered items
-				if (vm.filtered_items && vm.filtered_items.length > 0) {
-					setTimeout(() => {
-						vm.update_items_details(vm.filtered_items);
-					}, 300);
-				}
-			}
+                                // After search, update quantities for newly filtered items
+                                if (vm.filtered_items && vm.filtered_items.length > 0) {
+                                        setTimeout(() => {
+                                                vm.update_items_details(vm.filtered_items);
+                                        }, 300);
+                                }
+                        }
 
-			// Clear the input only when triggered via scanner
-			if (fromScanner) {
-				vm.clearSearch();
-				vm.$refs.debounce_search && vm.$refs.debounce_search.focus();
-				vm.search_from_scanner = false;
-			}
-		}, 300),
+                        // Clear the input only when triggered via scanner
+                        if (fromScanner) {
+                                vm.clearSearch();
+                                vm.$refs.debounce_search && vm.$refs.debounce_search.focus();
+                                vm.search_from_scanner = false;
+                        }
+                },
 		get_item_qty(first_search) {
 			const qtyVal = this.qty != null ? this.qty : 1;
 			let scal_qty = Math.abs(qtyVal);
@@ -2800,7 +2804,10 @@ export default {
 	},
 
 	created() {
-		console.log("ItemsSelector created - starting initialization");
+                console.log("ItemsSelector created - starting initialization");
+                this.searchDebounce = _.debounce(() => {
+                        this.search_onchange();
+                }, 800);
 		memoryInitPromise.then(async () => {
 			try {
 				const profile = await ensurePosProfile();
