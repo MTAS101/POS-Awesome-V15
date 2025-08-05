@@ -15,6 +15,7 @@ export {
 export {
 	memory,
 	memoryInitPromise,
+	initMemoryCache,
 	getCustomerStorage,
 	setCustomerStorage,
 	getItemsLastSync,

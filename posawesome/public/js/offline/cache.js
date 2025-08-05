@@ -45,52 +45,59 @@ export const memory = {
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
-export const memoryInitPromise = (async () => {
-	try {
-		await checkDbHealth();
-		for (const key of Object.keys(memory)) {
-			const stored = await db.table(tableForKey(key)).get(key);
-			if (stored && stored.value !== undefined) {
-				memory[key] = stored.value;
-				continue;
-			}
-			if (typeof localStorage !== "undefined") {
-				const ls = localStorage.getItem(`posa_${key}`);
-				if (ls) {
-					try {
-						memory[key] = JSON.parse(ls);
+export let memoryInitPromise;
+
+export function initMemoryCache() {
+	if (!memoryInitPromise) {
+		memoryInitPromise = (async () => {
+			try {
+				await checkDbHealth();
+				for (const key of Object.keys(memory)) {
+					const stored = await db.table(tableForKey(key)).get(key);
+					if (stored && stored.value !== undefined) {
+						memory[key] = stored.value;
 						continue;
-					} catch (err) {
-						console.error("Failed to parse localStorage for", key, err);
+					}
+					if (typeof localStorage !== "undefined") {
+						const ls = localStorage.getItem(`posa_${key}`);
+						if (ls) {
+							try {
+								memory[key] = JSON.parse(ls);
+								continue;
+							} catch (err) {
+								console.error("Failed to parse localStorage for", key, err);
+							}
+						}
 					}
 				}
-			}
-		}
 
-		// Verify cache version and clear outdated caches
-		const versionEntry = await db.table(tableForKey("cache_version")).get("cache_version");
-		let storedVersion = versionEntry ? versionEntry.value : null;
-		if (!storedVersion && typeof localStorage !== "undefined") {
-			const v = localStorage.getItem("posa_cache_version");
-			if (v) storedVersion = parseInt(v, 10);
-		}
-		if (storedVersion !== CACHE_VERSION) {
-			await forceClearAllCache();
-			memory.cache_version = CACHE_VERSION;
-			if (typeof localStorage !== "undefined") {
-				localStorage.setItem("posa_cache_version", CACHE_VERSION);
+				// Verify cache version and clear outdated caches
+				const versionEntry = await db.table(tableForKey("cache_version")).get("cache_version");
+				let storedVersion = versionEntry ? versionEntry.value : null;
+				if (!storedVersion && typeof localStorage !== "undefined") {
+					const v = localStorage.getItem("posa_cache_version");
+					if (v) storedVersion = parseInt(v, 10);
+				}
+				if (storedVersion !== CACHE_VERSION) {
+					await forceClearAllCache();
+					memory.cache_version = CACHE_VERSION;
+					if (typeof localStorage !== "undefined") {
+						localStorage.setItem("posa_cache_version", CACHE_VERSION);
+					}
+					persist("cache_version", CACHE_VERSION);
+				} else {
+					memory.cache_version = storedVersion || CACHE_VERSION;
+				}
+				// Mark caches initialized
+				memory.cache_ready = true;
+				persist("cache_ready", true);
+			} catch (e) {
+				console.error("Failed to initialize memory from DB", e);
 			}
-			persist("cache_version", CACHE_VERSION);
-		} else {
-			memory.cache_version = storedVersion || CACHE_VERSION;
-		}
-		// Mark caches initialized
-		memory.cache_ready = true;
-		persist("cache_ready", true);
-	} catch (e) {
-		console.error("Failed to initialize memory from DB", e);
+		})();
 	}
-})();
+	return memoryInitPromise;
+}
 
 // Reset cached invoices and customers after syncing
 export function resetOfflineState() {
@@ -132,22 +139,22 @@ export function getCustomerStorage() {
 }
 
 export function setCustomerStorage(customers, shouldPersist = true) {
-        try {
-                memory.customer_storage = customers.map((c) => ({
-                        name: c.name,
-                        customer_name: c.customer_name,
-                        mobile_no: c.mobile_no,
-                        email_id: c.email_id,
-                        primary_address: c.primary_address,
-                        tax_id: c.tax_id,
-                }));
-        } catch (e) {
-                console.error("Failed to trim customers for storage", e);
-                memory.customer_storage = [];
-        }
-        if (shouldPersist) {
-                persist("customer_storage", memory.customer_storage);
-        }
+	try {
+		memory.customer_storage = customers.map((c) => ({
+			name: c.name,
+			customer_name: c.customer_name,
+			mobile_no: c.mobile_no,
+			email_id: c.email_id,
+			primary_address: c.primary_address,
+			tax_id: c.tax_id,
+		}));
+	} catch (e) {
+		console.error("Failed to trim customers for storage", e);
+		memory.customer_storage = [];
+	}
+	if (shouldPersist) {
+		persist("customer_storage", memory.customer_storage);
+	}
 }
 
 export function getItemsLastSync() {
