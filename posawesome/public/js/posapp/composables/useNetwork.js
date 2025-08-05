@@ -245,29 +245,19 @@ export async function performConnectivityChecks(hostname, protocol, port) {
 }
 
 export async function checkFrappePing() {
-	try {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-		const response = await fetch("/api/method/ping", {
-			method: "HEAD",
-			cache: "no-cache",
-			signal: controller.signal,
-			headers: {
-				"Cache-Control": "no-cache, no-store, must-revalidate",
-				Pragma: "no-cache",
-				Expires: "0",
-			},
-		});
-
-		clearTimeout(timeoutId);
-		return response.ok;
-	} catch (error) {
-		if (error.name !== "AbortError") {
-			console.warn("Frappe ping check failed:", error);
-		}
-		return false;
-	}
+       try {
+               const response = await new Promise((resolve, reject) => {
+                       frappe.call({
+                               method: "frappe.ping",
+                               callback: (res) => resolve(res),
+                               error: (err) => reject(err),
+                       });
+               });
+               return response.message === "pong";
+       } catch (error) {
+               console.warn("Frappe ping check failed:", error);
+               return false;
+       }
 }
 
 export async function checkCurrentOrigin(protocol, hostname, port) {
