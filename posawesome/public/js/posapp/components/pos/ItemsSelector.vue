@@ -552,6 +552,11 @@ export default {
 			// Apply cached rates if available for immediate update
 			if (this.items_loaded && this.items && this.items.length > 0) {
 				const cached = await getCachedPriceListItems(this.customer_price_list);
+				if (cached === null) {
+					this.items_loaded = false;
+					this.get_items(true);
+					return;
+				}
 				if (cached && cached.length) {
 					const map = {};
 					cached.forEach((ci) => {
@@ -1245,6 +1250,9 @@ export default {
 				!this.pos_profile.pose_use_limit_search
 			) {
 				const cached = await getCachedPriceListItems(vm.customer_price_list);
+				if (cached === null) {
+					return await vm.get_items(true);
+				}
 				if (cached && cached.length) {
 					serverTimestamp = await vm.fetchServerItemsTimestamp();
 					if (serverTimestamp && syncSince && new Date(syncSince) < new Date(serverTimestamp)) {

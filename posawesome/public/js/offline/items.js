@@ -69,11 +69,21 @@ export async function savePriceListItems(priceList, items) {
 	}
 }
 
+/**
+ * Get price list items from the local cache.
+ *
+ * @param {string} priceList - Name of the price list to fetch.
+ * @param {number} ttl - Time-to-live in ms for cached entries.
+ * @returns {Promise<Array|null>} Cached items array or {@code null} if the
+ * cache is unavailable. A {@code null} result signals the caller to fetch data
+ * from the server.
+ */
 export async function getCachedPriceListItems(priceList, ttl = 24 * 60 * 60 * 1000) {
 	try {
 		priceList = priceList || frappe?.boot?.pos_profile?.selling_price_list;
 		if (!priceList) return null;
-		await checkDbHealth();
+		const healthy = await checkDbHealth();
+		if (!healthy) return null;
 		if (!db.isOpen()) await db.open();
 		const now = Date.now();
 		const prices = await db.table("item_prices").where("price_list").equals(priceList).toArray();
@@ -206,38 +216,31 @@ export async function searchStoredItems({ search = "", itemGroup = "", limit = 1
 		if (itemGroup && itemGroup.toLowerCase() !== "all") {
 			collection = collection.where("item_group").equalsIgnoreCase(itemGroup);
 		}
-                if (search) {
-                        const term = search.toLowerCase();
-                        collection = collection.filter((it) => {
-                                const nameMatch = it.item_name && it.item_name.toLowerCase().includes(term);
-                                const codeMatch = it.item_code && it.item_code.toLowerCase().includes(term);
-                                const barcodeMatch = Array.isArray(it.item_barcode)
-                                        ? it.item_barcode.some((b) => b.barcode && b.barcode.toLowerCase().includes(term))
-                                        : it.item_barcode && String(it.item_barcode).toLowerCase().includes(term);
-                                const serialMatch =
-                                        it.serial_no && String(it.serial_no).toLowerCase().includes(term);
-                                const batchMatch =
-                                        it.batch_no && String(it.batch_no).toLowerCase().includes(term);
-                                const matched =
-                                        nameMatch ||
-                                        codeMatch ||
-                                        barcodeMatch ||
-                                        serialMatch ||
-                                        batchMatch;
-                                if (matched) {
-                                        // Console log for verifying search paths
-                                        console.log("searchStoredItems match", {
-                                                item: it.item_code,
-                                                nameMatch,
-                                                codeMatch,
-                                                barcodeMatch,
-                                                serialMatch,
-                                                batchMatch,
-                                        });
-                                }
-                                return matched;
-                        });
-                }
+		if (search) {
+			const term = search.toLowerCase();
+			collection = collection.filter((it) => {
+				const nameMatch = it.item_name && it.item_name.toLowerCase().includes(term);
+				const codeMatch = it.item_code && it.item_code.toLowerCase().includes(term);
+				const barcodeMatch = Array.isArray(it.item_barcode)
+					? it.item_barcode.some((b) => b.barcode && b.barcode.toLowerCase().includes(term))
+					: it.item_barcode && String(it.item_barcode).toLowerCase().includes(term);
+				const serialMatch = it.serial_no && String(it.serial_no).toLowerCase().includes(term);
+				const batchMatch = it.batch_no && String(it.batch_no).toLowerCase().includes(term);
+				const matched = nameMatch || codeMatch || barcodeMatch || serialMatch || batchMatch;
+				if (matched) {
+					// Console log for verifying search paths
+					console.log("searchStoredItems match", {
+						item: it.item_code,
+						nameMatch,
+						codeMatch,
+						barcodeMatch,
+						serialMatch,
+						batchMatch,
+					});
+				}
+				return matched;
+			});
+		}
 		const res = await collection.offset(offset).limit(limit).toArray();
 		return res;
 	} catch (e) {
