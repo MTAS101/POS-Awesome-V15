@@ -270,27 +270,23 @@ export async function checkFrappePing() {
 	}
 }
 
-export async function checkCurrentOrigin(protocol, hostname, port) {
-	try {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), 5000);
-		const baseUrl = `${protocol}//${hostname}${port ? ":" + port : ""}`;
-		const response = await fetch(`${baseUrl}/api/method/frappe.auth.get_logged_user`, {
-			method: "HEAD",
-			cache: "no-cache",
-			signal: controller.signal,
-			headers: {
-				"Cache-Control": "no-cache, no-store, must-revalidate",
-			},
-		});
-		clearTimeout(timeoutId);
-		return response.status < 500;
-	} catch (error) {
-		if (error.name !== "AbortError") {
-			console.warn("Current origin check failed:", error);
-		}
-		return false;
-	}
+export async function checkCurrentOrigin(_protocol, _hostname, _port) {
+        try {
+                return await new Promise((resolve) => {
+                        frappe.call({
+                                method: "frappe.auth.get_logged_user",
+                                callback: (res) => {
+                                        resolve(Boolean(res.message));
+                                },
+                                error: () => {
+                                        resolve(false);
+                                },
+                        });
+                });
+        } catch (error) {
+                console.warn("Current origin check failed:", error);
+                return false;
+        }
 }
 
 export async function checkExternalConnectivity() {
