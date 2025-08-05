@@ -84,12 +84,14 @@ export const memoryInitPromise = (async () => {
 		} else {
 			memory.cache_version = storedVersion || CACHE_VERSION;
 		}
-		// Mark caches initialized
-		memory.cache_ready = true;
-		persist("cache_ready", true);
-	} catch (e) {
-		console.error("Failed to initialize memory from DB", e);
-	}
+                // Mark caches initialized
+                memory.cache_ready = true;
+                persist("cache_ready", true);
+                return true;
+        } catch (e) {
+                console.error("Failed to initialize memory from DB", e);
+                throw e;
+        }
 })();
 
 // Reset cached invoices and customers after syncing

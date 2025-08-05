@@ -141,11 +141,23 @@ export default {
 			this.page = page;
 		},
 
-		async initializeData() {
-			await initPromise;
-			await memoryInitPromise;
-			this.cacheReady = true;
-			checkDbHealth().catch(() => {});
+                async initializeData() {
+                        await initPromise;
+                        try {
+                                const success = await memoryInitPromise;
+                                if (success) {
+                                        this.cacheReady = true;
+                                } else {
+                                        this.cacheReady = false;
+                                        alert("Failed to initialize local cache. Please refresh and try again.");
+                                        return;
+                                }
+                        } catch (e) {
+                                this.cacheReady = false;
+                                alert("Failed to initialize local cache. Please refresh and try again.");
+                                return;
+                        }
+                        checkDbHealth().catch(() => {});
 			// Load POS profile from cache or storage
 			const openingData = getOpeningStorage();
 			if (openingData && openingData.pos_profile) {
