@@ -9,12 +9,12 @@
 				</v-card-title>
 				<v-card-text class="pa-0">
 					<v-container v-if="parentItem">
-						<div v-for="attr in parentItem.attributes" :key="attr.attribute">
+						<div v-for="attr in parentAttributes" :key="attr.attribute">
 							<v-chip-group
 								v-model="filters[attr.attribute]"
 								selected-class="green--text text--accent-4"
 								column
-								@update:model-value="updateFiltredItems"
+								@update:model-value="resetDisplayCount"
 							>
 								<v-chip
 									v-for="value in attr.values"
@@ -87,14 +87,12 @@
 <script>
 /* global frappe */
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
-import _ from "lodash";
 export default {
 	data: () => ({
 		varaintsDialog: false,
 		parentItem: null,
 		items: null,
 		filters: {},
-		filterdItems: [],
 		pos_profile: null,
 		attributes_meta: {},
 		displayCount: 100,
@@ -107,45 +105,71 @@ export default {
 			}
 			return this.items.filter((item) => item.variant_of == this.parentItem.item_code);
 		},
+		parentAttributes() {
+			if (
+				this.parentItem &&
+				Array.isArray(this.parentItem.attributes) &&
+				this.parentItem.attributes.length
+			) {
+				return this.parentItem.attributes;
+			}
+			if (this.attributes_meta && Object.keys(this.attributes_meta).length) {
+				return Object.keys(this.attributes_meta).map((attr) => ({
+					attribute: attr,
+					values: this.attributes_meta[attr].map((v) => ({
+						attribute_value: v,
+						abbr: v,
+					})),
+				}));
+			}
+			return [];
+		},
+		filterdItems() {
+			const values = [];
+			Object.entries(this.filters).forEach(([, value]) => {
+				if (value) {
+					values.push(value);
+				}
+			});
+			if (!values.length) {
+				return this.variantsItems;
+			}
+			const itemsList = [];
+			const results = [];
+			this.variantsItems.forEach((item) => {
+				let apply = true;
+				let attrs = [];
+				if (Array.isArray(item.item_attributes)) {
+					attrs = item.item_attributes;
+				} else if (
+					typeof item.item_attributes === "string" &&
+					item.item_attributes.trim().startsWith("[")
+				) {
+					try {
+						attrs = JSON.parse(item.item_attributes);
+					} catch (e) {
+						attrs = [];
+					}
+				}
+				for (const [attrName, val] of Object.entries(this.filters)) {
+					if (!val) continue;
+					const found = attrs.find(
+						(a) => a.attribute === attrName && String(a.attribute_value) === String(val),
+					);
+					if (!found) {
+						apply = false;
+						break;
+					}
+				}
+				if (apply && !itemsList.includes(item.item_code)) {
+					results.push(item);
+					itemsList.push(item.item_code);
+				}
+			});
+			return results;
+		},
 		displayItems() {
 			return this.filterdItems.slice(0, this.displayCount);
-		},
-	},
-
-	watch: {
-		items: {
-			handler() {
-				this.filterdItems = this.variantsItems;
-				this.displayCount = 100;
-			},
-			deep: true,
-		},
-		parentItem() {
-			this.filterdItems = this.variantsItems;
-			this.displayCount = 100;
-		},
-		attributes_meta: {
-			handler(newVal) {
-				if (this.parentItem && newVal && Object.keys(newVal).length) {
-					this.parentItem.attributes = Object.keys(newVal).map((attr) => ({
-						attribute: attr,
-						values: newVal[attr].map((v) => ({ attribute_value: v, abbr: v })),
-					}));
-				} else if (this.parentItem) {
-					this.parentItem.attributes = [];
-				}
-				this.$nextTick(() => {
-					this.filterdItems = this.variantsItems;
-					this.displayCount = 100;
-				});
-			},
-			deep: true,
-		},
-		filters: {
-			handler() {
-				this.updateFiltredItems();
-			},
-			deep: true,
 		},
 	},
 
@@ -212,69 +236,17 @@ export default {
 				console.error("Failed to fetch variants", e);
 			}
 		},
-		updateFiltredItems: _.debounce(function () {
-			this.$nextTick(() => {
-				const values = [];
-				Object.entries(this.filters).forEach(([, value]) => {
-					if (value) {
-						values.push(value);
-					}
-				});
-
-				if (!values.length) {
-					this.filterdItems = this.variantsItems;
-				} else {
-					const itemsList = [];
-					this.filterdItems = [];
-					this.variantsItems.forEach((item) => {
-						let apply = true;
-						let attrs = [];
-						if (Array.isArray(item.item_attributes)) {
-							attrs = item.item_attributes;
-						} else if (
-							typeof item.item_attributes === "string" &&
-							item.item_attributes.trim().startsWith("[")
-						) {
-							try {
-								attrs = JSON.parse(item.item_attributes);
-							} catch (e) {
-								attrs = [];
-							}
-						}
-						for (const [attrName, val] of Object.entries(this.filters)) {
-							if (!val) continue;
-							const found = attrs.find(
-								(a) => a.attribute === attrName && String(a.attribute_value) === String(val),
-							);
-							if (!found) {
-								apply = false;
-								break;
-							}
-						}
-						if (apply && !itemsList.includes(item.item_code)) {
-							this.filterdItems.push(item);
-							itemsList.push(item.item_code);
-						}
-					});
-				}
-				console.log(
-					"filtered items",
-					this.filterdItems.map((it) => it.item_code),
-				);
-				this.displayCount = 100;
-			});
-		}, 200),
 		clearFilter(attr) {
 			this.filters[attr] = null;
-			this.$nextTick(() => {
-				this.filterdItems = this.variantsItems;
-				this.displayCount = 100;
-			});
+			this.resetDisplayCount();
 		},
 		loadMore() {
 			if (this.displayCount < this.filterdItems.length) {
 				this.displayCount += 100;
 			}
+		},
+		resetDisplayCount() {
+			this.displayCount = 100;
 		},
 		async fetchVariantRate(item) {
 			if (!this.pos_profile) {
@@ -368,10 +340,7 @@ export default {
 				const parentCode = item.item_code || item.code || item.name;
 				await this.fetchVariants(parentCode, this.pos_profile);
 			}
-			this.$nextTick(() => {
-				this.filterdItems = this.variantsItems;
-				this.displayCount = 100;
-			});
+			this.resetDisplayCount();
 		});
 	},
 	beforeUnmount() {
