@@ -1548,38 +1548,51 @@ export default {
 			const lastSync = syncSince;
 			if (this.itemWorker) {
 				try {
-					const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							"X-Frappe-CSRF-Token": frappe.csrf_token,
-						},
-						credentials: "same-origin",
-						body: JSON.stringify({
-							pos_profile: JSON.stringify(this.pos_profile),
-							price_list: this.customer_price_list,
-							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
-							search_value: searchTerm || "",
-							customer: this.customer,
-							modified_after: lastSync,
-							limit,
-							offset,
-						}),
-					});
-					const text = await res.text();
 					const count = await new Promise((resolve) => {
-						this.itemWorker.onmessage = (ev) => {
-							if (ev.data.type === "parsed") {
-								resolve(ev.data.items.length);
-							} else if (ev.data.type === "error") {
-								console.error("Item worker parse error:", ev.data.error);
+						frappe.call({
+							method: "posawesome.posawesome.api.items.get_items",
+							args: {
+								pos_profile: JSON.stringify(this.pos_profile),
+								price_list: this.customer_price_list,
+								item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+								search_value: searchTerm || "",
+								customer: this.customer,
+								modified_after: lastSync,
+								limit,
+								offset,
+							},
+							callback: (r) => {
+								const rows = r.message || [];
+								this.itemWorker.onmessage = (ev) => {
+									if (ev.data.type === "parsed") {
+										const parsed = ev.data.items;
+										parsed.forEach((it) => {
+											const existing = this.items.find(
+												(i) => i.item_code === it.item_code,
+											);
+											if (existing) Object.assign(existing, it);
+											else this.items.push(it);
+										});
+										this.eventBus.emit("set_all_items", this.items);
+										resolve(parsed.length);
+									} else if (ev.data.type === "error") {
+										console.error("Item worker parse error:", ev.data.error);
+										resolve(0);
+									}
+								};
+								this.itemWorker.postMessage({
+									type: "parse_and_cache",
+									json: JSON.stringify(rows),
+									priceList:
+										this.customer_price_list ||
+										this.pos_profile?.selling_price_list ||
+										"",
+								});
+							},
+							error: (err) => {
+								console.error("Failed to background load items", err);
 								resolve(0);
-							}
-						};
-						this.itemWorker.postMessage({
-							type: "parse_and_cache",
-							json: text,
-							priceList: this.customer_price_list || this.pos_profile?.selling_price_list || "",
+							},
 						});
 					});
 					if (count === limit) {
