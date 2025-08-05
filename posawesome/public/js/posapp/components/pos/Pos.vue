@@ -45,27 +45,28 @@ import Payments from "./Payments.vue";
 import PosOffers from "./PosOffers.vue";
 import PosCoupons from "./PosCoupons.vue";
 import Drafts from "./Drafts.vue";
-import SalesOrders from "./SalesOrders.vue";
 import ClosingDialog from "./ClosingDialog.vue";
 import NewAddress from "./NewAddress.vue";
-import Variants from "./Variants.vue";
 import Returns from "./Returns.vue";
-import MpesaPayments from "./Mpesa-Payments.vue";
 import {
-	getOpeningStorage,
-	setOpeningStorage,
-	clearOpeningStorage,
+        getOpeningStorage,
+        setOpeningStorage,
+        clearOpeningStorage,
 	initPromise,
 	checkDbHealth,
 	setTaxTemplate,
 } from "../../../offline/index.js";
-import { getCurrentInstance, watch } from "vue";
+import { defineAsyncComponent, getCurrentInstance, watch } from "vue";
 import { usePosShift } from "../../composables/usePosShift.js";
 import { useOffers } from "../../composables/useOffers.js";
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 import { usePosStore } from "../../stores/usePosStore.js";
+
+const SalesOrders = defineAsyncComponent(() => import("./SalesOrders.vue"));
+const Variants = defineAsyncComponent(() => import("./Variants.vue"));
+const MpesaPayments = defineAsyncComponent(() => import("./Mpesa-Payments.vue"));
 
 export default {
 	setup() {
