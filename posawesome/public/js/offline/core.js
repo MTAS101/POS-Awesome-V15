@@ -87,6 +87,7 @@ export async function checkDbHealth(timeoutMs = 5000) {
 }
 
 let persistWorker = null;
+const DB_HEALTH_CHECK_INTERVAL = 5 * 60 * 1000;
 
 export function initPersistWorker() {
 	if (persistWorker || typeof Worker === "undefined") return;
@@ -118,13 +119,21 @@ export function terminatePersistWorker() {
 
 // Initialize worker immediately
 initPersistWorker();
+startDbHealthCheckScheduler();
 
 // Persist queue for batching operations
 const persistQueue = {};
 let persistTimeout = null;
 
-export function addToPersistQueue(key, value, timeoutMs) {
-	persistQueue[key] = { value, timeoutMs };
+function startDbHealthCheckScheduler() {
+	if (typeof setInterval !== "function") return;
+	// Run initial check immediately
+	checkDbHealth().catch(() => {});
+	setInterval(() => checkDbHealth().catch(() => {}), DB_HEALTH_CHECK_INTERVAL);
+}
+
+export function addToPersistQueue(key, value) {
+	persistQueue[key] = { value };
 
 	if (!persistTimeout) {
 		persistTimeout = setTimeout(flushPersistQueue, 100);
@@ -136,16 +145,14 @@ function flushPersistQueue() {
 	if (keys.length) {
 		keys.forEach((key) => {
 			const entry = persistQueue[key];
-			persist(key, entry.value, entry.timeoutMs);
+			persist(key, entry.value);
 			delete persistQueue[key];
 		});
 	}
 	persistTimeout = null;
 }
 
-export function persist(key, value, timeoutMs) {
-	// Run health check in background; ignore errors
-	checkDbHealth(timeoutMs).catch(() => {});
+export function persist(key, value) {
 	if (persistWorker) {
 		let cleanValue = value;
 		try {
