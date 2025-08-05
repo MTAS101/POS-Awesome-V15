@@ -736,12 +736,12 @@ export default {
 						base_amount: item.base_amount,
 					});
 
-					item.posa_offer_applied = 1;
-					this.$forceUpdate();
-				}
-			}
-		});
-	},
+                                        item.posa_offer_applied = 1;
+                                        this.eventBus.emit("items-updated");
+                                }
+                        }
+                });
+        },
 
 	RemoveOnPrice(offer) {
 		console.log("Removing price offer:", offer);
@@ -825,13 +825,13 @@ export default {
 						remaining_offers: remaining_offers,
 					});
 
-					// Force UI update
-					this.$forceUpdate();
-				}
-			} catch (error) {
-				console.error("Error removing price offer:", error);
-				this.eventBus.emit("show_message", {
-					title: __("Error removing price offer"),
+                                        // Notify listeners to update totals
+                                        this.eventBus.emit("items-updated");
+                                }
+                        } catch (error) {
+                                console.error("Error removing price offer:", error);
+                                this.eventBus.emit("show_message", {
+                                        title: __("Error removing price offer"),
 					color: "error",
 					message: error.message,
 				});
@@ -843,10 +843,10 @@ export default {
 		if (!offer.name) {
 			offer = this.posOffers.find((el) => el.name == offer.offer_name);
 		}
-		if (this.discount_percentage_offer_name === offer.name && this.discount_amount !== 0) {
-			// Discount already applied, do not recalculate when items change
-			return;
-		}
+                if (this.discount_percentage_offer_name === offer.name && this.discount_amount !== 0) {
+                        // Discount already applied, do not recalculate when items change
+                        return;
+                }
 		if (
 			(!this.discount_percentage_offer_name || this.discount_percentage_offer_name == offer.name) &&
 			offer.discount_percentage > 0 &&
@@ -1037,8 +1037,8 @@ export default {
 				this.calc_item_price(item);
 				this.handelOffers();
 			}
-			// Ensure Vue reactivity
-			this.$forceUpdate();
-		});
-	}, // Added missing comma here
+                        // Notify listeners that items changed
+                        this.eventBus.emit("items-updated");
+                });
+        }, // Added missing comma here
 };
