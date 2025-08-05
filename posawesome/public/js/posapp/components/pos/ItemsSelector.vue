@@ -1035,66 +1035,55 @@ export default {
 
 				// Go directly to API call for simplicity
 				console.log("🌐 Making direct API call to load items");
-				const requestBody = {
-					pos_profile: JSON.stringify(this.pos_profile),
-					price_list: this.customer_price_list || this.pos_profile.selling_price_list,
-					item_group: "",
-					search_value: "",
-					customer: this.customer,
-					limit: 50,
-					offset: 0,
-				};
+                                const requestBody = {
+                                        pos_profile: JSON.stringify(this.pos_profile),
+                                        price_list: this.customer_price_list || this.pos_profile.selling_price_list,
+                                        item_group: "",
+                                        search_value: "",
+                                        customer: this.customer,
+                                        limit: 50,
+                                        offset: 0,
+                                };
+                                frappe.freeze();
+                                frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_items",
+                                        args: requestBody,
+                                        callback: (res) => {
+                                                frappe.unfreeze();
+                                                if (!res.exc && Array.isArray(res.message)) {
+                                                        this.items = res.message;
+                                                        console.log(
+                                                                "✅ Items loaded successfully:",
+                                                                this.items.length,
+                                                                "items"
+                                                        );
 
-				const controller = new AbortController();
-				const timeoutId = setTimeout(() => controller.abort(), 5000);
+                                                        // Set default quantities immediately for instant display
+                                                        this.items.forEach((item) => {
+                                                                item.actual_qty = 0; // Set default quantity
+                                                        });
 
-				const response = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-						"X-Frappe-CSRF-Token": frappe.csrf_token,
-					},
-					credentials: "same-origin",
-					body: JSON.stringify(requestBody),
-					signal: controller.signal,
-				});
+                                                        // Clear search cache when new items are loaded
+                                                        if (this.searchCache) {
+                                                                this.searchCache.clear();
+                                                        }
 
-				clearTimeout(timeoutId);
+                                                        this.eventBus.emit("set_all_items", this.items);
 
-				if (response.ok) {
-					const data = await response.json();
+                                                        // Force a reactive update immediately
+                                                        this.$nextTick(() => {
+                                                                this.$forceUpdate();
+                                                        });
 
-					if (data.message && Array.isArray(data.message)) {
-						this.items = data.message;
-						console.log("✅ Items loaded successfully:", this.items.length, "items");
-
-						// Set default quantities immediately for instant display
-						this.items.forEach((item) => {
-							item.actual_qty = 0; // Set default quantity
-						});
-
-						// Clear search cache when new items are loaded
-						if (this.searchCache) {
-							this.searchCache.clear();
-						}
-
-						this.eventBus.emit("set_all_items", this.items);
-
-						// Force a reactive update immediately
-						this.$nextTick(() => {
-							this.$forceUpdate();
-						});
-
-						// Load quantities in background (non-blocking)
-						setTimeout(() => {
-							this.update_items_details(this.items);
-						}, 100);
-					} else {
-						console.error("❌ Invalid response format");
-					}
-				} else {
-					console.error("❌ HTTP error:", response.status, response.statusText);
-				}
+                                                        // Load quantities in background (non-blocking)
+                                                        setTimeout(() => {
+                                                                this.update_items_details(this.items);
+                                                        }, 100);
+                                                } else {
+                                                        console.error("❌ Invalid response format");
+                                                }
+                                        },
+                                });
 			} catch (error) {
 				console.error("❌ Error in forceLoadItems:", error.message);
 			}
