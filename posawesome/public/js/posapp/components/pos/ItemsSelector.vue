@@ -2833,36 +2833,27 @@ export default {
 			}
 		};
 
-		window.testDirectApiCall = async () => {
+		window.testDirectApiCall = () => {
 			if (this.pos_profile) {
 				console.log("🧪 Testing direct API call...");
-				try {
-					const response = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							"X-Frappe-CSRF-Token": frappe.csrf_token,
-						},
-						credentials: "same-origin",
-						body: JSON.stringify({
-							pos_profile: JSON.stringify(this.pos_profile),
-							price_list: this.customer_price_list || this.pos_profile.selling_price_list,
-							item_group: "",
-							search_value: "",
-							customer: this.customer,
-							limit: 50,
-							offset: 0,
-						}),
-					});
-
-					console.log("📥 API Response:", response.status, response.statusText);
-					const data = await response.json();
-					console.log("📦 API Data:", data);
-					return data;
-				} catch (error) {
-					console.error("❌ API Test Failed:", error);
-					return null;
-				}
+				frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: {
+						pos_profile: JSON.stringify(this.pos_profile),
+						price_list: this.customer_price_list || this.pos_profile.selling_price_list,
+						item_group: "",
+						search_value: "",
+						customer: this.customer,
+						limit: 50,
+						offset: 0,
+					},
+					callback: (r) => {
+						console.log("📦 API Data:", r);
+					},
+					error: (error) => {
+						console.error("❌ API Test Failed:", error);
+					},
+				});
 			} else {
 				console.log("❌ No POS profile available for API test");
 			}
