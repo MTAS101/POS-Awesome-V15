@@ -1,6 +1,5 @@
 import { ref, onUnmounted } from "vue";
-
-const API_URL = "/api/method/posawesome.posawesome.api.utilities.get_server_usage";
+/* global frappe */
 
 export function useServerCpu(pollInterval = 10000, windowSize = 60) {
     const cpu = ref(null);
@@ -13,36 +12,38 @@ export function useServerCpu(pollInterval = 10000, windowSize = 60) {
     const error = ref(null);
     let timer = null;
 
-    async function fetchServerCpu() {
+    function fetchServerCpu() {
         loading.value = true;
         error.value = null;
-        try {
-            const res = await fetch(API_URL);
-            const data = await res.json();
-            if (data && data.message) {
-                cpu.value = data.message.cpu_percent;
-                memory.value = data.message.memory_percent;
-                memoryTotal.value = data.message.memory_total;
-                memoryUsed.value = data.message.memory_used;
-                memoryAvailable.value = data.message.memory_available;
-                const uptime = data.message.uptime;
-                history.value.push({
-                    cpu: cpu.value,
-                    memory: memory.value,
-                    memoryTotal: memoryTotal.value,
-                    memoryUsed: memoryUsed.value,
-                    memoryAvailable: memoryAvailable.value,
-                    uptime: uptime
-                });
-                if (history.value.length > windowSize) history.value.shift();
-            } else {
-                error.value = "No data from server";
+        frappe.call({
+            method: "posawesome.posawesome.api.utilities.get_server_usage",
+            callback: (res) => {
+                if (res && res.message) {
+                    cpu.value = res.message.cpu_percent;
+                    memory.value = res.message.memory_percent;
+                    memoryTotal.value = res.message.memory_total;
+                    memoryUsed.value = res.message.memory_used;
+                    memoryAvailable.value = res.message.memory_available;
+                    const uptime = res.message.uptime;
+                    history.value.push({
+                        cpu: cpu.value,
+                        memory: memory.value,
+                        memoryTotal: memoryTotal.value,
+                        memoryUsed: memoryUsed.value,
+                        memoryAvailable: memoryAvailable.value,
+                        uptime: uptime
+                    });
+                    if (history.value.length > windowSize) history.value.shift();
+                } else {
+                    error.value = "No data from server";
+                }
+                loading.value = false;
+            },
+            error: (e) => {
+                error.value = e.message;
+                loading.value = false;
             }
-        } catch (e) {
-            error.value = e.message;
-        } finally {
-            loading.value = false;
-        }
+        });
     }
 
     fetchServerCpu();
