@@ -1,16 +1,19 @@
 import { ref, getCurrentInstance } from "vue";
 import { getCachedOffers, saveOffers } from "../../offline/index.js";
+import { usePosStore } from "../stores/usePosStore.js";
 
 export function useOffers() {
     const { proxy } = getCurrentInstance();
     const eventBus = proxy?.eventBus;
     const offers = ref([]);
+    const posStore = usePosStore();
 
     function get_offers(profileName, posProfile) {
         if (posProfile && posProfile.posa_local_storage) {
             const cached = getCachedOffers();
             if (cached.length) {
                 offers.value = cached;
+                posStore.setOffers(cached);
                 eventBus?.emit("set_offers", cached);
             }
         }
@@ -21,6 +24,7 @@ export function useOffers() {
                     console.info("LoadOffers");
                     saveOffers(r.message);
                     offers.value = r.message;
+                    posStore.setOffers(r.message);
                     eventBus?.emit("set_offers", r.message);
                 }
             })
@@ -29,6 +33,7 @@ export function useOffers() {
                 const cached = getCachedOffers();
                 if (cached.length) {
                     offers.value = cached;
+                    posStore.setOffers(cached);
                     eventBus?.emit("set_offers", cached);
                 }
             });

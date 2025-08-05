@@ -57,24 +57,30 @@ import {
 } from "../offline/index.js";
 import { silentPrint } from "./plugins/print.js";
 import {
-	setupNetworkListeners,
-	checkNetworkConnectivity,
-	detectHostType,
-	performConnectivityChecks,
-	checkFrappePing,
-	checkCurrentOrigin,
-	checkExternalConnectivity,
-	checkWebSocketConnectivity,
+        setupNetworkListeners,
+        checkNetworkConnectivity,
+        detectHostType,
+        performConnectivityChecks,
+        checkFrappePing,
+        checkCurrentOrigin,
+        checkExternalConnectivity,
+        checkWebSocketConnectivity,
 } from "./composables/useNetwork.js";
+import { usePosStore } from "./stores/usePosStore.js";
+import { storeToRefs } from "pinia";
 
 export default {
-	data: function () {
-		return {
-			page: "POS",
-			// POS Profile data
-			posProfile: {},
-			pendingInvoices: 0,
-			lastInvoiceId: "",
+        setup() {
+                const posStore = usePosStore();
+                const { profile: posProfile } = storeToRefs(posStore);
+                return { posStore, posProfile };
+        },
+        data: function () {
+                return {
+                        page: "POS",
+                        // POS Profile data
+                        pendingInvoices: 0,
+                        lastInvoiceId: "",
 
 			// Network status
 			networkOnline: navigator.onLine || false,
@@ -100,11 +106,16 @@ export default {
 		},
 	},
 	watch: {
-		networkOnline(newVal, oldVal) {
-			if (newVal && !oldVal) {
-				this.refreshTaxInclusiveSetting();
-				this.eventBus.emit("network-online");
-				this.handleSyncInvoices();
+                posProfile(newVal, oldVal) {
+                        if (newVal && navigator.onLine) {
+                                this.refreshTaxInclusiveSetting();
+                        }
+                },
+                networkOnline(newVal, oldVal) {
+                        if (newVal && !oldVal) {
+                                this.refreshTaxInclusiveSetting();
+                                this.eventBus.emit("network-online");
+                                this.handleSyncInvoices();
 			}
 		},
 		serverOnline(newVal, oldVal) {
@@ -141,19 +152,19 @@ export default {
 			this.page = page;
 		},
 
-		async initializeData() {
-			await initPromise;
-			await initMemoryCache();
-			this.cacheReady = true;
-			checkDbHealth().catch(() => {});
-			// Load POS profile from cache or storage
-			const openingData = getOpeningStorage();
-			if (openingData && openingData.pos_profile) {
-				this.posProfile = openingData.pos_profile;
-				if (navigator.onLine) {
-					await this.refreshTaxInclusiveSetting();
-				}
-			}
+                async initializeData() {
+                        await initPromise;
+                        await initMemoryCache();
+                        this.cacheReady = true;
+                        checkDbHealth().catch(() => {});
+                        // Load POS profile from cache or storage
+                        const openingData = getOpeningStorage();
+                        if (openingData && openingData.pos_profile) {
+                                this.posStore.setProfile(openingData.pos_profile);
+                                if (navigator.onLine) {
+                                        await this.refreshTaxInclusiveSetting();
+                                }
+                        }
 
 			if (queueHealthCheck()) {
 				alert("Offline queue is too large. Old entries will be purged.");
@@ -184,19 +195,11 @@ export default {
 		},
 
 		setupEventListeners() {
-			// Listen for POS profile registration
-			if (this.eventBus) {
-				this.eventBus.on("register_pos_profile", (data) => {
-					this.posProfile = data.pos_profile || {};
-					if (navigator.onLine) {
-						this.refreshTaxInclusiveSetting();
-					}
-				});
-
-				// Track last submitted invoice id
-				this.eventBus.on("set_last_invoice", (invoiceId) => {
-					this.lastInvoiceId = invoiceId;
-				});
+                        if (this.eventBus) {
+                                // Track last submitted invoice id
+                                this.eventBus.on("set_last_invoice", (invoiceId) => {
+                                        this.lastInvoiceId = invoiceId;
+                                });
 
 				// Allow other components to trigger printing
 				this.eventBus.on("print_last_invoice", () => {

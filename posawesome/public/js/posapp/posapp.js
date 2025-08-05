@@ -4,6 +4,7 @@ import Dexie from "dexie/dist/dexie.mjs";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import eventBus from "./bus";
+import { createPinia } from "pinia";
 import themePlugin from "./plugins/theme.js";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
@@ -75,12 +76,14 @@ frappe.PosApp.posapp = class {
 				},
 			},
 		});
-		const app = createApp(Home);
-		app.component("VueDatePicker", VueDatePicker);
-		app.use(eventBus);
-		app.use(vuetify);
-		app.use(themePlugin, { vuetify });
-		app.mount(this.$el[0]);
+                const pinia = createPinia();
+                const app = createApp(Home);
+                app.use(pinia);
+                app.component("VueDatePicker", VueDatePicker);
+                app.use(eventBus);
+                app.use(vuetify);
+                app.use(themePlugin, { vuetify });
+                app.mount(this.$el[0]);
 
 		if (!document.querySelector('link[rel="manifest"]')) {
 			const link = document.createElement("link");
