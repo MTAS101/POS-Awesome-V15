@@ -1,16 +1,17 @@
-import { ref, nextTick } from "vue";
+import { nextTick } from "vue";
 import _ from "lodash";
 
 export function useItemAddition() {
 	// Remove item from invoice
-	const removeItem = (item, context) => {
-		const index = context.items.findIndex((el) => el.posa_row_id == item.posa_row_id);
-		if (index >= 0) {
-			context.items.splice(index, 1);
-		}
-		// Remove from expanded if present
-		context.expanded = context.expanded.filter((id) => id !== item.posa_row_id);
-	};
+        const removeItem = (item, context) => {
+                const index = context.items.findIndex((el) => el.posa_row_id == item.posa_row_id);
+                if (index >= 0) {
+                        context.items.splice(index, 1);
+                }
+                // Remove from expanded if present
+                context.expanded = context.expanded.filter((id) => id !== item.posa_row_id);
+                context.eventBus.emit("items-updated");
+        };
 
 	// Add item to invoice
 	const addItem = async (item, context) => {
@@ -205,16 +206,15 @@ export function useItemAddition() {
 				await context.calc_uom(cur_item, cur_item.uom);
 			}
 		}
-		if (context.forceUpdate) context.forceUpdate();
-
-		// Only try to expand if new_item exists and should be expanded
-		if (
-			new_item &&
-			((!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no)
-		) {
-			context.expanded = [new_item.posa_row_id];
-		}
-	};
+                // Only try to expand if new_item exists and should be expanded
+                if (
+                        new_item &&
+                        ((!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) || new_item.has_serial_no)
+                ) {
+                        context.expanded = [new_item.posa_row_id];
+                }
+                context.eventBus.emit("items-updated");
+        };
 
 	// Create a new item object with default and calculated fields
 	const getNewItem = (item, context) => {
@@ -299,11 +299,11 @@ export function useItemAddition() {
 		context.posa_coupons = [];
 		context.invoice_doc = "";
 		context.return_doc = "";
-		context.discount_amount = 0;
-		context.additional_discount = 0;
-		context.additional_discount_percentage = 0;
-		context.delivery_charges_rate = 0;
-		context.selected_delivery_charge = "";
+                context.discount_amount = 0;
+                context.additional_discount = 0;
+                context.additional_discount_percentage = 0;
+                context.delivery_charges_rate = 0;
+                context.selected_delivery_charge = "";
 		// Reset posting date to today
 		context.posting_date = frappe.datetime.nowdate();
 
@@ -311,12 +311,13 @@ export function useItemAddition() {
 		if (context.update_price_list) context.update_price_list();
 
 		// Always reset to default customer after invoice
-		context.customer = context.pos_profile.customer;
+                context.customer = context.pos_profile.customer;
 
-		context.eventBus.emit("set_customer_readonly", false);
-		context.invoiceType = context.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
-		context.invoiceTypes = ["Invoice", "Order"];
-	};
+                context.eventBus.emit("set_customer_readonly", false);
+                context.invoiceType = context.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
+                context.invoiceTypes = ["Invoice", "Order"];
+                context.eventBus.emit("items-updated");
+        };
 
 	// Add this utility for grouping logic, matching ItemsTable.vue
 	function groupAndAddItem(items, newItem) {

@@ -1,58 +1,43 @@
 export default {
 	// Calculate total quantity of all items
-	total_qty() {
-		this.close_payments();
-		let qty = 0;
-		this.items.forEach((item) => {
-			qty += flt(item.qty);
-		});
-		return this.flt(qty, this.float_precision);
-	},
-	// Calculate total amount for all items (handles returns)
-	Total() {
-		let sum = 0;
-		this.items.forEach((item) => {
-			// For returns, use absolute value for correct calculation
-			const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
-			const rate = flt(item.rate);
-			sum += qty * rate;
-		});
-		return this.flt(sum, this.currency_precision);
-	},
-	// Calculate subtotal after discounts and delivery charges
-	subtotal() {
-		this.close_payments();
-		let sum = 0;
-		this.items.forEach((item) => {
-			// For returns, use absolute value for correct calculation
-			const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
-			const rate = flt(item.rate);
-			sum += qty * rate;
-		});
+        total_qty() {
+                this.close_payments();
+                const qty = this.items.reduce((sum, item) => sum + flt(item.qty), 0);
+                return this.flt(qty, this.float_precision);
+        },
+        // Calculate total amount for all items (handles returns)
+        Total() {
+                const sum = this.items.reduce((acc, item) => {
+                        // For returns, use absolute value for correct calculation
+                        const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
+                        return acc + qty * flt(item.rate);
+                }, 0);
+                return this.flt(sum, this.currency_precision);
+        },
+        // Calculate subtotal after discounts and delivery charges
+        subtotal() {
+                this.close_payments();
+                let sum = this.items.reduce((acc, item) => {
+                        const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
+                        return acc + qty * flt(item.rate);
+                }, 0);
 
-		// Subtract additional discount
-		const additional_discount = this.flt(this.additional_discount);
-		sum -= additional_discount;
+                // Subtract additional discount
+                sum -= this.flt(this.additional_discount);
 
-		// Add delivery charges
-		const delivery_charges = this.flt(this.delivery_charges_rate);
-		sum += delivery_charges;
+                // Add delivery charges
+                sum += this.flt(this.delivery_charges_rate);
 
-		return this.flt(sum, this.currency_precision);
-	},
-	// Calculate total discount amount for all items
-	total_items_discount_amount() {
-		let sum = 0;
-		this.items.forEach((item) => {
-			// For returns, use absolute value for correct calculation
-			if (this.isReturnInvoice) {
-				sum += Math.abs(flt(item.qty)) * flt(item.discount_amount);
-			} else {
-				sum += flt(item.qty) * flt(item.discount_amount);
-			}
-		});
-		return this.flt(sum, this.float_precision);
-	},
+                return this.flt(sum, this.currency_precision);
+        },
+        // Calculate total discount amount for all items
+        total_items_discount_amount() {
+                const sum = this.items.reduce((acc, item) => {
+                        const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
+                        return acc + qty * flt(item.discount_amount);
+                }, 0);
+                return this.flt(sum, this.float_precision);
+        },
 	// Format posting_date for display as DD-MM-YYYY
 	formatted_posting_date: {
 		get() {

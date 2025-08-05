@@ -33,19 +33,11 @@ export default {
 		this.eventBus.emit("update_discount_percentage_offer_name", {
 			value: this.discount_percentage_offer_name,
 		});
-	},
-	// Watch for items array changes (deep) and re-handle offers
-	items: {
-		deep: true,
-		handler() {
-			this.handelOffers();
-			this.$forceUpdate();
-		},
-	},
-	// Watch for invoice type change and emit
-	invoiceType() {
-		this.eventBus.emit("update_invoice_type", this.invoiceType);
-	},
+        },
+        // Watch for invoice type change and emit
+        invoiceType() {
+                this.eventBus.emit("update_invoice_type", this.invoiceType);
+        },
 	// Watch for additional discount and update percentage accordingly
 	additional_discount() {
 		if (!this.additional_discount || this.additional_discount == 0) {

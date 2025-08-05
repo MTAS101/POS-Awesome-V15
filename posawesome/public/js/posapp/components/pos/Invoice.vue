@@ -1123,18 +1123,21 @@ export default {
 		this.eventBus.on("set_offers", (data) => {
 			this.posOffers = data;
 		});
-		this.eventBus.on("update_invoice_offers", (data) => {
-			this.updateInvoiceOffers(data);
-		});
-		this.eventBus.on("update_invoice_coupons", (data) => {
-			this.posa_coupons = data;
-			this.handelOffers();
-		});
-		this.eventBus.on("set_all_items", (data) => {
-			this.allItems = data;
-			this.items.forEach((item) => {
-				this.update_item_detail(item);
-			});
+                this.eventBus.on("update_invoice_offers", (data) => {
+                        this.updateInvoiceOffers(data);
+                });
+                this.eventBus.on("update_invoice_coupons", (data) => {
+                        this.posa_coupons = data;
+                        this.handelOffers();
+                });
+                this.eventBus.on("items-updated", () => {
+                        this.handelOffers();
+                });
+                this.eventBus.on("set_all_items", (data) => {
+                        this.allItems = data;
+                        this.items.forEach((item) => {
+                                this.update_item_detail(item);
+                        });
 		});
 		this.eventBus.on("load_return_invoice", (data) => {
 			// Handle loading of return invoice and set all related fields

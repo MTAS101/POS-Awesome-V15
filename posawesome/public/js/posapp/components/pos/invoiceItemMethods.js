@@ -1262,14 +1262,15 @@ export default {
 					}
 				});
 			}
-		} catch (error) {
-			console.error("Error updating items:", error);
-			this.eventBus.emit("show_message", {
-				title: __("Error updating item details"),
-				color: "error",
-			});
-		}
-	},
+                } catch (error) {
+                        console.error("Error updating items:", error);
+                        this.eventBus.emit("show_message", {
+                                title: __("Error updating item details"),
+                                color: "error",
+                        });
+                }
+                this.eventBus.emit("items-updated");
+        },
 
 	// Update details for a single item (fetch from backend)
 	update_item_detail(item, force_update = false) {
@@ -1479,25 +1480,25 @@ export default {
 
 					// Calculate final amount
 					item.amount = vm.flt(item.qty * item.rate, vm.currency_precision);
-					item.base_amount = vm.flt(item.qty * item.base_rate, vm.currency_precision);
+                                        item.base_amount = vm.flt(item.qty * item.base_rate, vm.currency_precision);
 
-					// Log updated rates for debugging
-					console.log(`Updated rates for ${item.item_code} on expand:`, {
-						base_rate: item.base_rate,
+                                        // Log updated rates for debugging
+                                        console.log(`Updated rates for ${item.item_code} on expand:`, {
+                                                base_rate: item.base_rate,
 						rate: item.rate,
 						base_price_list_rate: item.base_price_list_rate,
 						price_list_rate: item.price_list_rate,
 						exchange_rate: vm.exchange_rate,
-						selected_currency: vm.selected_currency,
-						default_currency: vm.pos_profile.currency,
-					});
+                                                selected_currency: vm.selected_currency,
+                                                default_currency: vm.pos_profile.currency,
+                                        });
 
-					// Force update UI immediately
-					vm.$forceUpdate();
-				}
-			},
-		});
-	},
+                                        // Notify listeners that items were updated
+                                        vm.eventBus.emit("items-updated");
+                                }
+                        },
+                });
+        },
 
 	// Fetch customer details (info, price list, etc)
 	async fetch_customer_details() {
