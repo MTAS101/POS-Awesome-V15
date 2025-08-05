@@ -1321,14 +1321,10 @@ export default {
 
 			if (this.itemWorker) {
 				try {
-					const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							"X-Frappe-CSRF-Token": frappe.csrf_token,
-						},
-						credentials: "same-origin",
-						body: JSON.stringify({
+					frappe.freeze();
+					const res = await frappe.call({
+						method: "posawesome.posawesome.api.items.get_items",
+						args: {
 							pos_profile: JSON.stringify(vm.pos_profile),
 							price_list: vm.customer_price_list,
 							item_group: gr,
@@ -1337,11 +1333,9 @@ export default {
 							modified_after: syncSince,
 							limit: this.itemsPageLimit,
 							offset: 0,
-						}),
+						},
 					});
-
-					const text = await res.text();
-					// console.log(text)
+					const text = JSON.stringify(res);
 					this.itemWorker.onmessage = async (ev) => {
 						if (this.items_request_token !== request_token) return;
 						if (ev.data.type === "parsed") {
@@ -1430,6 +1424,8 @@ export default {
 				} catch (err) {
 					console.error("Failed to fetch items", err);
 					vm.loading = false;
+				} finally {
+					frappe.unfreeze();
 				}
 			} else {
 				frappe.call({
