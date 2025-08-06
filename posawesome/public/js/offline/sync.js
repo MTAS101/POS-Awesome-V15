@@ -1,4 +1,4 @@
-import { useOfflineStore, MAX_QUEUE_ITEMS } from "@/stores/offlineStore";
+import { useOfflineStore, MAX_QUEUE_ITEMS } from "../stores/offlineStore";
 import { updateLocalStock } from "./stock.js";
 
 // Flag to avoid concurrent invoice syncs which can cause duplicate submissions

@@ -1,5 +1,5 @@
 import { db, checkDbHealth } from "./core.js";
-import { useOfflineStore } from "@/stores/offlineStore";
+import { useOfflineStore } from "../stores/offlineStore";
 
 export function saveItemUOMs(itemCode, uoms) {
         try {

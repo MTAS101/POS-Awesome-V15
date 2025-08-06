@@ -1,4 +1,4 @@
-import { useOfflineStore } from "@/stores/offlineStore";
+import { useOfflineStore } from "../stores/offlineStore";
 
 // Customer balance caching functions
 export function saveCustomerBalance(customer, balance) {

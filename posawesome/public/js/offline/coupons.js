@@ -1,4 +1,4 @@
-import { useOfflineStore } from "@/stores/offlineStore";
+import { useOfflineStore } from "../stores/offlineStore";
 
 export function saveCoupons(customer, coupons) {
         try {

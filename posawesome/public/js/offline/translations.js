@@ -1,4 +1,4 @@
-import { useOfflineStore } from "@/stores/offlineStore";
+import { useOfflineStore } from "../stores/offlineStore";
 
 export function getTranslationsCache(lang) {
         const store = useOfflineStore();

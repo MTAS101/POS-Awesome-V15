@@ -1,4 +1,4 @@
-import { useOfflineStore } from "@/stores/offlineStore";
+import { useOfflineStore } from "../stores/offlineStore";
 
 // Modify initializeStockCache function to set the flag
 export async function initializeStockCache(items, pos_profile) {

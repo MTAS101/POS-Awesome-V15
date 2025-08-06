@@ -12,7 +12,7 @@ export {
 } from "./core.js";
 
 // Offline store exports
-export { useOfflineStore, MAX_QUEUE_ITEMS } from "@/stores/offlineStore";
+export { useOfflineStore, MAX_QUEUE_ITEMS } from "../stores/offlineStore";
 export const memoryInitPromise = () => useOfflineStore().init();
 export const resetOfflineState = () => useOfflineStore().resetOfflineState();
 export const reduceCacheUsage = () => useOfflineStore().reduceCacheUsage();
