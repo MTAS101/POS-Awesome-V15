@@ -169,6 +169,7 @@
 <script>
 import { mapState } from "pinia";
 import { useNetworkStore } from "../../../stores/networkStore.js";
+import { useThemeStore } from "../../../stores/themeStore.js";
 
 export default {
         name: "NavbarMenu",
@@ -179,10 +180,13 @@ export default {
                 },
                 lastInvoiceId: String,
                 manualOffline: Boolean,
-                isDark: Boolean,
         },
         computed: {
                 ...mapState(useNetworkStore, ["networkOnline", "serverOnline"]),
+                ...mapState(useThemeStore, ["current"]),
+                isDark() {
+                        return this.current === "dark";
+                },
         },
         emits: [
                 "close-shift",

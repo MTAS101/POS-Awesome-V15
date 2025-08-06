@@ -259,6 +259,8 @@ import invoiceWatchers from "./invoiceWatchers";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
 import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 
 export default {
 	name: "POSInvoice",
@@ -326,12 +328,13 @@ export default {
 		CancelSaleDialog,
 		ItemsTable,
 	},
-	computed: {
-		...invoiceComputed,
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
-	},
+        computed: {
+                ...invoiceComputed,
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 
 	methods: {
 		...shortcutMethods,

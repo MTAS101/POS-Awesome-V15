@@ -53,6 +53,8 @@
 
 <script>
 import format from "../../format";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 export default {
 	// props: ["draftsDialog"],
 	mixins: [format],
@@ -95,8 +97,9 @@ export default {
                 ],
         }),
         computed: {
+                ...mapState(useThemeStore, ["current"]),
                 isDarkTheme() {
-                        return this.$theme.current === "dark";
+                        return this.current === "dark";
                 },
         },
         watch: {},

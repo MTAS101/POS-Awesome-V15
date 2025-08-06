@@ -67,6 +67,8 @@
 
 <script>
 /* global __, frappe */
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 export default {
         data: () => ({
 		dialog: false,
@@ -106,8 +108,9 @@ export default {
                 ],
         }),
         computed: {
+                ...mapState(useThemeStore, ["current"]),
                 isDarkTheme() {
-                        return this.$theme.current === "dark";
+                        return this.current === "dark";
                 },
         },
         watch: {},

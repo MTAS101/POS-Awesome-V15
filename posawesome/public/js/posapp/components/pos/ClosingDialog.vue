@@ -111,6 +111,8 @@
 
 <script>
 import format from "../../format";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 export default {
 	mixins: [format],
 	data: () => ({
@@ -160,11 +162,12 @@ export default {
 		},
 	},
 
-	computed: {
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
-	},
+        computed: {
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 
 	created: function () {
 		this.eventBus.on("open_ClosingDialog", (data) => {

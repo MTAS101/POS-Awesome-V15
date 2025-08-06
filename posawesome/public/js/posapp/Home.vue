@@ -8,7 +8,6 @@
                                 :is-ip-host="isIpHost"
                                 :sync-totals="syncTotals"
                                 :manual-offline="manualOffline"
-                                :is-dark="isDark"
                         @change-page="setPage($event)"
                                 @nav-click="handleNavClick"
                                 @close-shift="handleCloseShift"
@@ -61,6 +60,7 @@ import {
 import { mapWritableState } from "pinia";
 import { useNetworkStore } from "../stores/networkStore.js";
 import { useSettingsStore } from "../stores/settingsStore.js";
+import { useThemeStore } from "../stores/themeStore.js";
 
 export default {
 	data: function () {
@@ -87,9 +87,6 @@ export default {
                         "serverConnecting",
                         "internetReachable",
                 ]),
-                isDark() {
-                        return this.$theme?.current === "dark";
-                },
         },
 	watch: {
 		networkOnline(newVal, oldVal) {
@@ -334,10 +331,10 @@ export default {
 			}
 		},
 
-		handleToggleTheme() {
-			// Use the global theme plugin instead of local state
-			this.$theme.toggle();
-		},
+               handleToggleTheme() {
+                        const themeStore = useThemeStore();
+                        themeStore.toggle();
+                },
 
 		handleLogout() {
 			window.location.href = "/app";

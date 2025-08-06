@@ -4,8 +4,7 @@
 		<NavbarAppBar
 			:pos-profile="posProfile"
 			:pending-invoices="pendingInvoices"
-			:is-dark="isDark"
-			@nav-click="handleNavClick"
+                        @nav-click="handleNavClick"
 			@go-desk="goDesk"
 			@show-offline-invoices="showOfflineInvoices = true"
 		>
@@ -38,7 +37,6 @@
                                         :pos-profile="posProfile"
                                         :last-invoice-id="lastInvoiceId"
                                         :manual-offline="manualOffline"
-                                        :is-dark="isDark"
                                         @close-shift="openCloseShift"
                                         @print-last-invoice="printLastInvoice"
                                         @sync-invoices="syncPendingInvoices"
@@ -48,19 +46,18 @@
                                         @toggle-theme="toggleTheme"
                                         @logout="logOut"
                                 />
-			</template>
-		</NavbarAppBar>
+                        </template>
+                </NavbarAppBar>
 
 		<!-- Use the modular NavbarDrawer component -->
-		<NavbarDrawer
-			v-model:drawer="drawer"
-			v-model:item="item"
-			:company="company"
-			:company-img="companyImg"
-			:items="items"
-			:is-dark="isDark"
-			@change-page="changePage"
-		/>
+                <NavbarDrawer
+                        v-model:drawer="drawer"
+                        v-model:item="item"
+                        :company="company"
+                        :company-img="companyImg"
+                        :items="items"
+                        @change-page="changePage"
+                />
 
 		<!-- Use the modular AboutDialog component -->
 		<AboutDialog v-model="showAboutDialog" />
@@ -153,8 +150,7 @@ export default {
 			type: Object,
 			default: () => ({ pending: 0, synced: 0, drafted: 0 }),
 		},
-		manualOffline: Boolean,
-		isDark: Boolean,
+                manualOffline: Boolean,
         },
         data() {
                 return {
@@ -178,11 +174,7 @@ export default {
                         snackTimeout: 3000,
                 };
         },
-	computed: {
-		appBarColor() {
-			return this.isDark ? this.$vuetify.theme.themes.dark.colors.surface : "white";
-		},
-        },
+        computed: {},
         methods: {
 		initializeNavbar() {
 			// Initialize company info from Frappe boot data

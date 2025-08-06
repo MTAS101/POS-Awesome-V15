@@ -390,8 +390,8 @@ import format from "../../format";
 import Customer from "../pos/Customer.vue";
 import UpdateCustomer from "../pos/UpdateCustomer.vue";
 import {
-	getOpeningStorage,
-	setOpeningStorage,
+        getOpeningStorage,
+        setOpeningStorage,
 	initPromise,
 	checkDbHealth,
 	saveOfflinePayment,
@@ -402,6 +402,8 @@ import {
 	getOfflineCustomers,
 } from "../../../offline/index.js";
 import { silentPrint } from "../../plugins/print.js";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 
 export default {
 	mixins: [format],
@@ -1184,9 +1186,10 @@ export default {
 
 			return flt(invoiceTotal - paymentTotal);
 		},
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
 	},
 
 	created() {

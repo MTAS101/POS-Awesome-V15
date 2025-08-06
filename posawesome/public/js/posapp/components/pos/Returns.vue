@@ -239,6 +239,8 @@
 
 <script>
 import format from "../../format";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 
 export default {
 	mixins: [format],
@@ -292,11 +294,12 @@ export default {
 			},
 		],
 	}),
-	computed: {
-		isDarkTheme() {
-			return this.$theme?.current === "dark";
-		},
-	},
+        computed: {
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 	watch: {
 		from_date() {
 			this.formatFromDate();

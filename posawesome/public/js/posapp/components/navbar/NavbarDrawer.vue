@@ -8,7 +8,7 @@
 		@mouseleave="handleMouseLeave"
 		temporary
 		location="left"
-		:scrim="scrimColor"
+                :scrim="scrimColor"
 	>
 		<div v-if="!mini" class="drawer-header">
 			<v-avatar size="40">
@@ -46,16 +46,18 @@
 </template>
 
 <script>
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
+
 export default {
-	name: "NavbarDrawer",
-	props: {
+        name: "NavbarDrawer",
+        props: {
 		drawer: Boolean,
 		company: String,
 		companyImg: String,
-		items: Array,
-		item: Number,
-		isDark: Boolean,
-	},
+                items: Array,
+                item: Number,
+        },
 	data() {
 		return {
 			mini: false,
@@ -65,11 +67,12 @@ export default {
 		};
 	},
 	computed: {
-		scrimColor() {
-			// Use an opaque background in light mode so that
-			// underlying content doesn't show through the drawer
-			return this.isDark ? true : "rgba(255,255,255,1)";
-		},
+                ...mapState(useThemeStore, ["current"]),
+                scrimColor() {
+                        // Use an opaque background in light mode so that
+                        // underlying content doesn't show through the drawer
+                        return this.current === "dark" ? true : "rgba(255,255,255,1)";
+                },
 	},
 	watch: {
 		drawer(val) {

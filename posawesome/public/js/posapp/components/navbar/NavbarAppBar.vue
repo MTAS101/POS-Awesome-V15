@@ -3,8 +3,8 @@
 		app
 		flat
 		height="56"
-		:color="appBarColor"
-		:theme="isDark ? 'dark' : 'light'"
+                :color="appBarColor"
+                :theme="current"
 		class="navbar-enhanced elevation-2 px-2 pb-1"
 	>
 		<v-app-bar-nav-icon ref="navIcon" @click="$emit('nav-click')" class="text-secondary nav-icon" />
@@ -67,10 +67,13 @@
 </template>
 
 <script>
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
+
 export default {
-	name: "NavbarAppBar",
-	props: {
-		posProfile: {
+        name: "NavbarAppBar",
+        props: {
+                posProfile: {
 			type: Object,
 			default: () => ({}),
 		},
@@ -78,14 +81,16 @@ export default {
 			type: Number,
 			default: 0,
 		},
-		isDark: Boolean,
-	},
-	computed: {
-		appBarColor() {
-			return this.isDark ? this.$vuetify.theme.themes.dark.colors.surface : "white";
-		},
+        },
+        computed: {
+                ...mapState(useThemeStore, ["current"]),
+                appBarColor() {
+                        return this.current === "dark"
+                                ? this.$vuetify.theme.themes.dark.colors.surface
+                                : "white";
+                },
 
-		displayName() {
+                displayName() {
 			// Show POS profile name if available, otherwise show user name
 			if (this.posProfile && this.posProfile.name) {
 				return this.posProfile.name;
