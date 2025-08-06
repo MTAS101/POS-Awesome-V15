@@ -11,45 +11,28 @@ export {
 	terminatePersistWorker,
 } from "./core.js";
 
-// Cache exports
-export {
-	memory,
-	memoryInitPromise,
-	getStoredItems,
-	saveItems,
-	clearStoredItems,
-	getCustomerStorage,
-	setCustomerStorage,
-	getItemsLastSync,
-	setItemsLastSync,
-	getCustomersLastSync,
-	setCustomersLastSync,
-	getSalesPersonsStorage,
-	setSalesPersonsStorage,
-	getOpeningStorage,
-	setOpeningStorage,
-	clearOpeningStorage,
-	getOpeningDialogStorage,
-	setOpeningDialogStorage,
-	getTaxTemplate,
-	setTaxTemplate,
-	setLastSyncTotals,
-	getLastSyncTotals,
-	getTaxInclusiveSetting,
-	setTaxInclusiveSetting,
-	isManualOffline,
-	setManualOffline,
-	toggleManualOffline,
-	queueHealthCheck,
-	purgeOldQueueEntries,
-	MAX_QUEUE_ITEMS,
-	resetOfflineState,
-	reduceCacheUsage,
-	clearAllCache,
-	forceClearAllCache,
-	getCacheUsageEstimate,
-	isCacheReady,
-} from "./cache.js";
+// Offline store exports
+export { useOfflineStore, MAX_QUEUE_ITEMS } from "@/stores/offlineStore";
+export const memoryInitPromise = () => useOfflineStore().init();
+export const resetOfflineState = () => useOfflineStore().resetOfflineState();
+export const reduceCacheUsage = () => useOfflineStore().reduceCacheUsage();
+export const setLastSyncTotals = (totals) => useOfflineStore().setLastSyncTotals(totals);
+export const getLastSyncTotals = () => useOfflineStore().getLastSyncTotals();
+export const getTaxInclusiveSetting = () => useOfflineStore().tax_inclusive;
+export const setTaxInclusiveSetting = (val) => useOfflineStore().setState("tax_inclusive", !!val);
+export const isManualOffline = () => useOfflineStore().isManualOffline();
+export const setManualOffline = (state) => useOfflineStore().setManualOffline(state);
+export const toggleManualOffline = () => useOfflineStore().toggleManualOffline();
+export const queueHealthCheck = (limit) => useOfflineStore().queueHealthCheck(limit);
+export const purgeOldQueueEntries = (limit) => useOfflineStore().purgeOldQueueEntries(limit);
+export const isCacheReady = () => useOfflineStore().cache_ready;
+export const getTaxTemplate = (name) => useOfflineStore().tax_template_cache?.[name] || null;
+export const setTaxTemplate = (name, doc) => {
+        const store = useOfflineStore();
+        const cache = store.tax_template_cache || {};
+        cache[name] = doc;
+        store.setState("tax_template_cache", cache);
+};
 
 // Stock exports
 export {
@@ -119,4 +102,4 @@ export {
 export { saveCoupons, getCachedCoupons, clearCoupons } from "./coupons.js";
 
 // Translation cache exports
-export { getTranslationsCache, saveTranslationsCache } from "./cache.js";
+export { getTranslationsCache, saveTranslationsCache } from "./translations.js";

@@ -1,5 +1,4 @@
-import { memory, resetOfflineState, setLastSyncTotals, MAX_QUEUE_ITEMS, reduceCacheUsage } from "./cache.js";
-import { persist } from "./core.js";
+import { useOfflineStore, MAX_QUEUE_ITEMS } from "@/stores/offlineStore";
 import { updateLocalStock } from "./stock.js";
 
 // Flag to avoid concurrent invoice syncs which can cause duplicate submissions
@@ -11,8 +10,9 @@ export function saveOfflineInvoice(entry) {
 		throw new Error("Cart is empty. Add items before saving.");
 	}
 
-	const key = "offline_invoices";
-	const entries = memory.offline_invoices;
+        const store = useOfflineStore();
+        const key = "offline_invoices";
+        const entries = store.offline_invoices;
 	// Clone the entry before storing to strip Vue reactivity
 	// and other non-serializable properties. IndexedDB only
 	// supports structured cloneable data, so reactive proxies
@@ -26,24 +26,24 @@ export function saveOfflineInvoice(entry) {
 	}
 
 	entries.push(cleanEntry);
-	if (entries.length > MAX_QUEUE_ITEMS) {
-		entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
-	}
-	memory.offline_invoices = entries;
-	persist(key, memory.offline_invoices);
+        if (entries.length > MAX_QUEUE_ITEMS) {
+                entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
+        }
+        store.setState(key, entries);
 
 	// Update local stock quantities
-	if (entry.invoice && entry.invoice.items) {
-		updateLocalStock(entry.invoice.items);
-	}
+        if (entry.invoice && entry.invoice.items) {
+                updateLocalStock(entry.invoice.items);
+        }
 }
 
 export function isOffline() {
 	// Use cached data when running offline
-	if (typeof window === "undefined") {
-		// Not in a browser (SSR/Node), assume online (or handle explicitly if needed)
-		return memory.manual_offline || false;
-	}
+        if (typeof window === "undefined") {
+                // Not in a browser (SSR/Node), assume online (or handle explicitly if needed)
+                const store = useOfflineStore();
+                return store.isManualOffline();
+        }
 
 	const { protocol, hostname, navigator } = window;
 	const online = navigator.onLine;
@@ -54,9 +54,10 @@ export function isOffline() {
 	const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
 	const isDnsName = !isIpAddress && !isLocalhost;
 
-	if (memory.manual_offline) {
-		return true;
-	}
+        const store = useOfflineStore();
+        if (store.isManualOffline()) {
+                return true;
+        }
 
 	if (protocol === "https:" && isDnsName) {
 		return !online || !serverOnline;
@@ -66,28 +67,33 @@ export function isOffline() {
 }
 
 export function getOfflineInvoices() {
-	return memory.offline_invoices;
+        const store = useOfflineStore();
+        return store.offline_invoices;
 }
 
 export function clearOfflineInvoices() {
-	memory.offline_invoices = [];
-	persist("offline_invoices", memory.offline_invoices);
+        const store = useOfflineStore();
+        store.setState("offline_invoices", []);
 }
 
 export function deleteOfflineInvoice(index) {
-	if (Array.isArray(memory.offline_invoices) && index >= 0 && index < memory.offline_invoices.length) {
-		memory.offline_invoices.splice(index, 1);
-		persist("offline_invoices", memory.offline_invoices);
-	}
+        const store = useOfflineStore();
+        const invoices = store.offline_invoices;
+        if (Array.isArray(invoices) && index >= 0 && index < invoices.length) {
+                invoices.splice(index, 1);
+                store.setState("offline_invoices", invoices);
+        }
 }
 
 export function getPendingOfflineInvoiceCount() {
-	return memory.offline_invoices.length;
+        const store = useOfflineStore();
+        return store.offline_invoices.length;
 }
 
 export function saveOfflinePayment(entry) {
-	const key = "offline_payments";
-	const entries = memory.offline_payments;
+        const store = useOfflineStore();
+        const key = "offline_payments";
+        const entries = store.offline_payments;
 	// Strip down POS Profile to essential fields to avoid
 	// serialization errors from complex reactive objects
 	if (entry?.args?.payload?.pos_profile) {
@@ -110,36 +116,40 @@ export function saveOfflinePayment(entry) {
 		throw e;
 	}
 	entries.push(cleanEntry);
-	if (entries.length > MAX_QUEUE_ITEMS) {
-		entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
-	}
-	memory.offline_payments = entries;
-	persist(key, memory.offline_payments);
+        if (entries.length > MAX_QUEUE_ITEMS) {
+                entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
+        }
+        store.setState(key, entries);
 }
 
 export function getOfflinePayments() {
-	return memory.offline_payments;
+        const store = useOfflineStore();
+        return store.offline_payments;
 }
 
 export function clearOfflinePayments() {
-	memory.offline_payments = [];
-	persist("offline_payments", memory.offline_payments);
+        const store = useOfflineStore();
+        store.setState("offline_payments", []);
 }
 
 export function deleteOfflinePayment(index) {
-	if (Array.isArray(memory.offline_payments) && index >= 0 && index < memory.offline_payments.length) {
-		memory.offline_payments.splice(index, 1);
-		persist("offline_payments", memory.offline_payments);
-	}
+        const store = useOfflineStore();
+        const payments = store.offline_payments;
+        if (Array.isArray(payments) && index >= 0 && index < payments.length) {
+                payments.splice(index, 1);
+                store.setState("offline_payments", payments);
+        }
 }
 
 export function getPendingOfflinePaymentCount() {
-	return memory.offline_payments.length;
+        const store = useOfflineStore();
+        return store.offline_payments.length;
 }
 
 export function saveOfflineCustomer(entry) {
-	const key = "offline_customers";
-	const entries = memory.offline_customers;
+        const store = useOfflineStore();
+        const key = "offline_customers";
+        const entries = store.offline_customers;
 	// Serialize to avoid storing reactive objects that IndexedDB
 	// cannot clone.
 	let cleanEntry;
@@ -150,38 +160,38 @@ export function saveOfflineCustomer(entry) {
 		throw e;
 	}
 	entries.push(cleanEntry);
-	if (entries.length > MAX_QUEUE_ITEMS) {
-		entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
-	}
-	memory.offline_customers = entries;
-	persist(key, memory.offline_customers);
+        if (entries.length > MAX_QUEUE_ITEMS) {
+                entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
+        }
+        store.setState(key, entries);
 }
 
 export function updateOfflineInvoicesCustomer(oldName, newName) {
-	let updated = false;
-	const invoices = memory.offline_invoices || [];
+        const store = useOfflineStore();
+        let updated = false;
+        const invoices = store.offline_invoices || [];
 	invoices.forEach((inv) => {
-		if (inv.invoice && inv.invoice.customer === oldName) {
-			inv.invoice.customer = newName;
+                if (inv.invoice && inv.invoice.customer === oldName) {
+                        inv.invoice.customer = newName;
 			if (inv.invoice.customer_name) {
 				inv.invoice.customer_name = newName;
 			}
 			updated = true;
 		}
 	});
-	if (updated) {
-		memory.offline_invoices = invoices;
-		persist("offline_invoices", memory.offline_invoices);
-	}
+        if (updated) {
+                store.setState("offline_invoices", invoices);
+        }
 }
 
 export function getOfflineCustomers() {
-	return memory.offline_customers;
+        const store = useOfflineStore();
+        return store.offline_customers;
 }
 
 export function clearOfflineCustomers() {
-	memory.offline_customers = [];
-	persist("offline_customers", memory.offline_customers);
+        const store = useOfflineStore();
+        store.setState("offline_customers", []);
 }
 
 // Add sync function to clear local cache when invoices are successfully synced
@@ -196,12 +206,13 @@ export async function syncOfflineInvoices() {
 		// referencing them do not fail during submission
 		await syncOfflineCustomers();
 
-		const invoices = getOfflineInvoices();
+                const store = useOfflineStore();
+                const invoices = getOfflineInvoices();
 		if (!invoices.length) {
 			// No invoices to sync; clear last totals to avoid repeated messages
-			const totals = { pending: 0, synced: 0, drafted: 0 };
-			setLastSyncTotals(totals);
-			return totals;
+                        const totals = { pending: 0, synced: 0, drafted: 0 };
+                        store.setLastSyncTotals(totals);
+                        return totals;
 		}
 		if (isOffline()) {
 			// When offline just return the pending count without attempting a sync
@@ -238,38 +249,36 @@ export async function syncOfflineInvoices() {
 		}
 
 		// Reset saved invoices and totals after successful sync
-		if (synced > 0) {
-			resetOfflineState();
-		}
+                if (synced > 0) {
+                        store.resetOfflineState();
+                }
 
 		const pendingLeft = failures.length;
 
 		if (pendingLeft) {
-			memory.offline_invoices = failures;
-			persist("offline_invoices", memory.offline_invoices);
-		} else {
-			clearOfflineInvoices();
-			if (synced > 0 && drafted === 0) {
-				reduceCacheUsage();
-			}
-		}
+                        store.setState("offline_invoices", failures);
+                } else {
+                        clearOfflineInvoices();
+                        if (synced > 0 && drafted === 0) {
+                                store.reduceCacheUsage();
+                        }
+                }
 
-		const totals = { pending: pendingLeft, synced, drafted };
-		if (pendingLeft || drafted) {
-			// Persist totals only if there are invoices still pending or drafted
-			setLastSyncTotals(totals);
-		} else {
-			// Clear totals so success message only shows once
-			setLastSyncTotals({ pending: 0, synced: 0, drafted: 0 });
-		}
-		return totals;
+                const totals = { pending: pendingLeft, synced, drafted };
+                if (pendingLeft || drafted) {
+                        store.setLastSyncTotals(totals);
+                } else {
+                        store.setLastSyncTotals({ pending: 0, synced: 0, drafted: 0 });
+                }
+                return totals;
 	} finally {
 		invoiceSyncInProgress = false;
 	}
 }
 
 export async function syncOfflineCustomers() {
-	const customers = getOfflineCustomers();
+        const store = useOfflineStore();
+        const customers = getOfflineCustomers();
 	if (!customers.length) {
 		return { pending: 0, synced: 0 };
 	}
@@ -301,20 +310,20 @@ export async function syncOfflineCustomers() {
 		}
 	}
 
-	if (failures.length) {
-		memory.offline_customers = failures;
-		persist("offline_customers", memory.offline_customers);
-	} else {
-		clearOfflineCustomers();
-	}
+        if (failures.length) {
+                store.setState("offline_customers", failures);
+        } else {
+                clearOfflineCustomers();
+        }
 
 	return { pending: failures.length, synced };
 }
 
 export async function syncOfflinePayments() {
-	await syncOfflineCustomers();
+        const store = useOfflineStore();
+        await syncOfflineCustomers();
 
-	const payments = getOfflinePayments();
+        const payments = getOfflinePayments();
 	if (!payments.length) {
 		return { pending: 0, synced: 0 };
 	}
@@ -338,12 +347,11 @@ export async function syncOfflinePayments() {
 		}
 	}
 
-	if (failures.length) {
-		memory.offline_payments = failures;
-		persist("offline_payments", memory.offline_payments);
-	} else {
-		clearOfflinePayments();
-	}
+        if (failures.length) {
+                store.setState("offline_payments", failures);
+        } else {
+                clearOfflinePayments();
+        }
 
 	return { pending: failures.length, synced };
 }

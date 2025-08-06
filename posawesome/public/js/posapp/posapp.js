@@ -1,6 +1,7 @@
 import { createVuetify } from "vuetify";
 import { createApp } from "vue";
 import { createPinia } from "pinia";
+import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import Dexie from "dexie/dist/dexie.mjs";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
@@ -76,6 +77,7 @@ frappe.PosApp.posapp = class {
 			},
 		});
                 const pinia = createPinia();
+                pinia.use(piniaPluginPersistedstate);
                 const app = createApp(Home);
                 app.component("VueDatePicker", VueDatePicker);
                 app.use(pinia);
