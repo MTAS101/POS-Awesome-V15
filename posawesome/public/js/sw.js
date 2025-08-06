@@ -13,12 +13,29 @@ self.addEventListener("message", (event) => {
 workbox.core.clientsClaim();
 
 const SW_REVISION = "1";
-workbox.precaching.precacheAndRoute([
-	{ url: "/assets/posawesome/js/posawesome.bundle.js", revision: SW_REVISION },
-	{ url: "/assets/posawesome/js/offline/index.js", revision: SW_REVISION },
-	{ url: "/manifest.json", revision: SW_REVISION },
-	{ url: "/offline.html", revision: SW_REVISION },
-]);
+
+async function precacheAssets() {
+	const assets = [
+		{ url: "/manifest.json", revision: SW_REVISION },
+		{ url: "/offline.html", revision: SW_REVISION },
+	];
+	try {
+		const manifest = await fetch("/assets/posawesome/dist/js/manifest.json").then((res) => res.json());
+		Object.values(manifest).forEach((item) => {
+			assets.push({
+				url: `/assets/posawesome/dist/js/${item.file}`,
+				revision: SW_REVISION,
+			});
+		});
+	} catch (e) {
+		console.error("Failed to load manifest", e);
+	}
+	workbox.precaching.precacheAndRoute(assets);
+}
+
+self.addEventListener("install", (event) => {
+	event.waitUntil(precacheAssets());
+});
 
 workbox.routing.registerRoute(
 	({ url }) => url.pathname.startsWith("/api/"),
