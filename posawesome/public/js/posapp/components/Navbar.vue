@@ -114,20 +114,41 @@ import DatabaseUsageGadget from "./navbar/DatabaseUsageGadget.vue";
 import { forceClearAllCache } from "../../offline/cache.js";
 import { clearAllCaches } from "../../utils/clearAllCaches.js";
 import { isOffline } from "../../offline/index.js";
+import { useEventBus } from "../../stores/eventBus.js";
+import { onMounted, onUnmounted, getCurrentInstance } from "vue";
 
 export default {
-	name: "NavBar",
-	components: {
-		NavbarAppBar,
-		NavbarDrawer,
-		NavbarMenu,
-		StatusIndicator,
-		CacheUsageMeter,
-		AboutDialog,
-		OfflineInvoicesDialog: OfflineInvoices,
-		ServerUsageGadget,
-		DatabaseUsageGadget,
-	},
+        name: "NavBar",
+        components: {
+                NavbarAppBar,
+                NavbarDrawer,
+                NavbarMenu,
+                StatusIndicator,
+                CacheUsageMeter,
+                AboutDialog,
+                OfflineInvoicesDialog: OfflineInvoices,
+                ServerUsageGadget,
+                DatabaseUsageGadget,
+        },
+        setup() {
+                const eventBus = useEventBus();
+                const vm = getCurrentInstance();
+
+                onMounted(() => {
+                        vm.proxy.initializeNavbar();
+                        eventBus.on("show_message", vm.proxy.showMessage);
+                        eventBus.on("freeze", vm.proxy.handleFreeze);
+                        eventBus.on("unfreeze", vm.proxy.handleUnfreeze);
+                        eventBus.on("set_company", vm.proxy.handleSetCompany);
+                });
+
+                onUnmounted(() => {
+                        eventBus.off("show_message", vm.proxy.showMessage);
+                        eventBus.off("freeze", vm.proxy.handleFreeze);
+                        eventBus.off("unfreeze", vm.proxy.handleUnfreeze);
+                        eventBus.off("set_company", vm.proxy.handleSetCompany);
+                });
+        },
 	props: {
 		posProfile: {
 			type: Object,
@@ -162,52 +183,34 @@ export default {
 		},
 		cacheReady: Boolean,
 	},
-	data() {
-		return {
-			drawer: false,
-			mini: true,
-			item: 0,
-			items: [
-				{ text: "POS", icon: "mdi-network-pos" },
-				{ text: "Payments", icon: "mdi-credit-card" },
-			],
-			company: "POS Awesome",
-			companyImg: "/assets/posawesome/js/posapp/components/pos/pos.png",
-			showAboutDialog: false,
-			showOfflineInvoices: false,
-			freeze: false,
-			freezeTitle: "",
-			freezeMsg: "",
-			snack: false,
-			snackText: "",
-			snackColor: "success",
-			snackTimeout: 3000,
-		};
-	},
+        data() {
+                return {
+                        drawer: false,
+                        mini: true,
+                        item: 0,
+                        items: [
+                                { text: "POS", icon: "mdi-network-pos" },
+                                { text: "Payments", icon: "mdi-credit-card" },
+                        ],
+                        company: "POS Awesome",
+                        companyImg: "/assets/posawesome/js/posapp/components/pos/pos.png",
+                        showAboutDialog: false,
+                        showOfflineInvoices: false,
+                        freeze: false,
+                        freezeTitle: "",
+                        freezeMsg: "",
+                        snack: false,
+                        snackText: "",
+                        snackColor: "success",
+                        snackTimeout: 3000,
+                };
+        },
 	computed: {
 		appBarColor() {
 			return this.isDark ? this.$vuetify.theme.themes.dark.colors.surface : "white";
 		},
-	},
-	mounted() {
-		this.initializeNavbar();
-
-		if (this.eventBus) {
-			this.eventBus.on("show_message", this.showMessage);
-			this.eventBus.on("freeze", this.handleFreeze);
-			this.eventBus.on("unfreeze", this.handleUnfreeze);
-			this.eventBus.on("set_company", this.handleSetCompany);
-		}
-	},
-	unmounted() {
-		if (this.eventBus) {
-			this.eventBus.off("show_message", this.showMessage);
-			this.eventBus.off("freeze", this.handleFreeze);
-			this.eventBus.off("unfreeze", this.handleUnfreeze);
-			this.eventBus.off("set_company", this.handleSetCompany);
-		}
-	},
-	methods: {
+        },
+        methods: {
 		initializeNavbar() {
 			// Initialize company info from Frappe boot data
 			if (frappe.boot && frappe.boot.sysdefaults && frappe.boot.sysdefaults.company) {

@@ -1,68 +1,67 @@
-import { memory } from "./cache.js";
-import { persist } from "./core.js";
+import { useOfflineStore } from "../stores/offlineStore";
 
 // Modify initializeStockCache function to set the flag
 export async function initializeStockCache(items, pos_profile) {
-	try {
-		const existingCache = memory.local_stock_cache || {};
-		const missingItems = Array.isArray(items) ? items.filter((it) => !existingCache[it.item_code]) : [];
+        try {
+                const store = useOfflineStore();
+                const existingCache = store.local_stock_cache || {};
+                const missingItems = Array.isArray(items) ? items.filter((it) => !existingCache[it.item_code]) : [];
 
-		if (missingItems.length === 0) {
-			if (!memory.stock_cache_ready) {
-				memory.stock_cache_ready = true;
-				persist("stock_cache_ready", memory.stock_cache_ready);
-			}
-			console.debug("Stock cache already initialized");
-			console.info("Stock cache initialized with", Object.keys(existingCache).length, "items");
-			return true;
-		}
+                if (missingItems.length === 0) {
+                        if (!store.stock_cache_ready) {
+                                store.setState("stock_cache_ready", true);
+                        }
+                        console.debug("Stock cache already initialized");
+                        console.info("Stock cache initialized with", Object.keys(existingCache).length, "items");
+                        return true;
+                }
 
-		console.info("Initializing stock cache for", missingItems.length, "new items");
+                console.info("Initializing stock cache for", missingItems.length, "new items");
 
-		const updatedItems = await fetchItemStockQuantities(missingItems, pos_profile);
+                const updatedItems = await fetchItemStockQuantities(missingItems, pos_profile);
 
-		if (updatedItems && updatedItems.length > 0) {
-			updatedItems.forEach((item) => {
-				if (item.actual_qty !== undefined) {
-					existingCache[item.item_code] = {
-						actual_qty: item.actual_qty,
-						last_updated: new Date().toISOString(),
-					};
-				}
-			});
+                if (updatedItems && updatedItems.length > 0) {
+                        updatedItems.forEach((item) => {
+                                if (item.actual_qty !== undefined) {
+                                        existingCache[item.item_code] = {
+                                                actual_qty: item.actual_qty,
+                                                last_updated: new Date().toISOString(),
+                                        };
+                                }
+                        });
 
-			memory.local_stock_cache = existingCache;
-			memory.stock_cache_ready = true;
-			persist("local_stock_cache", memory.local_stock_cache);
-			persist("stock_cache_ready", memory.stock_cache_ready);
-			console.info("Stock cache initialized with", Object.keys(existingCache).length, "items");
-			return true;
-		}
-		return false;
-	} catch (error) {
-		console.error("Failed to initialize stock cache:", error);
-		return false;
-	}
+                        store.setState("local_stock_cache", existingCache);
+                        store.setState("stock_cache_ready", true);
+                        console.info("Stock cache initialized with", Object.keys(existingCache).length, "items");
+                        return true;
+                }
+                return false;
+        } catch (error) {
+                console.error("Failed to initialize stock cache:", error);
+                return false;
+        }
 }
 
 // Add getter and setter for stock_cache_ready flag
 export function isStockCacheReady() {
-	return memory.stock_cache_ready || false;
+        const store = useOfflineStore();
+        return store.stock_cache_ready || false;
 }
 
 export function setStockCacheReady(ready) {
-	memory.stock_cache_ready = ready;
-	persist("stock_cache_ready", memory.stock_cache_ready);
+        const store = useOfflineStore();
+        store.setState("stock_cache_ready", ready);
 }
 
 // Add new validation function
 export function validateStockForOfflineInvoice(items) {
-	const allowNegativeStock = memory.pos_opening_storage?.stock_settings?.allow_negative_stock;
+        const store = useOfflineStore();
+        const allowNegativeStock = store.pos_opening_storage?.stock_settings?.allow_negative_stock;
 	if (allowNegativeStock) {
 		return { isValid: true, invalidItems: [], errorMessage: "" };
 	}
 
-	const stockCache = memory.local_stock_cache || {};
+        const stockCache = store.local_stock_cache || {};
 	const invalidItems = [];
 
 	items.forEach((item) => {
@@ -102,8 +101,9 @@ export function validateStockForOfflineInvoice(items) {
 
 // Local stock management functions
 export function updateLocalStock(items) {
-	try {
-		const stockCache = memory.local_stock_cache || {};
+        try {
+                const store = useOfflineStore();
+                const stockCache = store.local_stock_cache || {};
 
 		items.forEach((item) => {
 			const key = item.item_code;
@@ -120,48 +120,48 @@ export function updateLocalStock(items) {
 			// because we don't know the actual stock quantity
 		});
 
-		memory.local_stock_cache = stockCache;
-		persist("local_stock_cache", memory.local_stock_cache);
-	} catch (e) {
-		console.error("Failed to update local stock", e);
-	}
+                store.setState("local_stock_cache", stockCache);
+        } catch (e) {
+                console.error("Failed to update local stock", e);
+        }
 }
 
 export function getLocalStock(itemCode) {
-	try {
-		const stockCache = memory.local_stock_cache || {};
-		return stockCache[itemCode]?.actual_qty || null;
-	} catch (e) {
-		return null;
-	}
+        try {
+                const store = useOfflineStore();
+                const stockCache = store.local_stock_cache || {};
+                return stockCache[itemCode]?.actual_qty || null;
+        } catch (e) {
+                return null;
+        }
 }
 
 // Update the local stock cache with latest quantities
 export function updateLocalStockCache(items) {
-	try {
-		const stockCache = memory.local_stock_cache || {};
+        try {
+                const store = useOfflineStore();
+                const stockCache = store.local_stock_cache || {};
 
-		items.forEach((item) => {
-			if (!item || !item.item_code) return;
+                items.forEach((item) => {
+                        if (!item || !item.item_code) return;
 
-			if (item.actual_qty !== undefined) {
-				stockCache[item.item_code] = {
-					actual_qty: item.actual_qty,
-					last_updated: new Date().toISOString(),
-				};
-			}
-		});
+                        if (item.actual_qty !== undefined) {
+                                stockCache[item.item_code] = {
+                                        actual_qty: item.actual_qty,
+                                        last_updated: new Date().toISOString(),
+                                };
+                        }
+                });
 
-		memory.local_stock_cache = stockCache;
-		persist("local_stock_cache", memory.local_stock_cache);
-	} catch (e) {
-		console.error("Failed to refresh local stock cache", e);
-	}
+                store.setState("local_stock_cache", stockCache);
+        } catch (e) {
+                console.error("Failed to refresh local stock cache", e);
+        }
 }
 
 export function clearLocalStockCache() {
-	memory.local_stock_cache = {};
-	persist("local_stock_cache", memory.local_stock_cache);
+        const store = useOfflineStore();
+        store.setState("local_stock_cache", {});
 }
 
 // Add this new function to fetch stock quantities
@@ -203,8 +203,9 @@ export async function fetchItemStockQuantities(items, pos_profile, chunkSize = 1
 
 // New function to update local stock with actual quantities
 export function updateLocalStockWithActualQuantities(invoiceItems, serverItems) {
-	try {
-		const stockCache = memory.local_stock_cache || {};
+        try {
+                const store = useOfflineStore();
+                const stockCache = store.local_stock_cache || {};
 
 		invoiceItems.forEach((invoiceItem) => {
 			const key = invoiceItem.item_code;
@@ -231,18 +232,18 @@ export function updateLocalStockWithActualQuantities(invoiceItems, serverItems) 
 			}
 		});
 
-		memory.local_stock_cache = stockCache;
-		persist("local_stock_cache", memory.local_stock_cache);
-	} catch (e) {
-		console.error("Failed to update local stock with actual quantities", e);
-	}
+                store.setState("local_stock_cache", stockCache);
+        } catch (e) {
+                console.error("Failed to update local stock with actual quantities", e);
+        }
 }
 
 export function getLocalStockCache() {
-	return memory.local_stock_cache || {};
+        const store = useOfflineStore();
+        return store.local_stock_cache || {};
 }
 
 export function setLocalStockCache(cache) {
-	memory.local_stock_cache = cache || {};
-	persist("local_stock_cache", memory.local_stock_cache);
+        const store = useOfflineStore();
+        store.setState("local_stock_cache", cache || {});
 }

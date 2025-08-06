@@ -1,9 +1,10 @@
-import { memory } from "./cache.js";
-import { persist, db, checkDbHealth } from "./core.js";
+import { db, checkDbHealth } from "./core.js";
+import { useOfflineStore } from "../stores/offlineStore";
 
 export function saveItemUOMs(itemCode, uoms) {
-	try {
-		const cache = memory.uom_cache;
+        try {
+                const store = useOfflineStore();
+                const cache = store.uom_cache;
 		// Clone to avoid persisting reactive objects which cause
 		// DataCloneError when stored in IndexedDB
 		let cleanUoms;
@@ -13,38 +14,39 @@ export function saveItemUOMs(itemCode, uoms) {
 			console.error("Failed to serialize UOMs", err);
 			cleanUoms = [];
 		}
-		cache[itemCode] = cleanUoms;
-		memory.uom_cache = cache;
-		persist("uom_cache", memory.uom_cache);
-	} catch (e) {
-		console.error("Failed to cache UOMs", e);
-	}
+                cache[itemCode] = cleanUoms;
+                store.setState("uom_cache", cache);
+        } catch (e) {
+                console.error("Failed to cache UOMs", e);
+        }
 }
 
 export function getItemUOMs(itemCode) {
-	try {
-		const cache = memory.uom_cache || {};
-		return cache[itemCode] || [];
-	} catch (e) {
-		return [];
-	}
+        try {
+                const store = useOfflineStore();
+                const cache = store.uom_cache || {};
+                return cache[itemCode] || [];
+        } catch (e) {
+                return [];
+        }
 }
 
 export function saveOffers(offers) {
-	try {
-		memory.offers_cache = offers;
-		persist("offers_cache", memory.offers_cache);
-	} catch (e) {
-		console.error("Failed to cache offers", e);
-	}
+        try {
+                const store = useOfflineStore();
+                store.setState("offers_cache", offers);
+        } catch (e) {
+                console.error("Failed to cache offers", e);
+        }
 }
 
 export function getCachedOffers() {
-	try {
-		return memory.offers_cache || [];
-	} catch (e) {
-		return [];
-	}
+        try {
+                const store = useOfflineStore();
+                return store.offers_cache || [];
+        } catch (e) {
+                return [];
+        }
 }
 
 // Price list rate storage using dedicated table
@@ -115,7 +117,8 @@ export async function clearPriceListCache(priceList = null) {
 // Item details caching functions
 export function saveItemDetailsCache(profileName, priceList, items) {
 	try {
-		const cache = memory.item_details_cache || {};
+                const store = useOfflineStore();
+                const cache = store.item_details_cache || {};
 		const profileCache = cache[profileName] || {};
 		const priceCache = profileCache[priceList] || {};
 
@@ -133,19 +136,19 @@ export function saveItemDetailsCache(profileName, priceList, items) {
 				timestamp: Date.now(),
 			};
 		});
-		profileCache[priceList] = priceCache;
-		cache[profileName] = profileCache;
-		memory.item_details_cache = cache;
-		persist("item_details_cache", memory.item_details_cache);
-	} catch (e) {
-		console.error("Failed to cache item details", e);
-	}
+                profileCache[priceList] = priceCache;
+                cache[profileName] = profileCache;
+                store.setState("item_details_cache", cache);
+        } catch (e) {
+                console.error("Failed to cache item details", e);
+        }
 }
 
 export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15 * 60 * 1000) {
-	try {
-		const cache = memory.item_details_cache || {};
-		const priceCache = cache[profileName]?.[priceList] || {};
+        try {
+                const store = useOfflineStore();
+                const cache = store.item_details_cache || {};
+                const priceCache = cache[profileName]?.[priceList] || {};
 		const now = Date.now();
 		const cached = [];
 		const missing = [];

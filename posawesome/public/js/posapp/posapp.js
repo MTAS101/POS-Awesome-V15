@@ -1,10 +1,12 @@
 import { createVuetify } from "vuetify";
 import { createApp } from "vue";
+import { createPinia } from "pinia";
+import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import Dexie from "dexie/dist/dexie.mjs";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
-import eventBus from "./bus";
 import themePlugin from "./plugins/theme.js";
+import { useEventBus } from "../stores/eventBus.js";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
 import Home from "./Home.vue";
@@ -74,10 +76,14 @@ frappe.PosApp.posapp = class {
 				},
 			},
 		});
-		const app = createApp(Home);
-		app.component("VueDatePicker", VueDatePicker);
-		app.use(eventBus);
-		app.use(vuetify);
+                const pinia = createPinia();
+                pinia.use(piniaPluginPersistedstate);
+                const app = createApp(Home);
+                app.component("VueDatePicker", VueDatePicker);
+                app.use(pinia);
+                const eventBus = useEventBus(pinia);
+                app.config.globalProperties.eventBus = eventBus;
+                app.use(vuetify);
 		app.use(themePlugin, { vuetify });
 		app.mount(this.$el[0]);
 

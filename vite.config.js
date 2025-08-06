@@ -23,8 +23,8 @@ export default defineConfig({
 		},
 	},
 	resolve: {
-		alias: {
-			"@": resolve(__dirname, "posawesome/public/js"),
-		},
+                alias: {
+                        "@": resolve(__dirname, "posawesome/public/js"),
+                },
 	},
 });
