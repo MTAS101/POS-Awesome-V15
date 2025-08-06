@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 from . import __version__ as app_version
+import json
+import os
 
 app_name = "posawesome"
 app_title = "POS Awesome"
@@ -17,9 +19,18 @@ app_license = "GPLv3"
 # include js, css files in header of desk.html
 # app_include_css = "/assets/posawesome/css/posawesome.css"
 # app_include_js = "/assets/posawesome/js/posawesome.js"
-app_include_js = [
-	"posawesome.bundle.js",
-]
+_dist_dir = os.path.join(os.path.dirname(__file__), "public", "dist", "js")
+_manifest_path = os.path.join(_dist_dir, "manifest.json")
+
+app_include_js = []
+if os.path.exists(_manifest_path):
+        with open(_manifest_path) as f:
+                manifest = json.load(f)
+        for info in manifest.values():
+                if info.get("isEntry") and info.get("file", "").endswith(".js"):
+                        app_include_js.append(f"dist/js/{info['file']}")
+else:
+        app_include_js = ["posawesome.bundle.js"]
 
 # include js, css files in header of web template
 # web_include_css = "/assets/posawesome/css/posawesome.css"

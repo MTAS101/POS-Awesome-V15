@@ -6,16 +6,19 @@ export default defineConfig({
 	plugins: [vue()],
 	build: {
 		target: "esnext",
-		lib: {
-			entry: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
-			name: "PosAwesome",
-			fileName: "posawesome",
-		},
 		outDir: "posawesome/public/dist/js",
 		emptyOutDir: true,
+		manifest: true,
 		rollupOptions: {
+			input: {
+				posawesome: resolve(__dirname, "posawesome/public/js/posawesome.bundle.js"),
+				offline: resolve(__dirname, "posawesome/public/js/offline/index.js"),
+			},
 			external: ["socket.io-client"],
 			output: {
+				manualChunks: {
+					vuetify: ["vuetify"],
+				},
 				globals: {
 					"socket.io-client": "io",
 				},

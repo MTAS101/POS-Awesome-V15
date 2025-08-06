@@ -1,4 +1,19 @@
 // Include onscan.js
+
+async function loadOfflineModule() {
+	try {
+		const manifest = await fetch("/assets/posawesome/dist/js/manifest.json").then((r) => r.json());
+		for (const value of Object.values(manifest)) {
+			if (value.isEntry && value.src && value.src.endsWith("offline/index.js")) {
+				return import(`/assets/posawesome/dist/js/${value.file}`);
+			}
+		}
+	} catch (err) {
+		console.warn("Failed to load offline chunk", err);
+	}
+	return import("/assets/posawesome/js/offline/index.js");
+}
+
 frappe.pages["posapp"].on_page_load = async function (wrapper) {
 	await setupLanguage();
 
@@ -73,7 +88,7 @@ frappe.pages["posapp"].on_page_load = async function (wrapper) {
 								console.warn("Failed to cache tax inclusive setting", err);
 							}
 							applySetting(posa_tax_inclusive);
-							import("/assets/posawesome/js/offline/index.js")
+							loadOfflineModule()
 								.then((m) => {
 									if (m && m.setTaxInclusiveSetting) {
 										m.setTaxInclusiveSetting(posa_tax_inclusive);
@@ -96,7 +111,7 @@ frappe.pages["posapp"].on_page_load = async function (wrapper) {
 				try {
 					const val = JSON.parse(cachedValue);
 					applySetting(val);
-					import("/assets/posawesome/js/offline/index.js")
+					loadOfflineModule()
 						.then((m) => {
 							if (m && m.setTaxInclusiveSetting) {
 								m.setTaxInclusiveSetting(val);
@@ -149,7 +164,7 @@ function loadTranslations(lang) {
 				callback: function (r) {
 					if (!r.exc && r.message) {
 						$.extend(frappe._messages, r.message);
-						import("/assets/posawesome/js/offline/index.js")
+						loadOfflineModule()
 							.then((m) => {
 								if (m && m.saveTranslationsCache) {
 									m.saveTranslationsCache(language, r.message);
@@ -161,7 +176,7 @@ function loadTranslations(lang) {
 				},
 			});
 		} else {
-			import("/assets/posawesome/js/offline/index.js")
+			loadOfflineModule()
 				.then((m) => {
 					if (m && m.getTranslationsCache) {
 						const cached = m.getTranslationsCache(language);
