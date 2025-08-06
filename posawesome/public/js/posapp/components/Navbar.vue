@@ -11,24 +11,15 @@
 		>
 			<!-- Slot for status indicator -->
 			<template #status-indicator>
-				<StatusIndicator
-					:network-online="networkOnline"
-					:server-online="serverOnline"
-					:server-connecting="serverConnecting"
-					:is-ip-host="isIpHost"
-					:sync-totals="syncTotals"
-					:cache-ready="cacheReady"
-				/>
+                                <StatusIndicator
+                                        :is-ip-host="isIpHost"
+                                        :sync-totals="syncTotals"
+                                />
 			</template>
 
 			<!-- Slot for cache usage meter -->
 			<template #cache-usage-meter>
-				<CacheUsageMeter
-					:cache-usage="cacheUsage"
-					:cache-usage-loading="cacheUsageLoading"
-					:cache-usage-details="cacheUsageDetails"
-					@refresh="refreshCacheUsage"
-				/>
+                                <CacheUsageMeter @refresh="refreshCacheUsage" />
 			</template>
 
 			<!-- Slot for CPU gadget -->
@@ -43,22 +34,20 @@
 
 			<!-- Slot for menu -->
 			<template #menu>
-				<NavbarMenu
-					:pos-profile="posProfile"
-					:last-invoice-id="lastInvoiceId"
-					:manual-offline="manualOffline"
-					:network-online="networkOnline"
-					:server-online="serverOnline"
-					:is-dark="isDark"
-					@close-shift="openCloseShift"
-					@print-last-invoice="printLastInvoice"
-					@sync-invoices="syncPendingInvoices"
-					@toggle-offline="toggleManualOffline"
-					@clear-cache="clearCache"
-					@show-about="showAboutDialog = true"
-					@toggle-theme="toggleTheme"
-					@logout="logOut"
-				/>
+                                <NavbarMenu
+                                        :pos-profile="posProfile"
+                                        :last-invoice-id="lastInvoiceId"
+                                        :manual-offline="manualOffline"
+                                        :is-dark="isDark"
+                                        @close-shift="openCloseShift"
+                                        @print-last-invoice="printLastInvoice"
+                                        @sync-invoices="syncPendingInvoices"
+                                        @toggle-offline="toggleManualOffline"
+                                        @clear-cache="clearCache"
+                                        @show-about="showAboutDialog = true"
+                                        @toggle-theme="toggleTheme"
+                                        @logout="logOut"
+                                />
 			</template>
 		</NavbarAppBar>
 
@@ -158,31 +147,15 @@ export default {
 			type: Number,
 			default: 0,
 		},
-		lastInvoiceId: String,
-		networkOnline: Boolean,
-		serverOnline: Boolean,
-		serverConnecting: Boolean,
-		isIpHost: Boolean,
+                lastInvoiceId: String,
+                isIpHost: Boolean,
 		syncTotals: {
 			type: Object,
 			default: () => ({ pending: 0, synced: 0, drafted: 0 }),
 		},
 		manualOffline: Boolean,
 		isDark: Boolean,
-		cacheUsage: {
-			type: Number,
-			default: 0,
-		},
-		cacheUsageLoading: {
-			type: Boolean,
-			default: false,
-		},
-		cacheUsageDetails: {
-			type: Object,
-			default: () => ({ total: 0, indexedDB: 0, localStorage: 0 }),
-		},
-		cacheReady: Boolean,
-	},
+        },
         data() {
                 return {
                         drawer: false,

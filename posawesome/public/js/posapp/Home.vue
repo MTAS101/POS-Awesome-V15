@@ -1,32 +1,25 @@
 <template>
 	<v-app class="container1">
 		<v-main class="main-content">
-			<Navbar
-				:pos-profile="posProfile"
-				:pending-invoices="pendingInvoices"
-				:last-invoice-id="lastInvoiceId"
-				:network-online="networkOnline"
-				:server-online="serverOnline"
-				:server-connecting="serverConnecting"
-				:is-ip-host="isIpHost"
-				:sync-totals="syncTotals"
-				:manual-offline="manualOffline"
-				:is-dark="isDark"
-				:cache-usage="cacheUsage"
-				:cache-usage-loading="cacheUsageLoading"
-				:cache-usage-details="cacheUsageDetails"
-				:cache-ready="cacheReady"
-				@change-page="setPage($event)"
-				@nav-click="handleNavClick"
-				@close-shift="handleCloseShift"
-				@print-last-invoice="handlePrintLastInvoice"
-				@sync-invoices="handleSyncInvoices"
-				@toggle-offline="handleToggleOffline"
-				@toggle-theme="handleToggleTheme"
-				@logout="handleLogout"
-				@refresh-cache-usage="handleRefreshCacheUsage"
-				@update-after-delete="handleUpdateAfterDelete"
-			/>
+                        <Navbar
+                                :pos-profile="posProfile"
+                                :pending-invoices="pendingInvoices"
+                                :last-invoice-id="lastInvoiceId"
+                                :is-ip-host="isIpHost"
+                                :sync-totals="syncTotals"
+                                :manual-offline="manualOffline"
+                                :is-dark="isDark"
+                        @change-page="setPage($event)"
+                                @nav-click="handleNavClick"
+                                @close-shift="handleCloseShift"
+                                @print-last-invoice="handlePrintLastInvoice"
+                                @sync-invoices="handleSyncInvoices"
+                                @toggle-offline="handleToggleOffline"
+                                @toggle-theme="handleToggleTheme"
+                                @logout="handleLogout"
+                                @refresh-cache-usage="handleRefreshCacheUsage"
+                                @update-after-delete="handleUpdateAfterDelete"
+                        />
 			<div class="page-content">
 				<component v-bind:is="page" class="mx-4 md-4"></component>
 			</div>
@@ -39,10 +32,9 @@ import Navbar from "./components/Navbar.vue";
 import POS from "./components/pos/Pos.vue";
 import Payments from "./components/payments/Pay.vue";
 import {
-	getOpeningStorage,
-	getCacheUsageEstimate,
-	checkDbHealth,
-	queueHealthCheck,
+        getOpeningStorage,
+        checkDbHealth,
+        queueHealthCheck,
 	purgeOldQueueEntries,
 	MAX_QUEUE_ITEMS,
 	initPromise,
@@ -57,15 +49,18 @@ import {
 } from "../offline/index.js";
 import { silentPrint } from "./plugins/print.js";
 import {
-	setupNetworkListeners,
-	checkNetworkConnectivity,
-	detectHostType,
-	performConnectivityChecks,
-	checkFrappePing,
-	checkCurrentOrigin,
-	checkExternalConnectivity,
-	checkWebSocketConnectivity,
+        setupNetworkListeners,
+        checkNetworkConnectivity,
+        detectHostType,
+        performConnectivityChecks,
+        checkFrappePing,
+        checkCurrentOrigin,
+        checkExternalConnectivity,
+        checkWebSocketConnectivity,
 } from "./composables/useNetwork.js";
+import { mapWritableState } from "pinia";
+import { useNetworkStore } from "../stores/networkStore.js";
+import { useSettingsStore } from "../stores/settingsStore.js";
 
 export default {
 	data: function () {
@@ -76,29 +71,26 @@ export default {
 			pendingInvoices: 0,
 			lastInvoiceId: "",
 
-			// Network status
-			networkOnline: navigator.onLine || false,
-			serverOnline: false,
-			serverConnecting: false,
-			internetReachable: false,
-			isIpHost: false,
+                        // Network status
+                        isIpHost: false,
 
 			// Sync data
 			syncTotals: { pending: 0, synced: 0, drafted: 0 },
 			manualOffline: false,
 
-			// Cache data
-			cacheUsage: 0,
-			cacheUsageLoading: false,
-			cacheUsageDetails: { total: 0, indexedDB: 0, localStorage: 0 },
-			cacheReady: false,
-		};
-	},
-	computed: {
-		isDark() {
-			return this.$theme?.current === "dark";
-		},
-	},
+                };
+        },
+        computed: {
+                ...mapWritableState(useNetworkStore, [
+                        "networkOnline",
+                        "serverOnline",
+                        "serverConnecting",
+                        "internetReachable",
+                ]),
+                isDark() {
+                        return this.$theme?.current === "dark";
+                },
+        },
 	watch: {
 		networkOnline(newVal, oldVal) {
 			if (newVal && !oldVal) {
@@ -119,16 +111,17 @@ export default {
 		POS,
 		Payments,
 	},
-	mounted() {
-		this.remove_frappe_nav();
-		// Initialize cache ready state early from stored value
-		this.cacheReady = isCacheReady();
-		this.initializeData();
-		this.setupNetworkListeners();
-		this.setupEventListeners();
-		this.handleRefreshCacheUsage();
-	},
-	methods: {
+        mounted() {
+                this.remove_frappe_nav();
+                const settingsStore = useSettingsStore();
+                // Initialize cache ready state early from stored value
+                settingsStore.cacheReady = isCacheReady();
+                this.initializeData();
+                this.setupNetworkListeners();
+                this.setupEventListeners();
+                this.handleRefreshCacheUsage();
+        },
+        methods: {
 		setupNetworkListeners,
 		checkNetworkConnectivity,
 		detectHostType,
@@ -141,11 +134,12 @@ export default {
 			this.page = page;
 		},
 
-		async initializeData() {
-			await initPromise;
-			await memoryInitPromise;
-			this.cacheReady = true;
-			checkDbHealth().catch(() => {});
+                async initializeData() {
+                        await initPromise;
+                        await memoryInitPromise;
+                        const settingsStore = useSettingsStore();
+                        settingsStore.cacheReady = true;
+                        checkDbHealth().catch(() => {});
 			// Load POS profile from cache or storage
 			const openingData = getOpeningStorage();
 			if (openingData && openingData.pos_profile) {
@@ -163,13 +157,10 @@ export default {
 			this.pendingInvoices = getPendingOfflineInvoiceCount();
 			this.syncTotals = getLastSyncTotals();
 
-			getCacheUsageEstimate()
-				.then((usage) => {
-					if (usage.percentage > 90) {
-						alert("Local cache nearing capacity. Consider going online to sync.");
-					}
-				})
-				.catch(() => {});
+                        await settingsStore.refreshCacheUsage();
+                        if (settingsStore.cacheUsage > 90) {
+                                alert("Local cache nearing capacity. Consider going online to sync.");
+                        }
 
 			// Check if running on IP host
 			this.isIpHost = /^\d+\.\d+\.\d+\.\d+/.test(window.location.hostname);
@@ -352,55 +343,15 @@ export default {
 			window.location.href = "/app";
 		},
 
-		handleRefreshCacheUsage() {
-			this.cacheUsageLoading = true;
-			getCacheUsageEstimate()
-				.then((usage) => {
-					this.cacheUsage = usage.percentage || 0;
-					this.cacheUsageDetails = {
-						total: usage.total || 0,
-						indexedDB: usage.indexedDB || 0,
-						localStorage: usage.localStorage || 0,
-					};
-				})
-				.catch((e) => {
-					console.error("Failed to refresh cache usage", e);
-				})
-				.finally(() => {
-					this.cacheUsageLoading = false;
-				});
-		},
+                handleRefreshCacheUsage() {
+                        const settingsStore = useSettingsStore();
+                        settingsStore.refreshCacheUsage();
+                },
 
-		async refreshTaxInclusiveSetting() {
-			if (!this.posProfile || !this.posProfile.name || !navigator.onLine) {
-				return;
-			}
-			try {
-				const r = await frappe.call({
-					method: "posawesome.posawesome.api.utilities.get_pos_profile_tax_inclusive",
-					args: {
-						pos_profile: this.posProfile.name,
-					},
-				});
-				if (r.message !== undefined) {
-					const val = r.message;
-					try {
-						localStorage.setItem("posa_tax_inclusive", JSON.stringify(val));
-					} catch (err) {
-						console.warn("Failed to cache tax inclusive setting", err);
-					}
-					import("../offline/index.js")
-						.then((m) => {
-							if (m && m.setTaxInclusiveSetting) {
-								m.setTaxInclusiveSetting(val);
-							}
-						})
-						.catch(() => {});
-				}
-			} catch (e) {
-				console.warn("Failed to refresh tax inclusive setting", e);
-			}
-		},
+                async refreshTaxInclusiveSetting() {
+                        const settingsStore = useSettingsStore();
+                        await settingsStore.refreshTaxInclusiveSetting(this.posProfile);
+                },
 
 		handleUpdateAfterDelete() {
 			// Handle update after delete

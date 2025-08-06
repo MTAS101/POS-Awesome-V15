@@ -167,29 +167,33 @@
 </template>
 
 <script>
+import { mapState } from "pinia";
+import { useNetworkStore } from "../../../stores/networkStore.js";
+
 export default {
-	name: "NavbarMenu",
-	props: {
-		posProfile: {
-			type: Object,
-			default: () => ({}),
-		},
-		lastInvoiceId: String,
-		manualOffline: Boolean,
-		networkOnline: Boolean,
-		serverOnline: Boolean,
-		isDark: Boolean,
-	},
-	emits: [
-		"close-shift",
-		"print-last-invoice",
-		"sync-invoices",
-		"toggle-offline",
-		"clear-cache",
-		"show-about",
-		"toggle-theme",
-		"logout",
-	],
+        name: "NavbarMenu",
+        props: {
+                posProfile: {
+                        type: Object,
+                        default: () => ({}),
+                },
+                lastInvoiceId: String,
+                manualOffline: Boolean,
+                isDark: Boolean,
+        },
+        computed: {
+                ...mapState(useNetworkStore, ["networkOnline", "serverOnline"]),
+        },
+        emits: [
+                "close-shift",
+                "print-last-invoice",
+                "sync-invoices",
+                "toggle-offline",
+                "clear-cache",
+                "show-about",
+                "toggle-theme",
+                "logout",
+        ],
 };
 </script>
 

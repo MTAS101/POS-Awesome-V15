@@ -19,6 +19,9 @@
 </template>
 
 <script>
+import { mapState } from "pinia";
+import { useNetworkStore } from "../../../stores/networkStore.js";
+import { useSettingsStore } from "../../../stores/settingsStore.js";
 // Avoid relying on `import.meta` so the file can be bundled with older
 // JavaScript targets without warnings from esbuild. Debug logging can be
 // toggled by changing this flag during development.
@@ -26,20 +29,18 @@ const DEBUG = false;
 
 export default {
         name: "StatusIndicator",
-	props: {
-		networkOnline: Boolean,
-		serverOnline: Boolean,
-		serverConnecting: Boolean,
-		isIpHost: Boolean,
-		syncTotals: Object,
-		cacheReady: Boolean,
-	},
-	computed: {
-		/**
-		 * Determines the color of the status icon based on current network and server connectivity.
-		 * @returns {string} A Vuetify color string ('green', 'red').
-		 */
-		statusColor() {
+        props: {
+                isIpHost: Boolean,
+                syncTotals: Object,
+        },
+        computed: {
+                ...mapState(useNetworkStore, ["networkOnline", "serverOnline", "serverConnecting"]),
+                ...mapState(useSettingsStore, ["cacheReady"]),
+                /**
+                 * Determines the color of the status icon based on current network and server connectivity.
+                 * @returns {string} A Vuetify color string ('green', 'red').
+                 */
+                statusColor() {
                         // Enhanced debugging with more context
                         if (DEBUG) {
                                 console.log(
