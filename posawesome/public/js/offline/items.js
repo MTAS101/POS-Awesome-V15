@@ -33,20 +33,30 @@ export function getItemUOMs(itemCode) {
 }
 
 export function saveOffers(offers) {
-	try {
-		memory.offers_cache = offers;
-		persist("offers_cache", memory.offers_cache);
-	} catch (e) {
-		console.error("Failed to cache offers", e);
-	}
+        try {
+                memory.offers_cache = offers;
+                memory.offers_cache_timestamp = Date.now();
+                persist("offers_cache", memory.offers_cache);
+                persist("offers_cache_timestamp", memory.offers_cache_timestamp);
+        } catch (e) {
+                console.error("Failed to cache offers", e);
+        }
 }
 
-export function getCachedOffers() {
-	try {
-		return memory.offers_cache || [];
-	} catch {
-		return [];
-	}
+export function getCachedOffers(ttl = 15 * 60 * 1000) {
+        try {
+                const ts = memory.offers_cache_timestamp || 0;
+                if (!ts || Date.now() - ts > ttl) {
+                        memory.offers_cache = [];
+                        memory.offers_cache_timestamp = 0;
+                        persist("offers_cache", memory.offers_cache);
+                        persist("offers_cache_timestamp", memory.offers_cache_timestamp);
+                        return [];
+                }
+                return memory.offers_cache || [];
+        } catch {
+                return [];
+        }
 }
 
 // Price list rate storage using dedicated table
@@ -157,25 +167,36 @@ export function saveItemDetailsCache(profileName, priceList, items) {
 }
 
 export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15 * 60 * 1000) {
-	try {
-		const cache = memory.item_details_cache || {};
-		const priceCache = cache[profileName]?.[priceList] || {};
-		const now = Date.now();
-		const cached = [];
-		const missing = [];
-		itemCodes.forEach((code) => {
-			const entry = priceCache[code];
-			if (entry && now - entry.timestamp < ttl) {
-				cached.push(entry.data);
-			} else {
-				missing.push(code);
-			}
-		});
-		return { cached, missing };
-	} catch (e) {
-		console.error("Failed to get cached item details", e);
-		return { cached: [], missing: itemCodes };
-	}
+        try {
+                const cache = memory.item_details_cache || {};
+                const priceCache = cache[profileName]?.[priceList] || {};
+                const now = Date.now();
+                const cached = [];
+                const missing = [];
+                let changed = false;
+                itemCodes.forEach((code) => {
+                        const entry = priceCache[code];
+                        if (entry && now - entry.timestamp < ttl) {
+                                cached.push(entry.data);
+                        } else {
+                                if (entry) {
+                                        delete priceCache[code];
+                                        changed = true;
+                                }
+                                missing.push(code);
+                        }
+                });
+                if (changed) {
+                        cache[profileName] = cache[profileName] || {};
+                        cache[profileName][priceList] = priceCache;
+                        memory.item_details_cache = cache;
+                        persist("item_details_cache", memory.item_details_cache);
+                }
+                return { cached, missing };
+        } catch (e) {
+                console.error("Failed to get cached item details", e);
+                return { cached: [], missing: itemCodes };
+        }
 }
 
 // Persistent item storage helpers

@@ -10,10 +10,21 @@ import { getAllByCursor } from "./db-utils.js";
 import { clearPriceListCache } from "./items.js";
 import Dexie from "dexie/dist/dexie.mjs";
 
+// Default TTLs in milliseconds
+const OFFERS_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+const ITEM_DETAILS_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+
 // Increment this number whenever the cache data structure changes
 export const CACHE_VERSION = 1;
 
-export const MAX_QUEUE_ITEMS = 1000;
+// Queue size limit (can be configured via environment variable)
+const envQueueLimit = parseInt(
+        (typeof import.meta !== "undefined" && import.meta.env && import.meta.env.VITE_MAX_QUEUE_ITEMS) ||
+                (typeof process !== "undefined" && process.env && process.env.VITE_MAX_QUEUE_ITEMS) ||
+                "",
+        10,
+);
+export const MAX_QUEUE_ITEMS = Number.isFinite(envQueueLimit) && envQueueLimit > 0 ? envQueueLimit : 500;
 
 // Memory cache object
 export const memory = {
@@ -21,11 +32,12 @@ export const memory = {
 	offline_customers: [],
 	offline_payments: [],
 	pos_last_sync_totals: { pending: 0, synced: 0, drafted: 0 },
-	uom_cache: {},
-	offers_cache: [],
-	customer_balance_cache: {},
-	local_stock_cache: {},
-	stock_cache_ready: false,
+        uom_cache: {},
+        offers_cache: [],
+        offers_cache_timestamp: 0,
+        customer_balance_cache: {},
+        local_stock_cache: {},
+        stock_cache_ready: false,
 	customer_storage: [],
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
@@ -41,7 +53,7 @@ export const memory = {
 	cache_version: CACHE_VERSION,
 	cache_ready: false,
 	tax_inclusive: false,
-	manual_offline: false,
+        manual_offline: false,
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
@@ -90,10 +102,13 @@ export function initMemoryCache() {
 				}
 				// Mark caches initialized
 				memory.cache_ready = true;
-				persist("cache_ready", true);
-			} catch (e) {
-				console.error("Failed to initialize memory from DB", e);
-			}
+                                persist("cache_ready", true);
+
+                                // Start maintenance after cache is ready
+                                startCacheMaintenance();
+                        } catch (e) {
+                                console.error("Failed to initialize memory from DB", e);
+                        }
 		})();
 	}
 	return memoryInitPromise;
@@ -113,21 +128,23 @@ export function resetOfflineState() {
 }
 
 export function reduceCacheUsage() {
-	clearPriceListCache();
-	memory.item_details_cache = {};
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
-	memory.local_stock_cache = {};
-	memory.stock_cache_ready = false;
+        clearPriceListCache();
+        memory.item_details_cache = {};
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.offers_cache_timestamp = 0;
+        memory.customer_balance_cache = {};
+        memory.local_stock_cache = {};
+        memory.stock_cache_ready = false;
 	memory.coupons_cache = {};
 	memory.item_groups_cache = [];
 	persist("item_details_cache", memory.item_details_cache);
 	persist("uom_cache", memory.uom_cache);
-	persist("offers_cache", memory.offers_cache);
-	persist("customer_balance_cache", memory.customer_balance_cache);
-	persist("local_stock_cache", memory.local_stock_cache);
-	persist("stock_cache_ready", memory.stock_cache_ready);
+        persist("offers_cache", memory.offers_cache);
+        persist("offers_cache_timestamp", memory.offers_cache_timestamp);
+        persist("customer_balance_cache", memory.customer_balance_cache);
+        persist("local_stock_cache", memory.local_stock_cache);
+        persist("stock_cache_ready", memory.stock_cache_ready);
 	persist("coupons_cache", memory.coupons_cache);
 	persist("item_groups_cache", memory.item_groups_cache);
 }
@@ -350,6 +367,59 @@ export function purgeOldQueueEntries(limit = MAX_QUEUE_ITEMS) {
 	}
 }
 
+export function evictExpiredCaches(now = Date.now()) {
+        try {
+                if (memory.offers_cache_timestamp && now - memory.offers_cache_timestamp > OFFERS_CACHE_TTL) {
+                        memory.offers_cache = [];
+                        memory.offers_cache_timestamp = 0;
+                        persist("offers_cache", memory.offers_cache);
+                        persist("offers_cache_timestamp", memory.offers_cache_timestamp);
+                }
+
+                const cache = memory.item_details_cache || {};
+                let changed = false;
+                Object.keys(cache).forEach((profile) => {
+                        const profileCache = cache[profile] || {};
+                        Object.keys(profileCache).forEach((priceList) => {
+                                const priceCache = profileCache[priceList] || {};
+                                Object.keys(priceCache).forEach((itemCode) => {
+                                        const entry = priceCache[itemCode];
+                                        if (!entry || now - entry.timestamp > ITEM_DETAILS_CACHE_TTL) {
+                                                delete priceCache[itemCode];
+                                                changed = true;
+                                        }
+                                });
+                                if (Object.keys(priceCache).length === 0) {
+                                        delete profileCache[priceList];
+                                        changed = true;
+                                }
+                        });
+                        if (Object.keys(profileCache).length === 0) {
+                                delete cache[profile];
+                                changed = true;
+                        }
+                });
+
+                if (changed) {
+                        memory.item_details_cache = cache;
+                        persist("item_details_cache", memory.item_details_cache);
+                }
+        } catch (e) {
+                console.error("Failed to evict expired caches", e);
+        }
+}
+
+let maintenanceTimer = null;
+export function startCacheMaintenance(interval = 5 * 60 * 1000) {
+        if (maintenanceTimer) {
+                clearInterval(maintenanceTimer);
+        }
+        maintenanceTimer = setInterval(() => {
+                purgeOldQueueEntries();
+                evictExpiredCaches();
+        }, interval);
+}
+
 export async function clearAllCache() {
 	try {
 		await checkDbHealth();
@@ -376,11 +446,12 @@ export async function clearAllCache() {
 	memory.offline_customers = [];
 	memory.offline_payments = [];
 	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.coupons_cache = {};
-	memory.customer_balance_cache = {};
-	memory.local_stock_cache = {};
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.offers_cache_timestamp = 0;
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
+        memory.local_stock_cache = {};
 	memory.stock_cache_ready = false;
 	memory.customer_storage = [];
 	memory.items_last_sync = null;
@@ -397,7 +468,7 @@ export async function clearAllCache() {
 
 	await clearPriceListCache();
 
-	persist("cache_version", CACHE_VERSION);
+        persist("cache_version", CACHE_VERSION);
 }
 
 // Faster cache clearing without reopening the database
@@ -415,11 +486,12 @@ export async function forceClearAllCache() {
 	memory.offline_customers = [];
 	memory.offline_payments = [];
 	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.coupons_cache = {};
-	memory.customer_balance_cache = {};
-	memory.local_stock_cache = {};
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.offers_cache_timestamp = 0;
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
+        memory.local_stock_cache = {};
 	memory.stock_cache_ready = false;
 	memory.customer_storage = [];
 	memory.items_last_sync = null;
