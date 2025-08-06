@@ -25,14 +25,21 @@ frappe.PosApp.posapp = class {
                 this.page = page && page.page ? page.page : page;
                 this.make_body();
         }
-        make_body() {
-                this.$el = this.$parent.find(".main-section");
-                const vuetify = createVuetify({
-                        components,
-			directives,
-			locale: {
-				rtl: frappe.utils.is_rtl(),
-			},
+       make_body() {
+               let $el = $(this.page && this.page.body ? this.page.body : []);
+               if (!$el.length) {
+                       $el = this.$parent.find(".layout-main-section");
+               }
+               if (!$el.length) {
+                       $el = this.$parent.find(".main-section");
+               }
+               this.$el = $el;
+               const vuetify = createVuetify({
+                       components,
+                       directives,
+                       locale: {
+                               rtl: frappe.utils.is_rtl(),
+                       },
 			theme: {
 				defaultTheme: "light",
 				themes: {
@@ -85,9 +92,13 @@ frappe.PosApp.posapp = class {
                 const eventBus = useEventBus(pinia);
                 app.config.globalProperties.eventBus = eventBus;
                 app.use(vuetify);
-                const themeStore = useThemeStore(pinia);
-                themeStore.init(vuetify);
-                app.mount(this.$el[0]);
+               const themeStore = useThemeStore(pinia);
+               themeStore.init(vuetify);
+               if (!this.$el.length) {
+                       console.error("POSApp mount failed: target element not found");
+                       return;
+               }
+               app.mount(this.$el[0]);
 
 		if (!document.querySelector('link[rel="manifest"]')) {
 			const link = document.createElement("link");
