@@ -24,7 +24,7 @@ export default defineConfig({
 	},
 	resolve: {
                 alias: {
-                        "@": resolve(__dirname, "posawesome/public/js/posapp"),
+                        "@": resolve(__dirname, "posawesome/public/js"),
                 },
 	},
 });
