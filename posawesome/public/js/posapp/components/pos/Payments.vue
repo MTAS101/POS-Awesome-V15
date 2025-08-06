@@ -164,7 +164,10 @@
 							hide-details
 							:model-value="formatCurrency(loyalty_amount)"
 							type="text"
-							@change="setFormatedCurrency(this, 'loyalty_amount', null, false, $event)"
+							@change="
+								setFormatedCurrency(this, 'loyalty_amount', null, false, $event);
+								validateLoyaltyAmount();
+							"
 							:prefix="currencySymbol(invoice_doc.currency)"
 						></v-text-field>
 					</v-col>
@@ -587,7 +590,10 @@
 								hide-details
 								type="text"
 								:model-value="formatCurrency(row.credit_to_redeem)"
-								@change="setFormatedCurrency(row, 'credit_to_redeem', null, false, $event)"
+								@change="
+									setFormatedCurrency(row, 'credit_to_redeem', null, false, $event);
+									validateRedeemedCredit(row);
+								"
 								:prefix="currencySymbol(invoice_doc.currency)"
 							></v-text-field>
 						</v-col>
@@ -765,7 +771,6 @@ export default {
 			invoiceType: "Invoice", // Type of invoice
 			is_return: false, // Is this a return invoice?
 			loyalty_amount: 0, // Loyalty points to redeem
-			redeemed_customer_credit: 0, // Customer credit to redeem
 			paid_change: 0, // Change to be given as paid
 			is_credit_sale: false, // Is this a credit sale?
 			is_write_off_change: false, // Write-off for change enabled
@@ -925,6 +930,13 @@ export default {
 		available_customer_credit() {
 			return this.customer_credit_dict.reduce((total, row) => total + this.flt(row.total_credit), 0);
 		},
+		// Sum of credit selected for redemption
+		redeemed_customer_credit() {
+			return this.customer_credit_dict.reduce(
+				(sum, row) => sum + this.flt(row.credit_to_redeem || 0),
+				0,
+			);
+		},
 		// Validate if payment can be submitted
 		vaildatPayment() {
 			if (this.pos_profile.posa_allow_sales_order) {
@@ -964,42 +976,6 @@ export default {
 				this.paid_change_rules = [];
 				this.credit_change = this.flt(newVal - changeLimit, this.currency_precision);
 			}
-		},
-		// Watch loyalty_amount to handle loyalty points redemption
-		loyalty_amount(value) {
-			if (value > this.available_points_amount) {
-				this.invoice_doc.loyalty_amount = 0;
-				this.invoice_doc.redeem_loyalty_points = 0;
-				this.invoice_doc.loyalty_points = 0;
-				this.loyalty_amount = 0;
-				this.eventBus.emit("show_message", {
-					title: `Loyalty Amount can not be more than ${this.available_points_amount}`,
-					color: "error",
-				});
-			} else {
-				this.invoice_doc.loyalty_amount = this.flt(this.loyalty_amount);
-				this.invoice_doc.redeem_loyalty_points = 1;
-				this.invoice_doc.loyalty_points =
-					this.flt(this.loyalty_amount) / this.customer_info.conversion_factor;
-			}
-		},
-		// Watch redeemed_customer_credit to validate
-		redeemed_customer_credit(newVal) {
-			if (newVal > this.available_customer_credit) {
-				this.redeemed_customer_credit = this.available_customer_credit;
-				this.eventBus.emit("show_message", {
-					title: `You can redeem customer credit up to ${this.available_customer_credit}`,
-					color: "error",
-				});
-			}
-		},
-		// Recalculate total redeemed credit whenever credit entries change
-		customer_credit_dict: {
-			handler(newVal) {
-				const total = newVal.reduce((sum, row) => sum + this.flt(row.credit_to_redeem || 0), 0);
-				this.redeemed_customer_credit = this.flt(total, this.currency_precision);
-			},
-			deep: true,
 		},
 		// Watch sales_person to update sales_team
 		sales_person(newVal) {
@@ -1098,6 +1074,45 @@ export default {
 					payment.base_amount = -Math.abs(payment.base_amount);
 				}
 			});
+		},
+		// Validate loyalty amount against available points
+		validateLoyaltyAmount() {
+			if (this.loyalty_amount > this.available_points_amount) {
+				this.invoice_doc.loyalty_amount = 0;
+				this.invoice_doc.redeem_loyalty_points = 0;
+				this.invoice_doc.loyalty_points = 0;
+				this.loyalty_amount = 0;
+				this.eventBus.emit("show_message", {
+					title: `Loyalty Amount can not be more than ${this.available_points_amount}`,
+					color: "error",
+				});
+			} else {
+				this.invoice_doc.loyalty_amount = this.flt(this.loyalty_amount);
+				this.invoice_doc.redeem_loyalty_points = 1;
+				this.invoice_doc.loyalty_points =
+					this.flt(this.loyalty_amount) / this.customer_info.conversion_factor;
+			}
+		},
+		// Validate redeemed customer credit and recalc totals
+		validateRedeemedCredit(row) {
+			if (row && this.flt(row.credit_to_redeem) > this.flt(row.total_credit)) {
+				row.credit_to_redeem = this.flt(row.total_credit, this.currency_precision);
+				this.eventBus.emit("show_message", {
+					title: `Redeemed credit cannot be greater than its total.`,
+					color: "error",
+				});
+			}
+			const total = this.redeemed_customer_credit;
+			if (total > this.available_customer_credit) {
+				if (row) {
+					const diff = total - this.available_customer_credit;
+					row.credit_to_redeem = this.flt(row.credit_to_redeem - diff, this.currency_precision);
+				}
+				this.eventBus.emit("show_message", {
+					title: `You can redeem customer credit up to ${this.available_customer_credit}`,
+					color: "error",
+				});
+			}
 		},
 		// Submit payment after validation
 		submit(event, payment_received = false, print = false) {
@@ -1331,6 +1346,7 @@ export default {
 						vm.load_print_page();
 					}
 					vm.customer_credit_dict = [];
+					vm.validateRedeemedCredit();
 					vm.redeem_customer_credit = false;
 					vm.is_cashback = true;
 					vm.is_credit_return = false;
@@ -1500,12 +1516,15 @@ export default {
 								}
 							});
 							this.customer_credit_dict = data;
+							this.validateRedeemedCredit();
 						} else {
 							this.customer_credit_dict = [];
+							this.validateRedeemedCredit();
 						}
 					});
 			} else {
 				this.customer_credit_dict = [];
+				this.validateRedeemedCredit();
 			}
 		},
 		// Get customer addresses for shipping
@@ -1716,6 +1735,7 @@ export default {
 			};
 			this.clear_all_amounts();
 			this.customer_credit_dict.push(advance);
+			this.validateRedeemedCredit();
 		},
 		// Update delivery date after selection
 		update_delivery_date() {
@@ -1900,7 +1920,6 @@ export default {
 					this.is_credit_return = false;
 				}
 				this.loyalty_amount = 0;
-				this.redeemed_customer_credit = 0;
 				// Only get addresses if customer exists
 				if (invoice_doc.customer) {
 					this.get_addresses();
@@ -1937,6 +1956,7 @@ export default {
 			this.eventBus.on("update_customer", (customer) => {
 				if (this.customer !== customer) {
 					this.customer_credit_dict = [];
+					this.validateRedeemedCredit();
 					this.redeem_customer_credit = false;
 					this.is_cashback = true;
 					this.is_credit_return = false;
@@ -1954,6 +1974,8 @@ export default {
 			// Clear any stored invoice when parent emits clear_invoice
 			this.eventBus.on("clear_invoice", () => {
 				this.invoice_doc = "";
+				this.customer_credit_dict = [];
+				this.validateRedeemedCredit();
 				this.is_return = false;
 				this.is_credit_return = false;
 			});
