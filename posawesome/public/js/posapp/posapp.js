@@ -19,15 +19,16 @@ if (typeof window !== "undefined" && !window.Dexie) {
 frappe.provide("frappe.PosApp");
 
 frappe.PosApp.posapp = class {
-	constructor({ parent }) {
-		this.$parent = $(document);
-		this.page = parent.page;
-		this.make_body();
-	}
-	make_body() {
-		this.$el = this.$parent.find(".main-section");
-		const vuetify = createVuetify({
-			components,
+        constructor(page) {
+                this.$parent = $(document);
+                // Accept either the full page object or its DOM element
+                this.page = page && page.page ? page.page : page;
+                this.make_body();
+        }
+        make_body() {
+                this.$el = this.$parent.find(".main-section");
+                const vuetify = createVuetify({
+                        components,
 			directives,
 			locale: {
 				rtl: frappe.utils.is_rtl(),
