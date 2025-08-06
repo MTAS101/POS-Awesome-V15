@@ -26,13 +26,14 @@ if (typeof Worker !== "undefined") {
 const memory = {
 	offline_invoices: [],
 	offline_customers: [],
-	offline_payments: [],
-	pos_last_sync_totals: { pending: 0, synced: 0, drafted: 0 },
-	uom_cache: {},
-	offers_cache: [],
-	customer_balance_cache: {},
-	local_stock_cache: {},
-	stock_cache_ready: false, // New flag to track if stock cache is initialized
+        offline_payments: [],
+        pos_last_sync_totals: { pending: 0, synced: 0, drafted: 0 },
+        uom_cache: {},
+        offers_cache: [],
+        offers_cache_timestamp: 0,
+        customer_balance_cache: {},
+        local_stock_cache: {},
+        stock_cache_ready: false, // New flag to track if stock cache is initialized
 	customer_storage: [],
 	pos_opening_storage: null,
 	opening_dialog_storage: null,
@@ -178,24 +179,26 @@ export function resetOfflineState() {
 }
 
 export function reduceCacheUsage() {
-	memory.price_list_cache = {};
-	memory.item_details_cache = {};
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
-	memory.local_stock_cache = {};
-	memory.stock_cache_ready = false;
-	memory.coupons_cache = {};
-	memory.item_groups_cache = [];
-	persist("price_list_cache");
-	persist("item_details_cache");
-	persist("uom_cache");
-	persist("offers_cache");
-	persist("customer_balance_cache");
-	persist("local_stock_cache");
-	persist("stock_cache_ready");
-	persist("coupons_cache");
-	persist("item_groups_cache");
+        memory.price_list_cache = {};
+        memory.item_details_cache = {};
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.offers_cache_timestamp = 0;
+        memory.customer_balance_cache = {};
+        memory.local_stock_cache = {};
+        memory.stock_cache_ready = false;
+        memory.coupons_cache = {};
+        memory.item_groups_cache = [];
+        persist("price_list_cache");
+        persist("item_details_cache");
+        persist("uom_cache");
+        persist("offers_cache");
+        persist("offers_cache_timestamp");
+        persist("customer_balance_cache");
+        persist("local_stock_cache");
+        persist("stock_cache_ready");
+        persist("coupons_cache");
+        persist("item_groups_cache");
 }
 
 // Add new validation function
@@ -622,20 +625,30 @@ export function getItemUOMs(itemCode) {
 }
 
 export function saveOffers(offers) {
-	try {
-		memory.offers_cache = offers;
-		persist("offers_cache");
-	} catch (e) {
-		console.error("Failed to cache offers", e);
-	}
+        try {
+                memory.offers_cache = offers;
+                memory.offers_cache_timestamp = Date.now();
+                persist("offers_cache");
+                persist("offers_cache_timestamp");
+        } catch (e) {
+                console.error("Failed to cache offers", e);
+        }
 }
 
-export function getCachedOffers() {
-	try {
-		return memory.offers_cache || [];
-	} catch {
-		return [];
-	}
+export function getCachedOffers(ttl = 15 * 60 * 1000) {
+        try {
+                const ts = memory.offers_cache_timestamp || 0;
+                if (!ts || Date.now() - ts > ttl) {
+                        memory.offers_cache = [];
+                        memory.offers_cache_timestamp = 0;
+                        persist("offers_cache");
+                        persist("offers_cache_timestamp");
+                        return [];
+                }
+                return memory.offers_cache || [];
+        } catch {
+                return [];
+        }
 }
 
 // Customer balance caching functions
@@ -1056,13 +1069,14 @@ export async function clearAllCache() {
 
 	memory.offline_invoices = [];
 	memory.offline_customers = [];
-	memory.offline_payments = [];
-	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
-	memory.local_stock_cache = {};
-	memory.stock_cache_ready = false;
+        memory.offline_payments = [];
+        memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.offers_cache_timestamp = 0;
+        memory.customer_balance_cache = {};
+        memory.local_stock_cache = {};
+        memory.stock_cache_ready = false;
 	memory.customer_storage = [];
 	memory.pos_opening_storage = null;
 	memory.opening_dialog_storage = null;
@@ -1085,13 +1099,14 @@ export async function forceClearAllCache() {
 
 	memory.offline_invoices = [];
 	memory.offline_customers = [];
-	memory.offline_payments = [];
-	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
-	memory.local_stock_cache = {};
-	memory.stock_cache_ready = false;
+        memory.offline_payments = [];
+        memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.offers_cache_timestamp = 0;
+        memory.customer_balance_cache = {};
+        memory.local_stock_cache = {};
+        memory.stock_cache_ready = false;
 	memory.customer_storage = [];
 	memory.pos_opening_storage = null;
 	memory.opening_dialog_storage = null;
