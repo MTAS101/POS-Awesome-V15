@@ -86,9 +86,16 @@
 </template>
 
 <script>
+/* eslint-disable no-unused-vars */
+/* global __ */
 import format from "../../format";
+import { usePanelVisibilityStore } from "../../stores/panelVisibility.js";
 export default {
-	mixins: [format],
+        setup() {
+                const panelVisibilityStore = usePanelVisibilityStore();
+                return { panelVisibilityStore };
+        },
+        mixins: [format],
 	data: () => ({
 		loading: false,
 		pos_profile: "",
@@ -119,9 +126,9 @@ export default {
 	},
 
 	methods: {
-		back_to_invoice() {
-			this.eventBus.emit("show_offers", "false");
-		},
+                back_to_invoice() {
+                        this.panelVisibilityStore.hideOffers();
+                },
 		forceUpdateItem() {
 			let list_offers = [];
 			list_offers = [...this.pos_offers];

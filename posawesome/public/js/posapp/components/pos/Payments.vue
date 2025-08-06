@@ -752,12 +752,17 @@ import {
 
 import generateOfflineInvoiceHTML from "../../../offline_print_template";
 import { silentPrint } from "../../plugins/print.js";
+import { usePanelVisibilityStore } from "../../stores/panelVisibility.js";
 
 export default {
-	// Using format mixin for shared formatting methods
-	mixins: [format],
-	data() {
-		return {
+        setup() {
+                const panelVisibilityStore = usePanelVisibilityStore();
+                return { panelVisibilityStore };
+        },
+        // Using format mixin for shared formatting methods
+        mixins: [format],
+        data() {
+                return {
 			loading: false, // UI loading state
 			pos_profile: "", // POS profile settings
 			pos_settings: "", // POS settings
@@ -1060,10 +1065,10 @@ export default {
 	},
 	methods: {
 		// Go back to invoice view and reset customer readonly
-		back_to_invoice() {
-			this.eventBus.emit("show_payment", "false");
-			this.eventBus.emit("set_customer_readonly", false);
-		},
+                back_to_invoice() {
+                        this.panelVisibilityStore.hidePayment();
+                        this.eventBus.emit("set_customer_readonly", false);
+                },
 		// Reset all cash payments to zero
 		reset_cash_payments() {
 			this.invoice_doc.payments.forEach((payment) => {

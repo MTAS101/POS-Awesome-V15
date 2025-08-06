@@ -9,8 +9,8 @@
 		<Variants></Variants>
 		<OpeningDialog v-if="dialog" :dialog="dialog"></OpeningDialog>
 		<v-row v-show="!dialog" dense class="ma-0 dynamic-main-row">
-			<v-col
-				v-show="!payment && !showOffers && !coupons"
+                        <v-col
+                                v-show="!paymentVisible && !offersVisible && !couponsVisible"
 				xl="5"
 				lg="5"
 				md="5"
@@ -20,15 +20,15 @@
 			>
 				<ItemsSelector></ItemsSelector>
 			</v-col>
-			<v-col v-show="showOffers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
-				<PosOffers></PosOffers>
-			</v-col>
-			<v-col v-show="coupons" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
-				<PosCoupons></PosCoupons>
-			</v-col>
-			<v-col v-show="payment" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
-				<Payments></Payments>
-			</v-col>
+                        <v-col v-show="offersVisible" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
+                                <PosOffers></PosOffers>
+                        </v-col>
+                        <v-col v-show="couponsVisible" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
+                                <PosCoupons></PosCoupons>
+                        </v-col>
+                        <v-col v-show="paymentVisible" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
+                                <Payments></Payments>
+                        </v-col>
 
 			<v-col xl="7" lg="7" md="7" sm="7" cols="12" class="pos dynamic-col">
 				<Invoice></Invoice>
@@ -38,6 +38,7 @@
 </template>
 
 <script>
+/* global frappe */
 import ItemsSelector from "./ItemsSelector.vue";
 import Invoice from "./Invoice.vue";
 import OpeningDialog from "./OpeningDialog.vue";
@@ -65,6 +66,8 @@ import { useOffers } from "../../composables/useOffers.js";
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
+import { usePanelVisibilityStore } from "../../stores/panelVisibility.js";
+import { storeToRefs } from "pinia";
 
 export default {
 	setup() {
@@ -75,20 +78,18 @@ export default {
 				instance.proxy.dialog = true;
 			}
 		});
-		const offers = useOffers();
-		return { ...responsive, ...shift, ...offers };
-	},
-	data: function () {
-		return {
-			dialog: false,
-
-			payment: false,
-			showOffers: false,
-			coupons: false,
-			itemsLoaded: false,
-			customersLoaded: false,
-		};
-	},
+                const offers = useOffers();
+                const panelVisibilityStore = usePanelVisibilityStore();
+                const { paymentVisible, offersVisible, couponsVisible } = storeToRefs(panelVisibilityStore);
+                return { ...responsive, ...shift, ...offers, paymentVisible, offersVisible, couponsVisible };
+        },
+        data: function () {
+                return {
+                        dialog: false,
+                        itemsLoaded: false,
+                        customersLoaded: false,
+                };
+        },
 
 	components: {
 		ItemsSelector,
@@ -144,24 +145,9 @@ export default {
 					this.get_offers(data.pos_profile.name, data.pos_profile);
 				}
 			});
-			this.eventBus.on("show_payment", (data) => {
-				this.payment = data === "true";
-				this.showOffers = false;
-				this.coupons = false;
-			});
-			this.eventBus.on("show_offers", (data) => {
-				this.showOffers = data === "true";
-				this.payment = false;
-				this.coupons = false;
-			});
-			this.eventBus.on("show_coupons", (data) => {
-				this.coupons = data === "true";
-				this.showOffers = false;
-				this.payment = false;
-			});
-			this.eventBus.on("open_closing_dialog", () => {
-				this.get_closing_data();
-			});
+                        this.eventBus.on("open_closing_dialog", () => {
+                                this.get_closing_data();
+                        });
 			this.eventBus.on("submit_closing_pos", (data) => {
 				this.submit_closing_pos(data);
 			});
@@ -181,11 +167,9 @@ export default {
 		this.eventBus.off("register_pos_data");
 		this.eventBus.off("register_pos_profile");
 		this.eventBus.off("LoadPosProfile");
-		this.eventBus.off("show_offers");
-		this.eventBus.off("show_coupons");
-		this.eventBus.off("open_closing_dialog");
-		this.eventBus.off("submit_closing_pos");
-		this.eventBus.off("items_loaded");
+                this.eventBus.off("open_closing_dialog");
+                this.eventBus.off("submit_closing_pos");
+                this.eventBus.off("items_loaded");
 		this.eventBus.off("customers_loaded");
 	},
 	// In the created() or mounted() lifecycle hook

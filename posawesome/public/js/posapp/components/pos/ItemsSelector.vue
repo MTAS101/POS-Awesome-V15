@@ -372,6 +372,7 @@ import format from "../../format";
 import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
+import { usePanelVisibilityStore } from "../../stores/panelVisibility.js";
 import {
 	saveItemUOMs,
 	getItemUOMs,
@@ -402,10 +403,12 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
-	mixins: [format],
-	setup() {
-		return useResponsive();
-	},
+        mixins: [format],
+        setup() {
+                const responsive = useResponsive();
+                const panelVisibilityStore = usePanelVisibilityStore();
+                return { ...responsive, panelVisibilityStore };
+        },
 	components: {
 		CameraScanner,
 	},
@@ -785,12 +788,12 @@ export default {
 			});
 		},
 
-		show_offers() {
-			this.eventBus.emit("show_offers", "true");
-		},
-		show_coupons() {
-			this.eventBus.emit("show_coupons", "true");
-		},
+                show_offers() {
+                        this.panelVisibilityStore.showOffers();
+                },
+                show_coupons() {
+                        this.panelVisibilityStore.showCoupons();
+                },
 		async forceReloadItems() {
 			// Clear cached price list items so the reload always
 			// fetches the latest data from the server
