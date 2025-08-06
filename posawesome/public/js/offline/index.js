@@ -12,7 +12,7 @@ export {
 } from "./core.js";
 
 // Offline store exports
-export { useOfflineStore, MAX_QUEUE_ITEMS } from "../stores/offlineStore";
+export { useOfflineStore, MAX_QUEUE_ITEMS } from "../stores/offlineStore.js";
 export const memoryInitPromise = () => useOfflineStore().init();
 export const resetOfflineState = () => useOfflineStore().resetOfflineState();
 export const reduceCacheUsage = () => useOfflineStore().reduceCacheUsage();
@@ -74,18 +74,19 @@ export {
 
 // Items exports
 export {
-	saveItemUOMs,
-	getItemUOMs,
-	saveOffers,
-	getCachedOffers,
-	savePriceListItems,
-	getCachedPriceListItems,
-	clearPriceListCache,
-	saveItemDetailsCache,
-	getCachedItemDetails,
-	saveItemsBulk,
-	getAllStoredItems,
-	searchStoredItems,
+        saveItemUOMs,
+        getItemUOMs,
+        saveOffers,
+        getCachedOffers,
+        savePriceListItems,
+        getCachedPriceListItems,
+        clearPriceListCache,
+        saveItemDetailsCache,
+        getCachedItemDetails,
+        saveItemsBulk as saveItems,
+        getAllStoredItems,
+        searchStoredItems,
+        clearStoredItems,
 } from "./items.js";
 
 export { saveItemGroups, getCachedItemGroups, clearItemGroups } from "./item_groups.js";
@@ -103,3 +104,20 @@ export { saveCoupons, getCachedCoupons, clearCoupons } from "./coupons.js";
 
 // Translation cache exports
 export { getTranslationsCache, saveTranslationsCache } from "./translations.js";
+
+// Legacy convenience wrappers mapped to the Pinia store
+export const getCustomerStorage = () => useOfflineStore().getCustomerStorage();
+export const setCustomerStorage = (customers) => useOfflineStore().setCustomerStorage(customers);
+export const getItemsLastSync = () => useOfflineStore().getItemsLastSync();
+export const setItemsLastSync = (ts) => useOfflineStore().setItemsLastSync(ts);
+export const getCustomersLastSync = () => useOfflineStore().getCustomersLastSync();
+export const setCustomersLastSync = (ts) => useOfflineStore().setCustomersLastSync(ts);
+export const getSalesPersonsStorage = () => useOfflineStore().getSalesPersonsStorage();
+export const setSalesPersonsStorage = (data) => useOfflineStore().setSalesPersonsStorage(data);
+export const getOpeningStorage = () => useOfflineStore().getOpeningStorage();
+export const setOpeningStorage = (data) => useOfflineStore().setOpeningStorage(data);
+export const clearOpeningStorage = () => useOfflineStore().clearOpeningStorage();
+export const getOpeningDialogStorage = () => useOfflineStore().getOpeningDialogStorage();
+export const setOpeningDialogStorage = (data) => useOfflineStore().setOpeningDialogStorage(data);
+export const forceClearAllCache = () => useOfflineStore().forceClearAllCache();
+export const getCacheUsageEstimate = () => useOfflineStore().getCacheUsageEstimate();

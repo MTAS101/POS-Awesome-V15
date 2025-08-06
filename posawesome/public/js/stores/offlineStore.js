@@ -1,5 +1,14 @@
 import { defineStore } from "pinia";
-import { db, persist, checkDbHealth, tableForKey } from "../offline/core.js";
+import Dexie from "dexie/dist/dexie.mjs";
+import { getAllByCursor } from "../offline/db-utils.js";
+import {
+        db,
+        persist,
+        checkDbHealth,
+        tableForKey,
+        terminatePersistWorker,
+        initPersistWorker,
+} from "../offline/core.js";
 
 export const CACHE_VERSION = 1;
 export const MAX_QUEUE_ITEMS = 1000;
@@ -142,6 +151,141 @@ export const useOfflineStore = defineStore("offline", {
                         cache[lang] = data;
                         this.translation_cache = cache;
                         persist("translation_cache", this.translation_cache);
+                },
+                getCustomerStorage() {
+                        return this.customer_storage || [];
+                },
+                setCustomerStorage(customers = []) {
+                        try {
+                                const trimmed = customers.map((c) => ({
+                                        name: c.name,
+                                        customer_name: c.customer_name,
+                                        mobile_no: c.mobile_no,
+                                        email_id: c.email_id,
+                                        primary_address: c.primary_address,
+                                        tax_id: c.tax_id,
+                                }));
+                                this.setState("customer_storage", trimmed);
+                        } catch (e) {
+                                console.error("Failed to set customer storage", e);
+                                this.setState("customer_storage", []);
+                        }
+                },
+                getItemsLastSync() {
+                        return this.items_last_sync || null;
+                },
+                setItemsLastSync(ts) {
+                        this.setState("items_last_sync", ts);
+                },
+                getCustomersLastSync() {
+                        return this.customers_last_sync || null;
+                },
+                setCustomersLastSync(ts) {
+                        this.setState("customers_last_sync", ts);
+                },
+                getSalesPersonsStorage() {
+                        return this.sales_persons_storage || [];
+                },
+                setSalesPersonsStorage(data = []) {
+                        let clean;
+                        try {
+                                clean = JSON.parse(JSON.stringify(data));
+                        } catch (err) {
+                                console.error("Failed to serialize sales persons", err);
+                                clean = [];
+                        }
+                        this.setState("sales_persons_storage", clean);
+                },
+                getOpeningStorage() {
+                        return this.pos_opening_storage || null;
+                },
+                setOpeningStorage(data) {
+                        let clean;
+                        try {
+                                clean = JSON.parse(JSON.stringify(data));
+                        } catch (err) {
+                                console.error("Failed to serialize opening storage", err);
+                                clean = {};
+                        }
+                        this.setState("pos_opening_storage", clean);
+                },
+                clearOpeningStorage() {
+                        this.setState("pos_opening_storage", null);
+                },
+                getOpeningDialogStorage() {
+                        return this.opening_dialog_storage || null;
+                },
+                setOpeningDialogStorage(data) {
+                        let clean;
+                        try {
+                                clean = JSON.parse(JSON.stringify(data));
+                        } catch (err) {
+                                console.error("Failed to serialize opening dialog", err);
+                                clean = {};
+                        }
+                        this.setState("opening_dialog_storage", clean);
+                },
+                async forceClearAllCache() {
+                        terminatePersistWorker();
+                        if (typeof localStorage !== "undefined") {
+                                Object.keys(localStorage).forEach((key) => {
+                                        if (key.startsWith("posa_")) {
+                                                localStorage.removeItem(key);
+                                        }
+                                });
+                        }
+                        try {
+                                await Dexie.delete("posawesome_offline");
+                                await db.open();
+                                initPersistWorker();
+                        } catch (e) {
+                                console.error("Failed to clear IndexedDB cache", e);
+                        }
+                        this.$reset();
+                        if (typeof localStorage !== "undefined") {
+                                localStorage.setItem("posa_cache_version", CACHE_VERSION);
+                        }
+                        persist("cache_version", CACHE_VERSION);
+                },
+                async getCacheUsageEstimate() {
+                        try {
+                                await checkDbHealth();
+                                let localStorageSize = 0;
+                                if (typeof localStorage !== "undefined") {
+                                        for (let i = 0; i < localStorage.length; i++) {
+                                                const key = localStorage.key(i);
+                                                if (key && key.startsWith("posa_")) {
+                                                        const value = localStorage.getItem(key) || "";
+                                                        localStorageSize += (key.length + value.length) * 2;
+                                                }
+                                        }
+                                }
+                                let indexedDBSize = 0;
+                                try {
+                                        if (db.isOpen()) {
+                                                for (const table of db.tables) {
+                                                        const entries = await getAllByCursor(table.name);
+                                                        indexedDBSize += entries.reduce((size, item) => {
+                                                                return size + JSON.stringify(item).length * 2;
+                                                        }, 0);
+                                                }
+                                        }
+                                } catch (e) {
+                                        console.error("Failed to calculate IndexedDB size", e);
+                                }
+                                const totalSize = localStorageSize + indexedDBSize;
+                                const maxSize = 50 * 1024 * 1024;
+                                const usagePercentage = Math.min(100, Math.round((totalSize / maxSize) * 100));
+                                return {
+                                        total: totalSize,
+                                        localStorage: localStorageSize,
+                                        indexedDB: indexedDBSize,
+                                        percentage: usagePercentage,
+                                };
+                        } catch (e) {
+                                console.error("Failed to estimate cache usage", e);
+                                return { total: 0, localStorage: 0, indexedDB: 0, percentage: 0 };
+                        }
                 },
         },
         persist: true,
