@@ -38,6 +38,8 @@
 import Navbar from "./components/Navbar.vue";
 import POS from "./components/pos/Pos.vue";
 import Payments from "./components/payments/Pay.vue";
+import { useNetworkStore } from "./stores/network";
+import { storeToRefs } from "pinia";
 import {
 	getOpeningStorage,
 	getCacheUsageEstimate,
@@ -68,6 +70,11 @@ import {
 } from "./composables/useNetwork.js";
 
 export default {
+	setup() {
+		const networkStore = useNetworkStore();
+		const { networkOnline, serverOnline, serverConnecting, manualOffline } = storeToRefs(networkStore);
+		return { networkStore, networkOnline, serverOnline, serverConnecting, manualOffline };
+	},
 	data: function () {
 		return {
 			page: "POS",
@@ -77,15 +84,11 @@ export default {
 			lastInvoiceId: "",
 
 			// Network status
-			networkOnline: navigator.onLine || false,
-			serverOnline: false,
-			serverConnecting: false,
 			internetReachable: false,
 			isIpHost: false,
 
 			// Sync data
 			syncTotals: { pending: 0, synced: 0, drafted: 0 },
-			manualOffline: false,
 
 			// Cache data
 			cacheUsage: 0,
