@@ -5,7 +5,7 @@ import Dexie from "dexie/dist/dexie.mjs";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
 import themePlugin from "./plugins/theme.js";
-import { useEventBus } from "@/stores/eventBus";
+import { useEventBus } from "../stores/eventBus.js";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
 import Home from "./Home.vue";

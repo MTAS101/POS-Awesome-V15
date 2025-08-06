@@ -114,7 +114,7 @@ import DatabaseUsageGadget from "./navbar/DatabaseUsageGadget.vue";
 import { forceClearAllCache } from "../../offline/cache.js";
 import { clearAllCaches } from "../../utils/clearAllCaches.js";
 import { isOffline } from "../../offline/index.js";
-import { useEventBus } from "@/stores/eventBus";
+import { useEventBus } from "../../stores/eventBus.js";
 
 export default {
 	name: "NavBar",
