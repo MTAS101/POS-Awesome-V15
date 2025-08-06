@@ -115,20 +115,40 @@ import { forceClearAllCache } from "../../offline/cache.js";
 import { clearAllCaches } from "../../utils/clearAllCaches.js";
 import { isOffline } from "../../offline/index.js";
 import { useEventBus } from "../../stores/eventBus.js";
+import { onMounted, onUnmounted, getCurrentInstance } from "vue";
 
 export default {
-	name: "NavBar",
-	components: {
-		NavbarAppBar,
-		NavbarDrawer,
-		NavbarMenu,
-		StatusIndicator,
-		CacheUsageMeter,
-		AboutDialog,
-		OfflineInvoicesDialog: OfflineInvoices,
-		ServerUsageGadget,
-		DatabaseUsageGadget,
-	},
+        name: "NavBar",
+        components: {
+                NavbarAppBar,
+                NavbarDrawer,
+                NavbarMenu,
+                StatusIndicator,
+                CacheUsageMeter,
+                AboutDialog,
+                OfflineInvoicesDialog: OfflineInvoices,
+                ServerUsageGadget,
+                DatabaseUsageGadget,
+        },
+        setup() {
+                const eventBus = useEventBus();
+                const vm = getCurrentInstance();
+
+                onMounted(() => {
+                        vm.proxy.initializeNavbar();
+                        eventBus.on("show_message", vm.proxy.showMessage);
+                        eventBus.on("freeze", vm.proxy.handleFreeze);
+                        eventBus.on("unfreeze", vm.proxy.handleUnfreeze);
+                        eventBus.on("set_company", vm.proxy.handleSetCompany);
+                });
+
+                onUnmounted(() => {
+                        eventBus.off("show_message", vm.proxy.showMessage);
+                        eventBus.off("freeze", vm.proxy.handleFreeze);
+                        eventBus.off("unfreeze", vm.proxy.handleUnfreeze);
+                        eventBus.off("set_company", vm.proxy.handleSetCompany);
+                });
+        },
 	props: {
 		posProfile: {
 			type: Object,
@@ -183,29 +203,14 @@ export default {
                         snackText: "",
                         snackColor: "success",
                         snackTimeout: 3000,
-                        eventBus: useEventBus(),
                 };
         },
 	computed: {
 		appBarColor() {
 			return this.isDark ? this.$vuetify.theme.themes.dark.colors.surface : "white";
 		},
-	},
-        mounted() {
-                this.initializeNavbar();
-
-                this.eventBus.on("show_message", this.showMessage);
-                this.eventBus.on("freeze", this.handleFreeze);
-                this.eventBus.on("unfreeze", this.handleUnfreeze);
-                this.eventBus.on("set_company", this.handleSetCompany);
         },
-        unmounted() {
-                this.eventBus.off("show_message", this.showMessage);
-                this.eventBus.off("freeze", this.handleFreeze);
-                this.eventBus.off("unfreeze", this.handleUnfreeze);
-                this.eventBus.off("set_company", this.handleSetCompany);
-        },
-	methods: {
+        methods: {
 		initializeNavbar() {
 			// Initialize company info from Frappe boot data
 			if (frappe.boot && frappe.boot.sysdefaults && frappe.boot.sysdefaults.company) {
