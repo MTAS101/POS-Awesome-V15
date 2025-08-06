@@ -80,8 +80,13 @@
 
 <script>
 /* global __, frappe */
+import { usePanelVisibilityStore } from "../../stores/panelVisibility.js";
 export default {
-	data: () => ({
+        setup() {
+                const panelVisibilityStore = usePanelVisibilityStore();
+                return { panelVisibilityStore };
+        },
+        data: () => ({
 		loading: false,
 		pos_profile: "",
 		customer: "",
@@ -110,9 +115,9 @@ export default {
 	},
 
 	methods: {
-		back_to_invoice() {
-			this.eventBus.emit("show_coupons", "false");
-		},
+                back_to_invoice() {
+                        this.panelVisibilityStore.hideCoupons();
+                },
 		add_coupon(new_coupon) {
 			if (!this.customer || !new_coupon) {
 				this.eventBus.emit("show_message", {

@@ -1,13 +1,13 @@
+/* global __, frappe, flt */
 import {
-	isOffline,
-	saveCustomerBalance,
-	getCachedCustomerBalance,
-	getCachedPriceListItems,
-	getItemUOMs,
-	getCustomerStorage,
-	getOfflineCustomers,
-	getTaxTemplate,
-	getTaxInclusiveSetting,
+        isOffline,
+        saveCustomerBalance,
+        getCachedCustomerBalance,
+        getCachedPriceListItems,
+        getCustomerStorage,
+        getOfflineCustomers,
+        getTaxTemplate,
+        getTaxInclusiveSetting,
 } from "../../../offline/index.js";
 
 // Import composables
@@ -15,6 +15,7 @@ import { useBatchSerial } from "../../composables/useBatchSerial.js";
 import { useDiscounts } from "../../composables/useDiscounts.js";
 import { useItemAddition } from "../../composables/useItemAddition.js";
 import { useStockUtils } from "../../composables/useStockUtils.js";
+import { usePanelVisibilityStore } from "../../stores/panelVisibility.js";
 
 const { setSerialNo, setBatchQty } = useBatchSerial();
 const { updateDiscountAmount, calcPrices, calcItemPrice } = useDiscounts();
@@ -208,30 +209,31 @@ export default {
 	},
 
 	// Save and clear the current invoice (draft logic)
-	save_and_clear_invoice() {
-		const doc = this.get_invoice_doc();
-		if (doc.name) {
-			old_invoice = this.update_invoice(doc);
-		} else {
-			if (doc.items.length) {
-				old_invoice = this.update_invoice(doc);
-			} else {
-				this.eventBus.emit("show_message", {
-					title: `Nothing to save`,
-					color: "error",
-				});
-			}
-		}
-		if (!old_invoice) {
-			this.eventBus.emit("show_message", {
-				title: `Error saving the current invoice`,
-				color: "error",
-			});
-		} else {
-			this.clear_invoice();
-			return old_invoice;
-		}
-	},
+        save_and_clear_invoice() {
+                const doc = this.get_invoice_doc();
+                let old_invoice;
+                if (doc.name) {
+                        old_invoice = this.update_invoice(doc);
+                } else {
+                        if (doc.items.length) {
+                                old_invoice = this.update_invoice(doc);
+                        } else {
+                                this.eventBus.emit("show_message", {
+                                        title: `Nothing to save`,
+                                        color: "error",
+                                });
+                        }
+                }
+                if (!old_invoice) {
+                        this.eventBus.emit("show_message", {
+                                title: `Error saving the current invoice`,
+                                color: "error",
+                        });
+                } else {
+                        this.clear_invoice();
+                        return old_invoice;
+                }
+        },
 
 	// Start a new order (or return order) with provided data
 	async new_order(data = {}) {
@@ -1024,8 +1026,9 @@ export default {
 			}
 
 			console.log("Showing payment dialog with currency:", invoice_doc.currency);
-			this.eventBus.emit("show_payment", "true");
-			this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
+                        const panelVisibilityStore = usePanelVisibilityStore();
+                        panelVisibilityStore.showPayment();
+                        this.eventBus.emit("send_invoice_doc_payment", invoice_doc);
 		} catch (error) {
 			console.error("Error in show_payment:", error);
 			this.eventBus.emit("show_message", {
@@ -1228,8 +1231,9 @@ export default {
 
 	// Close payment dialog
 	close_payments() {
-		this.eventBus.emit("show_payment", "false");
-	},
+                const panelVisibilityStore = usePanelVisibilityStore();
+                panelVisibilityStore.hidePayment();
+        },
 
 	// Update details for all items (fetch from backend)
 	async update_items_details(items) {
