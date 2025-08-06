@@ -50,6 +50,8 @@
 </template>
 
 <script>
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 export default {
 	props: {
 		pos_profile: Object,
@@ -66,11 +68,12 @@ export default {
 			internal_selected_delivery_charge: this.selected_delivery_charge,
 		};
 	},
-	computed: {
-		isDarkTheme() {
-			return this.$theme?.current === "dark";
-		},
-	},
+        computed: {
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 	watch: {
 		selected_delivery_charge(val) {
 			this.internal_selected_delivery_charge = val;

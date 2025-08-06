@@ -741,8 +741,8 @@
 // Importing format mixin for currency and utility functions
 import format from "../../format";
 import {
-	saveOfflineInvoice,
-	syncOfflineInvoices,
+        saveOfflineInvoice,
+        syncOfflineInvoices,
 	getPendingOfflineInvoiceCount,
 	isOffline,
 	getSalesPersonsStorage,
@@ -752,6 +752,8 @@ import {
 
 import generateOfflineInvoiceHTML from "../../../offline_print_template";
 import { silentPrint } from "../../plugins/print.js";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 
 export default {
 	// Using format mixin for shared formatting methods
@@ -948,10 +950,11 @@ export default {
 				) || false
 			);
 		},
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
-	},
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 	watch: {
 		// Watch diff_payment to update paid_change
 		diff_payment(newVal) {

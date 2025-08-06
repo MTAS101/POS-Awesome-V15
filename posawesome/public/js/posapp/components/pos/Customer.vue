@@ -158,12 +158,14 @@
 <script>
 import UpdateCustomer from "./UpdateCustomer.vue";
 import {
-	getCustomerStorage,
-	setCustomerStorage,
-	memoryInitPromise,
-	getCustomersLastSync,
-	setCustomersLastSync,
+        getCustomerStorage,
+        setCustomerStorage,
+        memoryInitPromise,
+        getCustomersLastSync,
+        setCustomersLastSync,
 } from "../../../offline/index.js";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 
 export default {
 	props: {
@@ -190,10 +192,11 @@ export default {
 		UpdateCustomer,
 	},
 
-	computed: {
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
+        computed: {
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
 
 		filteredCustomers() {
 			const search = this.customerSearch.toLowerCase();

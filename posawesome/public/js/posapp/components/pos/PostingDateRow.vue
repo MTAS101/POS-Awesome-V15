@@ -49,6 +49,9 @@
 </template>
 
 <script>
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
+
 export default {
 	props: {
 		pos_profile: Object,
@@ -64,11 +67,12 @@ export default {
 			internal_price_list: this.priceList,
 		};
 	},
-	computed: {
-		isDarkTheme() {
-			return this.$theme?.current === "dark";
-		},
-	},
+        computed: {
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 	watch: {
 		posting_date_display(val) {
 			this.internal_posting_date_display = val;

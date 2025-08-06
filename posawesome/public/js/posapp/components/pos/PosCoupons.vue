@@ -80,6 +80,8 @@
 
 <script>
 /* global __, frappe */
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 export default {
 	data: () => ({
 		loading: false,
@@ -101,13 +103,14 @@ export default {
 		couponsCount() {
 			return this.posa_coupons.length;
 		},
-		appliedCouponsCount() {
-			return this.posa_coupons.filter((el) => !!el.applied).length;
-		},
-		isDarkTheme() {
-			return this.$theme?.current === "dark";
-		},
-	},
+                appliedCouponsCount() {
+                        return this.posa_coupons.filter((el) => !!el.applied).length;
+                },
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 
 	methods: {
 		back_to_invoice() {

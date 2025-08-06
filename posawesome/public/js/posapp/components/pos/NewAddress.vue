@@ -76,17 +76,20 @@
 </template>
 
 <script>
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 export default {
 	data: () => ({
 		addressDialog: false,
 		address: {},
 		customer: "",
 	}),
-	computed: {
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
-	},
+        computed: {
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 
 	methods: {
 		close_dialog() {

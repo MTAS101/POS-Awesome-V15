@@ -73,33 +73,23 @@
 </template>
 
 <script>
+import { mapState } from "pinia";
+import { useSettingsStore } from "../../../stores/settingsStore.js";
+
 export default {
-	name: "CacheUsageMeter",
-	props: {
-		cacheUsage: {
-			type: Number,
-			default: 0,
-		},
-		cacheUsageLoading: {
-			type: Boolean,
-			default: false,
-		},
-		cacheUsageDetails: {
-			type: Object,
-			default: () => ({
-				total: 0,
-				indexedDB: 0,
-				localStorage: 0,
-			}),
-		},
-	},
-	computed: {
-		cacheUsageColor() {
-			// Return color based on cache usage percentage
-			if (this.cacheUsage < 50) return "success";
-			if (this.cacheUsage < 80) return "warning";
-			return "error";
-		},
+        name: "CacheUsageMeter",
+        computed: {
+                ...mapState(useSettingsStore, [
+                        "cacheUsage",
+                        "cacheUsageLoading",
+                        "cacheUsageDetails",
+                ]),
+                cacheUsageColor() {
+                        // Return color based on cache usage percentage
+                        if (this.cacheUsage < 50) return "success";
+                        if (this.cacheUsage < 80) return "warning";
+                        return "error";
+                },
 		cacheBarGradient() {
 			if (this.cacheUsage < 50) {
 				return "linear-gradient(90deg, #43e97b 0%, #38f9d7 100%)";

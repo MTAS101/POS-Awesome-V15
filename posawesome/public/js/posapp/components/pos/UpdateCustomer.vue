@@ -215,6 +215,8 @@
 
 <script>
 import { isOffline, saveOfflineCustomer } from "../../../offline/index.js";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 
 export default {
 	data: () => ({
@@ -334,11 +336,12 @@ export default {
 			}
 		},
 	},
-	computed: {
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
-	},
+        computed: {
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 	methods: {
 		// Add a new method to update calendar date
 		updateCalendarDate(day, month, year) {

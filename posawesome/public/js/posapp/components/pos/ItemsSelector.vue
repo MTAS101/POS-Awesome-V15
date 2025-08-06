@@ -372,6 +372,8 @@ import format from "../../format";
 import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 import {
 	saveItemUOMs,
 	getItemUOMs,
@@ -2329,9 +2331,10 @@ export default {
 				this.qty = parsed;
 			}, 200),
 		},
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
 		active_price_list() {
 			return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
 		},

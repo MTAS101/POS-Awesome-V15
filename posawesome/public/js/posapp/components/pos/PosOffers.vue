@@ -87,6 +87,8 @@
 
 <script>
 import format from "../../format";
+import { mapState } from "pinia";
+import { useThemeStore } from "../../../stores/themeStore.js";
 export default {
 	mixins: [format],
 	data: () => ({
@@ -110,13 +112,14 @@ export default {
 		offersCount() {
 			return this.pos_offers.length;
 		},
-		appliedOffersCount() {
-			return this.pos_offers.filter((el) => !!el.offer_applied).length;
-		},
-		isDarkTheme() {
-			return this.$theme?.current === "dark";
-		},
-	},
+                appliedOffersCount() {
+                        return this.pos_offers.filter((el) => !!el.offer_applied).length;
+                },
+                ...mapState(useThemeStore, ["current"]),
+                isDarkTheme() {
+                        return this.current === "dark";
+                },
+        },
 
 	methods: {
 		back_to_invoice() {

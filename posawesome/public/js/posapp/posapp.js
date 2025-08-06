@@ -5,11 +5,11 @@ import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import Dexie from "dexie/dist/dexie.mjs";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
-import themePlugin from "./plugins/theme.js";
 import { useEventBus } from "../stores/eventBus.js";
 import * as components from "vuetify/components";
 import * as directives from "vuetify/directives";
 import Home from "./Home.vue";
+import { useThemeStore } from "../stores/themeStore.js";
 
 // Expose Dexie globally for libraries that expect a global Dexie instance
 if (typeof window !== "undefined" && !window.Dexie) {
@@ -84,8 +84,9 @@ frappe.PosApp.posapp = class {
                 const eventBus = useEventBus(pinia);
                 app.config.globalProperties.eventBus = eventBus;
                 app.use(vuetify);
-		app.use(themePlugin, { vuetify });
-		app.mount(this.$el[0]);
+                const themeStore = useThemeStore(pinia);
+                themeStore.init(vuetify);
+                app.mount(this.$el[0]);
 
 		if (!document.querySelector('link[rel="manifest"]')) {
 			const link = document.createElement("link");

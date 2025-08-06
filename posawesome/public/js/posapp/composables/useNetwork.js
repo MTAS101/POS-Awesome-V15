@@ -1,5 +1,6 @@
 // Network-related composable functions for Home.vue
 import { isManualOffline } from "../../offline/index.js";
+import { useNetworkStore } from "../../stores/networkStore.js";
 /* global frappe */
 
 // Debounce variables for network stability
@@ -17,112 +18,90 @@ let checkInterval = 15000; // Start with 15s
 const MAX_INTERVAL = 120000; // Max 2 minutes
 const MIN_INTERVAL = 15000; // Min 15s
 
-// Persist last known good state
-function persistStatus(networkOnline, serverOnline) {
-	localStorage.setItem("networkOnline", JSON.stringify(networkOnline));
-	localStorage.setItem("serverOnline", JSON.stringify(serverOnline));
-}
-
-function getPersistedStatus() {
-	return {
-		networkOnline: JSON.parse(localStorage.getItem("networkOnline") || "true"),
-		serverOnline: JSON.parse(localStorage.getItem("serverOnline") || "true"),
-	};
-}
-
 // Manual retry function (to be called from UI)
 export function manualNetworkRetry(vm) {
-	if (typeof vm.checkNetworkConnectivity === "function") {
-		vm.serverConnecting = true;
-		vm.$forceUpdate();
-		vm.checkNetworkConnectivity().then(() => {
-			vm.serverConnecting = false;
-			vm.$forceUpdate();
-		});
-	}
+        const store = useNetworkStore();
+        if (typeof vm.checkNetworkConnectivity === "function") {
+                store.serverConnecting = true;
+                vm.checkNetworkConnectivity().then(() => {
+                        store.serverConnecting = false;
+                });
+        }
 }
 
 // Enhanced periodic check with exponential backoff
 function scheduleNextCheck(vm) {
-	setTimeout(async () => {
-		if (isManualOffline()) {
-			vm.serverConnecting = false;
-			vm.networkOnline = false;
-			vm.serverOnline = false;
-			window.serverOnline = false;
-			persistStatus(false, false);
-			vm.$forceUpdate();
-			scheduleNextCheck(vm);
-			return;
-		}
-		vm.serverConnecting = true;
-		vm.$forceUpdate();
-		await vm.checkNetworkConnectivity();
-		vm.serverConnecting = false;
-		vm.$forceUpdate();
-		// If failed, increase interval (up to max)
-		if (!vm.serverOnline) {
-			checkInterval = Math.min(checkInterval * 2, MAX_INTERVAL);
-		} else {
-			checkInterval = MIN_INTERVAL; // Reset on success
-		}
-		scheduleNextCheck(vm);
-	}, checkInterval);
+        const store = useNetworkStore();
+        setTimeout(async () => {
+                if (isManualOffline()) {
+                        store.serverConnecting = false;
+                        store.networkOnline = false;
+                        store.serverOnline = false;
+                        window.serverOnline = false;
+                        scheduleNextCheck(vm);
+                        return;
+                }
+                store.serverConnecting = true;
+                await vm.checkNetworkConnectivity();
+                store.serverConnecting = false;
+                // If failed, increase interval (up to max)
+                if (!store.serverOnline) {
+                        checkInterval = Math.min(checkInterval * 2, MAX_INTERVAL);
+                } else {
+                        checkInterval = MIN_INTERVAL; // Reset on success
+                }
+                scheduleNextCheck(vm);
+        }, checkInterval);
 }
 
 export function setupNetworkListeners() {
-	// Listen for network status changes
-	window.addEventListener("online", () => {
-		if (isManualOffline()) return;
-		this.networkOnline = true;
-		this.internetReachable = true;
-		console.log("Network: Online");
-		// Verify actual connectivity
-		this.checkNetworkConnectivity();
-	});
+        const store = useNetworkStore();
+        // Listen for network status changes
+        window.addEventListener("online", () => {
+                if (isManualOffline()) return;
+                store.networkOnline = true;
+                store.internetReachable = true;
+                console.log("Network: Online");
+                // Verify actual connectivity
+                this.checkNetworkConnectivity();
+        });
 
-	window.addEventListener("offline", () => {
-		if (isManualOffline()) return;
-		this.networkOnline = false;
-		this.internetReachable = false;
-		this.serverOnline = false;
-		window.serverOnline = false;
-		console.log("Network: Offline");
-		this.$forceUpdate();
-	});
+        window.addEventListener("offline", () => {
+                if (isManualOffline()) return;
+                store.networkOnline = false;
+                store.internetReachable = false;
+                store.serverOnline = false;
+                window.serverOnline = false;
+                console.log("Network: Offline");
+        });
 
-	// Initial network status from persisted state
-	const persisted = getPersistedStatus();
-	this.networkOnline = persisted.networkOnline;
-	this.serverOnline = persisted.serverOnline;
-	this.internetReachable = false;
-	this.serverConnecting = false;
-	window.serverOnline = this.serverOnline;
+        // Initial network status
+        store.internetReachable = false;
+        store.serverConnecting = false;
+        window.serverOnline = store.serverOnline;
 
-	if (!isManualOffline()) {
-		this.networkOnline = navigator.onLine;
-		this.serverConnecting = true;
-		this.$forceUpdate();
-		this.checkNetworkConnectivity().then(() => {
-			this.serverConnecting = false;
-			this.$forceUpdate();
-		});
-	} else {
-		this.networkOnline = false;
-		this.internetReachable = false;
-		this.serverOnline = false;
-		window.serverOnline = false;
-		persistStatus(false, false);
-	}
+        if (!isManualOffline()) {
+                store.networkOnline = navigator.onLine;
+                store.serverConnecting = true;
+                this.checkNetworkConnectivity().then(() => {
+                        store.serverConnecting = false;
+                });
+        } else {
+                store.networkOnline = false;
+                store.internetReachable = false;
+                store.serverOnline = false;
+                window.serverOnline = false;
+        }
 
-	// Start enhanced periodic check
-	scheduleNextCheck(this);
+        // Start enhanced periodic check
+        scheduleNextCheck(this);
 }
 
 export async function checkNetworkConnectivity() {
-	try {
-		let isConnected = false;
-		let isInternetReachable = false;
+        const store = useNetworkStore();
+        try {
+                let isConnected = false;
+                let isInternetReachable = false;
 
 		const deskRequest = fetch("/app", {
 			method: "HEAD",
@@ -166,48 +145,42 @@ export async function checkNetworkConnectivity() {
 		isInternetReachable = internetResult;
 
 		// Debounce logic for network/server status
-		if (isConnected) {
-			consecutiveSuccesses++;
-			consecutiveFailures = 0;
-			if (consecutiveSuccesses >= SUCCESS_THRESHOLD) {
-				if (!this.networkOnline || !this.serverOnline) {
-					this.networkOnline = isConnected;
-					this.internetReachable = isInternetReachable;
-					this.serverOnline = true;
-					window.serverOnline = true;
-					persistStatus(this.networkOnline, true);
-					console.log("Network: Connected");
-					this.$forceUpdate();
-				}
-			}
-		} else {
-			consecutiveFailures++;
-			consecutiveSuccesses = 0;
-			if (consecutiveFailures >= FAILURE_THRESHOLD) {
-				if (this.networkOnline || this.serverOnline) {
-					this.networkOnline = isConnected;
-					this.internetReachable = isInternetReachable;
-					this.serverOnline = false;
-					window.serverOnline = false;
-					persistStatus(this.networkOnline, false);
-					console.log("Network: Disconnected");
-					this.$forceUpdate();
-				}
-			}
-		}
-	} catch (error) {
-		console.warn("Network connectivity check failed:", error);
-		consecutiveFailures++;
-		consecutiveSuccesses = 0;
-		if (consecutiveFailures >= FAILURE_THRESHOLD) {
-			this.networkOnline = navigator.onLine;
-			this.internetReachable = false;
-			this.serverOnline = false;
-			window.serverOnline = false;
-			persistStatus(this.networkOnline, false);
-			this.$forceUpdate();
-		}
-	}
+                if (isConnected) {
+                        consecutiveSuccesses++;
+                        consecutiveFailures = 0;
+                        if (consecutiveSuccesses >= SUCCESS_THRESHOLD) {
+                                if (!store.networkOnline || !store.serverOnline) {
+                                        store.networkOnline = isConnected;
+                                        store.internetReachable = isInternetReachable;
+                                        store.serverOnline = true;
+                                        window.serverOnline = true;
+                                        console.log("Network: Connected");
+                                }
+                        }
+                } else {
+                        consecutiveFailures++;
+                        consecutiveSuccesses = 0;
+                        if (consecutiveFailures >= FAILURE_THRESHOLD) {
+                                if (store.networkOnline || store.serverOnline) {
+                                        store.networkOnline = isConnected;
+                                        store.internetReachable = isInternetReachable;
+                                        store.serverOnline = false;
+                                        window.serverOnline = false;
+                                        console.log("Network: Disconnected");
+                                }
+                        }
+                }
+        } catch (error) {
+                console.warn("Network connectivity check failed:", error);
+                consecutiveFailures++;
+                consecutiveSuccesses = 0;
+                if (consecutiveFailures >= FAILURE_THRESHOLD) {
+                        store.networkOnline = navigator.onLine;
+                        store.internetReachable = false;
+                        store.serverOnline = false;
+                        window.serverOnline = false;
+                }
+        }
 }
 
 export function detectHostType(hostname) {
