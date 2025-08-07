@@ -156,6 +156,7 @@
 </style>
 
 <script>
+/* global frappe */
 import UpdateCustomer from "./UpdateCustomer.vue";
 import {
 	getCustomerStorage,
@@ -217,13 +218,11 @@ export default {
 		readonly(val) {
 			this.effectiveReadonly = val && navigator.onLine;
 		},
-                customers_loaded(val) {
-                        if (val) {
-                                this.eventBus.emit("customers_loaded");
-                                this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
-                                this.eventBus.emit("data-loaded", "customers");
-                        }
-                },
+               customers_loaded(val) {
+                       if (val) {
+                               this.eventBus.emit("customers_loaded");
+                       }
+               },
 	},
 
 	methods: {
@@ -292,42 +291,48 @@ export default {
 			}
 		},
 
-		backgroundLoadCustomers(offset, syncSince) {
-			const limit = this.customersPageLimit;
-			const lastSync = syncSince;
-			frappe.call({
-				method: "posawesome.posawesome.api.customers.get_customer_names",
-				args: {
-					pos_profile: this.pos_profile.pos_profile,
-					modified_after: lastSync,
-					limit,
-					offset,
-				},
-				callback: (r) => {
-					const rows = r.message || [];
-					rows.forEach((c) => {
-						const idx = this.customers.findIndex((x) => x.name === c.name);
-						if (idx !== -1) {
-							this.customers.splice(idx, 1, c);
-						} else {
-							this.customers.push(c);
-						}
-					});
-					setCustomerStorage(this.customers);
-					if (rows.length === limit) {
-						this.backgroundLoadCustomers(offset + limit, syncSince);
-					} else {
-						setCustomersLastSync(new Date().toISOString());
-					}
-				},
-				error: (err) => {
-					console.error("Failed to background load customers", err);
-				},
-			});
-		},
-		// Fetch customers list
-		get_customer_names() {
-			var vm = this;
+               backgroundLoadCustomers(offset, syncSince, loaded = offset) {
+                       const limit = this.customersPageLimit;
+                       const lastSync = syncSince;
+                       frappe.call({
+                               method: "posawesome.posawesome.api.customers.get_customer_names",
+                               args: {
+                                       pos_profile: this.pos_profile.pos_profile,
+                                       modified_after: lastSync,
+                                       limit,
+                                       offset,
+                               },
+                               callback: (r) => {
+                                       const rows = r.message || [];
+                                       const newLoaded = loaded + rows.length;
+                                       rows.forEach((c) => {
+                                               const idx = this.customers.findIndex((x) => x.name === c.name);
+                                               if (idx !== -1) {
+                                                       this.customers.splice(idx, 1, c);
+                                               } else {
+                                                       this.customers.push(c);
+                                               }
+                                       });
+                                       setCustomerStorage(this.customers);
+                                       const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+                                       this.eventBus.emit("data-load-progress", { name: "customers", progress });
+                                       if (rows.length === limit) {
+                                               this.backgroundLoadCustomers(offset + limit, syncSince, newLoaded);
+                                       } else {
+                                               setCustomersLastSync(new Date().toISOString());
+                                               this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
+                                               this.eventBus.emit("data-loaded", "customers");
+                                               this.customers_loaded = true;
+                                       }
+                               },
+                               error: (err) => {
+                                       console.error("Failed to background load customers", err);
+                               },
+                       });
+               },
+               // Fetch customers list
+               get_customer_names() {
+                       var vm = this;
 			if (this.customers.length > 0) {
 				this.customers_loaded = true;
 				return;
@@ -344,20 +349,20 @@ export default {
                                 }
                         }
 
-                        this.eventBus.emit("data-load-progress", { name: "customers", progress: 0 });
-                        this.loadingCustomers = true; // Start loading
-			frappe.call({
-				method: "posawesome.posawesome.api.customers.get_customer_names",
-				args: {
-					pos_profile: this.pos_profile.pos_profile,
-					modified_after: syncSince,
-					limit: this.customersPageLimit,
-					offset: 0,
-				},
-				callback: function (r) {
-                                        if (r.message) {
-                                                const newCust = r.message;
-                                                const total = newCust.length || 1;
+                       this.eventBus.emit("data-load-progress", { name: "customers", progress: 0 });
+                       this.loadingCustomers = true; // Start loading
+                       frappe.call({
+                               method: "posawesome.posawesome.api.customers.get_customer_names",
+                               args: {
+                                       pos_profile: this.pos_profile.pos_profile,
+                                       modified_after: syncSince,
+                                       limit: this.customersPageLimit,
+                                       offset: 0,
+                               },
+                               callback: function (r) {
+                                       if (r.message) {
+                                               const newCust = r.message;
+                                               const total = newCust.length || 1;
                                                 if (syncSince && vm.customers.length) {
                                                         newCust.forEach((c, idx) => {
                                                                 const idxExisting = vm.customers.findIndex((x) => x.name === c.name);
@@ -382,31 +387,40 @@ export default {
                                                         });
                                                 }
 
-						setCustomerStorage(vm.customers);
-						if (newCust.length === vm.customersPageLimit) {
-							vm.backgroundLoadCustomers(vm.customersPageLimit, syncSince);
-						} else {
-							setCustomersLastSync(new Date().toISOString());
-						}
-					}
-					vm.loadingCustomers = false; // ? Stop loading
-					vm.customers_loaded = true;
-				},
-				error: function (err) {
-					console.error("Failed to fetch customers:", err);
-					if (getCustomerStorage().length) {
-						try {
-							vm.customers = getCustomerStorage();
-						} catch (e) {
-							console.error("Failed to load cached customers", e);
-							vm.customers = [];
-						}
-					}
-					vm.loadingCustomers = false;
-					vm.customers_loaded = true;
-				},
-			});
-		},
+                                               setCustomerStorage(vm.customers);
+                                               const progress = Math.min(
+                                                       99,
+                                                       Math.round((vm.customers.length / (vm.customers.length + vm.customersPageLimit)) * 100),
+                                               );
+                                               if (newCust.length === vm.customersPageLimit) {
+                                                       vm.eventBus.emit("data-load-progress", { name: "customers", progress });
+                                                       vm.backgroundLoadCustomers(vm.customersPageLimit, syncSince, vm.customers.length);
+                                               } else {
+                                                       setCustomersLastSync(new Date().toISOString());
+                                                       vm.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
+                                                       vm.eventBus.emit("data-loaded", "customers");
+                                                       vm.customers_loaded = true;
+                                               }
+                                       }
+                                       vm.loadingCustomers = false; // Stop loading
+                               },
+                               error: function (err) {
+                                       console.error("Failed to fetch customers:", err);
+                                       if (getCustomerStorage().length) {
+                                               try {
+                                                       vm.customers = getCustomerStorage();
+                                               } catch (e) {
+                                                       console.error("Failed to load cached customers", e);
+                                                       vm.customers = [];
+                                               }
+                                       }
+                                       vm.loadingCustomers = false;
+                                       vm.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
+                                       vm.eventBus.emit("data-loaded", "customers");
+                                       vm.customers_loaded = true;
+                               },
+                       });
+               },
 
 		new_customer() {
 			this.eventBus.emit("open_update_customer", null);
