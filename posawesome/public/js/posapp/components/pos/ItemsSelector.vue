@@ -758,13 +758,13 @@ export default {
 
 			vm.loading = true;
 
-			const itemCodes = vm.filtered_items.map((it) => it.item_code);
-			const cacheResult = await getCachedItemDetails(
-				vm.pos_profile.name,
-				vm.active_price_list,
-				itemCodes,
-			);
-			const updates = [];
+                        const itemCodes = vm.filtered_items.map((it) => it.item_code);
+                        const cacheResult = await getCachedItemDetails(
+                                vm.pos_profile.name,
+                                vm.active_price_list,
+                                itemCodes,
+                        );
+                        const updates = [];
 
 			cacheResult.cached.forEach((det) => {
 				const item = vm.filtered_items.find((it) => it.item_code === det.item_code);
@@ -2260,118 +2260,136 @@ export default {
 		},
 		filtered_items() {
 			this.search = this.get_search(this.first_search).trim();
-			let filtred_list = [];
-			let filtred_group_list = [];
+			if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
+				let filtred_list = [];
+				let filtred_group_list = [];
+				if (this.item_group != "ALL") {
+					filtred_group_list = this.items.filter((item) =>
+						item.item_group.toLowerCase().includes(this.item_group.toLowerCase()),
+					);
+				} else {
+					filtred_group_list = this.items;
+				}
+				if (!this.search || this.search.length < 3) {
+					let filtered = [];
+					if (
+						this.pos_profile.posa_show_template_items &&
+						this.pos_profile.posa_hide_variants_items
+					) {
+						filtered = filtred_group_list
+							.filter((item) => !item.variant_of)
+							.slice(0, this.itemsPerPage);
+					} else {
+						filtered = filtred_group_list.slice(0, this.itemsPerPage);
+					}
 
-			if (this.item_group != "ALL") {
-				filtred_group_list = this.items.filter((item) =>
-					item.item_group.toLowerCase().includes(this.item_group.toLowerCase()),
-				);
-			} else {
-				filtred_group_list = this.items;
-			}
+					if (this.hide_zero_rate_items) {
+						filtered = filtered.filter((item) => parseFloat(item.rate) !== 0);
+					}
 
-			if (!this.search || this.search.length < 3) {
-				let filtered = [];
+					// Ensure quantities are defined
+					filtered.forEach((item) => {
+						if (item.actual_qty === undefined) {
+							item.actual_qty = 0;
+						}
+					});
+
+					return filtered;
+				} else if (this.search) {
+					const term = this.search.toLowerCase();
+					// Match barcode directly
+					filtred_list = filtred_group_list.filter((item) =>
+						item.item_barcode.some((b) => b.barcode === this.search),
+					);
+
+					if (filtred_list.length === 0) {
+						// Match by code or name containing the term
+						filtred_list = filtred_group_list.filter(
+							(item) =>
+								item.item_code.toLowerCase().includes(term) ||
+								item.item_name.toLowerCase().includes(term),
+						);
+					}
+
+					if (filtred_list.length === 0) {
+						// Fallback to partial fuzzy match on name
+						const search_combinations = this.generateWordCombinations(this.search);
+						filtred_list = filtred_group_list.filter((item) => {
+							const nameLower = item.item_name.toLowerCase();
+							return search_combinations.some((element) => {
+								element = element.toLowerCase().trim();
+								const element_regex = new RegExp(`.*${element.split("").join(".*")}.*`);
+								return element_regex.test(nameLower);
+							});
+						});
+					}
+
+					if (filtred_list.length === 0 && this.pos_profile.posa_search_serial_no) {
+						filtred_list = filtred_group_list.filter((item) => {
+							for (let element of item.serial_no_data) {
+								if (element.serial_no === this.search) {
+									this.flags.serial_no = this.search;
+									return true;
+								}
+							}
+							return false;
+						});
+					}
+
+					if (filtred_list.length === 0 && this.pos_profile.posa_search_batch_no) {
+						filtred_list = filtred_group_list.filter((item) => {
+							for (let element of item.batch_no_data) {
+								if (element.batch_no === this.search) {
+									this.flags.batch_no = this.search;
+									return true;
+								}
+							}
+							return false;
+						});
+					}
+				}
+
+				let final_filtered_list = [];
 				if (this.pos_profile.posa_show_template_items && this.pos_profile.posa_hide_variants_items) {
-					filtered = filtred_group_list
+					final_filtered_list = filtred_list
 						.filter((item) => !item.variant_of)
 						.slice(0, this.itemsPerPage);
 				} else {
-					filtered = filtred_group_list.slice(0, this.itemsPerPage);
+					final_filtered_list = filtred_list.slice(0, this.itemsPerPage);
 				}
 
 				if (this.hide_zero_rate_items) {
-					filtered = filtered.filter((item) => parseFloat(item.rate) !== 0);
+					final_filtered_list = final_filtered_list.filter((item) => parseFloat(item.rate) !== 0);
 				}
 
-				// Ensure quantities are defined
-				filtered.forEach((item) => {
+				// Ensure quantities are defined for each item
+				final_filtered_list.forEach((item) => {
 					if (item.actual_qty === undefined) {
 						item.actual_qty = 0;
 					}
 				});
 
-				return filtered;
-			} else if (this.search) {
-				const term = this.search.toLowerCase();
-				// Match barcode directly
-				filtred_list = filtred_group_list.filter((item) =>
-					item.item_barcode.some((b) => b.barcode === this.search),
-				);
+				// Item details will be refreshed via watchers when the filtered
+				// list length changes. Removing the automatic call here prevents
+				// redundant requests each time this computed property re-evaluates.
 
-				if (filtred_list.length === 0) {
-					// Match by code or name containing the term
-					filtred_list = filtred_group_list.filter(
-						(item) =>
-							item.item_code.toLowerCase().includes(term) ||
-							item.item_name.toLowerCase().includes(term),
-					);
-				}
-
-				if (filtred_list.length === 0) {
-					// Fallback to partial fuzzy match on name
-					const search_combinations = this.generateWordCombinations(this.search);
-					filtred_list = filtred_group_list.filter((item) => {
-						const nameLower = item.item_name.toLowerCase();
-						return search_combinations.some((element) => {
-							element = element.toLowerCase().trim();
-							const element_regex = new RegExp(`.*${element.split("").join(".*")}.*`);
-							return element_regex.test(nameLower);
-						});
-					});
-				}
-
-				if (filtred_list.length === 0 && this.pos_profile.posa_search_serial_no) {
-					filtred_list = filtred_group_list.filter((item) => {
-						for (let element of item.serial_no_data) {
-							if (element.serial_no === this.search) {
-								this.flags.serial_no = this.search;
-								return true;
-							}
-						}
-						return false;
-					});
-				}
-
-				if (filtred_list.length === 0 && this.pos_profile.posa_search_batch_no) {
-					filtred_list = filtred_group_list.filter((item) => {
-						for (let element of item.batch_no_data) {
-							if (element.batch_no === this.search) {
-								this.flags.batch_no = this.search;
-								return true;
-							}
-						}
-						return false;
-					});
-				}
-			}
-
-			let final_filtered_list = [];
-			if (this.pos_profile.posa_show_template_items && this.pos_profile.posa_hide_variants_items) {
-				final_filtered_list = filtred_list
-					.filter((item) => !item.variant_of)
-					.slice(0, this.itemsPerPage);
+				return final_filtered_list;
 			} else {
-				final_filtered_list = filtred_list.slice(0, this.itemsPerPage);
-			}
+				const items_list = this.items.slice(0, this.itemsPerPage);
 
-			if (this.hide_zero_rate_items) {
-				final_filtered_list = final_filtered_list.filter((item) => parseFloat(item.rate) !== 0);
-			}
+				// Ensure quantities are defined
+				items_list.forEach((item) => {
+					if (item.actual_qty === undefined) {
+						item.actual_qty = 0;
+					}
+				});
 
-			// Ensure quantities are defined for each item
-			final_filtered_list.forEach((item) => {
-				if (item.actual_qty === undefined) {
-					item.actual_qty = 0;
+				if (this.hide_zero_rate_items) {
+					return items_list.filter((item) => parseFloat(item.rate) !== 0);
 				}
-			});
 
-			// Item details will be refreshed via watchers when the filtered
-			// list length changes. Removing the automatic call here prevents
-			// redundant requests each time this computed property re-evaluates.
-
-			return final_filtered_list;
+				return items_list;
+			}
 		},
 		debounce_search: {
 			get() {
