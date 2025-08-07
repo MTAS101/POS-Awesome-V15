@@ -1603,15 +1603,12 @@ export default {
 			}
 			return scal_qty;
 		},
-		get_search(first_search) {
-			let search_term = "";
-			if (first_search && first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
-				search_term = first_search.substr(0, 7);
-			} else {
-				search_term = first_search;
-			}
-			return search_term;
-		},
+               get_search(first_search) {
+                       if (!first_search) return "";
+                       return first_search.startsWith(this.pos_profile.posa_scale_barcode_start)
+                               ? first_search.substr(0, 7)
+                               : first_search;
+               },
 		esc_event() {
 			this.search = null;
 			this.first_search = null;
@@ -2258,18 +2255,19 @@ export default {
 		headers() {
 			return this.getItemsHeaders();
 		},
-		filtered_items() {
-			this.search = this.get_search(this.first_search).trim();
-			if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
-				let filtred_list = [];
-				let filtred_group_list = [];
-				if (this.item_group != "ALL") {
-					filtred_group_list = this.items.filter((item) =>
-						item.item_group.toLowerCase().includes(this.item_group.toLowerCase()),
-					);
-				} else {
-					filtred_group_list = this.items;
-				}
+               filtered_items() {
+                       const searchValue = this.get_search(this.first_search);
+                       this.search = searchValue ? searchValue.trim() : searchValue;
+                       if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
+                               let filtred_list = [];
+                               let filtred_group_list = [];
+                               if (this.item_group != "ALL") {
+                                       filtred_group_list = this.items.filter((item) =>
+                                               item.item_group.toLowerCase().includes(this.item_group.toLowerCase()),
+                                       );
+                               } else {
+                                       filtred_group_list = this.items;
+                               }
 				if (!this.search || this.search.length < 3) {
 					let filtered = [];
 					if (
