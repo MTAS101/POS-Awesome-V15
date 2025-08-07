@@ -3,13 +3,29 @@ import { withWriteLock } from "./db-utils.js";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
-db.version(4).stores({
-	keyval: "&key",
-	queue: "&key",
-	cache: "&key",
-	items: "&item_code,item_name,item_group",
-	item_prices: "&[price_list+item_code],price_list,item_code",
-});
+db.version(5)
+	.stores({
+		keyval: "&key",
+		queue: "&key",
+		cache: "&key",
+		items: "&item_code,item_name,item_group,*barcodes,*name_keywords",
+		item_prices: "&[price_list+item_code],price_list,item_code",
+	})
+	.upgrade((tx) =>
+		tx
+			.table("items")
+			.toCollection()
+			.modify((item) => {
+				item.barcodes = Array.isArray(item.item_barcode)
+					? item.item_barcode.map((b) => b.barcode).filter(Boolean)
+					: item.item_barcode
+						? [String(item.item_barcode)]
+						: [];
+				item.name_keywords = item.item_name
+					? item.item_name.toLowerCase().split(/\s+/).filter(Boolean)
+					: [];
+			}),
+	);
 
 export const KEY_TABLE_MAP = {
         offline_invoices: "queue",
