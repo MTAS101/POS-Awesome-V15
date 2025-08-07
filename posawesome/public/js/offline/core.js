@@ -12,12 +12,14 @@ db.version(4).stores({
 });
 
 export const KEY_TABLE_MAP = {
-	offline_invoices: "queue",
-	offline_customers: "queue",
-	offline_payments: "queue",
-	item_details_cache: "cache",
-	customer_storage: "cache",
+        offline_invoices: "queue",
+        offline_customers: "queue",
+        offline_payments: "queue",
+        item_details_cache: "cache",
+        customer_storage: "cache",
 };
+
+const LARGE_KEYS = new Set(["items", "item_details_cache", "local_stock_cache"]);
 
 export function tableForKey(key) {
 	return KEY_TABLE_MAP[key] || "keyval";
@@ -71,11 +73,11 @@ export function initPersistWorker() {
 		// Load the worker without a query string so the service worker
 		// can serve the cached version when offline.
 		const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-		try {
-			persistWorker = new Worker(workerUrl, { type: "classic" });
-		} catch (err) {
-			persistWorker = new Worker(workerUrl, { type: "module" });
-		}
+                try {
+                        persistWorker = new Worker(workerUrl, { type: "classic" });
+                } catch {
+                        persistWorker = new Worker(workerUrl, { type: "module" });
+                }
 	} catch (e) {
 		console.error("Failed to init persist worker", e);
 		persistWorker = null;
@@ -148,13 +150,17 @@ export function persist(key, value) {
 			.catch((e) => console.error(`Failed to persist ${key}`, e)),
 	);
 
-	if (typeof localStorage !== "undefined" && key !== "price_list_cache") {
-		try {
-			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
-		} catch (err) {
-			console.error("Failed to persist", key, "to localStorage", err);
-		}
-	}
+        if (
+                typeof localStorage !== "undefined" &&
+                key !== "price_list_cache" &&
+                !LARGE_KEYS.has(key)
+        ) {
+                try {
+                        localStorage.setItem(`posa_${key}`, JSON.stringify(value));
+                } catch (err) {
+                        console.error("Failed to persist", key, "to localStorage", err);
+                }
+        }
 }
 
 export const initPromise = new Promise((resolve) => {
