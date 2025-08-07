@@ -1,14 +1,17 @@
+/* eslint-env worker */
+/* global importScripts, Dexie */
+
 let db;
 (async () => {
-	let DexieLib;
-	try {
-		importScripts("/assets/posawesome/js/libs/dexie.min.js?v=1");
-		DexieLib = { default: Dexie };
-	} catch (e) {
-		// Fallback to dynamic import when importScripts fails
-		DexieLib = await import("/assets/posawesome/js/libs/dexie.min.js?v=1");
-	}
-	db = new DexieLib.default("posawesome_offline");
+        let DexieLib;
+        try {
+                importScripts("/assets/posawesome/js/libs/dexie.min.js?v=1");
+                DexieLib = { default: Dexie };
+        } catch {
+                // Fallback to dynamic import when importScripts fails
+                DexieLib = await import("/assets/posawesome/js/libs/dexie.min.js?v=1");
+        }
+        db = new DexieLib.default("posawesome_offline");
 	db.version(4).stores({
 		keyval: "&key",
 		queue: "&key",
@@ -16,6 +19,41 @@ let db;
 		items: "&item_code,item_name,item_group",
 		item_prices: "&[price_list+item_code],price_list,item_code",
 	});
+/* global importScripts, Dexie */
+let db;
+(async () => {
+	let DexieLib;
+	try {
+		importScripts("/assets/posawesome/js/libs/dexie.min.js?v=1");
+		DexieLib = { default: Dexie };
+	} catch {
+		// Fallback to dynamic import when importScripts fails
+		DexieLib = await import("/assets/posawesome/js/libs/dexie.min.js?v=1");
+	}
+	db = new DexieLib.default("posawesome_offline");
+	db.version(5)
+		.stores({
+			keyval: "&key",
+			queue: "&key",
+			cache: "&key",
+			items: "&item_code,item_name,item_group,*barcodes,*name_keywords",
+			item_prices: "&[price_list+item_code],price_list,item_code",
+		})
+		.upgrade((tx) =>
+			tx
+				.table("items")
+				.toCollection()
+				.modify((item) => {
+					item.barcodes = Array.isArray(item.item_barcode)
+						? item.item_barcode.map((b) => b.barcode).filter(Boolean)
+						: item.item_barcode
+							? [String(item.item_barcode)]
+							: [];
+					item.name_keywords = item.item_name
+						? item.item_name.toLowerCase().split(/\s+/).filter(Boolean)
+						: [];
+				}),
+		);
 	try {
 		await db.open();
 	} catch (err) {
@@ -24,12 +62,14 @@ let db;
 })();
 
 const KEY_TABLE_MAP = {
-	offline_invoices: "queue",
-	offline_customers: "queue",
-	offline_payments: "queue",
-	item_details_cache: "cache",
-	customer_storage: "cache",
+        offline_invoices: "queue",
+        offline_customers: "queue",
+        offline_payments: "queue",
+        item_details_cache: "cache",
+        customer_storage: "cache",
 };
+
+const LARGE_KEYS = new Set(["items", "item_details_cache", "local_stock_cache"]);
 
 function tableForKey(key) {
 	return KEY_TABLE_MAP[key] || "keyval";
@@ -46,13 +86,13 @@ async function persist(key, value) {
 		console.error("Worker persist failed", e);
 	}
 
-	if (typeof localStorage !== "undefined") {
-		try {
-			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
-		} catch (err) {
-			console.error("Worker localStorage failed", err);
-		}
-	}
+        if (typeof localStorage !== "undefined" && !LARGE_KEYS.has(key)) {
+                try {
+                        localStorage.setItem(`posa_${key}`, JSON.stringify(value));
+                } catch (err) {
+                        console.error("Worker localStorage failed", err);
+                }
+        }
 }
 
 async function bulkPutItems(items) {
@@ -67,13 +107,13 @@ async function bulkPutItems(items) {
 }
 
 async function bulkPutPrices(priceList, items) {
-        try {
-                if (!priceList) {
-                        return;
-                }
-                if (!db.isOpen()) {
-                        await db.open();
-                }
+	try {
+		if (!priceList) {
+			return;
+		}
+		if (!db.isOpen()) {
+			await db.open();
+		}
 		const records = items.map((it) => ({
 			price_list: priceList,
 			item_code: it.item_code,
@@ -109,7 +149,7 @@ self.onmessage = async (event) => {
 				self.postMessage({ type: "error", error: e.message });
 				return;
 			}
-                        let trimmed = items.map((it) => ({
+			let trimmed = items.map((it) => ({
 				item_code: it.item_code,
 				item_name: it.item_name,
 				description: it.description,
@@ -125,6 +165,12 @@ self.onmessage = async (event) => {
 				has_batch_no: it.has_batch_no,
 				has_serial_no: it.has_serial_no,
 				has_variants: !!it.has_variants,
+				barcodes: Array.isArray(it.item_barcode)
+					? it.item_barcode.map((b) => b.barcode).filter(Boolean)
+					: it.item_barcode
+						? [String(it.item_barcode)]
+						: [],
+				name_keywords: it.item_name ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean) : [],
 			}));
 			await bulkPutItems(trimmed);
 			await bulkPutPrices(data.priceList, trimmed);
@@ -133,8 +179,8 @@ self.onmessage = async (event) => {
 			itemsRaw = null;
 			data.json = null;
 			parsed = null;
-                       let out = trimmed;
-                       self.postMessage({ type: "parsed", items: out });
+			let out = trimmed;
+			self.postMessage({ type: "parsed", items: out });
 			trimmed.length = 0;
 			trimmed = null;
 		} catch (err) {

@@ -25,7 +25,7 @@ export function getItemUOMs(itemCode) {
 	try {
 		const cache = memory.uom_cache || {};
 		return cache[itemCode] || [];
-	} catch (e) {
+	} catch {
 		return [];
 	}
 }
@@ -42,7 +42,7 @@ export function saveOffers(offers) {
 export function getCachedOffers() {
 	try {
 		return memory.offers_cache || [];
-	} catch (e) {
+	} catch {
 		return [];
 	}
 }
@@ -205,6 +205,15 @@ export async function saveItemsBulk(items) {
 			console.error("Failed to serialize items", err);
 			cleanItems = [];
 		}
+		cleanItems = cleanItems.map((it) => ({
+			...it,
+			barcodes: Array.isArray(it.item_barcode)
+				? it.item_barcode.map((b) => b.barcode).filter(Boolean)
+				: it.item_barcode
+					? [String(it.item_barcode)]
+					: [],
+			name_keywords: it.item_name ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean) : [],
+		}));
 		await db.table("items").bulkPut(cleanItems);
 	} catch (e) {
 		console.error("Failed to save items", e);
@@ -226,6 +235,48 @@ export async function searchStoredItems({ search = "", itemGroup = "", limit = 1
 	try {
 		await checkDbHealth();
 		if (!db.isOpen()) await db.open();
+		const term = search.toLowerCase();
+		if (term) {
+			let collection = db
+				.table("items")
+				.where("item_code")
+				.startsWithIgnoreCase(term)
+				.or("item_name")
+				.startsWithIgnoreCase(term)
+				.or("barcodes")
+				.equalsIgnoreCase(term)
+				.or("name_keywords")
+				.startsWithIgnoreCase(term);
+			if (itemGroup && itemGroup.toLowerCase() !== "all") {
+				const group = itemGroup.toLowerCase();
+				collection = collection.and((it) => it.item_group && it.item_group.toLowerCase() === group);
+			}
+			let results = await collection.toArray();
+			if (!results.length) {
+				let fallback = db.table("items");
+				if (itemGroup && itemGroup.toLowerCase() !== "all") {
+					fallback = fallback.where("item_group").equalsIgnoreCase(itemGroup);
+				}
+				results = await fallback
+					.filter((it) => {
+						const nameMatch = it.item_name && it.item_name.toLowerCase().includes(term);
+						const codeMatch = it.item_code && it.item_code.toLowerCase().includes(term);
+						const barcodeMatch = Array.isArray(it.item_barcode)
+							? it.item_barcode.some((b) => b.barcode && b.barcode.toLowerCase() === term)
+							: it.item_barcode && String(it.item_barcode).toLowerCase().includes(term);
+						return nameMatch || codeMatch || barcodeMatch;
+					})
+					.toArray();
+			}
+			const map = new Map();
+			results.forEach((it) => {
+				if (!map.has(it.item_code)) {
+					map.set(it.item_code, it);
+				}
+			});
+			const unique = Array.from(map.values());
+			return unique.slice(offset, offset + limit);
+		}
 		let collection = db.table("items");
 		if (itemGroup && itemGroup.toLowerCase() !== "all") {
 			collection = collection.where("item_group").equalsIgnoreCase(itemGroup);
