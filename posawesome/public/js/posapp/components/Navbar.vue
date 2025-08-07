@@ -5,6 +5,8 @@
 			:pos-profile="posProfile"
 			:pending-invoices="pendingInvoices"
 			:is-dark="isDark"
+			:loading-progress="loadingProgress"
+			:loading-active="loadingActive"
 			@nav-click="handleNavClick"
 			@go-desk="goDesk"
 			@show-offline-invoices="showOfflineInvoices = true"
@@ -161,6 +163,14 @@ export default {
 			default: () => ({ total: 0, indexedDB: 0, localStorage: 0 }),
 		},
 		cacheReady: Boolean,
+		loadingProgress: {
+			type: Number,
+			default: 0,
+		},
+		loadingActive: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	data() {
 		return {

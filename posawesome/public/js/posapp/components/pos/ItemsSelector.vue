@@ -620,11 +620,13 @@ export default {
 			// Maintain the configured items per page on resize
 			this.itemsPerPage = this.items_per_page;
 		},
-		items_loaded(val) {
-			if (val) {
-				this.eventBus.emit("items_loaded");
-			}
-		},
+                items_loaded(val) {
+                        if (val) {
+                                this.eventBus.emit("items_loaded");
+                                this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+                                this.eventBus.emit("data-loaded", "items");
+                        }
+                },
 		items_view() {
 			this.$nextTick(() => {
 				if (this.items_view === "card") {
@@ -637,26 +639,33 @@ export default {
 	},
 
 	methods: {
-		async loadVisibleItems(reset = false) {
-			await initPromise;
+                async loadVisibleItems(reset = false) {
+                        this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
+                        await initPromise;
 			await checkDbHealth();
-			if (reset) {
-				this.currentPage = 0;
-				this.items = [];
-			}
-			const search = this.get_search(this.first_search);
-			const itemGroup = this.item_group !== "ALL" ? this.item_group.toLowerCase() : "";
-			const pageItems = await searchStoredItems({
-				search,
-				itemGroup,
-				limit: this.itemsPerPage,
-				offset: this.currentPage * this.itemsPerPage,
-			});
-			if (reset) this.items = pageItems;
-			else this.items = [...this.items, ...pageItems];
-			this.eventBus.emit("set_all_items", this.items);
-			if (pageItems.length) this.update_items_details(pageItems);
-		},
+                        if (reset) {
+                                this.currentPage = 0;
+                                this.items = [];
+                        }
+                        const search = this.get_search(this.first_search);
+                        const itemGroup = this.item_group !== "ALL" ? this.item_group.toLowerCase() : "";
+                        const pageItems = await searchStoredItems({
+                                search,
+                                itemGroup,
+                                limit: this.itemsPerPage,
+                                offset: this.currentPage * this.itemsPerPage,
+                        });
+                        const total = pageItems.length || 1;
+                        pageItems.forEach((it, idx) => {
+                                this.items.push(it);
+                                this.eventBus.emit("data-load-progress", {
+                                        name: "items",
+                                        progress: Math.round(((idx + 1) / total) * 100),
+                                });
+                        });
+                        this.eventBus.emit("set_all_items", this.items);
+                        if (pageItems.length) this.update_items_details(pageItems);
+                },
 		onCardScroll() {
 			const el = this.$refs.itemsContainer;
 			if (!el) return;
@@ -1603,12 +1612,12 @@ export default {
 			}
 			return scal_qty;
 		},
-               get_search(first_search) {
-                       if (!first_search) return "";
-                       return first_search.startsWith(this.pos_profile.posa_scale_barcode_start)
-                               ? first_search.substr(0, 7)
-                               : first_search;
-               },
+		get_search(first_search) {
+			if (!first_search) return "";
+			return first_search.startsWith(this.pos_profile.posa_scale_barcode_start)
+				? first_search.substr(0, 7)
+				: first_search;
+		},
 		esc_event() {
 			this.search = null;
 			this.first_search = null;
@@ -2255,19 +2264,19 @@ export default {
 		headers() {
 			return this.getItemsHeaders();
 		},
-               filtered_items() {
-                       const searchValue = this.get_search(this.first_search);
-                       this.search = searchValue ? searchValue.trim() : searchValue;
-                       if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
-                               let filtred_list = [];
-                               let filtred_group_list = [];
-                               if (this.item_group != "ALL") {
-                                       filtred_group_list = this.items.filter((item) =>
-                                               item.item_group.toLowerCase().includes(this.item_group.toLowerCase()),
-                                       );
-                               } else {
-                                       filtred_group_list = this.items;
-                               }
+		filtered_items() {
+			const searchValue = this.get_search(this.first_search);
+			this.search = searchValue ? searchValue.trim() : searchValue;
+			if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
+				let filtred_list = [];
+				let filtred_group_list = [];
+				if (this.item_group != "ALL") {
+					filtred_group_list = this.items.filter((item) =>
+						item.item_group.toLowerCase().includes(this.item_group.toLowerCase()),
+					);
+				} else {
+					filtred_group_list = this.items;
+				}
 				if (!this.search || this.search.length < 3) {
 					let filtered = [];
 					if (
