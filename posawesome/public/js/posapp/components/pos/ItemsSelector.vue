@@ -430,10 +430,10 @@ export default {
 		customer: null,
 		new_line: false,
 		qty: 1,
-               refresh_interval: null,
-               abortController: null,
-               itemDetailsRequestCache: { key: null, promise: null, result: null },
-               itemDetailsRetryCount: 0,
+		refresh_interval: null,
+		abortController: null,
+		itemDetailsRequestCache: { key: null, promise: null, result: null },
+		itemDetailsRetryCount: 0,
 		itemDetailsRetryTimeout: null,
 		items_loaded: false,
 		selected_currency: "",
@@ -686,169 +686,152 @@ export default {
 			this.isOverflowing = el.scrollHeight > maxHeight;
 		},
 
-               fetchItemDetails(items) {
-                       if (!items || items.length === 0) {
-                               return Promise.resolve([]);
-                       }
+		async fetchItemDetails(items) {
+			if (!items || items.length === 0) {
+				return [];
+			}
 
-                       const key = [
-                               this.pos_profile.name,
-                               this.active_price_list,
-                               items.map((i) => i.item_code).join(","),
-                       ].join(":");
+			const key = [
+				this.pos_profile.name,
+				this.active_price_list,
+				items.map((i) => i.item_code).join(","),
+			].join(":");
 
-                       if (
-                               this.itemDetailsRequestCache.key === key &&
-                               this.itemDetailsRequestCache.result
-                       ) {
-                               return Promise.resolve(this.itemDetailsRequestCache.result);
-                       }
+			if (this.itemDetailsRequestCache.key === key && this.itemDetailsRequestCache.result) {
+				return this.itemDetailsRequestCache.result;
+			}
 
-                       if (
-                               this.itemDetailsRequestCache.key === key &&
-                               this.itemDetailsRequestCache.promise
-                       ) {
-                               return this.itemDetailsRequestCache.promise;
-                       }
+			if (this.itemDetailsRequestCache.key === key && this.itemDetailsRequestCache.promise) {
+				return this.itemDetailsRequestCache.promise;
+			}
 
-                       this.cancelItemDetailsRequest();
-                       this.itemDetailsRequestCache.key = key;
+			this.cancelItemDetailsRequest();
+			this.itemDetailsRequestCache.key = key;
 
-                       this.abortController = new AbortController();
-                       const requestPromise = frappe
-                               .call({
-                                       method: "posawesome.posawesome.api.items.get_items_details",
-                                       args: {
-                                               pos_profile: JSON.stringify(this.pos_profile),
-                                               items_data: JSON.stringify(items),
-                                               price_list: this.active_price_list,
-                                       },
-                                       freeze: false,
-                                       signal: this.abortController.signal,
-                               })
-                               .then((r) => {
-                                       const msg = (r && r.message) || [];
-                                       if (this.itemDetailsRequestCache.key === key) {
-                                               this.itemDetailsRequestCache.result = msg;
-                                       }
-                                       return msg;
-                               })
-                               .catch((err) => {
-                                       if (err.name !== "AbortError") {
-                                               console.error("Error fetching item details:", err);
-                                       }
-                                       throw err;
-                               })
-                               .finally(() => {
-                                       if (this.itemDetailsRequestCache.key === key) {
-                                               this.itemDetailsRequestCache.promise = null;
-                                       }
-                                       this.abortController = null;
-                               });
+			this.abortController = new AbortController();
+			const requestPromise = frappe.call({
+				method: "posawesome.posawesome.api.items.get_items_details",
+				args: {
+					pos_profile: JSON.stringify(this.pos_profile),
+					items_data: JSON.stringify(items),
+					price_list: this.active_price_list,
+				},
+				freeze: false,
+				signal: this.abortController.signal,
+			});
 
-                       this.itemDetailsRequestCache.promise = requestPromise;
-                       return requestPromise;
-               },
-                cancelItemDetailsRequest() {
-                        if (this.abortController) {
-                                this.abortController.abort();
-                                this.abortController = null;
-                        }
-                        if (this.itemDetailsRequestCache) {
-                                this.itemDetailsRequestCache.key = null;
-                                this.itemDetailsRequestCache.promise = null;
-                                this.itemDetailsRequestCache.result = null;
-                        }
-                },
-                async refreshPricesForVisibleItems() {
-                        const vm = this;
-                        if (!vm.filtered_items || vm.filtered_items.length === 0) return;
+			this.itemDetailsRequestCache.promise = requestPromise;
 
-                        vm.loading = true;
+			try {
+				const r = await requestPromise;
+				const msg = (r && r.message) || [];
+				if (this.itemDetailsRequestCache.key === key) {
+					this.itemDetailsRequestCache.result = msg;
+				}
+				return msg;
+			} catch (err) {
+				if (err.name !== "AbortError") {
+					console.error("Error fetching item details:", err);
+				}
+				throw err;
+			} finally {
+				if (this.itemDetailsRequestCache.key === key) {
+					this.itemDetailsRequestCache.promise = null;
+				}
+				this.abortController = null;
+			}
+		},
+		cancelItemDetailsRequest() {
+			if (this.abortController) {
+				this.abortController.abort();
+				this.abortController = null;
+			}
+			if (this.itemDetailsRequestCache) {
+				this.itemDetailsRequestCache.key = null;
+				this.itemDetailsRequestCache.promise = null;
+				this.itemDetailsRequestCache.result = null;
+			}
+		},
+		async refreshPricesForVisibleItems() {
+			const vm = this;
+			if (!vm.filtered_items || vm.filtered_items.length === 0) return;
 
-                        const itemCodes = vm.filtered_items.map((it) => it.item_code);
-                        const cacheResult = getCachedItemDetails(vm.pos_profile.name, vm.active_price_list, itemCodes);
-                        const updates = [];
+			vm.loading = true;
 
-                        cacheResult.cached.forEach((det) => {
-                                const item = vm.filtered_items.find((it) => it.item_code === det.item_code);
-                                if (item) {
-                                        const upd = {
-                                                actual_qty: det.actual_qty,
-                                                serial_no_data: det.serial_no_data,
-                                                batch_no_data: det.batch_no_data,
-                                        };
-                                        if (det.item_uoms && det.item_uoms.length > 0) {
-                                                upd.item_uoms = det.item_uoms;
-                                                saveItemUOMs(item.item_code, det.item_uoms);
-                                        }
-                                        if (det.rate !== undefined) {
-                                                if (det.rate !== 0 || !item.rate) {
-                                                        upd.rate = det.rate;
-                                                        upd.price_list_rate = det.price_list_rate || det.rate;
-                                                }
-                                        }
-                                        updates.push({ item, upd });
-                                }
-                        });
+			const itemCodes = vm.filtered_items.map((it) => it.item_code);
+			const cacheResult = getCachedItemDetails(vm.pos_profile.name, vm.active_price_list, itemCodes);
+			const updates = [];
 
-                        if (cacheResult.missing.length === 0) {
-                                vm.$nextTick(() => {
-                                        updates.forEach(({ item, upd }) => Object.assign(item, upd));
-                                        updateLocalStockCache(cacheResult.cached);
-                                        vm.loading = false;
-                                });
-                                return;
-                        }
+			cacheResult.cached.forEach((det) => {
+				const item = vm.filtered_items.find((it) => it.item_code === det.item_code);
+				if (item) {
+					const upd = {
+						actual_qty: det.actual_qty,
+						serial_no_data: det.serial_no_data,
+						batch_no_data: det.batch_no_data,
+					};
+					if (det.item_uoms && det.item_uoms.length > 0) {
+						upd.item_uoms = det.item_uoms;
+						saveItemUOMs(item.item_code, det.item_uoms);
+					}
+					if (det.rate !== undefined) {
+						if (det.rate !== 0 || !item.rate) {
+							upd.rate = det.rate;
+							upd.price_list_rate = det.price_list_rate || det.rate;
+						}
+					}
+					updates.push({ item, upd });
+				}
+			});
 
-                        const itemsToFetch = vm.filtered_items.filter((it) =>
-                                cacheResult.missing.includes(it.item_code),
-                        );
+			if (cacheResult.missing.length === 0) {
+				vm.$nextTick(() => {
+					updates.forEach(({ item, upd }) => Object.assign(item, upd));
+					updateLocalStockCache(cacheResult.cached);
+					vm.loading = false;
+				});
+				return;
+			}
 
-                        try {
-                                const details = await vm.fetchItemDetails(itemsToFetch);
-                                details.forEach((updItem) => {
-                                        const item = vm.filtered_items.find(
-                                                (it) => it.item_code === updItem.item_code,
-                                        );
-                                        if (item) {
-                                                const upd = {
-                                                        actual_qty: updItem.actual_qty,
-                                                        serial_no_data: updItem.serial_no_data,
-                                                        batch_no_data: updItem.batch_no_data,
-                                                };
-                                                if (updItem.item_uoms && updItem.item_uoms.length > 0) {
-                                                        upd.item_uoms = updItem.item_uoms;
-                                                        saveItemUOMs(item.item_code, updItem.item_uoms);
-                                                }
-                                                if (updItem.rate !== undefined) {
-                                                        if (updItem.rate !== 0 || !item.rate) {
-                                                                upd.rate = updItem.rate;
-                                                                upd.price_list_rate =
-                                                                        updItem.price_list_rate || updItem.rate;
-                                                        }
-                                                }
-                                                updates.push({ item, upd });
-                                        }
-                                });
+			const itemsToFetch = vm.filtered_items.filter((it) => cacheResult.missing.includes(it.item_code));
 
-                                vm.$nextTick(() => {
-                                        updates.forEach(({ item, upd }) => Object.assign(item, upd));
-                                        updateLocalStockCache(details);
-                                        saveItemDetailsCache(
-                                                vm.pos_profile.name,
-                                                vm.active_price_list,
-                                                details,
-                                        );
-                                        vm.loading = false;
-                                });
-                        } catch (err) {
-                                if (err.name !== "AbortError") {
-                                        console.error("Error fetching item details:", err);
-                                        vm.loading = false;
-                                }
-                        }
-                },
+			try {
+				const details = await vm.fetchItemDetails(itemsToFetch);
+				details.forEach((updItem) => {
+					const item = vm.filtered_items.find((it) => it.item_code === updItem.item_code);
+					if (item) {
+						const upd = {
+							actual_qty: updItem.actual_qty,
+							serial_no_data: updItem.serial_no_data,
+							batch_no_data: updItem.batch_no_data,
+						};
+						if (updItem.item_uoms && updItem.item_uoms.length > 0) {
+							upd.item_uoms = updItem.item_uoms;
+							saveItemUOMs(item.item_code, updItem.item_uoms);
+						}
+						if (updItem.rate !== undefined) {
+							if (updItem.rate !== 0 || !item.rate) {
+								upd.rate = updItem.rate;
+								upd.price_list_rate = updItem.price_list_rate || updItem.rate;
+							}
+						}
+						updates.push({ item, upd });
+					}
+				});
+
+				vm.$nextTick(() => {
+					updates.forEach(({ item, upd }) => Object.assign(item, upd));
+					updateLocalStockCache(details);
+					saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
+					vm.loading = false;
+				});
+			} catch (err) {
+				if (err.name !== "AbortError") {
+					console.error("Error fetching item details:", err);
+					vm.loading = false;
+				}
+			}
+		},
 
 		show_offers() {
 			this.eventBus.emit("show_offers", "true");
@@ -1539,10 +1522,10 @@ export default {
 				this.$refs.debounce_search.focus();
 			}
 		},
-               search_onchange: _.debounce(async function (newSearchTerm) {
-                       const vm = this;
+		search_onchange: _.debounce(async function (newSearchTerm) {
+			const vm = this;
 
-                       vm.cancelItemDetailsRequest();
+			vm.cancelItemDetailsRequest();
 
 			// Determine the actual query string and trim whitespace
 			const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
@@ -1705,72 +1688,65 @@ export default {
 				return;
 			}
 
-                       const itemsToFetch = items.filter(
-                               (it) => cacheResult.missing.includes(it.item_code) && !it.has_variants,
-                       );
+			const itemsToFetch = items.filter(
+				(it) => cacheResult.missing.includes(it.item_code) && !it.has_variants,
+			);
 
-                       if (itemsToFetch.length === 0) {
-                               vm.itemDetailsRetryCount = 0;
-                               return;
-                       }
+			if (itemsToFetch.length === 0) {
+				vm.itemDetailsRetryCount = 0;
+				return;
+			}
 
-                       try {
-                               const details = await vm.fetchItemDetails(itemsToFetch);
-                               if (details && details.length) {
-                                       vm.itemDetailsRetryCount = 0;
-                                       let qtyChanged = false;
-                                       let updatedItems = [];
+			try {
+				const details = await vm.fetchItemDetails(itemsToFetch);
+				if (details && details.length) {
+					vm.itemDetailsRetryCount = 0;
+					let qtyChanged = false;
+					let updatedItems = [];
 
-                                       items.forEach((item) => {
-                                               const updated_item = details.find(
-                                                       (element) => element.item_code == item.item_code,
-                                               );
-                                               if (updated_item) {
-                                                       const prev_qty = item.actual_qty;
+					items.forEach((item) => {
+						const updated_item = details.find((element) => element.item_code == item.item_code);
+						if (updated_item) {
+							const prev_qty = item.actual_qty;
 
-                                                       updatedItems.push({
-                                                               item: item,
-                                                               updates: {
-                                                                       actual_qty: updated_item.actual_qty,
-                                                                       serial_no_data: updated_item.serial_no_data,
-                                                                       batch_no_data: updated_item.batch_no_data,
-                                                                       has_batch_no: updated_item.has_batch_no,
-                                                                       has_serial_no: updated_item.has_serial_no,
-                                                                       item_uoms:
-                                                                               updated_item.item_uoms &&
-                                                                               updated_item.item_uoms.length > 0
-                                                                                       ? updated_item.item_uoms
-                                                                                       : item.item_uoms,
-                                                               },
-                                                       });
+							updatedItems.push({
+								item: item,
+								updates: {
+									actual_qty: updated_item.actual_qty,
+									serial_no_data: updated_item.serial_no_data,
+									batch_no_data: updated_item.batch_no_data,
+									has_batch_no: updated_item.has_batch_no,
+									has_serial_no: updated_item.has_serial_no,
+									item_uoms:
+										updated_item.item_uoms && updated_item.item_uoms.length > 0
+											? updated_item.item_uoms
+											: item.item_uoms,
+								},
+							});
 
-                                                       if (prev_qty > 0 && updated_item.actual_qty === 0) {
-                                                               qtyChanged = true;
-                                                       }
+							if (prev_qty > 0 && updated_item.actual_qty === 0) {
+								qtyChanged = true;
+							}
 
-                                                       if (updated_item.item_uoms && updated_item.item_uoms.length > 0) {
-                                                               saveItemUOMs(item.item_code, updated_item.item_uoms);
-                                                       }
-                                               }
-                                       });
+							if (updated_item.item_uoms && updated_item.item_uoms.length > 0) {
+								saveItemUOMs(item.item_code, updated_item.item_uoms);
+							}
+						}
+					});
 
-                                       updatedItems.forEach(({ item, updates }) => {
-                                               Object.assign(item, updates);
-                                               vm.applyCurrencyConversionToItem(item);
-                                       });
+					updatedItems.forEach(({ item, updates }) => {
+						Object.assign(item, updates);
+						vm.applyCurrencyConversionToItem(item);
+					});
 
-                                       updateLocalStockCache(details);
-                                       saveItemDetailsCache(
-                                               vm.pos_profile.name,
-                                               vm.active_price_list,
-                                               details,
-                                       );
+					updateLocalStockCache(details);
+					saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
 
-                                       if (qtyChanged) {
-                                               vm.$forceUpdate();
-                                       }
-                               }
-                       } catch (err) {
+					if (qtyChanged) {
+						vm.$forceUpdate();
+					}
+				}
+			} catch (err) {
 				if (err.name !== "AbortError") {
 					console.error("Error fetching item details:", err);
 					items.forEach((item) => {
