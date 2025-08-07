@@ -685,6 +685,7 @@ export default {
 			}
 			this.isOverflowing = el.scrollHeight > maxHeight;
 		},
+
 		refreshPricesForVisibleItems() {
 			const vm = this;
 			if (!vm.filtered_items || vm.filtered_items.length === 0) return;
@@ -1637,7 +1638,11 @@ export default {
 			}
 
 			const itemCodes = items.map((it) => it.item_code);
-			const cacheResult = getCachedItemDetails(vm.pos_profile.name, vm.active_price_list, itemCodes);
+			const cacheResult = await getCachedItemDetails(
+				vm.pos_profile.name,
+				vm.active_price_list,
+				itemCodes,
+			);
 			cacheResult.cached.forEach((det) => {
 				const item = items.find((it) => it.item_code === det.item_code);
 				if (item) {
