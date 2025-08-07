@@ -208,18 +208,22 @@ def get_items(
 		if not posa_show_template_items:
 			filters["has_variants"] = 0
 
-		# Determine limit
-		limit_page_length = None
-		limit_start = None
+                # Determine limit
+                limit_page_length = None
+                limit_start = None
 
-		if limit is not None:
-			limit_page_length = limit
-			if offset:
-				limit_start = offset
-		elif use_limit_search:
-			limit_page_length = search_limit
-			if pos_profile.get("posa_force_reload_items") and search_value:
-				limit_page_length = None
+                # When a specific search term is provided, fetch all matching
+                # items. Applying a limit in this scenario can truncate results
+                # and prevent relevant items from appearing in the item selector.
+                if not search_value:
+                        if limit is not None:
+                                limit_page_length = limit
+                                if offset:
+                                        limit_start = offset
+                        elif use_limit_search:
+                                limit_page_length = search_limit
+                                if pos_profile.get("posa_force_reload_items"):
+                                        limit_page_length = None
 
 		items_data = frappe.get_all(
 			"Item",

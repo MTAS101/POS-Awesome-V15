@@ -758,13 +758,13 @@ export default {
 
 			vm.loading = true;
 
-                        const itemCodes = vm.filtered_items.map((it) => it.item_code);
-                        const cacheResult = await getCachedItemDetails(
-                                vm.pos_profile.name,
-                                vm.active_price_list,
-                                itemCodes,
-                        );
-                        const updates = [];
+			const itemCodes = vm.filtered_items.map((it) => it.item_code);
+			const cacheResult = await getCachedItemDetails(
+				vm.pos_profile.name,
+				vm.active_price_list,
+				itemCodes,
+			);
+			const updates = [];
 
 			cacheResult.cached.forEach((det) => {
 				const item = vm.filtered_items.find((it) => it.item_code === det.item_code);
@@ -2351,11 +2351,14 @@ export default {
 
 				let final_filtered_list = [];
 				if (this.pos_profile.posa_show_template_items && this.pos_profile.posa_hide_variants_items) {
-					final_filtered_list = filtred_list
-						.filter((item) => !item.variant_of)
-						.slice(0, this.itemsPerPage);
+					final_filtered_list = filtred_list.filter((item) => !item.variant_of);
 				} else {
-					final_filtered_list = filtred_list.slice(0, this.itemsPerPage);
+					final_filtered_list = filtred_list;
+				}
+
+				// When searching, show all matching items. Otherwise, restrict to the configured page size.
+				if (!this.search) {
+					final_filtered_list = final_filtered_list.slice(0, this.itemsPerPage);
 				}
 
 				if (this.hide_zero_rate_items) {
@@ -2375,7 +2378,7 @@ export default {
 
 				return final_filtered_list;
 			} else {
-				const items_list = this.items.slice(0, this.itemsPerPage);
+				const items_list = this.search ? this.items : this.items.slice(0, this.itemsPerPage);
 
 				// Ensure quantities are defined
 				items_list.forEach((item) => {
@@ -2384,11 +2387,12 @@ export default {
 					}
 				});
 
+				let final_list = items_list;
 				if (this.hide_zero_rate_items) {
-					return items_list.filter((item) => parseFloat(item.rate) !== 0);
+					final_list = final_list.filter((item) => parseFloat(item.rate) !== 0);
 				}
 
-				return items_list;
+				return final_list;
 			}
 		},
 		debounce_search: {
