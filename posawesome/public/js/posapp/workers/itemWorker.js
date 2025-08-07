@@ -1,3 +1,24 @@
+/* eslint-env worker */
+/* global importScripts, Dexie */
+
+let db;
+(async () => {
+        let DexieLib;
+        try {
+                importScripts("/assets/posawesome/js/libs/dexie.min.js?v=1");
+                DexieLib = { default: Dexie };
+        } catch {
+                // Fallback to dynamic import when importScripts fails
+                DexieLib = await import("/assets/posawesome/js/libs/dexie.min.js?v=1");
+        }
+        db = new DexieLib.default("posawesome_offline");
+	db.version(4).stores({
+		keyval: "&key",
+		queue: "&key",
+		cache: "&key",
+		items: "&item_code,item_name,item_group",
+		item_prices: "&[price_list+item_code],price_list,item_code",
+	});
 /* global importScripts, Dexie */
 let db;
 (async () => {
@@ -41,12 +62,14 @@ let db;
 })();
 
 const KEY_TABLE_MAP = {
-	offline_invoices: "queue",
-	offline_customers: "queue",
-	offline_payments: "queue",
-	item_details_cache: "cache",
-	customer_storage: "cache",
+        offline_invoices: "queue",
+        offline_customers: "queue",
+        offline_payments: "queue",
+        item_details_cache: "cache",
+        customer_storage: "cache",
 };
+
+const LARGE_KEYS = new Set(["items", "item_details_cache", "local_stock_cache"]);
 
 function tableForKey(key) {
 	return KEY_TABLE_MAP[key] || "keyval";
@@ -63,13 +86,13 @@ async function persist(key, value) {
 		console.error("Worker persist failed", e);
 	}
 
-	if (typeof localStorage !== "undefined") {
-		try {
-			localStorage.setItem(`posa_${key}`, JSON.stringify(value));
-		} catch (err) {
-			console.error("Worker localStorage failed", err);
-		}
-	}
+        if (typeof localStorage !== "undefined" && !LARGE_KEYS.has(key)) {
+                try {
+                        localStorage.setItem(`posa_${key}`, JSON.stringify(value));
+                } catch (err) {
+                        console.error("Worker localStorage failed", err);
+                }
+        }
 }
 
 async function bulkPutItems(items) {
