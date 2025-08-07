@@ -11,7 +11,7 @@ import { clearPriceListCache } from "./items.js";
 import Dexie from "dexie/dist/dexie.mjs";
 
 // Increment this number whenever the cache data structure changes
-export const CACHE_VERSION = 1;
+export const CACHE_VERSION = 2;
 
 export const MAX_QUEUE_ITEMS = 1000;
 
@@ -23,18 +23,16 @@ export const memory = {
 	pos_last_sync_totals: { pending: 0, synced: 0, drafted: 0 },
 	uom_cache: {},
 	offers_cache: [],
-	customer_balance_cache: {},
-	local_stock_cache: {},
-	stock_cache_ready: false,
-	customer_storage: [],
-	pos_opening_storage: null,
-	opening_dialog_storage: null,
-	sales_persons_storage: [],
-	item_details_cache: {},
-	tax_template_cache: {},
-	translation_cache: {},
-	coupons_cache: {},
-	item_groups_cache: [],
+        customer_balance_cache: {},
+        stock_cache_ready: false,
+        customer_storage: [],
+        pos_opening_storage: null,
+        opening_dialog_storage: null,
+        sales_persons_storage: [],
+        tax_template_cache: {},
+        translation_cache: {},
+        coupons_cache: {},
+        item_groups_cache: [],
 	items_last_sync: null,
 	customers_last_sync: null,
 	// Track the current cache schema version
@@ -106,23 +104,19 @@ export function resetOfflineState() {
 }
 
 export function reduceCacheUsage() {
-	clearPriceListCache();
-	memory.item_details_cache = {};
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.customer_balance_cache = {};
-	memory.local_stock_cache = {};
-	memory.stock_cache_ready = false;
-	memory.coupons_cache = {};
-	memory.item_groups_cache = [];
-	persist("item_details_cache", memory.item_details_cache);
-	persist("uom_cache", memory.uom_cache);
-	persist("offers_cache", memory.offers_cache);
-	persist("customer_balance_cache", memory.customer_balance_cache);
-	persist("local_stock_cache", memory.local_stock_cache);
-	persist("stock_cache_ready", memory.stock_cache_ready);
-	persist("coupons_cache", memory.coupons_cache);
-	persist("item_groups_cache", memory.item_groups_cache);
+        clearPriceListCache();
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.customer_balance_cache = {};
+        memory.stock_cache_ready = false;
+        memory.coupons_cache = {};
+        memory.item_groups_cache = [];
+        persist("uom_cache", memory.uom_cache);
+        persist("offers_cache", memory.offers_cache);
+        persist("customer_balance_cache", memory.customer_balance_cache);
+        persist("stock_cache_ready", memory.stock_cache_ready);
+        persist("coupons_cache", memory.coupons_cache);
+        persist("item_groups_cache", memory.item_groups_cache);
 }
 
 // --- Generic getters and setters for cached data ----------------------------
@@ -406,24 +400,22 @@ export async function clearAllCache() {
 	memory.offline_customers = [];
 	memory.offline_payments = [];
 	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.coupons_cache = {};
-	memory.customer_balance_cache = {};
-	memory.local_stock_cache = {};
-	memory.stock_cache_ready = false;
-	memory.customer_storage = [];
-	memory.items_last_sync = null;
-	memory.customers_last_sync = null;
-	memory.pos_opening_storage = null;
-	memory.opening_dialog_storage = null;
-	memory.sales_persons_storage = [];
-	memory.item_details_cache = {};
-	memory.tax_template_cache = {};
-	memory.item_groups_cache = [];
-	memory.cache_version = CACHE_VERSION;
-	memory.tax_inclusive = false;
-	memory.manual_offline = false;
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
+        memory.stock_cache_ready = false;
+        memory.customer_storage = [];
+        memory.items_last_sync = null;
+        memory.customers_last_sync = null;
+        memory.pos_opening_storage = null;
+        memory.opening_dialog_storage = null;
+        memory.sales_persons_storage = [];
+        memory.tax_template_cache = {};
+        memory.item_groups_cache = [];
+        memory.cache_version = CACHE_VERSION;
+        memory.tax_inclusive = false;
+        memory.manual_offline = false;
 
 	await clearPriceListCache();
 
@@ -445,24 +437,22 @@ export async function forceClearAllCache() {
 	memory.offline_customers = [];
 	memory.offline_payments = [];
 	memory.pos_last_sync_totals = { pending: 0, synced: 0, drafted: 0 };
-	memory.uom_cache = {};
-	memory.offers_cache = [];
-	memory.coupons_cache = {};
-	memory.customer_balance_cache = {};
-	memory.local_stock_cache = {};
-	memory.stock_cache_ready = false;
-	memory.customer_storage = [];
-	memory.items_last_sync = null;
-	memory.customers_last_sync = null;
-	memory.pos_opening_storage = null;
-	memory.opening_dialog_storage = null;
-	memory.sales_persons_storage = [];
-	memory.item_details_cache = {};
-	memory.tax_template_cache = {};
-	memory.item_groups_cache = [];
-	memory.cache_version = CACHE_VERSION;
-	memory.tax_inclusive = false;
-	memory.manual_offline = false;
+        memory.uom_cache = {};
+        memory.offers_cache = [];
+        memory.coupons_cache = {};
+        memory.customer_balance_cache = {};
+        memory.stock_cache_ready = false;
+        memory.customer_storage = [];
+        memory.items_last_sync = null;
+        memory.customers_last_sync = null;
+        memory.pos_opening_storage = null;
+        memory.opening_dialog_storage = null;
+        memory.sales_persons_storage = [];
+        memory.tax_template_cache = {};
+        memory.item_groups_cache = [];
+        memory.cache_version = CACHE_VERSION;
+        memory.tax_inclusive = false;
+        memory.manual_offline = false;
 
 	if (typeof localStorage !== "undefined") {
 		localStorage.setItem("posa_cache_version", CACHE_VERSION);

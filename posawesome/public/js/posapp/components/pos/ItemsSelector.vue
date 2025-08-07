@@ -367,23 +367,22 @@
 
 <script type="module">
 /* eslint-disable no-unused-vars */
-/* global frappe, __, setLocalStockCache, flt, onScan, get_currency_symbol, current_items, wordCount */
+/* global frappe, __, flt, onScan, get_currency_symbol, current_items, wordCount */
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
 import {
-	saveItemUOMs,
-	getItemUOMs,
-	getLocalStock,
-	isOffline,
-	initializeStockCache,
-	searchStoredItems,
-	saveItems,
-	clearStoredItems,
-	getLocalStockCache,
-	setLocalStockCache,
-	initPromise,
+        saveItemUOMs,
+        getItemUOMs,
+        getLocalStock,
+        isOffline,
+        initializeStockCache,
+        searchStoredItems,
+        saveItems,
+        clearStoredItems,
+        getLocalStockCache,
+        initPromise,
 	memoryInitPromise,
 	checkDbHealth,
 	getCachedPriceListItems,
@@ -685,11 +684,11 @@ export default {
                         }
                         this.isOverflowing = el.scrollHeight > maxHeight;
                 },
-                refreshPricesForVisibleItems() {
+                async refreshPricesForVisibleItems() {
                         const vm = this;
                         if (!vm.filtered_items || vm.filtered_items.length === 0) return;
 
-			vm.loading = true;
+                        vm.loading = true;
 
 			// Cancel previous request if any
 			if (vm.currentRequest) {
@@ -697,8 +696,12 @@ export default {
 				vm.currentRequest = null;
 			}
 
-			const itemCodes = vm.filtered_items.map((it) => it.item_code);
-			const cacheResult = getCachedItemDetails(vm.pos_profile.name, vm.active_price_list, itemCodes);
+                        const itemCodes = vm.filtered_items.map((it) => it.item_code);
+                        const cacheResult = await getCachedItemDetails(
+                                vm.pos_profile.name,
+                                vm.active_price_list,
+                                itemCodes,
+                        );
 			const updates = [];
 
 			cacheResult.cached.forEach((det) => {
@@ -724,13 +727,13 @@ export default {
 			});
 
 			if (cacheResult.missing.length === 0) {
-				vm.$nextTick(() => {
-					updates.forEach(({ item, upd }) => Object.assign(item, upd));
-					updateLocalStockCache(cacheResult.cached);
-					vm.loading = false;
-				});
-				return;
-			}
+                                vm.$nextTick(async () => {
+                                        updates.forEach(({ item, upd }) => Object.assign(item, upd));
+                                        await updateLocalStockCache(cacheResult.cached);
+                                        vm.loading = false;
+                                });
+                                return;
+                        }
 
 			vm.abortController = new AbortController();
 			const itemsToFetch = vm.filtered_items.filter((it) => cacheResult.missing.includes(it.item_code));
@@ -768,12 +771,12 @@ export default {
 							}
 						});
 
-						vm.$nextTick(() => {
-							updates.forEach(({ item, upd }) => Object.assign(item, upd));
-							updateLocalStockCache(r.message);
-							saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
-							vm.loading = false;
-						});
+                                                vm.$nextTick(async () => {
+                                                        updates.forEach(({ item, upd }) => Object.assign(item, upd));
+                                                        await updateLocalStockCache(r.message);
+                                                        saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
+                                                        vm.loading = false;
+                                                });
 					}
 				},
 				error: function (err) {
@@ -1517,9 +1520,9 @@ export default {
 			this.qty = 1;
 			this.$refs.debounce_search.focus();
 		},
-		async update_items_details(items) {
-			const vm = this;
-			if (!items || !items.length) return;
+                async update_items_details(items) {
+                        const vm = this;
+                        if (!items || !items.length) return;
 
 			// reset any pending retry timer
 			if (vm.itemDetailsRetryTimeout) {
@@ -1527,58 +1530,62 @@ export default {
 				vm.itemDetailsRetryTimeout = null;
 			}
 
-			const itemCodes = items.map((it) => it.item_code);
-			const cacheResult = getCachedItemDetails(vm.pos_profile.name, vm.active_price_list, itemCodes);
-			cacheResult.cached.forEach((det) => {
-				const item = items.find((it) => it.item_code === det.item_code);
-				if (item) {
-					Object.assign(item, {
-						actual_qty: det.actual_qty,
-						serial_no_data: det.serial_no_data,
-						batch_no_data: det.batch_no_data,
-						has_batch_no: det.has_batch_no,
-						has_serial_no: det.has_serial_no,
-					});
-					if (det.item_uoms && det.item_uoms.length > 0) {
-						item.item_uoms = det.item_uoms;
-						saveItemUOMs(item.item_code, det.item_uoms);
-					}
-					if (det.rate !== undefined) {
-						if (det.rate !== 0 || !item.rate) {
-							item.rate = det.rate;
-							item.price_list_rate = det.price_list_rate || det.rate;
-						}
-					}
+                        const itemCodes = items.map((it) => it.item_code);
+                        const cacheResult = await getCachedItemDetails(
+                                vm.pos_profile.name,
+                                vm.active_price_list,
+                                itemCodes,
+                        );
+                        cacheResult.cached.forEach((det) => {
+                                const item = items.find((it) => it.item_code === det.item_code);
+                                if (item) {
+                                        Object.assign(item, {
+                                                actual_qty: det.actual_qty,
+                                                serial_no_data: det.serial_no_data,
+                                                batch_no_data: det.batch_no_data,
+                                                has_batch_no: det.has_batch_no,
+                                                has_serial_no: det.has_serial_no,
+                                        });
+                                        if (det.item_uoms && det.item_uoms.length > 0) {
+                                                item.item_uoms = det.item_uoms;
+                                                saveItemUOMs(item.item_code, det.item_uoms);
+                                        }
+                                        if (det.rate !== undefined) {
+                                                if (det.rate !== 0 || !item.rate) {
+                                                        item.rate = det.rate;
+                                                        item.price_list_rate = det.price_list_rate || det.rate;
+                                                }
+                                        }
 
-					if (!item.original_rate) {
-						item.original_rate = item.rate;
-						item.original_currency = item.currency || vm.pos_profile.currency;
-					}
+                                        if (!item.original_rate) {
+                                                item.original_rate = item.rate;
+                                                item.original_currency = item.currency || vm.pos_profile.currency;
+                                        }
 
-					vm.applyCurrencyConversionToItem(item);
-				}
-			});
+                                        vm.applyCurrencyConversionToItem(item);
+                                }
+                        });
 
-			let allCached = cacheResult.missing.length === 0;
-			items.forEach((item) => {
-				const localQty = getLocalStock(item.item_code);
-				if (localQty !== null) {
-					item.actual_qty = localQty;
-				} else {
-					allCached = false;
-				}
+                        let allCached = cacheResult.missing.length === 0;
+                        for (const item of items) {
+                                const localQty = await getLocalStock(item.item_code);
+                                if (localQty !== null) {
+                                        item.actual_qty = localQty;
+                                } else {
+                                        allCached = false;
+                                }
 
-				if (!item.item_uoms || item.item_uoms.length === 0) {
-					const cachedUoms = getItemUOMs(item.item_code);
-					if (cachedUoms.length > 0) {
-						item.item_uoms = cachedUoms;
-					} else if (isOffline()) {
-						item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
-					} else {
-						allCached = false;
-					}
-				}
-			});
+                                if (!item.item_uoms || item.item_uoms.length === 0) {
+                                        const cachedUoms = getItemUOMs(item.item_code);
+                                        if (cachedUoms.length > 0) {
+                                                item.item_uoms = cachedUoms;
+                                        } else if (isOffline()) {
+                                                item.item_uoms = [{ uom: item.stock_uom, conversion_factor: 1.0 }];
+                                        } else {
+                                                allCached = false;
+                                        }
+                                }
+                        }
 
 			// When offline or everything is cached, skip server call
 			if (isOffline() || allCached) {
@@ -1656,8 +1663,8 @@ export default {
 						vm.applyCurrencyConversionToItem(item);
 					});
 
-					updateLocalStockCache(r.message);
-					saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
+                                        await updateLocalStockCache(r.message);
+                                        saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, r.message);
 
 					if (qtyChanged) {
 						vm.$forceUpdate();
@@ -1666,18 +1673,18 @@ export default {
 			} catch (err) {
 				if (err.name !== "AbortError") {
 					console.error("Error fetching item details:", err);
-					items.forEach((item) => {
-						const localQty = getLocalStock(item.item_code);
-						if (localQty !== null) {
-							item.actual_qty = localQty;
-						}
-						if (!item.item_uoms || item.item_uoms.length === 0) {
-							const cached = getItemUOMs(item.item_code);
-							if (cached.length > 0) {
-								item.item_uoms = cached;
-							}
-						}
-					});
+                                        for (const item of items) {
+                                                const localQty = await getLocalStock(item.item_code);
+                                                if (localQty !== null) {
+                                                        item.actual_qty = localQty;
+                                                }
+                                                if (!item.item_uoms || item.item_uoms.length === 0) {
+                                                        const cached = getItemUOMs(item.item_code);
+                                                        if (cached.length > 0) {
+                                                                item.item_uoms = cached;
+                                                        }
+                                                }
+                                        }
 
 					if (!isOffline()) {
 						vm.itemDetailsRetryCount += 1;
@@ -1701,17 +1708,17 @@ export default {
 				this.update_items_details(this.filtered_items);
 			}
 		},
-		async prePopulateStockCache(items) {
-			if (this.prePopulateInProgress) {
-				return;
-			}
-			if (!Array.isArray(items) || items.length === 0) {
-				return;
-			}
-			this.prePopulateInProgress = true;
-			try {
-				const cache = getLocalStockCache();
-				const cacheSize = Object.keys(cache).length;
+                async prePopulateStockCache(items) {
+                        if (this.prePopulateInProgress) {
+                                return;
+                        }
+                        if (!Array.isArray(items) || items.length === 0) {
+                                return;
+                        }
+                        this.prePopulateInProgress = true;
+                        try {
+                                const cache = await getLocalStockCache();
+                                const cacheSize = Object.keys(cache).length;
 
 				if (isStockCacheReady() && cacheSize >= items.length) {
 					console.debug("Stock cache already initialized");

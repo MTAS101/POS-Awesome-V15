@@ -112,56 +112,28 @@ export async function clearPriceListCache(priceList = null) {
 	}
 }
 
-// Item details caching functions
-export function saveItemDetailsCache(profileName, priceList, items) {
-	try {
-		const cache = memory.item_details_cache || {};
-		const profileCache = cache[profileName] || {};
-		const priceCache = profileCache[priceList] || {};
-
-		let cleanItems;
-		try {
-			cleanItems = JSON.parse(JSON.stringify(items));
-		} catch (err) {
-			console.error("Failed to serialize item details", err);
-			cleanItems = [];
-		}
-
-		cleanItems.forEach((item) => {
-			priceCache[item.item_code] = {
-				data: item,
-				timestamp: Date.now(),
-			};
-		});
-		profileCache[priceList] = priceCache;
-		cache[profileName] = profileCache;
-		memory.item_details_cache = cache;
-		persist("item_details_cache", memory.item_details_cache);
-	} catch (e) {
-		console.error("Failed to cache item details", e);
-	}
+// Item details caching functions using IndexedDB as the single source of truth
+export async function saveItemDetailsCache(profileName, priceList, items) {
+        try {
+                await saveItemsBulk(items);
+        } catch (e) {
+                console.error("Failed to cache item details", e);
+        }
 }
 
-export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15 * 60 * 1000) {
-	try {
-		const cache = memory.item_details_cache || {};
-		const priceCache = cache[profileName]?.[priceList] || {};
-		const now = Date.now();
-		const cached = [];
-		const missing = [];
-		itemCodes.forEach((code) => {
-			const entry = priceCache[code];
-			if (entry && now - entry.timestamp < ttl) {
-				cached.push(entry.data);
-			} else {
-				missing.push(code);
-			}
-		});
-               return { cached, missing };
-	} catch (e) {
-		console.error("Failed to get cached item details", e);
-		return { cached: [], missing: itemCodes };
-	}
+export async function getCachedItemDetails(profileName, priceList, itemCodes) {
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                const stored = await db.table("items").where("item_code").anyOf(itemCodes).toArray();
+                const cached = stored;
+                const foundCodes = new Set(stored.map((it) => it.item_code));
+                const missing = itemCodes.filter((code) => !foundCodes.has(code));
+                return { cached, missing };
+        } catch (e) {
+                console.error("Failed to get cached item details", e);
+                return { cached: [], missing: itemCodes };
+        }
 }
 
 // Persistent item storage helpers
