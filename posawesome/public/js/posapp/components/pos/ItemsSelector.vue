@@ -758,9 +758,13 @@ export default {
 
 			vm.loading = true;
 
-			const itemCodes = vm.filtered_items.map((it) => it.item_code);
-			const cacheResult = getCachedItemDetails(vm.pos_profile.name, vm.active_price_list, itemCodes);
-			const updates = [];
+                        const itemCodes = vm.filtered_items.map((it) => it.item_code);
+                        const cacheResult = await getCachedItemDetails(
+                                vm.pos_profile.name,
+                                vm.active_price_list,
+                                itemCodes,
+                        );
+                        const updates = [];
 
 			cacheResult.cached.forEach((det) => {
 				const item = vm.filtered_items.find((it) => it.item_code === det.item_code);
