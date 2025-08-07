@@ -33,7 +33,7 @@ let db;
 					item.name_keywords = item.item_name
 						? item.item_name.toLowerCase().split(/\s+/).filter(Boolean)
 						: [];
-				})
+				}),
 		);
 	try {
 		await db.open();
