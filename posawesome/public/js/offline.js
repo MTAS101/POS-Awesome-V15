@@ -749,7 +749,18 @@ export function saveItemDetailsCache(profileName, priceList, items) {
 		const priceCache = profileCache[priceList] || {};
 		let cleanItems;
 		try {
-			cleanItems = JSON.parse(JSON.stringify(items));
+			cleanItems = items.map((it) => ({
+				item_code: it.item_code,
+				actual_qty: it.actual_qty,
+				serial_no_data: it.serial_no_data,
+				batch_no_data: it.batch_no_data,
+				has_batch_no: it.has_batch_no,
+				has_serial_no: it.has_serial_no,
+				item_uoms: it.item_uoms,
+				rate: it.rate,
+				price_list_rate: it.price_list_rate,
+			}));
+			cleanItems = JSON.parse(JSON.stringify(cleanItems));
 		} catch (err) {
 			console.error("Failed to serialize item details", err);
 			cleanItems = [];
@@ -769,7 +780,7 @@ export function saveItemDetailsCache(profileName, priceList, items) {
 	}
 }
 
-export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15 * 60 * 1000) {
+export async function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15 * 60 * 1000) {
 	try {
 		const cache = memory.item_details_cache || {};
 		const priceCache = cache[profileName]?.[priceList] || {};
@@ -784,6 +795,22 @@ export function getCachedItemDetails(profileName, priceList, itemCodes, ttl = 15
 				missing.push(code);
 			}
 		});
+
+		if (cached.length) {
+			await checkDbHealth();
+			if (!db.isOpen()) await db.open();
+			const baseItems = await db
+				.table("items")
+				.where("item_code")
+				.anyOf(cached.map((it) => it.item_code))
+				.toArray();
+			const map = new Map(baseItems.map((it) => [it.item_code, it]));
+			cached.forEach((det, idx) => {
+				const base = map.get(det.item_code) || {};
+				cached[idx] = { ...base, ...det };
+			});
+		}
+
 		return { cached, missing };
 	} catch (e) {
 		console.error("Failed to get cached item details", e);
@@ -972,17 +999,17 @@ export async function searchStoredItems({ search = "", itemGroup = "", limit = 1
 		if (itemGroup && itemGroup.toLowerCase() !== "all") {
 			collection = collection.where("item_group").equalsIgnoreCase(itemGroup);
 		}
-                if (search) {
-                        const term = search.toLowerCase();
-                        collection = collection.filter((it) => {
-                                const nameMatch = it.item_name && it.item_name.toLowerCase().includes(term);
-                                const codeMatch = it.item_code && it.item_code.toLowerCase().includes(term);
-                                const barcodeMatch = Array.isArray(it.item_barcode)
-                                        ? it.item_barcode.some((b) => b.barcode && b.barcode.toLowerCase() === term)
-                                        : it.item_barcode && String(it.item_barcode).toLowerCase().includes(term);
-                                return nameMatch || codeMatch || barcodeMatch;
-                        });
-                }
+		if (search) {
+			const term = search.toLowerCase();
+			collection = collection.filter((it) => {
+				const nameMatch = it.item_name && it.item_name.toLowerCase().includes(term);
+				const codeMatch = it.item_code && it.item_code.toLowerCase().includes(term);
+				const barcodeMatch = Array.isArray(it.item_barcode)
+					? it.item_barcode.some((b) => b.barcode && b.barcode.toLowerCase() === term)
+					: it.item_barcode && String(it.item_barcode).toLowerCase().includes(term);
+				return nameMatch || codeMatch || barcodeMatch;
+			});
+		}
 		return await collection.offset(offset).limit(limit).toArray();
 	} catch (e) {
 		console.error("Failed to query stored items", e);
