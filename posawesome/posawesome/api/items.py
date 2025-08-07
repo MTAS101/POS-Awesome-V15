@@ -480,33 +480,225 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 
 @frappe.whitelist()
 def get_items_details(pos_profile, items_data, price_list=None):
-	pos_profile = json.loads(pos_profile)
-	items_data = json.loads(items_data)
-	warehouse = pos_profile.get("warehouse")
-	company = (
-		pos_profile.get("company")
-		or frappe.defaults.get_user_default("Company")
-		or frappe.defaults.get_global_default("company")
-	)
-	result = []
+        """Bulk fetch item details for a list of items.
 
-	if items_data:
-		for item in items_data:
-			item_code = item.get("item_code")
-			if item_code:
-				if item.get("has_variants"):
-					# Skip template items to avoid ValidationError
-					continue
-				item_detail = get_item_detail(
-					json.dumps(item),
-						warehouse=warehouse,
-						price_list=price_list or pos_profile.get("selling_price_list"),
-						company=company,
-					)
-				if item_detail:
-					result.append(item_detail)
+        Instead of calling :pyfunc:`get_item_detail` for each item, this
+        implementation gathers price, stock and UOM information for all items
+        using a few ``frappe.get_all`` queries. Batch and serial information is
+        also fetched in bulk so that the front end can cache it for offline
+        selection without additional round trips per item.
+        """
 
-	return result
+        pos_profile = json.loads(pos_profile)
+        items_data = json.loads(items_data)
+
+        warehouse = pos_profile.get("warehouse")
+        if not items_data:
+                return []
+
+        ttl = pos_profile.get("posa_server_cache_duration")
+        if ttl:
+                ttl = int(ttl) * 60
+
+        def _to_tuple(data):
+                return tuple(sorted(data))
+
+        @redis_cache(ttl=ttl or 300)
+        def _get_item_prices(price_list, currency, item_codes):
+                if not item_codes:
+                        return []
+                today = nowdate()
+                return frappe.get_all(
+                        "Item Price",
+                        fields=["item_code", "price_list_rate", "currency", "uom"],
+                        filters={
+                                "price_list": price_list,
+                                "item_code": ["in", item_codes],
+                                "currency": currency,
+                                "selling": 1,
+                                "valid_from": ["<=", today],
+                        },
+                        or_filters=[["valid_upto", ">=", today], ["valid_upto", "in", ["", None]]],
+                        order_by="valid_from ASC, valid_upto DESC",
+                )
+
+        @redis_cache(ttl=ttl or 300)
+        def _get_bin_qty(warehouse, item_codes):
+                if not item_codes or not warehouse:
+                        return []
+                return frappe.get_all(
+                        "Bin",
+                        fields=["item_code", "actual_qty"],
+                        filters={"warehouse": warehouse, "item_code": ["in", item_codes]},
+                )
+
+        @redis_cache(ttl=ttl or 300)
+        def _get_item_meta(item_codes):
+                if not item_codes:
+                        return []
+                return frappe.get_all(
+                        "Item",
+                        fields=["name", "has_batch_no", "has_serial_no", "stock_uom"],
+                        filters={"name": ["in", item_codes]},
+                )
+
+        @redis_cache(ttl=ttl or 300)
+        def _get_uoms(item_codes):
+                if not item_codes:
+                        return []
+                return frappe.get_all(
+                        "UOM Conversion Detail",
+                        fields=["parent", "uom", "conversion_factor"],
+                        filters={"parent": ["in", item_codes]},
+                )
+
+        @redis_cache(ttl=ttl or 300)
+        def _get_batches(warehouse, item_codes):
+                """Fetch batch data and quantities for multiple items."""
+                if not item_codes or not warehouse:
+                        return []
+                bins = frappe.get_all(
+                        "Bin",
+                        fields=["item_code", "batch_no", "actual_qty"],
+                        filters={
+                                "warehouse": warehouse,
+                                "item_code": ["in", item_codes],
+                                "batch_no": ["!=", ""],
+                                "actual_qty": [">", 0],
+                        },
+                )
+                batch_nos = [b.batch_no for b in bins if b.batch_no]
+                if not batch_nos:
+                        return []
+                batch_docs = frappe.get_all(
+                        "Batch",
+                        fields=[
+                                "name",
+                                "expiry_date",
+                                "manufacturing_date",
+                                "posa_batch_price",
+                                "item",
+                                "disabled",
+                        ],
+                        filters={"name": ["in", batch_nos]},
+                )
+                doc_map = {d.name: d for d in batch_docs}
+                today = nowdate()
+                result = []
+                for b in bins:
+                        doc = doc_map.get(b.batch_no)
+                        if not doc or doc.disabled:
+                                continue
+                        if doc.expiry_date and cstr(doc.expiry_date) <= cstr(today):
+                                continue
+                        result.append(
+                                {
+                                        "item_code": b.item_code,
+                                        "batch_no": b.batch_no,
+                                        "batch_qty": b.actual_qty,
+                                        "expiry_date": doc.expiry_date,
+                                        "batch_price": doc.posa_batch_price,
+                                        "manufacturing_date": doc.manufacturing_date,
+                                }
+                        )
+                return result
+
+        @redis_cache(ttl=ttl or 300)
+        def _get_serials(warehouse, item_codes):
+                if not item_codes or not warehouse:
+                        return []
+                return frappe.get_all(
+                        "Serial No",
+                        fields=["name as serial_no", "item_code"],
+                        filters={
+                                "item_code": ["in", item_codes],
+                                "warehouse": warehouse,
+                                "status": "Active",
+                        },
+                )
+
+        price_list = price_list or pos_profile.get("selling_price_list")
+        price_list_currency = frappe.db.get_value("Price List", price_list, "currency") or pos_profile.get("currency")
+
+        item_codes = [d.get("item_code") for d in items_data if d.get("item_code") and not d.get("has_variants")]
+        item_codes_tuple = _to_tuple(item_codes)
+
+        price_rows = _get_item_prices(price_list, price_list_currency, item_codes_tuple)
+        stock_rows = _get_bin_qty(warehouse, item_codes_tuple)
+        meta_rows = _get_item_meta(item_codes_tuple)
+        uom_rows = _get_uoms(item_codes_tuple)
+
+        # Determine which items require batch or serial data
+        batch_items = [d.name for d in meta_rows if d.has_batch_no]
+        serial_items = [d.name for d in meta_rows if d.has_serial_no]
+
+        batch_rows = _get_batches(warehouse, _to_tuple(batch_items))
+        serial_rows = _get_serials(warehouse, _to_tuple(serial_items))
+
+        price_map = {}
+        for d in price_rows:
+                price_map.setdefault(d.item_code, {})
+                price_map[d.item_code][d.get("uom") or "None"] = d
+
+        stock_map = {d.item_code: d.actual_qty for d in stock_rows}
+        meta_map = {d.name: d for d in meta_rows}
+
+        uom_map = {}
+        for d in uom_rows:
+                uom_map.setdefault(d.parent, []).append({"uom": d.uom, "conversion_factor": d.conversion_factor})
+
+        batch_map = {}
+        for d in batch_rows:
+                batch_map.setdefault(d.item_code, []).append(
+                        {
+                                "batch_no": d.batch_no,
+                                "batch_qty": d.batch_qty,
+                                "expiry_date": d.expiry_date,
+                                "batch_price": d.batch_price,
+                                "manufacturing_date": d.manufacturing_date,
+                        }
+                )
+
+        serial_map = {}
+        for d in serial_rows:
+                serial_map.setdefault(d.item_code, []).append({"serial_no": d.serial_no})
+
+        result = []
+        for item in items_data:
+                item_code = item.get("item_code")
+                if not item_code or item.get("has_variants"):
+                        continue
+
+                meta = meta_map.get(item_code, {})
+                uoms = uom_map.get(item_code, [])
+
+                stock_uom = meta.get("stock_uom")
+                if stock_uom and not any(u.get("uom") == stock_uom for u in uoms):
+                        uoms.append({"uom": stock_uom, "conversion_factor": 1.0})
+
+                item_price = {}
+                if price_map.get(item_code):
+                        item_price = price_map[item_code].get(stock_uom) or price_map[item_code].get("None") or {}
+
+                row = {}
+                row.update(item)
+                row.update(
+                        {
+                                "item_uoms": uoms or [],
+                                "actual_qty": stock_map.get(item_code, 0) or 0,
+                                "has_batch_no": meta.get("has_batch_no"),
+                                "has_serial_no": meta.get("has_serial_no"),
+                                "batch_no_data": batch_map.get(item_code, []),
+                                "serial_no_data": serial_map.get(item_code, []),
+                                "rate": item_price.get("price_list_rate") or 0,
+                                "price_list_rate": item_price.get("price_list_rate") or 0,
+                                "currency": item_price.get("currency") or price_list_currency or pos_profile.get("currency"),
+                        }
+                )
+
+                result.append(row)
+
+        return result
 
 
 @frappe.whitelist()

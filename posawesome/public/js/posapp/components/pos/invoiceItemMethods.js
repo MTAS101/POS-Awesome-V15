@@ -1,13 +1,13 @@
+/* global __, frappe, flt */
 import {
-	isOffline,
-	saveCustomerBalance,
-	getCachedCustomerBalance,
-	getCachedPriceListItems,
-	getItemUOMs,
-	getCustomerStorage,
-	getOfflineCustomers,
-	getTaxTemplate,
-	getTaxInclusiveSetting,
+        isOffline,
+        saveCustomerBalance,
+        getCachedCustomerBalance,
+        getCachedPriceListItems,
+        getCustomerStorage,
+        getOfflineCustomers,
+        getTaxTemplate,
+        getTaxInclusiveSetting,
 } from "../../../offline/index.js";
 
 // Import composables
@@ -208,30 +208,31 @@ export default {
 	},
 
 	// Save and clear the current invoice (draft logic)
-	save_and_clear_invoice() {
-		const doc = this.get_invoice_doc();
-		if (doc.name) {
-			old_invoice = this.update_invoice(doc);
-		} else {
-			if (doc.items.length) {
-				old_invoice = this.update_invoice(doc);
-			} else {
-				this.eventBus.emit("show_message", {
-					title: `Nothing to save`,
-					color: "error",
-				});
-			}
-		}
-		if (!old_invoice) {
-			this.eventBus.emit("show_message", {
-				title: `Error saving the current invoice`,
-				color: "error",
-			});
-		} else {
-			this.clear_invoice();
-			return old_invoice;
-		}
-	},
+       save_and_clear_invoice() {
+                let old_invoice = null;
+                const doc = this.get_invoice_doc();
+                if (doc.name) {
+                        old_invoice = this.update_invoice(doc);
+                } else {
+                        if (doc.items.length) {
+                                old_invoice = this.update_invoice(doc);
+                        } else {
+                                this.eventBus.emit("show_message", {
+                                        title: `Nothing to save`,
+                                        color: "error",
+                                });
+                        }
+                }
+                if (!old_invoice) {
+                        this.eventBus.emit("show_message", {
+                                title: `Error saving the current invoice`,
+                                color: "error",
+                        });
+                } else {
+                        this.clear_invoice();
+                        return old_invoice;
+                }
+       },
 
 	// Start a new order (or return order) with provided data
 	async new_order(data = {}) {
@@ -1236,28 +1237,38 @@ export default {
 		if (!items?.length) return;
 		if (!this.pos_profile) return;
 
-		try {
-			const response = await frappe.call({
-				method: "posawesome.posawesome.api.items.get_items_details",
-				args: {
-					pos_profile: JSON.stringify(this.pos_profile),
-					items_data: JSON.stringify(items),
-				},
-			});
+                try {
+                        const response = await frappe.call({
+                                method: "posawesome.posawesome.api.items.get_items_details",
+                                args: {
+                                        pos_profile: JSON.stringify(this.pos_profile),
+                                        items_data: JSON.stringify(items),
+                                        price_list: this.selected_price_list || this.pos_profile.selling_price_list,
+                                },
+                        });
 
 			if (response?.message) {
 				items.forEach((item) => {
 					const updated_item = response.message.find(
 						(element) => element.posa_row_id == item.posa_row_id,
 					);
-					if (updated_item) {
-						item.actual_qty = updated_item.actual_qty;
-						item.serial_no_data = updated_item.serial_no_data;
-						item.batch_no_data = updated_item.batch_no_data;
-						item.item_uoms = updated_item.item_uoms;
-						item.has_batch_no = updated_item.has_batch_no;
-						item.has_serial_no = updated_item.has_serial_no;
-					}
+                                        if (updated_item) {
+                                                item.actual_qty = updated_item.actual_qty;
+                                                item.item_uoms = updated_item.item_uoms;
+                                                item.has_batch_no = updated_item.has_batch_no;
+                                                item.has_serial_no = updated_item.has_serial_no;
+                                                item.batch_no_data = updated_item.batch_no_data;
+                                                item.serial_no_data = updated_item.serial_no_data;
+                                                if (updated_item.rate !== undefined) {
+                                                        if (updated_item.rate !== 0 || !item.rate) {
+                                                                item.rate = updated_item.rate;
+                                                                item.price_list_rate = updated_item.price_list_rate || updated_item.rate;
+                                                        }
+                                                }
+                                                if (updated_item.currency) {
+                                                        item.currency = updated_item.currency;
+                                                }
+                                        }
 				});
 			}
 		} catch (error) {
@@ -1340,9 +1351,12 @@ export default {
 					if (!item.original_rate) {
 						item.original_rate = data.price_list_rate;
 					}
-					if (data.batch_no_data) {
-						item.batch_no_data = data.batch_no_data;
-					}
+                                        if (data.serial_no_data) {
+                                                item.serial_no_data = data.serial_no_data;
+                                        }
+                                        if (data.batch_no_data) {
+                                                item.batch_no_data = data.batch_no_data;
+                                        }
 					if (
 						item.has_batch_no &&
 						vm.pos_profile.posa_auto_set_batch &&

@@ -454,11 +454,9 @@ export default {
 		temp_enable_custom_items_per_page: false,
 		items_per_page: 50,
 		temp_items_per_page: 50,
-		// Page size for incremental item loading. When browser local
-		// storage is enabled this will be adjusted to 500 so items are
-		// fetched in manageable batches. Otherwise a high limit
-		// effectively disables incremental loading.
-		itemsPageLimit: 10000,
+                // Fixed page size for incremental item loading to avoid
+                // pulling the entire catalog at once.
+            itemsPageLimit: 100,
 		// Track if the current search was triggered by a scanner
 		search_from_scanner: false,
 		currentPage: 0,
@@ -774,27 +772,26 @@ export default {
 			);
 			const updates = [];
 
-			cacheResult.cached.forEach((det) => {
-				const item = vm.filtered_items.find((it) => it.item_code === det.item_code);
-				if (item) {
-					const upd = {
-						actual_qty: det.actual_qty,
-						serial_no_data: det.serial_no_data,
-						batch_no_data: det.batch_no_data,
-					};
-					if (det.item_uoms && det.item_uoms.length > 0) {
-						upd.item_uoms = det.item_uoms;
-						saveItemUOMs(item.item_code, det.item_uoms);
-					}
-					if (det.rate !== undefined) {
-						if (det.rate !== 0 || !item.rate) {
-							upd.rate = det.rate;
-							upd.price_list_rate = det.price_list_rate || det.rate;
-						}
-					}
-					updates.push({ item, upd });
-				}
-			});
+                        cacheResult.cached.forEach((det) => {
+                                const item = vm.filtered_items.find((it) => it.item_code === det.item_code);
+                                if (item) {
+                                        const upd = { actual_qty: det.actual_qty };
+                                        if (det.item_uoms && det.item_uoms.length > 0) {
+                                                upd.item_uoms = det.item_uoms;
+                                                saveItemUOMs(item.item_code, det.item_uoms);
+                                        }
+                                        if (det.rate !== undefined) {
+                                                if (det.rate !== 0 || !item.rate) {
+                                                        upd.rate = det.rate;
+                                                        upd.price_list_rate = det.price_list_rate || det.rate;
+                                                }
+                                        }
+                                        if (det.currency) {
+                                                upd.currency = det.currency;
+                                        }
+                                        updates.push({ item, upd });
+                                }
+                        });
 
 			if (cacheResult.missing.length === 0) {
 				vm.$nextTick(() => {
@@ -808,28 +805,33 @@ export default {
 			const itemsToFetch = vm.filtered_items.filter((it) => cacheResult.missing.includes(it.item_code));
 
 			try {
-				const details = await vm.fetchItemDetails(itemsToFetch);
-				details.forEach((updItem) => {
-					const item = vm.filtered_items.find((it) => it.item_code === updItem.item_code);
-					if (item) {
-						const upd = {
-							actual_qty: updItem.actual_qty,
-							serial_no_data: updItem.serial_no_data,
-							batch_no_data: updItem.batch_no_data,
-						};
-						if (updItem.item_uoms && updItem.item_uoms.length > 0) {
-							upd.item_uoms = updItem.item_uoms;
-							saveItemUOMs(item.item_code, updItem.item_uoms);
-						}
-						if (updItem.rate !== undefined) {
-							if (updItem.rate !== 0 || !item.rate) {
-								upd.rate = updItem.rate;
-								upd.price_list_rate = updItem.price_list_rate || updItem.rate;
-							}
-						}
-						updates.push({ item, upd });
-					}
-				});
+                                const details = await vm.fetchItemDetails(itemsToFetch);
+                                details.forEach((updItem) => {
+                                        const item = vm.filtered_items.find((it) => it.item_code === updItem.item_code);
+                                        if (item) {
+                                                const upd = { actual_qty: updItem.actual_qty };
+                                                if (updItem.item_uoms && updItem.item_uoms.length > 0) {
+                                                        upd.item_uoms = updItem.item_uoms;
+                                                        saveItemUOMs(item.item_code, updItem.item_uoms);
+                                                }
+                                                if (updItem.rate !== undefined) {
+                                                        if (updItem.rate !== 0 || !item.rate) {
+                                                                upd.rate = updItem.rate;
+                                                                upd.price_list_rate = updItem.price_list_rate || updItem.rate;
+                                                        }
+                                                }
+                                                if (updItem.currency) {
+                                                        upd.currency = updItem.currency;
+                                                }
+                                                if (updItem.batch_no_data) {
+                                                        upd.batch_no_data = updItem.batch_no_data;
+                                                }
+                                                if (updItem.serial_no_data) {
+                                                        upd.serial_no_data = updItem.serial_no_data;
+                                                }
+                                                updates.push({ item, upd });
+                                        }
+                                });
 
 				vm.$nextTick(() => {
 					updates.forEach(({ item, upd }) => Object.assign(item, upd));
@@ -1518,33 +1520,12 @@ export default {
 					match = true;
 				}
 			});
-			if (
-				!new_item.to_set_serial_no &&
-				new_item.has_serial_no &&
-				this.pos_profile.posa_search_serial_no
-			) {
-				new_item.serial_no_data.forEach((element) => {
-					if (this.search && element.serial_no == this.search) {
-						new_item.to_set_serial_no = this.first_search;
-						match = true;
-					}
-				});
-			}
-			if (this.flags.serial_no) {
-				new_item.to_set_serial_no = this.flags.serial_no;
-			}
-			if (!new_item.to_set_batch_no && new_item.has_batch_no && this.pos_profile.posa_search_batch_no) {
-				new_item.batch_no_data.forEach((element) => {
-					if (this.search && element.batch_no == this.search) {
-						new_item.to_set_batch_no = this.first_search;
-						new_item.batch_no = this.first_search;
-						match = true;
-					}
-				});
-			}
-			if (this.flags.batch_no) {
-				new_item.to_set_batch_no = this.flags.batch_no;
-			}
+                        if (this.flags.serial_no) {
+                                new_item.to_set_serial_no = this.flags.serial_no;
+                        }
+                        if (this.flags.batch_no) {
+                                new_item.to_set_batch_no = this.flags.batch_no;
+                        }
 			if (match) {
 				await this.add_item(new_item);
 				this.flags.serial_no = null;
@@ -1661,35 +1642,36 @@ export default {
 				vm.active_price_list,
 				itemCodes,
 			);
-			cacheResult.cached.forEach((det) => {
-				const item = items.find((it) => it.item_code === det.item_code);
-				if (item) {
-					Object.assign(item, {
-						actual_qty: det.actual_qty,
-						serial_no_data: det.serial_no_data,
-						batch_no_data: det.batch_no_data,
-						has_batch_no: det.has_batch_no,
-						has_serial_no: det.has_serial_no,
-					});
-					if (det.item_uoms && det.item_uoms.length > 0) {
-						item.item_uoms = det.item_uoms;
-						saveItemUOMs(item.item_code, det.item_uoms);
-					}
-					if (det.rate !== undefined) {
-						if (det.rate !== 0 || !item.rate) {
-							item.rate = det.rate;
-							item.price_list_rate = det.price_list_rate || det.rate;
-						}
-					}
+                        cacheResult.cached.forEach((det) => {
+                                const item = items.find((it) => it.item_code === det.item_code);
+                                if (item) {
+                                        Object.assign(item, {
+                                                actual_qty: det.actual_qty,
+                                                has_batch_no: det.has_batch_no,
+                                                has_serial_no: det.has_serial_no,
+                                        });
+                                        if (det.item_uoms && det.item_uoms.length > 0) {
+                                                item.item_uoms = det.item_uoms;
+                                                saveItemUOMs(item.item_code, det.item_uoms);
+                                        }
+                                        if (det.rate !== undefined) {
+                                                if (det.rate !== 0 || !item.rate) {
+                                                        item.rate = det.rate;
+                                                        item.price_list_rate = det.price_list_rate || det.rate;
+                                                }
+                                        }
+                                        if (det.currency) {
+                                                item.currency = det.currency;
+                                        }
 
-					if (!item.original_rate) {
-						item.original_rate = item.rate;
-						item.original_currency = item.currency || vm.pos_profile.currency;
-					}
+                                        if (!item.original_rate) {
+                                                item.original_rate = item.rate;
+                                                item.original_currency = item.currency || vm.pos_profile.currency;
+                                        }
 
-					vm.applyCurrencyConversionToItem(item);
-				}
-			});
+                                        vm.applyCurrencyConversionToItem(item);
+                                }
+                        });
 
 			let allCached = cacheResult.missing.length === 0;
 			items.forEach((item) => {
@@ -1739,20 +1721,36 @@ export default {
 						if (updated_item) {
 							const prev_qty = item.actual_qty;
 
-							updatedItems.push({
-								item: item,
-								updates: {
-									actual_qty: updated_item.actual_qty,
-									serial_no_data: updated_item.serial_no_data,
-									batch_no_data: updated_item.batch_no_data,
-									has_batch_no: updated_item.has_batch_no,
-									has_serial_no: updated_item.has_serial_no,
-									item_uoms:
-										updated_item.item_uoms && updated_item.item_uoms.length > 0
-											? updated_item.item_uoms
-											: item.item_uoms,
-								},
-							});
+                                                        updatedItems.push({
+                                                                item: item,
+                                                                updates: {
+                                                                        actual_qty: updated_item.actual_qty,
+                                                                        has_batch_no: updated_item.has_batch_no,
+                                                                        has_serial_no: updated_item.has_serial_no,
+                                                                        batch_no_data:
+                                                                                updated_item.batch_no_data && updated_item.batch_no_data.length > 0
+                                                                                        ? updated_item.batch_no_data
+                                                                                        : item.batch_no_data,
+                                                                        serial_no_data:
+                                                                                updated_item.serial_no_data && updated_item.serial_no_data.length > 0
+                                                                                        ? updated_item.serial_no_data
+                                                                                        : item.serial_no_data,
+                                                                        item_uoms:
+                                                                                updated_item.item_uoms && updated_item.item_uoms.length > 0
+                                                                                        ? updated_item.item_uoms
+                                                                                        : item.item_uoms,
+                                                                        rate:
+                                                                                updated_item.rate !== undefined
+                                                                                        ? updated_item.rate
+                                                                                        : item.rate,
+                                                                        price_list_rate:
+                                                                                updated_item.price_list_rate !== undefined
+                                                                                        ? updated_item.price_list_rate
+                                                                                        : item.price_list_rate,
+                                                                        currency:
+                                                                                updated_item.currency || item.currency,
+                                                                },
+                                                        });
 
 							if (prev_qty > 0 && updated_item.actual_qty === 0) {
 								qtyChanged = true;
@@ -1764,13 +1762,13 @@ export default {
 						}
 					});
 
-					updatedItems.forEach(({ item, updates }) => {
-						Object.assign(item, updates);
-						vm.applyCurrencyConversionToItem(item);
-					});
+                                        updatedItems.forEach(({ item, updates }) => {
+                                                Object.assign(item, updates);
+                                                vm.applyCurrencyConversionToItem(item);
+                                        });
 
-					updateLocalStockCache(details);
-					saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
+                                        updateLocalStockCache(details);
+                                        saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
 
 					if (qtyChanged) {
 						vm.$forceUpdate();
@@ -2351,29 +2349,7 @@ export default {
 						});
 					}
 
-					if (filtred_list.length === 0 && this.pos_profile.posa_search_serial_no) {
-						filtred_list = filtred_group_list.filter((item) => {
-							for (let element of item.serial_no_data) {
-								if (element.serial_no === this.search) {
-									this.flags.serial_no = this.search;
-									return true;
-								}
-							}
-							return false;
-						});
-					}
-
-					if (filtred_list.length === 0 && this.pos_profile.posa_search_batch_no) {
-						filtred_list = filtred_group_list.filter((item) => {
-							for (let element of item.batch_no_data) {
-								if (element.batch_no === this.search) {
-									this.flags.batch_no = this.search;
-									return true;
-								}
-							}
-							return false;
-						});
-					}
+                                        // serial or batch number searches rely on server side lookups now
 				}
 
 				let final_filtered_list = [];
@@ -2459,8 +2435,8 @@ export default {
 		memoryInitPromise.then(async () => {
 			const profile = await ensurePosProfile();
 			if (profile) {
-				// Adjust page limit based on local storage setting
-				this.itemsPageLimit = profile.posa_local_storage ? 500 : 10000;
+                                // Load items in small pages to avoid huge payloads
+                                this.itemsPageLimit = 100;
 				if (profile.posa_local_storage) {
 					this.loadVisibleItems(true);
 				} else {
@@ -2497,8 +2473,8 @@ export default {
 			await memoryInitPromise;
 			await checkDbHealth();
 			this.pos_profile = data.pos_profile;
-			// Update page limit whenever profile is registered
-			this.itemsPageLimit = this.pos_profile.posa_local_storage ? 500 : 10000;
+                        // Use a fixed page size to gradually load items
+                        this.itemsPageLimit = 100;
 			if (!this.pos_profile.posa_local_storage) {
 				await forceClearAllCache();
 				await this.get_items(true);
@@ -2582,8 +2558,8 @@ export default {
 		if (!this.pos_profile || Object.keys(this.pos_profile).length === 0) {
 			this.pos_profile = profile || {};
 		}
-		// Apply correct page limit based on local storage option
-		this.itemsPageLimit = this.pos_profile.posa_local_storage ? 500 : 10000;
+                // Apply fixed page size for incremental loading
+                this.itemsPageLimit = 100;
 		if (this.pos_profile && !this.pos_profile.posa_local_storage && !this.items_loaded) {
 			await forceClearAllCache();
 			await this.get_items(true);
