@@ -120,19 +120,20 @@ export function saveItemDetailsCache(profileName, priceList, items) {
 		const priceCache = profileCache[priceList] || {};
 
 		let cleanItems;
-		try {
-			// Store only fields required for offline usage
-			cleanItems = items.map((it) => ({
-				item_code: it.item_code,
-				actual_qty: it.actual_qty,
-				serial_no_data: it.serial_no_data,
-				batch_no_data: it.batch_no_data,
-				has_batch_no: it.has_batch_no,
-				has_serial_no: it.has_serial_no,
-				item_uoms: it.item_uoms,
-				rate: it.rate,
-				price_list_rate: it.price_list_rate,
-			}));
+                try {
+                        // Store only fields required for offline usage
+                        cleanItems = items.map((it) => ({
+                                item_code: it.item_code,
+                                actual_qty: it.actual_qty,
+                                has_batch_no: it.has_batch_no,
+                                has_serial_no: it.has_serial_no,
+                                item_uoms: it.item_uoms,
+                                batch_no_data: it.batch_no_data,
+                                serial_no_data: it.serial_no_data,
+                                rate: it.rate,
+                                price_list_rate: it.price_list_rate,
+                                currency: it.currency,
+                        }));
 			cleanItems = JSON.parse(JSON.stringify(cleanItems));
 		} catch (err) {
 			console.error("Failed to serialize item details", err);
