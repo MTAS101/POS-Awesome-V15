@@ -63,6 +63,19 @@
 
 		<!-- Menu component slot -->
 		<slot name="menu"></slot>
+
+		<v-progress-linear
+			v-if="loadingActive"
+			:model-value="loadingProgress"
+			color="primary"
+			height="4"
+			absolute
+			location="bottom"
+		>
+			<template #default>
+				<span class="text-caption text-white">{{ __("Loading app data") }}</span>
+			</template>
+		</v-progress-linear>
 	</v-app-bar>
 </template>
 
@@ -79,6 +92,14 @@ export default {
 			default: 0,
 		},
 		isDark: Boolean,
+		loadingProgress: {
+			type: Number,
+			default: 0,
+		},
+		loadingActive: {
+			type: Boolean,
+			default: false,
+		},
 	},
 	computed: {
 		appBarColor() {

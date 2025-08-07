@@ -217,11 +217,13 @@ export default {
 		readonly(val) {
 			this.effectiveReadonly = val && navigator.onLine;
 		},
-		customers_loaded(val) {
-			if (val) {
-				this.eventBus.emit("customers_loaded");
-			}
-		},
+                customers_loaded(val) {
+                        if (val) {
+                                this.eventBus.emit("customers_loaded");
+                                this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
+                                this.eventBus.emit("data-loaded", "customers");
+                        }
+                },
 	},
 
 	methods: {
@@ -331,18 +333,19 @@ export default {
 				return;
 			}
 
-			const syncSince = getCustomersLastSync();
+                        const syncSince = getCustomersLastSync();
 
-			if (getCustomerStorage().length) {
-				try {
-					vm.customers = getCustomerStorage();
-				} catch (e) {
-					console.error("Failed to parse customer cache:", e);
-					vm.customers = [];
-				}
-			}
+                        if (getCustomerStorage().length) {
+                                try {
+                                        vm.customers = getCustomerStorage();
+                                } catch (e) {
+                                        console.error("Failed to parse customer cache:", e);
+                                        vm.customers = [];
+                                }
+                        }
 
-			this.loadingCustomers = true; // ? Start loading
+                        this.eventBus.emit("data-load-progress", { name: "customers", progress: 0 });
+                        this.loadingCustomers = true; // Start loading
 			frappe.call({
 				method: "posawesome.posawesome.api.customers.get_customer_names",
 				args: {
@@ -352,20 +355,32 @@ export default {
 					offset: 0,
 				},
 				callback: function (r) {
-					if (r.message) {
-						const newCust = r.message;
-						if (syncSince && vm.customers.length) {
-							newCust.forEach((c) => {
-								const idx = vm.customers.findIndex((x) => x.name === c.name);
-								if (idx !== -1) {
-									vm.customers.splice(idx, 1, c);
-								} else {
-									vm.customers.push(c);
-								}
-							});
-						} else {
-							vm.customers = newCust;
-						}
+                                        if (r.message) {
+                                                const newCust = r.message;
+                                                const total = newCust.length || 1;
+                                                if (syncSince && vm.customers.length) {
+                                                        newCust.forEach((c, idx) => {
+                                                                const idxExisting = vm.customers.findIndex((x) => x.name === c.name);
+                                                                if (idxExisting !== -1) {
+                                                                        vm.customers.splice(idxExisting, 1, c);
+                                                                } else {
+                                                                        vm.customers.push(c);
+                                                                }
+                                                                vm.eventBus.emit("data-load-progress", {
+                                                                        name: "customers",
+                                                                        progress: Math.round(((idx + 1) / total) * 100),
+                                                                });
+                                                        });
+                                                } else {
+                                                        vm.customers = [];
+                                                        newCust.forEach((c, idx) => {
+                                                                vm.customers.push(c);
+                                                                vm.eventBus.emit("data-load-progress", {
+                                                                        name: "customers",
+                                                                        progress: Math.round(((idx + 1) / total) * 100),
+                                                                });
+                                                        });
+                                                }
 
 						setCustomerStorage(vm.customers);
 						if (newCust.length === vm.customersPageLimit) {
