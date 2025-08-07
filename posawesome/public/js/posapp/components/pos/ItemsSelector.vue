@@ -686,64 +686,69 @@ export default {
 			this.isOverflowing = el.scrollHeight > maxHeight;
 		},
 
-		refreshPricesForVisibleItems() {
-			const vm = this;
-			if (!vm.filtered_items || vm.filtered_items.length === 0) return;
+               fetchItemDetails(items) {
+                       if (!items || items.length === 0) {
+                               return Promise.resolve([]);
+                       }
 
-			vm.loading = true;
+                       const key = [
+                               this.pos_profile.name,
+                               this.active_price_list,
+                               items.map((i) => i.item_code).join(","),
+                       ].join(":");
 
-                        if (
-                                this.itemDetailsRequestCache.key === key &&
-                                this.itemDetailsRequestCache.result
-                        ) {
-                                return this.itemDetailsRequestCache.result;
-                        }
+                       if (
+                               this.itemDetailsRequestCache.key === key &&
+                               this.itemDetailsRequestCache.result
+                       ) {
+                               return Promise.resolve(this.itemDetailsRequestCache.result);
+                       }
 
-                        if (
-                                this.itemDetailsRequestCache.key === key &&
-                                this.itemDetailsRequestCache.promise
-                        ) {
-                                return this.itemDetailsRequestCache.promise;
-                        }
+                       if (
+                               this.itemDetailsRequestCache.key === key &&
+                               this.itemDetailsRequestCache.promise
+                       ) {
+                               return this.itemDetailsRequestCache.promise;
+                       }
 
-                        this.cancelItemDetailsRequest();
-                        this.itemDetailsRequestCache.key = key;
+                       this.cancelItemDetailsRequest();
+                       this.itemDetailsRequestCache.key = key;
 
-                        this.abortController = new AbortController();
-                        const requestPromise = frappe
-                                .call({
-                                        method: "posawesome.posawesome.api.items.get_items_details",
-                                        args: {
-                                                pos_profile: JSON.stringify(this.pos_profile),
-                                                items_data: JSON.stringify(items),
-                                                price_list: this.active_price_list,
-                                        },
-                                        freeze: false,
-                                        signal: this.abortController.signal,
-                                })
-                                .then((r) => {
-                                        const msg = (r && r.message) || [];
-                                        if (this.itemDetailsRequestCache.key === key) {
-                                                this.itemDetailsRequestCache.result = msg;
-                                        }
-                                        return msg;
-                                })
-                                .catch((err) => {
-                                        if (err.name !== "AbortError") {
-                                                console.error("Error fetching item details:", err);
-                                        }
-                                        throw err;
-                                })
-                                .finally(() => {
-                                        if (this.itemDetailsRequestCache.key === key) {
-                                                this.itemDetailsRequestCache.promise = null;
-                                        }
-                                        this.abortController = null;
-                                });
+                       this.abortController = new AbortController();
+                       const requestPromise = frappe
+                               .call({
+                                       method: "posawesome.posawesome.api.items.get_items_details",
+                                       args: {
+                                               pos_profile: JSON.stringify(this.pos_profile),
+                                               items_data: JSON.stringify(items),
+                                               price_list: this.active_price_list,
+                                       },
+                                       freeze: false,
+                                       signal: this.abortController.signal,
+                               })
+                               .then((r) => {
+                                       const msg = (r && r.message) || [];
+                                       if (this.itemDetailsRequestCache.key === key) {
+                                               this.itemDetailsRequestCache.result = msg;
+                                       }
+                                       return msg;
+                               })
+                               .catch((err) => {
+                                       if (err.name !== "AbortError") {
+                                               console.error("Error fetching item details:", err);
+                                       }
+                                       throw err;
+                               })
+                               .finally(() => {
+                                       if (this.itemDetailsRequestCache.key === key) {
+                                               this.itemDetailsRequestCache.promise = null;
+                                       }
+                                       this.abortController = null;
+                               });
 
-                        this.itemDetailsRequestCache.promise = requestPromise;
-                        return requestPromise;
-                },
+                       this.itemDetailsRequestCache.promise = requestPromise;
+                       return requestPromise;
+               },
                 cancelItemDetailsRequest() {
                         if (this.abortController) {
                                 this.abortController.abort();
