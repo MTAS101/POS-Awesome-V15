@@ -81,14 +81,14 @@ def get_items(
 		modified_after=None,
 	):
 		return _get_items(
-		        pos_profile,
-		        price_list,
-		        item_group,
-		        search_value,
-		        customer,
-		        limit,
-		        offset,
-		        modified_after,
+			pos_profile,
+			price_list,
+			item_group,
+			search_value,
+			customer,
+			limit,
+			offset,
+			modified_after,
 		)
 
 	def _get_items(
@@ -178,7 +178,7 @@ def get_items(
 		# Build ORM filters
 		filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
 		if modified_after:
-		        filters["modified"] = [">", modified_after]
+			filters["modified"] = [">", modified_after]
 
 		# Add item group filter
 		item_groups = get_item_groups(pos_profile.get("name"))
@@ -208,22 +208,22 @@ def get_items(
 		if not posa_show_template_items:
 			filters["has_variants"] = 0
 
-                # Determine limit
-                limit_page_length = None
-                limit_start = None
+		# Determine limit
+		limit_page_length = None
+		limit_start = None
 
-                # When a specific search term is provided, fetch all matching
-                # items. Applying a limit in this scenario can truncate results
-                # and prevent relevant items from appearing in the item selector.
-                if not search_value:
-                        if limit is not None:
-                                limit_page_length = limit
-                                if offset:
-                                        limit_start = offset
-                        elif use_limit_search:
-                                limit_page_length = search_limit
-                                if pos_profile.get("posa_force_reload_items"):
-                                        limit_page_length = None
+		# When a specific search term is provided, fetch all matching
+		# items. Applying a limit in this scenario can truncate results
+		# and prevent relevant items from appearing in the item selector.
+		if not search_value:
+			if limit is not None:
+				limit_page_length = limit
+				if offset:
+					limit_start = offset
+			elif use_limit_search:
+				limit_page_length = search_limit
+				if pos_profile.get("posa_force_reload_items"):
+					limit_page_length = None
 
 		items_data = frappe.get_all(
 			"Item",
@@ -368,25 +368,25 @@ def get_items(
 
 	if use_price_list:
 		return __get_items(
-		        pos_profile,
-		        price_list,
-		        item_group,
-		        search_value,
-		        customer,
-		        limit,
-		        offset,
-		        modified_after,
+			pos_profile,
+			price_list,
+			item_group,
+			search_value,
+			customer,
+			limit,
+			offset,
+			modified_after,
 		)
 	else:
 		return _get_items(
-		        pos_profile,
-		        price_list,
-		        item_group,
-		        search_value,
-		        customer,
-		        limit,
-		        offset,
-		        modified_after,
+			pos_profile,
+			price_list,
+			item_group,
+			search_value,
+			customer,
+			limit,
+			offset,
+			modified_after,
 		)
 
 
