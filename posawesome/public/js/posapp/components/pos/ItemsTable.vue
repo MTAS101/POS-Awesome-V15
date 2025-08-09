@@ -233,7 +233,11 @@
 												setFormatedCurrency(item, 'rate', null, false, $event),
 												calcPrices(item, $event.target.value, $event),
 											]"
-											:disabled="!!item.posa_is_replace || !!item.posa_offer_applied"
+											:disabled="
+												!pos_profile.posa_allow_user_to_edit_rate ||
+												!!item.posa_is_replace ||
+												!!item.posa_offer_applied
+											"
 											prepend-inner-icon="mdi-currency-usd"
 										></v-text-field>
 									</div>
@@ -258,7 +262,11 @@
 												),
 												calcPrices(item, $event.target.value, $event),
 											]"
-											:disabled="!!item.posa_is_replace || !!item.posa_offer_applied"
+                                                                                        :disabled="
+                                                                                                !pos_profile.posa_allow_user_to_edit_item_discount ||
+                                                                                                !!item.posa_is_replace ||
+                                                                                                !!item.posa_offer_applied
+                                                                                        "
 											prepend-inner-icon="mdi-percent"
 										></v-text-field>
 									</div>
@@ -283,7 +291,11 @@
 												),
 												calcPrices(item, $event.target.value, $event),
 											]"
-											:disabled="!!item.posa_is_replace || !!item.posa_offer_applied"
+                                                                                        :disabled="
+                                                                                                !pos_profile.posa_allow_user_to_edit_item_discount ||
+                                                                                                !!item.posa_is_replace ||
+                                                                                                !!item.posa_offer_applied
+                                                                                        "
 											prepend-inner-icon="mdi-tag-minus"
 										></v-text-field>
 									</div>
