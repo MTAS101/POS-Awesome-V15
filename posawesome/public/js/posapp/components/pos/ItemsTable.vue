@@ -960,8 +960,8 @@ export default {
 .form-row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16px;
-	margin-bottom: 16px;
+	gap: 8px;
+	margin-bottom: 8px;
 }
 
 .form-field {
@@ -974,8 +974,8 @@ export default {
 }
 
 .form-section {
-	margin-top: 24px;
-	padding: 20px;
+	margin-top: 12px;
+	padding: 10px;
 	background: var(--surface-secondary);
 	border-radius: var(--border-radius-lg);
 	border: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
@@ -1003,8 +1003,8 @@ export default {
 .section-header {
 	display: flex;
 	align-items: center;
-	margin-bottom: 16px;
-	padding-bottom: 12px;
+	margin-bottom: 8px;
+	padding-bottom: 8px;
 	border-bottom: 2px solid var(--primary-color, #1976d2);
 	position: relative;
 }
@@ -1034,10 +1034,35 @@ export default {
 
 .section-title {
 	font-weight: 600;
-	font-size: 1rem;
+	font-size: 0.85rem;
 	color: var(--text-primary);
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
+}
+
+@media (max-width: 600px) {
+	.form-section {
+		margin-top: 8px;
+		padding: 8px;
+	}
+
+	.form-row {
+		gap: 6px;
+		margin-bottom: 6px;
+	}
+
+	.section-header {
+		margin-bottom: 6px;
+		padding-bottom: 6px;
+	}
+
+	.form-field {
+		min-width: 140px;
+	}
+
+	.section-title {
+		font-size: 0.8rem;
+	}
 }
 
 /* Change price button styling */
