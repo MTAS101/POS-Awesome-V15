@@ -1203,19 +1203,19 @@ export default {
                                                vm.eventBus.emit("set_all_items", vm.items);
                                                const progress = Math.min(99, Math.round((vm.items.length / (vm.items.length + vm.itemsPageLimit)) * 100));
                                                vm.eventBus.emit("data-load-progress", { name: "items", progress });
-                                               if (newItems.length === this.itemsPageLimit) {
-                                                       this.backgroundLoadItems(
-                                                               this.itemsPageLimit,
-                                                               syncSince,
-                                                               shouldClear,
-                                                               request_token,
-                                                               vm.items.length,
-                                                       );
-                                               } else {
-                                                       setItemsLastSync(new Date().toISOString());
-                                                       vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-                                                       vm.items_loaded = true;
-                                               }
+                                              if (newItems.length === this.itemsPageLimit) {
+                                                      void this.backgroundLoadItems(
+                                                              this.itemsPageLimit,
+                                                              syncSince,
+                                                              shouldClear,
+                                                              request_token,
+                                                              vm.items.length,
+                                                      );
+                                              } else {
+                                                      setItemsLastSync(new Date().toISOString());
+                                                      vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+                                                      vm.items_loaded = true;
+                                              }
                                                if (this.storageAvailable) {
                                                        try {
                                                                await savePriceListItems(vm.customer_price_list, vm.items);
@@ -1377,64 +1377,64 @@ export default {
                                        return this.backgroundLoadItems(offset, syncSince, clearBefore, requestToken, loaded);
                                }
                        } else {
-                               frappe.call({
-                                       method: "posawesome.posawesome.api.items.get_items",
-                                       args: {
-                                               pos_profile: JSON.stringify(this.pos_profile),
-                                               price_list: this.customer_price_list,
-                                               item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
-                                               search_value: this.search || "",
-                                               customer: this.customer,
-                                               modified_after: lastSync,
-                                               limit,
-                                               offset,
-                                       },
-                                       callback: async (r) => {
-                                               if (this.items_request_token !== requestToken) {
-                                                       return;
-                                               }
-                                               const rows = r.message || [];
-                                               rows.forEach((it) => {
-                                                       const existing = this.items.find((i) => i.item_code === it.item_code);
-                                                       if (existing) Object.assign(existing, it);
-                                                       else this.items.push(it);
-                                               });
-                                               this.eventBus.emit("set_all_items", this.items);
-                                               if (
-                                                       this.pos_profile &&
-                                                       this.pos_profile.posa_local_storage &&
-                                                       this.storageAvailable &&
-                                                       !this.pos_profile.pose_use_limit_search
-                                               ) {
-                                                       try {
-                                                               if (clearBefore) {
-                                                                       await clearStoredItems();
-                                                                       clearBefore = false;
-                                                               }
-                                                               await saveItems(this.items);
-                                                       } catch (e) {
-                                                               console.error(e);
-                                                               this.markStorageUnavailable();
+                               try {
+                                       const r = await frappe.call({
+                                               method: "posawesome.posawesome.api.items.get_items",
+                                               args: {
+                                                       pos_profile: JSON.stringify(this.pos_profile),
+                                                       price_list: this.customer_price_list,
+                                                       item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+                                                       search_value: this.search || "",
+                                                       customer: this.customer,
+                                                       modified_after: lastSync,
+                                                       limit,
+                                                       offset,
+                                               },
+                                       });
+                                       if (this.items_request_token !== requestToken) {
+                                               return;
+                                       }
+                                       const rows = r.message || [];
+                                       this.items = this.items || [];
+                                       rows.forEach((it) => {
+                                               const existing = this.items.find((i) => i.item_code === it.item_code);
+                                               if (existing) Object.assign(existing, it);
+                                               else this.items.push(it);
+                                       });
+                                       this.eventBus.emit("set_all_items", this.items);
+                                       if (
+                                               this.pos_profile &&
+                                               this.pos_profile.posa_local_storage &&
+                                               this.storageAvailable &&
+                                               !this.pos_profile.pose_use_limit_search
+                                       ) {
+                                               try {
+                                                       if (clearBefore) {
+                                                               await clearStoredItems();
+                                                               clearBefore = false;
                                                        }
+                                                       await saveItems(this.items);
+                                               } catch (e) {
+                                                       console.error(e);
+                                                       this.markStorageUnavailable();
                                                }
-                                               const newLoaded = loaded + rows.length;
-                                               const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
-                                               this.eventBus.emit("data-load-progress", { name: "items", progress });
-                                               if (rows.length === limit) {
-                                                       this.backgroundLoadItems(offset + limit, syncSince, clearBefore, requestToken, newLoaded);
-                                               } else {
-                                                       setItemsLastSync(new Date().toISOString());
-                                                       if (this.items && this.items.length > 0) {
-                                                               await this.prePopulateStockCache(this.items);
-                                                       }
-                                                       this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-                                                       this.items_loaded = true;
+                                       }
+                                       const newLoaded = loaded + rows.length;
+                                       const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+                                       this.eventBus.emit("data-load-progress", { name: "items", progress });
+                                       if (rows.length === limit) {
+                                               await this.backgroundLoadItems(offset + limit, syncSince, clearBefore, requestToken, newLoaded);
+                                       } else {
+                                               setItemsLastSync(new Date().toISOString());
+                                               if (this.items && this.items.length > 0) {
+                                                       await this.prePopulateStockCache(this.items);
                                                }
-                                       },
-                                       error: (err) => {
-                                               console.error("Failed to background load items", err);
-                                       },
-                               });
+                                               this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+                                               this.items_loaded = true;
+                                       }
+                               } catch (err) {
+                                       console.error("Failed to background load items", err);
+                               }
                        }
                },
 		get_items_groups() {
