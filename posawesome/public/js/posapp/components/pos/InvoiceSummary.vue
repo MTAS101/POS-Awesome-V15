@@ -23,7 +23,7 @@
 					<v-col cols="6" v-if="!pos_profile.posa_use_percentage_discount">
 						<v-text-field
 							:model-value="additional_discount"
-							@update:model-value="handleAdditionalDiscountUpdate"
+							@update:model-value="$emit('update:additional_discount', $event)"
 							:label="frappe._('Additional Discount')"
 							prepend-inner-icon="mdi-cash-minus"
 							variant="solo"
@@ -34,14 +34,13 @@
 								!pos_profile.posa_allow_user_to_edit_additional_discount ||
 								!!discount_percentage_offer_name
 							"
-							class="summary-field"
 						/>
 					</v-col>
 
 					<v-col cols="6" v-else>
 						<v-text-field
 							:model-value="additional_discount_percentage"
-							@update:model-value="handleAdditionalDiscountPercentageUpdate"
+							@update:model-value="$emit('update:additional_discount_percentage', $event)"
 							@change="$emit('update_discount_umount')"
 							:rules="[isNumber]"
 							:label="frappe._('Additional Discount %')"
@@ -54,7 +53,6 @@
 								!pos_profile.posa_allow_user_to_edit_additional_discount ||
 								!!discount_percentage_offer_name
 							"
-							class="summary-field"
 						/>
 					</v-col>
 
@@ -69,7 +67,6 @@
 							density="compact"
 							color="warning"
 							readonly
-							class="summary-field"
 						/>
 					</v-col>
 
@@ -84,7 +81,6 @@
 							density="compact"
 							readonly
 							color="success"
-							class="summary-field"
 						/>
 					</v-col>
 				</v-row>
@@ -99,9 +95,8 @@
 							color="accent"
 							theme="dark"
 							prepend-icon="mdi-content-save"
-							@click="handleSaveAndClear"
+							@click="$emit('save-and-clear')"
 							class="summary-btn"
-							:loading="saveLoading"
 						>
 							{{ __("Save & Clear") }}
 						</v-btn>
@@ -112,9 +107,8 @@
 							color="warning"
 							theme="dark"
 							prepend-icon="mdi-file-document"
-							@click="handleLoadDrafts"
+							@click="$emit('load-drafts')"
 							class="white-text-btn summary-btn"
-							:loading="loadDraftsLoading"
 						>
 							{{ __("Load Drafts") }}
 						</v-btn>
@@ -125,9 +119,8 @@
 							color="info"
 							theme="dark"
 							prepend-icon="mdi-book-search"
-							@click="handleSelectOrder"
+							@click="$emit('select-order')"
 							class="summary-btn"
-							:loading="selectOrderLoading"
 						>
 							{{ __("Select S.O") }}
 						</v-btn>
@@ -138,9 +131,8 @@
 							color="error"
 							theme="dark"
 							prepend-icon="mdi-close-circle"
-							@click="handleCancelSale"
+							@click="$emit('cancel-sale')"
 							class="summary-btn"
-							:loading="cancelLoading"
 						>
 							{{ __("Cancel Sale") }}
 						</v-btn>
@@ -151,9 +143,8 @@
 							color="secondary"
 							theme="dark"
 							prepend-icon="mdi-backup-restore"
-							@click="handleOpenReturns"
+							@click="$emit('open-returns')"
 							class="summary-btn"
-							:loading="returnsLoading"
 						>
 							{{ __("Sales Return") }}
 						</v-btn>
@@ -164,9 +155,8 @@
 							color="primary"
 							theme="dark"
 							prepend-icon="mdi-printer"
-							@click="handlePrintDraft"
+							@click="$emit('print-draft')"
 							class="summary-btn"
-							:loading="printLoading"
 						>
 							{{ __("Print Draft") }}
 						</v-btn>
@@ -178,9 +168,8 @@
 							theme="dark"
 							size="large"
 							prepend-icon="mdi-credit-card"
-							@click="handleShowPayment"
-							class="summary-btn pay-btn"
-							:loading="paymentLoading"
+							@click="$emit('show-payment')"
+							class="summary-btn"
 						>
 							{{ __("PAY") }}
 						</v-btn>
@@ -206,18 +195,6 @@ export default {
 		currencySymbol: Function,
 		discount_percentage_offer_name: [String, Number],
 		isNumber: Function,
-	},
-	data() {
-		return {
-			// Loading states for better UX
-			saveLoading: false,
-			loadDraftsLoading: false,
-			selectOrderLoading: false,
-			cancelLoading: false,
-			returnsLoading: false,
-			printLoading: false,
-			paymentLoading: false,
-		};
 	},
 	emits: [
 		"update:additional_discount",
@@ -248,86 +225,12 @@ export default {
 			return false;
 		},
 	},
-	methods: {
-		// Debounced handlers for better performance
-		handleAdditionalDiscountUpdate(value) {
-			this.$emit("update:additional_discount", value);
-		},
-
-		handleAdditionalDiscountPercentageUpdate(value) {
-			this.$emit("update:additional_discount_percentage", value);
-		},
-
-		async handleSaveAndClear() {
-			this.saveLoading = true;
-			try {
-				await this.$emit("save-and-clear");
-			} finally {
-				this.saveLoading = false;
-			}
-		},
-
-		async handleLoadDrafts() {
-			this.loadDraftsLoading = true;
-			try {
-				await this.$emit("load-drafts");
-			} finally {
-				this.loadDraftsLoading = false;
-			}
-		},
-
-		async handleSelectOrder() {
-			this.selectOrderLoading = true;
-			try {
-				await this.$emit("select-order");
-			} finally {
-				this.selectOrderLoading = false;
-			}
-		},
-
-		async handleCancelSale() {
-			this.cancelLoading = true;
-			try {
-				await this.$emit("cancel-sale");
-			} finally {
-				this.cancelLoading = false;
-			}
-		},
-
-		async handleOpenReturns() {
-			this.returnsLoading = true;
-			try {
-				await this.$emit("open-returns");
-			} finally {
-				this.returnsLoading = false;
-			}
-		},
-
-		async handlePrintDraft() {
-			this.printLoading = true;
-			try {
-				await this.$emit("print-draft");
-			} finally {
-				this.printLoading = false;
-			}
-		},
-
-		async handleShowPayment() {
-			this.paymentLoading = true;
-			try {
-				await this.$emit("show-payment");
-			} finally {
-				this.paymentLoading = false;
-			}
-		},
-	},
 };
 </script>
 
 <style scoped>
 .cards {
 	background-color: #f5f5f5 !important;
-	transition: all 0.3s ease;
 }
 
 :deep([data-theme="dark"]) .cards,
@@ -353,91 +256,8 @@ export default {
 	color: white !important;
 }
 
-/* Enhanced button styling with better performance */
-.summary-btn {
-	transition: all 0.2s ease !important;
-	position: relative;
-	overflow: hidden;
-}
-
+/* ensure long button labels stay within the button */
 .summary-btn :deep(.v-btn__content) {
 	white-space: normal !important;
-	transition: all 0.2s ease;
-}
-
-.summary-btn:hover {
-	transform: translateY(-1px);
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
-}
-
-.summary-btn:active {
-	transform: translateY(0);
-}
-
-/* Special styling for the PAY button */
-.pay-btn {
-	font-weight: 600 !important;
-	font-size: 1.1rem !important;
-	background: linear-gradient(135deg, #4caf50, #45a049) !important;
-	box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
-}
-
-.pay-btn:hover {
-	background: linear-gradient(135deg, #45a049, #3d8b40) !important;
-	box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4) !important;
-	transform: translateY(-2px);
-}
-
-/* Enhanced field styling */
-.summary-field {
-	transition: all 0.2s ease;
-}
-
-.summary-field:hover {
-	transform: translateY(-1px);
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* Responsive optimizations */
-@media (max-width: 768px) {
-	.summary-btn {
-		font-size: 0.875rem !important;
-		padding: 8px 12px !important;
-	}
-
-	.pay-btn {
-		font-size: 1rem !important;
-	}
-
-	.summary-field {
-		font-size: 0.875rem;
-	}
-}
-
-@media (max-width: 480px) {
-	.summary-btn {
-		font-size: 0.8rem !important;
-		padding: 6px 8px !important;
-	}
-
-	.pay-btn {
-		font-size: 0.95rem !important;
-	}
-}
-
-/* Loading state animations */
-.summary-btn:deep(.v-btn__loader) {
-	opacity: 0.8;
-}
-
-/* Dark theme enhancements */
-:deep([data-theme="dark"]) .summary-btn,
-:deep(.v-theme--dark) .summary-btn {
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-}
-
-:deep([data-theme="dark"]) .summary-btn:hover,
-:deep(.v-theme--dark) .summary-btn:hover {
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
 }
 </style>
