@@ -96,46 +96,50 @@
 			<template v-slot:expanded-row="{ item }">
 				<td :colspan="headers.length" class="ma-0 pa-0">
 					<div class="expanded-content">
-						<!-- Action buttons with improved layout and visual feedback -->
+						<!-- Enhanced Action Panel with better visual hierarchy -->
 						<div class="action-panel">
-							<div class="action-button-group">
-								<v-btn
-									:disabled="!!item.posa_is_replace"
-									icon="mdi-trash-can-outline"
-									size="large"
-									color="error"
-									variant="tonal"
-									class="item-action-btn delete-btn"
-									@click.stop="removeItem(item)"
-								>
-									<v-icon size="large">mdi-trash-can-outline</v-icon>
-									<span class="action-label">{{ __("Remove") }}</span>
-								</v-btn>
+							<div class="action-panel-header">
+								<v-icon size="small" class="action-panel-icon">mdi-cog</v-icon>
+								<span class="action-panel-title">{{ __("Quick Actions") }}</span>
 							</div>
-
-							<div class="action-button-group">
-								<v-btn
-									:disabled="!!item.posa_is_replace"
-									size="large"
-									color="warning"
-									variant="tonal"
-									class="item-action-btn minus-btn"
-									@click.stop="subtractOne(item)"
-								>
-									<v-icon size="large">mdi-minus-circle-outline</v-icon>
-									<span class="action-label">{{ __("Decrease") }}</span>
-								</v-btn>
-								<v-btn
-									:disabled="!!item.posa_is_replace"
-									size="large"
-									color="success"
-									variant="tonal"
-									class="item-action-btn plus-btn"
-									@click.stop="addOne(item)"
-								>
-									<v-icon size="large">mdi-plus-circle-outline</v-icon>
-									<span class="action-label">{{ __("Increase") }}</span>
-								</v-btn>
+							<div class="action-panel-content">
+								<div class="action-button-group">
+									<v-btn
+										:disabled="!!item.posa_is_replace"
+										size="large"
+										color="error"
+										variant="tonal"
+										class="item-action-btn delete-btn"
+										@click.stop="removeItem(item)"
+									>
+										<v-icon size="large">mdi-trash-can-outline</v-icon>
+										<span class="action-label">{{ __("Remove") }}</span>
+									</v-btn>
+								</div>
+								<div class="action-button-group">
+									<v-btn
+										:disabled="!!item.posa_is_replace"
+										size="large"
+										color="warning"
+										variant="tonal"
+										class="item-action-btn minus-btn"
+										@click.stop="subtractOne(item)"
+									>
+										<v-icon size="large">mdi-minus-circle-outline</v-icon>
+										<span class="action-label">{{ __("Decrease") }}</span>
+									</v-btn>
+									<v-btn
+										:disabled="!!item.posa_is_replace"
+										size="large"
+										color="success"
+										variant="tonal"
+										class="item-action-btn plus-btn"
+										@click.stop="addOne(item)"
+									>
+										<v-icon size="large">mdi-plus-circle-outline</v-icon>
+										<span class="action-label">{{ __("Increase") }}</span>
+									</v-btn>
+								</div>
 							</div>
 						</div>
 
@@ -362,6 +366,10 @@
 
 							<!-- Serial Number Section -->
 							<div class="form-section" v-if="item.has_serial_no || item.serial_no">
+								<div class="section-header">
+									<v-icon size="small" class="section-icon">mdi-barcode-scan</v-icon>
+									<span class="section-title">{{ __("Serial Numbers") }}</span>
+								</div>
 								<div class="form-row">
 									<div class="form-field">
 										<v-text-field
@@ -375,6 +383,7 @@
 											v-model="item.serial_no_selected_count"
 											type="number"
 											disabled
+											prepend-inner-icon="mdi-counter"
 										></v-text-field>
 									</div>
 								</div>
@@ -394,6 +403,7 @@
 											:label="frappe._('Serial No')"
 											multiple
 											@update:model-value="setSerialNo(item)"
+											prepend-inner-icon="mdi-barcode"
 										></v-autocomplete>
 									</div>
 								</div>
@@ -401,6 +411,12 @@
 
 							<!-- Batch Number Section -->
 							<div class="form-section" v-if="item.has_batch_no || item.batch_no">
+								<div class="section-header">
+									<v-icon size="small" class="section-icon"
+										>mdi-package-variant-closed</v-icon
+									>
+									<span class="section-title">{{ __("Batch Information") }}</span>
+								</div>
 								<div class="form-row">
 									<div class="form-field">
 										<v-text-field
@@ -413,6 +429,7 @@
 											hide-details
 											:model-value="formatFloat(item.actual_batch_qty)"
 											disabled
+											prepend-inner-icon="mdi-package-variant"
 										></v-text-field>
 									</div>
 									<div class="form-field">
@@ -426,6 +443,7 @@
 											hide-details
 											v-model="item.batch_no_expiry_date"
 											disabled
+											prepend-inner-icon="mdi-calendar-clock"
 										></v-text-field>
 									</div>
 									<div class="form-field">
@@ -441,6 +459,7 @@
 											:label="frappe._('Batch No')"
 											@update:model-value="setBatchQty(item, $event)"
 											hide-details
+											prepend-inner-icon="mdi-package-variant-closed"
 										>
 											<template v-slot:item="{ props, item }">
 												<v-list-item v-bind="props">
@@ -464,6 +483,10 @@
 								class="form-section"
 								v-if="pos_profile.posa_allow_sales_order && invoiceType == 'Order'"
 							>
+								<div class="section-header">
+									<v-icon size="small" class="section-icon">mdi-calendar-check</v-icon>
+									<span class="section-title">{{ __("Delivery Information") }}</span>
+								</div>
 								<div class="form-row">
 									<div class="form-field">
 										<VueDatePicker
@@ -590,9 +613,9 @@ export default {
 			}
 		},
 
-                onDragEnterFromSelector() {
-                        this.$emit("show-drop-feedback", true);
-                },
+		onDragEnterFromSelector() {
+			this.$emit("show-drop-feedback", true);
+		},
 
 		onDragLeaveFromSelector(event) {
 			// Only hide feedback if leaving the entire table area
@@ -674,11 +697,8 @@ export default {
 	letter-spacing: 0.5px;
 	padding: 12px 16px;
 	transition: background-color var(--transition-normal);
-        border-bottom: 2px solid var(--table-header-border);
-        background-color: var(
-                --table-header-bg,
-                var(--surface-secondary, #f5f5f5)
-        );
+	border-bottom: 2px solid var(--table-header-border);
+	background-color: var(--table-header-bg, var(--surface-secondary, #f5f5f5));
 	color: var(--table-header-text);
 	position: sticky;
 	top: 0;
@@ -727,19 +747,54 @@ export default {
 /* Action panel styling */
 .action-panel {
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 12px;
-	margin-bottom: 16px;
-	background-color: rgba(0, 0, 0, 0.02);
-	border-radius: var(--border-radius-md);
-	border: 1px solid rgba(0, 0, 0, 0.05);
+	flex-direction: column;
+	padding: 16px;
+	margin-bottom: 20px;
+	background: var(--surface-primary);
+	border-radius: var(--border-radius-lg);
+	border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+	transition: all 0.3s ease;
 }
 
 :deep([data-theme="dark"]) .action-panel,
 :deep(.v-theme--dark) .action-panel {
-	background-color: rgba(255, 255, 255, 0.05);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.06) 100%);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.action-panel-header {
+	display: flex;
+	align-items: center;
+	padding-bottom: 8px;
+	border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
+}
+
+:deep([data-theme="dark"]) .action-panel-header,
+:deep(.v-theme--dark) .action-panel-header {
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.action-panel-icon {
+	margin-right: 8px;
+	color: var(--primary-color, #1976d2);
+}
+
+.action-panel-title {
+	font-weight: 600;
+	font-size: 0.9rem;
+	color: var(--text-primary);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+}
+
+.action-panel-content {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	flex-wrap: wrap;
 }
 
 .action-button-group {
@@ -759,6 +814,7 @@ export default {
 	display: flex;
 	align-items: center;
 	padding: 0 16px !important;
+	font-weight: 500;
 }
 
 .item-action-btn .action-label {
@@ -860,8 +916,8 @@ export default {
 .form-row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 12px;
-	margin-bottom: 12px;
+	gap: 16px;
+	margin-bottom: 16px;
 }
 
 .form-field {
@@ -874,14 +930,70 @@ export default {
 }
 
 .form-section {
-	margin-top: 16px;
-	padding-top: 16px;
-	border-top: 1px dashed rgba(0, 0, 0, 0.1);
+	margin-top: 24px;
+	padding: 20px;
+	background: var(--surface-secondary);
+	border-radius: var(--border-radius-lg);
+	border: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+	transition: all 0.3s ease;
+}
+
+.form-section:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+	transform: translateY(-1px);
 }
 
 :deep([data-theme="dark"]) .form-section,
 :deep(.v-theme--dark) .form-section {
-	border-top: 1px dashed rgba(255, 255, 255, 0.1);
+	background: rgba(255, 255, 255, 0.02);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+:deep([data-theme="dark"]) .form-section:hover,
+:deep(.v-theme--dark) .form-section:hover {
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.section-header {
+	display: flex;
+	align-items: center;
+	margin-bottom: 16px;
+	padding-bottom: 12px;
+	border-bottom: 2px solid var(--primary-color, #1976d2);
+	position: relative;
+}
+
+.section-header::after {
+	content: "";
+	position: absolute;
+	bottom: -2px;
+	left: 0;
+	width: 40px;
+	height: 2px;
+	background: linear-gradient(90deg, var(--primary-color, #1976d2), transparent);
+}
+
+.section-icon {
+	margin-right: 10px;
+	color: var(--primary-color, #1976d2);
+	background: rgba(25, 118, 210, 0.1);
+	padding: 6px;
+	border-radius: 8px;
+}
+
+:deep([data-theme="dark"]) .section-icon,
+:deep(.v-theme--dark) .section-icon {
+	background: rgba(144, 202, 249, 0.1);
+}
+
+.section-title {
+	font-weight: 600;
+	font-size: 1rem;
+	color: var(--text-primary);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
 }
 
 /* Currency and amount display */
