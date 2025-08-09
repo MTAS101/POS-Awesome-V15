@@ -140,6 +140,7 @@ DocType: POS Closing Shift,Total Quantity,الكمية الكلية
 DocType: POS Offer,Transaction,عملية
 Custom Field - label: Item Barcode-posa_uom,UOM,UOM
 Custom Field - label: POS Profile-posa_local_storage,Use Browser Local Storage,استخدم التخزين المحلي للمتصفح
+Custom Field - label: POS Profile-posa_force_server_items,Fetch Items Directly from Server,جلب العناصر مباشرة من الخادم
 Custom Field - label: POS Profile-use_cashback,Use Cashback,استخدم استرداد النقود
 Custom Field - label: POS Profile-use_customer_credit,Use Customer Credit,استخدم ائتمان العملاء
 apps/posawesome/posawesome/posawesome/doctype/pos_opening_shift/pos_opening_shift.py,User {} has been disabled. Please select valid user/cashier,تم تعطيل المستخدم {}.الرجاء تحديد مستخدم/أمين الصندوق صالح
