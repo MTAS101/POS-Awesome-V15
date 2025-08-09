@@ -650,6 +650,7 @@ export default {
 	methods: {
 		markStorageUnavailable() {
 			this.storageAvailable = false;
+			this.itemsPageLimit = null;
 			if (this.itemWorker) {
 				this.itemWorker.terminate();
 				this.itemWorker = null;
@@ -2546,8 +2547,8 @@ export default {
 			if (profile) {
 				this.pos_profile = profile;
 				// Load items in small pages to avoid huge payloads
-				this.itemsPageLimit = 100;
 				await this.ensureStorageHealth();
+				this.itemsPageLimit = this.storageAvailable && this.itemWorker ? 100 : null;
 				if (profile.posa_local_storage && this.storageAvailable) {
 					this.loadVisibleItems(true);
 				} else {
@@ -2564,8 +2565,8 @@ export default {
 			await memoryInitPromise;
 			this.pos_profile = data.pos_profile;
 			// Use a fixed page size to gradually load items
-			this.itemsPageLimit = 100;
 			await this.ensureStorageHealth();
+			this.itemsPageLimit = this.storageAvailable && this.itemWorker ? 100 : null;
 			if (!this.pos_profile.posa_local_storage || !this.storageAvailable) {
 				if (this.itemWorker) {
 					this.itemWorker.terminate();
@@ -2655,7 +2656,7 @@ export default {
 			this.pos_profile = profile || {};
 		}
 		// Apply fixed page size for incremental loading
-		this.itemsPageLimit = 100;
+		this.itemsPageLimit = this.storageAvailable && this.itemWorker ? 100 : null;
 		if (this.pos_profile && !this.pos_profile.posa_local_storage && !this.items_loaded) {
 			await forceClearAllCache();
 			await this.get_items(true);
