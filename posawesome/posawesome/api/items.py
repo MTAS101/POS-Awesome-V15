@@ -557,51 +557,47 @@ def get_items_details(pos_profile, items_data, price_list=None):
                 """Fetch batch data and quantities for multiple items."""
                 if not item_codes or not warehouse:
                         return []
-                bins = frappe.get_all(
-                        "Bin",
-                        fields=["item_code", "batch_no", "actual_qty"],
-                        filters={
-                                "warehouse": warehouse,
-                                "item_code": ["in", item_codes],
-                                "batch_no": ["!=", ""],
-                                "actual_qty": [">", 0],
-                        },
-                )
-                batch_nos = [b.batch_no for b in bins if b.batch_no]
-                if not batch_nos:
-                        return []
-                batch_docs = frappe.get_all(
-                        "Batch",
-                        fields=[
-                                "name",
-                                "expiry_date",
-                                "manufacturing_date",
-                                "posa_batch_price",
-                                "item",
-                                "disabled",
-                        ],
-                        filters={"name": ["in", batch_nos]},
-                )
-                doc_map = {d.name: d for d in batch_docs}
                 today = nowdate()
-                result = []
-                for b in bins:
-                        doc = doc_map.get(b.batch_no)
-                        if not doc or doc.disabled:
-                                continue
-                        if doc.expiry_date and cstr(doc.expiry_date) <= cstr(today):
-                                continue
-                        result.append(
-                                {
-                                        "item_code": b.item_code,
-                                        "batch_no": b.batch_no,
-                                        "batch_qty": b.actual_qty,
-                                        "expiry_date": doc.expiry_date,
-                                        "batch_price": doc.posa_batch_price,
-                                        "manufacturing_date": doc.manufacturing_date,
-                                }
-                        )
-                return result
+                rows = frappe.db.sql(
+                        """
+                        SELECT
+                                sle.item_code,
+                                sle.batch_no,
+                                SUM(sle.actual_qty) AS batch_qty,
+                                b.expiry_date,
+                                b.manufacturing_date,
+                                b.posa_batch_price
+                        FROM `tabStock Ledger Entry` sle
+                        JOIN `tabBatch` b ON b.name = sle.batch_no AND b.item = sle.item_code
+                        WHERE
+                                sle.warehouse = %s
+                                AND sle.item_code IN %s
+                                AND IFNULL(sle.batch_no, '') != ''
+                                AND sle.is_cancelled = 0
+                                AND b.disabled = 0
+                                AND (b.expiry_date IS NULL OR b.expiry_date > %s)
+                        GROUP BY
+                                sle.item_code,
+                                sle.batch_no,
+                                b.expiry_date,
+                                b.manufacturing_date,
+                                b.posa_batch_price
+                        HAVING SUM(sle.actual_qty) > 0
+                        """,
+                        (warehouse, item_codes, today),
+                        as_dict=True,
+                )
+                return [
+                        {
+                                "item_code": d.item_code,
+                                "batch_no": d.batch_no,
+                                "batch_qty": d.batch_qty,
+                                "expiry_date": d.expiry_date,
+                                "batch_price": d.posa_batch_price,
+                                "manufacturing_date": d.manufacturing_date,
+                        }
+                        for d in rows
+                ]
 
         @redis_cache(ttl=ttl or 300)
         def _get_serials(warehouse, item_codes):
