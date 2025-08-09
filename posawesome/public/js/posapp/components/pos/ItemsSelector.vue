@@ -1111,6 +1111,7 @@ export default {
 								);
 								vm.eventBus.emit("data-load-progress", { name: "items", progress });
 								if (newItems.length === this.itemsPageLimit) {
+									// Mirror worker path: load more items from the server when the page limit is reached
 									this.backgroundLoadItems(
 										this.itemsPageLimit,
 										syncSince,
@@ -1439,7 +1440,7 @@ export default {
 						const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
 						this.eventBus.emit("data-load-progress", { name: "items", progress });
 						if (rows.length === limit) {
-							this.backgroundLoadItems(
+							await this.backgroundLoadItems(
 								offset + limit,
 								syncSince,
 								clearBefore,
