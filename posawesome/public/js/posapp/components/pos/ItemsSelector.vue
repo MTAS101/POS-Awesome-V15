@@ -1221,13 +1221,16 @@ export default {
 						);
 						vm.eventBus.emit("data-load-progress", { name: "items", progress });
 						if (newItems.length === this.itemsPageLimit) {
-							this.backgroundLoadItems(
+							const loadMore = this.backgroundLoadItems(
 								this.itemsPageLimit,
 								syncSince,
 								shouldClear,
 								request_token,
 								vm.items.length,
 							);
+							if (!this.itemWorker || !this.storageAvailable) {
+								await loadMore;
+							}
 						} else {
 							setItemsLastSync(new Date().toISOString());
 							vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
@@ -1396,19 +1399,23 @@ export default {
 					return this.backgroundLoadItems(offset, syncSince, clearBefore, requestToken, loaded);
 				}
 			} else {
-				frappe.call({
-					method: "posawesome.posawesome.api.items.get_items",
-					args: {
-						pos_profile: JSON.stringify(this.pos_profile),
-						price_list: this.customer_price_list,
-						item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
-						search_value: this.search || "",
-						customer: this.customer,
-						modified_after: lastSync,
-						limit,
-						offset,
-					},
-					callback: async (r) => {
+				let currentOffset = offset;
+				let totalLoaded = loaded;
+				try {
+					while (true) {
+						const r = await frappe.call({
+							method: "posawesome.posawesome.api.items.get_items",
+							args: {
+								pos_profile: JSON.stringify(this.pos_profile),
+								price_list: this.customer_price_list,
+								item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+								search_value: this.search || "",
+								customer: this.customer,
+								modified_after: lastSync,
+								limit,
+								offset: currentOffset,
+							},
+						});
 						if (this.items_request_token !== requestToken) {
 							return;
 						}
@@ -1436,30 +1443,26 @@ export default {
 								this.markStorageUnavailable();
 							}
 						}
-						const newLoaded = loaded + rows.length;
-						const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+						totalLoaded += rows.length;
+						const progress = Math.min(
+							99,
+							Math.round((totalLoaded / (totalLoaded + limit)) * 100),
+						);
 						this.eventBus.emit("data-load-progress", { name: "items", progress });
-						if (rows.length === limit) {
-							await this.backgroundLoadItems(
-								offset + limit,
-								syncSince,
-								clearBefore,
-								requestToken,
-								newLoaded,
-							);
-						} else {
+						if (rows.length < limit) {
 							setItemsLastSync(new Date().toISOString());
 							if (this.items && this.items.length > 0) {
 								await this.prePopulateStockCache(this.items);
 							}
 							this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 							this.items_loaded = true;
+							break;
 						}
-					},
-					error: (err) => {
-						console.error("Failed to background load items", err);
-					},
-				});
+						currentOffset += limit;
+					}
+				} catch (err) {
+					console.error("Failed to background load items", err);
+				}
 			}
 		},
 		get_items_groups() {
