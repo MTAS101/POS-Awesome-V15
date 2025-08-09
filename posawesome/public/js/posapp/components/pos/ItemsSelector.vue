@@ -486,7 +486,10 @@ export default {
 						if (!isOffline()) {
 							this.get_items(true);
 						} else {
-							if (this.pos_profile && !this.pos_profile.posa_local_storage) {
+							if (
+								this.pos_profile &&
+								(!this.pos_profile.posa_local_storage || !this.storageAvailable)
+							) {
 								this.get_items(true);
 							} else {
 								this.get_items();
@@ -502,7 +505,10 @@ export default {
 					if (!isOffline()) {
 						this.get_items(true);
 					} else {
-						if (this.pos_profile && !this.pos_profile.posa_local_storage) {
+						if (
+							this.pos_profile &&
+							(!this.pos_profile.posa_local_storage || !this.storageAvailable)
+						) {
 							this.get_items(true);
 						} else {
 							this.get_items();
@@ -516,7 +522,7 @@ export default {
 			if (this.items_loaded && this.filtered_items && this.filtered_items.length > 0) {
 				this.$nextTick(() => this.refreshPricesForVisibleItems());
 			} else {
-				if (this.pos_profile && !this.pos_profile.posa_local_storage) {
+				if (this.pos_profile && (!this.pos_profile.posa_local_storage || !this.storageAvailable)) {
 					this.get_items(true);
 				} else {
 					this.get_items();
@@ -575,7 +581,7 @@ export default {
 			if (!isOffline()) {
 				this.get_items(true);
 			} else {
-				if (this.pos_profile && !this.pos_profile.posa_local_storage) {
+				if (this.pos_profile && (!this.pos_profile.posa_local_storage || !this.storageAvailable)) {
 					this.get_items(true);
 				} else {
 					this.get_items();
@@ -587,13 +593,17 @@ export default {
 		},
 		item_group(newValue, oldValue) {
 			if (this.pos_profile && this.pos_profile.pose_use_limit_search && newValue !== oldValue) {
-				if (this.pos_profile && !this.pos_profile.posa_local_storage) {
+				if (this.pos_profile && (!this.pos_profile.posa_local_storage || !this.storageAvailable)) {
 					this.get_items(true);
 				} else {
 					this.get_items();
 				}
 			} else if (this.pos_profile && this.pos_profile.posa_local_storage && newValue !== oldValue) {
-				this.loadVisibleItems(true);
+				if (this.storageAvailable) {
+					this.loadVisibleItems(true);
+				} else {
+					this.get_items(true);
+				}
 			}
 		},
 		filtered_items(new_value, old_value) {
@@ -654,6 +664,9 @@ export default {
 			if (this.itemWorker) {
 				this.itemWorker.terminate();
 				this.itemWorker = null;
+			}
+			if (this.pos_profile) {
+				this.pos_profile.posa_local_storage = false;
 			}
 		},
 		async ensureStorageHealth() {
@@ -1657,16 +1670,20 @@ export default {
 			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 				// Only trigger search when query length meets minimum threshold
 				if (vm.search && vm.search.length >= 3) {
-					if (vm.pos_profile && !vm.pos_profile.posa_local_storage) {
+					if (vm.pos_profile && (!vm.pos_profile.posa_local_storage || !vm.storageAvailable)) {
 						vm.get_items(true);
 					} else {
 						vm.get_items();
 					}
 				}
 			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
-				await vm.loadVisibleItems(true);
-				if (vm.search && vm.search.length >= 3) {
-					vm.enter_event();
+				if (vm.storageAvailable) {
+					await vm.loadVisibleItems(true);
+					if (vm.search && vm.search.length >= 3) {
+						vm.enter_event();
+					}
+				} else {
+					vm.get_items(true);
 				}
 			} else {
 				// Save the current filtered items before search to maintain quantity data
@@ -2657,7 +2674,11 @@ export default {
 		}
 		// Apply fixed page size for incremental loading
 		this.itemsPageLimit = this.storageAvailable && this.itemWorker ? 100 : null;
-		if (this.pos_profile && !this.pos_profile.posa_local_storage && !this.items_loaded) {
+		if (
+			this.pos_profile &&
+			(!this.pos_profile.posa_local_storage || !this.storageAvailable) &&
+			!this.items_loaded
+		) {
 			await forceClearAllCache();
 			await this.get_items(true);
 		}
