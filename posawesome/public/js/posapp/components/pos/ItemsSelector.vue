@@ -1055,28 +1055,25 @@ export default {
 				// Removed noisy debug log
 
 				if (this.itemWorker && this.storageAvailable && !this.pos_profile.posa_force_server_items) {
-                                       try {
-                                               const payload = {
-                                                       pos_profile: JSON.stringify(vm.pos_profile),
-                                                       price_list: vm.customer_price_list,
-                                                       item_group: gr,
-                                                       search_value: sr,
-                                                       customer: vm.customer,
-                                                       modified_after: syncSince,
-                                                       offset: 0,
-                                               };
-                                               if (this.storageAvailable) {
-                                                       payload.limit = this.itemsPageLimit;
-                                               }
-                                               const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
-                                                       method: "POST",
-                                                       headers: {
-                                                               "Content-Type": "application/json",
-                                                               "X-Frappe-CSRF-Token": frappe.csrf_token,
-                                                       },
-                                                       credentials: "same-origin",
-                                                       body: JSON.stringify(payload),
-                                               });
+					try {
+						const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+								"X-Frappe-CSRF-Token": frappe.csrf_token,
+							},
+							credentials: "same-origin",
+							body: JSON.stringify({
+								pos_profile: JSON.stringify(vm.pos_profile),
+								price_list: vm.customer_price_list,
+								item_group: gr,
+								search_value: sr,
+								customer: vm.customer,
+								modified_after: syncSince,
+								limit: this.itemsPageLimit,
+								offset: 0,
+							}),
+						});
 
 						const text = await res.text();
 						// console.log(text)
@@ -1181,23 +1178,20 @@ export default {
 						vm.loading = false;
 					}
 				} else {
-                                       try {
-                                               const args = {
-                                                       pos_profile: JSON.stringify(vm.pos_profile),
-                                                       price_list: vm.customer_price_list,
-                                                       item_group: gr,
-                                                       search_value: sr,
-                                                       customer: vm.customer,
-                                                       modified_after: syncSince,
-                                                       offset: 0,
-                                               };
-                                               if (this.storageAvailable) {
-                                                       args.limit = vm.itemsPageLimit;
-                                               }
-                                               const r = await frappe.call({
-                                                       method: "posawesome.posawesome.api.items.get_items",
-                                                       args,
-                                               });
+					try {
+						const r = await frappe.call({
+							method: "posawesome.posawesome.api.items.get_items",
+							args: {
+								pos_profile: JSON.stringify(vm.pos_profile),
+								price_list: vm.customer_price_list,
+								item_group: gr,
+								search_value: sr,
+								customer: vm.customer,
+								modified_after: syncSince,
+								limit: vm.itemsPageLimit,
+								offset: 0,
+							},
+						});
 						if (vm.items_request_token !== request_token) return;
 						const newItems = r.message || [];
 						if (syncSince && vm.items && vm.items.length) {
@@ -1316,156 +1310,158 @@ export default {
 				}
 			}
 		},
-               async backgroundLoadItems(offset, syncSince, clearBefore = false, requestToken, loaded = offset) {
-                       const limit = this.itemsPageLimit;
-                       // When the limit is extremely high, treat it as
-                       // "no incremental loading" and exit early.
-                       if (!limit || limit >= 10000) {
-                               return;
-                       }
-                       if (this.items_request_token !== requestToken) {
-                               return;
-                       }
-                       const lastSync = syncSince;
-                       if (this.itemWorker && this.storageAvailable) {
-                               try {
-                                       const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
-                                               method: "POST",
-                                               headers: {
-                                                       "Content-Type": "application/json",
-                                                       "X-Frappe-CSRF-Token": frappe.csrf_token,
-                                               },
-                                               credentials: "same-origin",
-                                               body: JSON.stringify({
-                                                       pos_profile: JSON.stringify(this.pos_profile),
-                                                       price_list: this.customer_price_list,
-                                                       item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
-                                                       search_value: this.search || "",
-                                                       customer: this.customer,
-                                                       modified_after: lastSync,
-                                                       limit,
-                                                       offset,
-                                               }),
-                                       });
-                                       const text = await res.text();
-                                       if (this.items_request_token !== requestToken) {
-                                               return;
-                                       }
-                                       const count = await new Promise((resolve) => {
-                                               this.itemWorker.onmessage = (ev) => {
-                                                       if (this.items_request_token !== requestToken) {
-                                                               resolve(0);
-                                                               return;
-                                                       }
-                                                       if (ev.data.type === "parsed") {
-                                                               resolve(ev.data.items.length);
-                                                       } else if (ev.data.type === "error") {
-                                                               console.error("Item worker parse error:", ev.data.error);
-                                                               resolve(0);
-                                                       }
-                                               };
-                                               this.itemWorker.postMessage({
-                                                       type: "parse_and_cache",
-                                                       json: text,
-                                                       priceList: this.customer_price_list || "",
-                                               });
-                                       });
-                                       if (this.items_request_token !== requestToken) {
-                                               return;
-                                       }
-                                       const newLoaded = loaded + count;
-                                       const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
-                                       this.eventBus.emit("data-load-progress", { name: "items", progress });
-                                       if (count === limit) {
-                                               await this.backgroundLoadItems(
-                                                       offset + limit,
-                                                       syncSince,
-                                                       clearBefore,
-                                                       requestToken,
-                                                       newLoaded,
-                                               );
-                                       } else {
-                                               setItemsLastSync(new Date().toISOString());
-                                               if (this.itemWorker) {
-                                                       this.itemWorker.terminate();
-                                                       this.itemWorker = null;
-                                               }
-                                               if (this.items && this.items.length > 0) {
-                                                       await this.prePopulateStockCache(this.items);
-                                               }
-                                               this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-                                               this.items_loaded = true;
-                                       }
-                               } catch (err) {
-                                       console.error("Failed to background load items", err);
-                                       this.markStorageUnavailable();
-                                       return this.backgroundLoadItems(offset, syncSince, clearBefore, requestToken, loaded);
-                               }
-                       } else {
-                               let currentOffset = offset;
-                               while (true) {
-                                       if (this.items_request_token !== requestToken) {
-                                               return;
-                                       }
-                                       const args = {
-                                               pos_profile: JSON.stringify(this.pos_profile),
-                                               price_list: this.customer_price_list,
-                                               item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
-                                               search_value: this.search || "",
-                                               customer: this.customer,
-                                               modified_after: lastSync,
-                                               offset: currentOffset,
-                                       };
-                                       if (this.storageAvailable) {
-                                               args.limit = limit;
-                                       }
-                                       const r = await frappe.call({
-                                               method: "posawesome.posawesome.api.items.get_items",
-                                               args,
-                                       });
-                                       if (this.items_request_token !== requestToken) {
-                                               return;
-                                       }
-                                       const rows = r.message || [];
-                                       rows.forEach((it) => {
-                                               const existing = this.items.find((i) => i.item_code === it.item_code);
-                                               if (existing) Object.assign(existing, it);
-                                               else this.items.push(it);
-                                       });
-                                       this.eventBus.emit("set_all_items", this.items);
-                                       if (
-                                               this.pos_profile &&
-                                               this.pos_profile.posa_local_storage &&
-                                               this.storageAvailable &&
-                                               !this.pos_profile.pose_use_limit_search
-                                       ) {
-                                               try {
-                                                       if (clearBefore) {
-                                                               await clearStoredItems();
-                                                               clearBefore = false;
-                                                       }
-                                                       await saveItems(this.items);
-                                               } catch (e) {
-                                                       console.error(e);
-                                                       this.markStorageUnavailable();
-                                               }
-                                       }
-                                       const newLoaded = currentOffset + rows.length;
-                                       const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
-                                       this.eventBus.emit("data-load-progress", { name: "items", progress });
-                                       if (!this.storageAvailable ? rows.length === 0 : rows.length < limit) {
-                                               setItemsLastSync(new Date().toISOString());
-                                               if (this.items && this.items.length > 0) {
-                                                       await this.prePopulateStockCache(this.items);
-                                               }
-                                               this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-                                               this.items_loaded = true;
-                                               break;
-                                       }
-                                       currentOffset += this.storageAvailable ? limit : rows.length;
-                               }
-                       }
-               },
+		async backgroundLoadItems(offset, syncSince, clearBefore = false, requestToken, loaded = offset) {
+			const limit = this.itemsPageLimit;
+			// When the limit is extremely high, treat it as
+			// "no incremental loading" and exit early.
+			if (!limit || limit >= 10000) {
+				return;
+			}
+			if (this.items_request_token !== requestToken) {
+				return;
+			}
+			const lastSync = syncSince;
+			if (this.itemWorker && this.storageAvailable) {
+				try {
+					const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							"X-Frappe-CSRF-Token": frappe.csrf_token,
+						},
+						credentials: "same-origin",
+						body: JSON.stringify({
+							pos_profile: JSON.stringify(this.pos_profile),
+							price_list: this.customer_price_list,
+							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+							search_value: this.search || "",
+							customer: this.customer,
+							modified_after: lastSync,
+							limit,
+							offset,
+						}),
+					});
+					const text = await res.text();
+					if (this.items_request_token !== requestToken) {
+						return;
+					}
+					const count = await new Promise((resolve) => {
+						this.itemWorker.onmessage = (ev) => {
+							if (this.items_request_token !== requestToken) {
+								resolve(0);
+								return;
+							}
+							if (ev.data.type === "parsed") {
+								resolve(ev.data.items.length);
+							} else if (ev.data.type === "error") {
+								console.error("Item worker parse error:", ev.data.error);
+								resolve(0);
+							}
+						};
+						this.itemWorker.postMessage({
+							type: "parse_and_cache",
+							json: text,
+							priceList: this.customer_price_list || "",
+						});
+					});
+					if (this.items_request_token !== requestToken) {
+						return;
+					}
+					const newLoaded = loaded + count;
+					const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+					this.eventBus.emit("data-load-progress", { name: "items", progress });
+					if (count === limit) {
+						await this.backgroundLoadItems(
+							offset + limit,
+							syncSince,
+							clearBefore,
+							requestToken,
+							newLoaded,
+						);
+					} else {
+						setItemsLastSync(new Date().toISOString());
+						if (this.itemWorker) {
+							this.itemWorker.terminate();
+							this.itemWorker = null;
+						}
+						if (this.items && this.items.length > 0) {
+							await this.prePopulateStockCache(this.items);
+						}
+						this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+						this.items_loaded = true;
+					}
+				} catch (err) {
+					console.error("Failed to background load items", err);
+					this.markStorageUnavailable();
+					return this.backgroundLoadItems(offset, syncSince, clearBefore, requestToken, loaded);
+				}
+			} else {
+				frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: {
+						pos_profile: JSON.stringify(this.pos_profile),
+						price_list: this.customer_price_list,
+						item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+						search_value: this.search || "",
+						customer: this.customer,
+						modified_after: lastSync,
+						limit,
+						offset,
+					},
+					callback: async (r) => {
+						if (this.items_request_token !== requestToken) {
+							return;
+						}
+						const rows = r.message || [];
+						rows.forEach((it) => {
+							const existing = this.items.find((i) => i.item_code === it.item_code);
+							if (existing) Object.assign(existing, it);
+							else this.items.push(it);
+						});
+						this.eventBus.emit("set_all_items", this.items);
+						if (
+							this.pos_profile &&
+							this.pos_profile.posa_local_storage &&
+							this.storageAvailable &&
+							!this.pos_profile.pose_use_limit_search
+						) {
+							try {
+								if (clearBefore) {
+									await clearStoredItems();
+									clearBefore = false;
+								}
+								await saveItems(this.items);
+							} catch (e) {
+								console.error(e);
+								this.markStorageUnavailable();
+							}
+						}
+						const newLoaded = loaded + rows.length;
+						const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+						this.eventBus.emit("data-load-progress", { name: "items", progress });
+						if (rows.length === limit) {
+							await this.backgroundLoadItems(
+								offset + limit,
+								syncSince,
+								clearBefore,
+								requestToken,
+								newLoaded,
+							);
+						} else {
+							setItemsLastSync(new Date().toISOString());
+							if (this.items && this.items.length > 0) {
+								await this.prePopulateStockCache(this.items);
+							}
+							this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+							this.items_loaded = true;
+						}
+					},
+					error: (err) => {
+						console.error("Failed to background load items", err);
+					},
+				});
+			}
+		},
 		get_items_groups() {
 			if (!this.pos_profile) {
 				console.log("No POS Profile");
