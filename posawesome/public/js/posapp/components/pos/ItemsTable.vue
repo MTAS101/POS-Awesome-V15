@@ -96,50 +96,46 @@
 			<template v-slot:expanded-row="{ item }">
 				<td :colspan="headers.length" class="ma-0 pa-0">
 					<div class="expanded-content">
-						<!-- Enhanced Action Panel with better visual hierarchy -->
+						<!-- Action buttons with improved layout and visual feedback -->
 						<div class="action-panel">
-							<div class="action-panel-header">
-								<v-icon size="small" class="action-panel-icon">mdi-cog</v-icon>
-								<span class="action-panel-title">{{ __("Quick Actions") }}</span>
+							<div class="action-button-group">
+								<v-btn
+									:disabled="!!item.posa_is_replace"
+									icon="mdi-trash-can-outline"
+									size="large"
+									color="error"
+									variant="tonal"
+									class="item-action-btn delete-btn"
+									@click.stop="removeItem(item)"
+								>
+									<v-icon size="large">mdi-trash-can-outline</v-icon>
+									<span class="action-label">{{ __("Remove") }}</span>
+								</v-btn>
 							</div>
-							<div class="action-panel-content">
-								<div class="action-button-group">
-									<v-btn
-										:disabled="!!item.posa_is_replace"
-										size="large"
-										color="error"
-										variant="tonal"
-										class="item-action-btn delete-btn"
-										@click.stop="removeItem(item)"
-									>
-										<v-icon size="large">mdi-trash-can-outline</v-icon>
-										<span class="action-label">{{ __("Remove") }}</span>
-									</v-btn>
-								</div>
-								<div class="action-button-group">
-									<v-btn
-										:disabled="!!item.posa_is_replace"
-										size="large"
-										color="warning"
-										variant="tonal"
-										class="item-action-btn minus-btn"
-										@click.stop="subtractOne(item)"
-									>
-										<v-icon size="large">mdi-minus-circle-outline</v-icon>
-										<span class="action-label">{{ __("Decrease") }}</span>
-									</v-btn>
-									<v-btn
-										:disabled="!!item.posa_is_replace"
-										size="large"
-										color="success"
-										variant="tonal"
-										class="item-action-btn plus-btn"
-										@click.stop="addOne(item)"
-									>
-										<v-icon size="large">mdi-plus-circle-outline</v-icon>
-										<span class="action-label">{{ __("Increase") }}</span>
-									</v-btn>
-								</div>
+
+							<div class="action-button-group">
+								<v-btn
+									:disabled="!!item.posa_is_replace"
+									size="large"
+									color="warning"
+									variant="tonal"
+									class="item-action-btn minus-btn"
+									@click.stop="subtractOne(item)"
+								>
+									<v-icon size="large">mdi-minus-circle-outline</v-icon>
+									<span class="action-label">{{ __("Decrease") }}</span>
+								</v-btn>
+								<v-btn
+									:disabled="!!item.posa_is_replace"
+									size="large"
+									color="success"
+									variant="tonal"
+									class="item-action-btn plus-btn"
+									@click.stop="addOne(item)"
+								>
+									<v-icon size="large">mdi-plus-circle-outline</v-icon>
+									<span class="action-label">{{ __("Increase") }}</span>
+								</v-btn>
 							</div>
 						</div>
 
@@ -594,9 +590,9 @@ export default {
 			}
 		},
 
-		onDragEnterFromSelector() {
-			this.$emit("show-drop-feedback", true);
-		},
+                onDragEnterFromSelector() {
+                        this.$emit("show-drop-feedback", true);
+                },
 
 		onDragLeaveFromSelector(event) {
 			// Only hide feedback if leaving the entire table area
@@ -678,8 +674,11 @@ export default {
 	letter-spacing: 0.5px;
 	padding: 12px 16px;
 	transition: background-color var(--transition-normal);
-	border-bottom: 2px solid var(--table-header-border);
-	background-color: var(--table-header-bg, var(--surface-secondary, #f5f5f5));
+        border-bottom: 2px solid var(--table-header-border);
+        background-color: var(
+                --table-header-bg,
+                var(--surface-secondary, #f5f5f5)
+        );
 	color: var(--table-header-text);
 	position: sticky;
 	top: 0;
@@ -706,26 +705,17 @@ export default {
 
 /* Expanded content styling */
 .expanded-content {
-	padding: 24px;
-	background: linear-gradient(135deg, var(--surface-primary) 0%, var(--surface-secondary) 100%);
-	border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
-	box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.03);
-	animation: fadeIn 0.4s ease;
-	border: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
-	border-top: none;
-}
-
-:deep([data-theme="dark"]) .expanded-content,
-:deep(.v-theme--dark) .expanded-content {
-	background: linear-gradient(135deg, rgba(255, 255, 255, 0.01) 0%, rgba(255, 255, 255, 0.03) 100%);
-	box-shadow: inset 0 4px 12px rgba(0, 0, 0, 0.1);
-	border: 1px solid rgba(255, 255, 255, 0.08);
+	padding: var(--dynamic-md);
+	background-color: var(--surface-secondary);
+	border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+	box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.05);
+	animation: fadeIn 0.3s ease;
 }
 
 @keyframes fadeIn {
 	from {
 		opacity: 0;
-		transform: translateY(-15px);
+		transform: translateY(-10px);
 	}
 
 	to {
@@ -737,55 +727,19 @@ export default {
 /* Action panel styling */
 .action-panel {
 	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	padding: 16px;
-	margin-bottom: 20px;
-	background: linear-gradient(135deg, var(--surface-secondary) 0%, var(--surface-tertiary) 100%);
-	border-radius: var(--border-radius-lg);
-	border: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-	transition: all 0.3s ease;
+	justify-content: space-between;
+	align-items: center;
+	padding: 12px;
+	margin-bottom: 16px;
+	background-color: rgba(0, 0, 0, 0.02);
+	border-radius: var(--border-radius-md);
+	border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 :deep([data-theme="dark"]) .action-panel,
 :deep(.v-theme--dark) .action-panel {
-	background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.06) 100%);
-	border: 1px solid rgba(255, 255, 255, 0.12);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.action-panel-header {
-	display: flex;
-	align-items: center;
-	padding-bottom: 8px;
-	border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
-}
-
-:deep([data-theme="dark"]) .action-panel-header,
-:deep(.v-theme--dark) .action-panel-header {
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.action-panel-icon {
-	margin-right: 8px;
-	color: var(--primary-color, #1976d2);
-}
-
-.action-panel-title {
-	font-weight: 600;
-	font-size: 0.9rem;
-	color: var(--text-primary);
-	text-transform: uppercase;
-	letter-spacing: 0.5px;
-}
-
-.action-panel-content {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: 12px;
-	flex-wrap: wrap;
+	background-color: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .action-button-group {
@@ -805,7 +759,6 @@ export default {
 	display: flex;
 	align-items: center;
 	padding: 0 16px !important;
-	font-weight: 500;
 }
 
 .item-action-btn .action-label {
@@ -907,8 +860,8 @@ export default {
 .form-row {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 16px;
-	margin-bottom: 16px;
+	gap: 12px;
+	margin-bottom: 12px;
 }
 
 .form-field {
@@ -921,23 +874,14 @@ export default {
 }
 
 .form-section {
-	margin-top: 24px;
-	padding: 20px;
-	background: var(--surface-secondary);
-	border-radius: var(--border-radius-lg);
-	border: 1px solid var(--border-color, rgba(0, 0, 0, 0.06));
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
-	transition: all 0.3s ease;
-}
-
-.form-section:hover {
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+	margin-top: 16px;
+	padding-top: 16px;
+	border-top: 1px dashed rgba(0, 0, 0, 0.1);
 }
 
 :deep([data-theme="dark"]) .form-section,
 :deep(.v-theme--dark) .form-section {
-	background: rgba(255, 255, 255, 0.05);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-top: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
 /* Currency and amount display */
