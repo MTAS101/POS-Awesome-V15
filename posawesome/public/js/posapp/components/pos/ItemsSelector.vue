@@ -451,6 +451,7 @@ export default {
 		prePopulateInProgress: false,
 		itemWorker: null,
 		storageAvailable: true,
+		localStorageAvailable: true,
 		items_request_token: 0,
 		pendingGetItems: null,
 		lastGetItemsKey: "",
@@ -658,8 +659,13 @@ export default {
 	},
 
 	methods: {
-		markStorageUnavailable() {
+		markStorageUnavailable(localOnly = false) {
+			if (localOnly) {
+				this.localStorageAvailable = false;
+				return;
+			}
 			this.storageAvailable = false;
+			this.localStorageAvailable = false;
 			this.itemsPageLimit = null;
 			if (this.itemWorker) {
 				this.itemWorker.terminate();
@@ -670,7 +676,7 @@ export default {
 			}
 		},
 		async ensureStorageHealth() {
-			let healthy = true;
+			let localHealthy = true;
 			try {
 				if (typeof localStorage !== "undefined") {
 					const t = "posa_test";
@@ -679,13 +685,16 @@ export default {
 				}
 			} catch (e) {
 				console.warn("localStorage unavailable", e);
-				healthy = false;
+				localHealthy = false;
 			}
-			if (healthy) {
-				healthy = await checkDbHealth().catch(() => false);
-			}
-			if (healthy) {
+			const dbHealthy = await checkDbHealth().catch(() => false);
+			if (dbHealthy) {
 				this.storageAvailable = true;
+				if (!localHealthy) {
+					this.markStorageUnavailable(true);
+				} else {
+					this.localStorageAvailable = true;
+				}
 				if (
 					this.pos_profile &&
 					this.pos_profile.posa_local_storage &&
@@ -709,7 +718,7 @@ export default {
 			} else {
 				this.markStorageUnavailable();
 			}
-			return healthy;
+			return dbHealthy;
 		},
 		async loadVisibleItems(reset = false) {
 			this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
@@ -1134,7 +1143,9 @@ export default {
 										vm.items.length,
 									);
 								} else {
-									setItemsLastSync(new Date().toISOString());
+									if (this.storageAvailable && this.localStorageAvailable) {
+										setItemsLastSync(new Date().toISOString());
+									}
 									if (vm.itemWorker) {
 										vm.itemWorker.terminate();
 										vm.itemWorker = null;
@@ -1243,7 +1254,9 @@ export default {
 								vm.items.length,
 							);
 						} else {
-							setItemsLastSync(new Date().toISOString());
+							if (this.storageAvailable && this.localStorageAvailable) {
+								setItemsLastSync(new Date().toISOString());
+							}
 							vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 							vm.items_loaded = true;
 						}
@@ -1393,7 +1406,9 @@ export default {
 							newLoaded,
 						);
 					} else {
-						setItemsLastSync(new Date().toISOString());
+						if (this.storageAvailable && this.localStorageAvailable) {
+							setItemsLastSync(new Date().toISOString());
+						}
 						if (this.itemWorker) {
 							this.itemWorker.terminate();
 							this.itemWorker = null;
@@ -1462,7 +1477,9 @@ export default {
 								newLoaded,
 							);
 						} else {
-							setItemsLastSync(new Date().toISOString());
+							if (this.storageAvailable && this.localStorageAvailable) {
+								setItemsLastSync(new Date().toISOString());
+							}
 							if (this.items && this.items.length > 0) {
 								await this.prePopulateStockCache(this.items);
 							}
@@ -2358,6 +2375,7 @@ export default {
 			this.eventBus.emit("item-drag-end");
 		},
 		saveItemSettings() {
+			if (!this.localStorageAvailable) return;
 			try {
 				const settings = {
 					hide_qty_decimals: this.hide_qty_decimals,
@@ -2379,6 +2397,7 @@ export default {
 			});
 		},
 		loadItemSettings() {
+			if (!this.localStorageAvailable) return;
 			try {
 				const saved = localStorage.getItem("posawesome_item_selector_settings");
 				if (saved) {
