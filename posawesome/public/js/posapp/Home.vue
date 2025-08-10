@@ -18,6 +18,7 @@
 				:cache-ready="cacheReady"
 				:loading-progress="loadingProgress"
 				:loading-active="loadingActive"
+				:loading-message="loadingMessage"
 				@change-page="setPage($event)"
 				@nav-click="handleNavClick"
 				@close-shift="handleCloseShift"
@@ -45,6 +46,7 @@ import {
         initLoadingSources,
         setSourceProgress,
         markSourceLoaded,
+        clearLoadingTimeout,
 } from "./utils/loading.js";
 import {
 	getOpeningStorage,
@@ -113,6 +115,9 @@ export default {
                 },
                 loadingActive() {
                         return loadingState.active;
+                },
+                loadingMessage() {
+                        return loadingState.message;
                 },
         },
 	watch: {
@@ -200,6 +205,15 @@ export default {
                         }
 
                         markSourceLoaded("init");
+                        
+                        // Fallback: if items/customers don't load within 10 seconds, mark them as loaded
+                        setTimeout(() => {
+                                if (loadingState.active) {
+                                        console.warn("Forcing items/customers to complete due to delay");
+                                        markSourceLoaded("items");
+                                        markSourceLoaded("customers");
+                                }
+                        }, 10000);
                 },
 
 		setupEventListeners() {
@@ -438,12 +452,16 @@ export default {
 				$(".navbar.navbar-default.navbar-fixed-top").remove();
 			});
 		},
+
+
 	},
 	beforeUnmount() {
 		if (this.eventBus) {
 			this.eventBus.off("pending_invoices_changed");
 			this.eventBus.off("data-loaded");
 		}
+		// Clear loading timeout when component unmounts
+		clearLoadingTimeout();
 	},
 	created: function () {
 		setTimeout(() => {
@@ -481,4 +499,6 @@ export default {
 	min-height: 100%;
 	height: 100%;
 }
+
+
 </style>

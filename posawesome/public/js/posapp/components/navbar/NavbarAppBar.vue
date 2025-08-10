@@ -64,18 +64,23 @@
 		<!-- Menu component slot -->
 		<slot name="menu"></slot>
 
-		<v-progress-linear
-			v-if="loadingActive"
-			:model-value="loadingProgress"
-			color="primary"
-			height="4"
-			absolute
-			location="bottom"
-		>
-			<template #default>
-				<span class="text-caption text-white">{{ __("Loading app data") }}</span>
-			</template>
-		</v-progress-linear>
+		<!-- Glass Morphism Loading Bar -->
+		<transition name="loading-fade">
+			<div v-if="loadingActive" class="loading-container">
+				<div class="glass-card">
+					<span class="loading-message">{{ loadingMessage }}</span>
+					<div class="progress-badge">{{ loadingProgress }}%</div>
+				</div>
+				<v-progress-linear
+					:model-value="loadingProgress"
+					color="primary"
+					height="4"
+					absolute
+					location="bottom"
+					class="glass-progress"
+				/>
+			</div>
+		</transition>
 	</v-app-bar>
 </template>
 
@@ -99,6 +104,10 @@ export default {
 		loadingActive: {
 			type: Boolean,
 			default: false,
+		},
+		loadingMessage: {
+			type: String,
+			default: 'Loading app data...',
 		},
 	},
 	computed: {
@@ -124,6 +133,7 @@ export default {
 			return "User";
 		},
 	},
+
 	emits: ["nav-click", "go-desk", "show-offline-invoices"],
 };
 </script>
@@ -247,5 +257,123 @@ export default {
 	background-color: var(--surface-secondary, #2d2d2d) !important;
 	color: var(--text-primary, #ffffff) !important;
 	border-color: var(--primary-light, #90caf9) !important;
+}
+
+/* ===== GLASS MORPHISM LOADING BAR ===== */
+.loading-container {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	z-index: 1000;
+}
+
+.glass-card {
+	position: absolute;
+	top: -40px;
+	left: 12px;
+	right: 12px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 8px 16px;
+	
+	/* Glass morphism effect */
+	background: color(from Canvas r g b / 0.8);
+	backdrop-filter: blur(20px);
+	border-radius: 12px;
+	border: 1px solid color(from Canvas r g b / 0.1);
+	
+	/* System shadows */
+	box-shadow: 
+		0 8px 32px color(from CanvasText r g b / 0.1),
+		0 1px 0 color(from Canvas r g b / 0.5) inset;
+}
+
+.loading-message {
+	font-size: 12px;
+	font-weight: 500;
+	color: AccentColor;
+	flex: 1;
+}
+
+.progress-badge {
+	font-size: 11px;
+	font-weight: 600;
+	color: Canvas;
+	background: AccentColor;
+	padding: 2px 8px;
+	border-radius: 8px;
+	min-width: 32px;
+	text-align: center;
+}
+
+.glass-progress {
+	border-radius: 0 !important;
+	backdrop-filter: blur(10px);
+}
+
+.glass-progress :deep(.v-progress-linear__background) {
+	background: color(from CanvasText r g b / 0.1) !important;
+}
+
+.glass-progress :deep(.v-progress-linear__determinate) {
+	background: AccentColor !important;
+	box-shadow: 0 0 12px color(from AccentColor r g b / 0.3);
+}
+
+/* Smooth transitions */
+.loading-fade-enter-active,
+.loading-fade-leave-active {
+	transition: all 0.3s ease;
+}
+
+.loading-fade-enter-from {
+	opacity: 0;
+	transform: translateY(8px);
+}
+
+.loading-fade-leave-to {
+	opacity: 0;
+	transform: translateY(-4px);
+}
+
+/* Dark theme fallback for older browsers */
+@media (prefers-color-scheme: dark) {
+	.glass-card {
+		background: rgba(30, 30, 30, 0.8);
+		border-color: rgba(255, 255, 255, 0.1);
+		box-shadow: 
+			0 8px 32px rgba(0, 0, 0, 0.2),
+			0 1px 0 rgba(255, 255, 255, 0.1) inset;
+	}
+	
+	.loading-message {
+		color: #bb86fc;
+	}
+	
+	.progress-badge {
+		background: #bb86fc;
+		color: #000;
+	}
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+	.glass-card {
+		padding: 6px 12px;
+		left: 8px;
+		right: 8px;
+	}
+	
+	.loading-message {
+		font-size: 11px;
+	}
+	
+	.progress-badge {
+		font-size: 10px;
+		padding: 1px 6px;
+		min-width: 28px;
+	}
 }
 </style>
