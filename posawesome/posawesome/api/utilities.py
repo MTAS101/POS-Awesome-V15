@@ -5,11 +5,12 @@
 from __future__ import unicode_literals
 import json
 import frappe
-from frappe.utils import cstr
+from frappe.utils import cstr, add_to_date, get_datetime
 from typing import List, Dict
 import time
 import os
 import psutil
+import functools
 
 def get_version():
 	branch_name = get_app_branch("erpnext")
@@ -361,3 +362,207 @@ def get_server_usage():
         'load_avg': load_avg,
         'uptime': uptime,
     } 
+
+
+# Cache for language data
+_LANGUAGE_CACHE = {
+    'languages': None,
+    'last_updated': None,
+    'cache_duration': 300  # 5 minutes
+}
+
+# Language display names mapping (moved to module level for reuse)
+LANGUAGE_NAMES = {
+    "en": "English",
+    "ar": "العربية",
+    "es": "Español", 
+    "pt": "Português",
+    "fr": "Français",
+    "de": "Deutsch",
+    "it": "Italiano",
+    "nl": "Nederlands",
+    "pl": "Polski",
+    "ru": "Русский",
+    "zh": "中文",
+    "ja": "日本語",
+    "ko": "한국어",
+    "hi": "हिन्दी",
+    "tr": "Türkçe",
+    "sv": "Svenska",
+    "da": "Dansk",
+    "no": "Norsk",
+    "fi": "Suomi",
+    "cs": "Čeština",
+    "sk": "Slovenčina",
+    "hu": "Magyar",
+    "ro": "Română",
+    "bg": "Български",
+    "hr": "Hrvatski",
+    "sl": "Slovenščina",
+    "et": "Eesti",
+    "lv": "Latviešu",
+    "lt": "Lietuvių",
+}
+
+def _is_cache_valid():
+    """Check if language cache is still valid."""
+    if not _LANGUAGE_CACHE['last_updated']:
+        return False
+    
+    cache_time = _LANGUAGE_CACHE['last_updated']
+    expiry_time = add_to_date(cache_time, seconds=_LANGUAGE_CACHE['cache_duration'])
+    return get_datetime() < expiry_time
+
+def _update_language_cache(languages):
+    """Update the language cache."""
+    _LANGUAGE_CACHE['languages'] = languages
+    _LANGUAGE_CACHE['last_updated'] = get_datetime()
+
+@frappe.whitelist()
+def get_available_languages():
+    """Get list of available languages with caching."""
+    # Return cached data if valid
+    if _is_cache_valid() and _LANGUAGE_CACHE['languages']:
+        return _LANGUAGE_CACHE['languages']
+    
+    languages = []
+    
+    try:
+        translations_path = frappe.get_app_path("posawesome", "translations")
+        if os.path.exists(translations_path):
+            # Use os.scandir for better performance
+            with os.scandir(translations_path) as entries:
+                for entry in entries:
+                    if entry.is_file() and entry.name.endswith(".csv"):
+                        lang_code = os.path.splitext(entry.name)[0]
+                        display_name = LANGUAGE_NAMES.get(lang_code, lang_code.upper())
+                        languages.append({
+                            "code": lang_code,
+                            "name": display_name,
+                            "native_name": display_name
+                        })
+        
+        # Always include English as fallback
+        if not any(lang["code"] == "en" for lang in languages):
+            languages.insert(0, {
+                "code": "en",
+                "name": "English",
+                "native_name": "English"
+            })
+        
+        # Sort and cache
+        languages = sorted(languages, key=lambda x: x["code"])
+        _update_language_cache(languages)
+        
+        return languages
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting available languages: {str(e)}")
+        # Return minimal fallback
+        fallback = [{"code": "en", "name": "English", "native_name": "English"}]
+        _update_language_cache(fallback)
+        return fallback
+
+@functools.lru_cache(maxsize=128)
+def _get_user_language_cached(user):
+    """Get user language with LRU cache."""
+    if user == "Guest":
+        return "en"
+    return frappe.get_cached_value("User", user, "language") or "en"
+
+@frappe.whitelist()
+def get_current_user_language():
+    """Get current user's language with optimized caching."""
+    try:
+        user = frappe.session.user
+        if user == "Guest":
+            return {"success": False, "message": "Guest users cannot have language preferences"}
+        
+        user_language = _get_user_language_cached(user)
+        available_languages = get_available_languages()
+        
+        # Find current language details
+        current_lang = next((lang for lang in available_languages if lang["code"] == user_language), None)
+        
+        return {
+            "success": True,
+            "user": user,
+            "language_code": user_language,
+            "language_name": current_lang["name"] if current_lang else user_language.upper(),
+            "available_languages": available_languages
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting current user language: {str(e)}")
+        return {"success": False, "message": "Failed to get language"}
+
+@frappe.whitelist()
+def set_current_user_language(lang_code):
+    """Set language with optimized database operations."""
+    try:
+        user = frappe.session.user
+        if user == "Guest":
+            return {"success": False, "message": "Guest users cannot set language preferences"}
+        
+        # Validate language code
+        available_languages = get_available_languages()
+        valid_codes = [lang["code"] for lang in available_languages]
+        
+        if lang_code not in valid_codes:
+            return {
+                "success": False, 
+                "message": f"Language '{lang_code}' is not supported"
+            }
+        
+        # Batch database operations
+        frappe.db.set_value("User", user, "language", lang_code, update_modified=False)
+        frappe.db.commit()
+        
+        # Clear specific caches
+        frappe.clear_cache(user=user)
+        _get_user_language_cached.cache_clear()
+        
+        return {
+            "success": True,
+            "message": f"Language set to {lang_code}",
+            "language": lang_code
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error setting language: {str(e)}")
+        return {"success": False, "message": "Failed to set language"}
+
+
+@frappe.whitelist()
+def get_language_info(lang_code):
+    """Get detailed information about a specific language."""
+    try:
+        is_valid, error_msg = _validate_language_code(lang_code)
+        if not is_valid:
+            return {"success": False, "message": error_msg}
+        
+        available_languages = get_available_languages()
+        language = next((lang for lang in available_languages if lang["code"] == lang_code), None)
+        
+        # Check translation file
+        translations_path = frappe.get_app_path("posawesome", "translations", f"{lang_code}.csv")
+        has_translations = os.path.exists(translations_path)
+        
+        translation_count = 0
+        if has_translations:
+            try:
+                with open(translations_path, 'r', encoding='utf-8') as f:
+                    translation_count = sum(1 for _ in f) - 1  # Exclude header
+            except Exception:
+                pass
+        
+        return {
+            "success": True,
+            "language": language,
+            "has_translations": has_translations,
+            "translation_count": translation_count
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting language info for {lang_code}: {str(e)}")
+        return {"success": False, "message": "Failed to get language info"}

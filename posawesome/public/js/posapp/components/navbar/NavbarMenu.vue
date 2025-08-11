@@ -127,6 +127,23 @@
 					</div>
 				</v-list-item>
 
+				<!-- Language selection menu item -->
+				<v-list-item @click="showLanguageDialog = true" class="menu-item-compact primary-action">
+					<template v-slot:prepend>
+						<div class="menu-icon-wrapper-compact primary-icon">
+							<v-icon color="white" size="16">mdi-translate</v-icon>
+						</div>
+					</template>
+					<div class="menu-content-compact">
+						<v-list-item-title class="menu-item-title-compact">{{
+							__("Language")
+						}}</v-list-item-title>
+						<v-list-item-subtitle class="menu-item-subtitle-compact">{{
+							__("Change interface language")
+						}}</v-list-item-subtitle>
+					</div>
+				</v-list-item>
+
 				<!-- Theme toggle menu item -->
 				<v-list-item @click="$emit('toggle-theme')" class="menu-item-compact info-action">
 					<template v-slot:prepend>
@@ -164,25 +181,234 @@
 			</v-list>
 		</v-card>
 	</v-menu>
+
+	<!-- Language Selection Dialog -->
+	<v-dialog v-model="showLanguageDialog" max-width="400" persistent>
+		<v-card>
+			<v-card-title class="text-h6 d-flex align-center">
+				<v-icon start color="primary" class="mr-2">mdi-translate</v-icon>
+				{{ __("Select Language") }}
+			</v-card-title>
+
+			<v-card-text>
+				<div class="text-body-2 mb-3">
+					{{ __("Choose your preferred language for the POS interface") }}
+				</div>
+
+				<v-select
+					v-model="selectedLanguage"
+					:items="availableLanguages"
+					item-title="name"
+					item-value="code"
+					:label="__('Language')"
+					variant="outlined"
+					density="compact"
+					:loading="loading"
+					:disabled="loading"
+				>
+					<template #item="{ item, props }">
+						<v-list-item v-bind="props">
+							<template #prepend>
+								<v-icon :color="item.raw.code === currentLanguage ? 'primary' : 'grey'">
+									{{ item.raw.code === currentLanguage ? 'mdi-check-circle' : 'mdi-circle-outline' }}
+								</v-icon>
+							</template>
+							<v-list-item-title>
+								{{ item.raw.name }} ({{ item.raw.code.toUpperCase() }})
+							</v-list-item-title>
+							<v-list-item-subtitle v-if="item.raw.code !== 'en'">
+								{{ item.raw.native_name }}
+							</v-list-item-subtitle>
+						</v-list-item>
+					</template>
+				</v-select>
+
+				<v-alert
+					v-if="selectedLanguage !== currentLanguage"
+					type="info"
+					variant="tonal"
+					density="compact"
+					class="mt-3"
+				>
+					{{ __("Language will be changed to") }}: 
+					<strong>{{ selectedLanguageName }}</strong>
+				</v-alert>
+			</v-card-text>
+
+			<v-card-actions class="pa-4 pt-0">
+				<v-spacer />
+				<v-btn
+					color="grey"
+					variant="text"
+					@click="closeLanguageDialog"
+					:disabled="changing"
+				>
+					{{ __("Cancel") }}
+				</v-btn>
+				<v-btn
+					color="primary"
+					:loading="changing"
+					:disabled="!canChangeLanguage"
+					@click="changeLanguage"
+				>
+					{{ __("Change Language") }}
+				</v-btn>
+			</v-card-actions>
+		</v-card>
+	</v-dialog>
+
+	<!-- Notification Snackbars -->
+	<v-snackbar
+		v-model="notification.show"
+		:timeout="notification.timeout"
+		:color="notification.type"
+		location="top right"
+	>
+		{{ notification.message }}
+		<template #actions>
+			<v-btn color="white" variant="text" @click="hideNotification">
+				{{ __("Close") }}
+			</v-btn>
+		</template>
+	</v-snackbar>
 </template>
 
 <script>
+const FALLBACK_LANGUAGES = [
+	{ code: "en", name: "English", native_name: "English" },
+	{ code: "ar", name: "العربية", native_name: "العربية" },
+	{ code: "es", name: "Español", native_name: "Español" },
+	{ code: "pt", name: "Português", native_name: "Português" },
+];
+
 export default {
 	name: "NavbarMenu",
 	props: {
-		posProfile: {
-			type: Object,
-			default: () => ({}),
-		},
+		posProfile: { type: Object, default: () => ({}) },
 		lastInvoiceId: String,
 		manualOffline: Boolean,
 		networkOnline: Boolean,
 		serverOnline: Boolean,
 		isDark: Boolean,
 	},
+	data() {
+		return {
+			showLanguageDialog: false,
+			selectedLanguage: "en",
+			currentLanguage: "en",
+			availableLanguages: FALLBACK_LANGUAGES,
+			loading: false,
+			changing: false,
+			notification: {
+				show: false,
+				message: "",
+				type: "info",
+				timeout: 3000,
+			},
+		};
+	},
+	computed: {
+		canChangeLanguage() {
+			return this.selectedLanguage !== this.currentLanguage && !this.changing;
+		},
+		selectedLanguageName() {
+			const lang = this.availableLanguages.find(l => l.code === this.selectedLanguage);
+			return lang?.name || this.selectedLanguage.toUpperCase();
+		},
+	},
+	async mounted() {
+		await this.initializeLanguage();
+	},
+	methods: {
+		async changeLanguage() {
+			if (!this.canChangeLanguage) {
+				this.showNotification("Cannot change language - same language selected", "warning");
+				return;
+			}
+
+			this.changing = true;
+			try {
+				const response = await frappe.call({
+					method: 'posawesome.posawesome.api.utilities.set_current_user_language',
+					args: { lang_code: this.selectedLanguage }
+				});
+
+				const result = response?.message || response;
+				
+				if (result?.success) {
+					this.currentLanguage = this.selectedLanguage;
+					
+					if (window.frappe && window.frappe.boot) {
+						window.frappe.boot.lang = this.selectedLanguage;
+					}
+					
+					this.showNotification("Language changed successfully! Reloading...", "success");
+					this.closeLanguageDialog();
+					
+					this.$emit('clear-cache');
+					
+					setTimeout(() => {
+						window.location.reload();
+					}, 2000);
+				} else {
+					const errorMsg = result?.message || "Failed to change language";
+					this.showNotification(errorMsg, "error");
+				}
+			} catch (error) {
+				this.showNotification(`Failed to change language: ${error.message || 'Unknown error'}`, "error");
+			} finally {
+				this.changing = false;
+			}
+		},
+
+		async initializeLanguage() {
+			this.loading = true;
+			try {
+				const response = await frappe.call({
+					method: 'posawesome.posawesome.api.utilities.get_current_user_language'
+				});
+				
+				const result = response?.message || response;
+				
+				if (result?.success) {
+					Object.assign(this, {
+						availableLanguages: result.available_languages,
+						currentLanguage: result.language_code,
+						selectedLanguage: result.language_code,
+					});
+				}
+			} catch (error) {
+				console.error("Error initializing language:", error);
+			} finally {
+				this.loading = false;
+			}
+		},
+
+		closeLanguageDialog() {
+			this.showLanguageDialog = false;
+			this.selectedLanguage = this.currentLanguage;
+		},
+
+		showNotification(message, type = "info", timeout = 3000) {
+			Object.assign(this.notification, {
+				show: true,
+				message: this.__(message),
+				type,
+				timeout,
+			});
+		},
+
+		hideNotification() {
+			this.notification.show = false;
+		},
+
+		__(text) {
+			return window.__ ? window.__(text) : text;
+		},
+	},
 	emits: [
 		"close-shift",
-		"print-last-invoice",
+		"print-last-invoice", 
 		"sync-invoices",
 		"toggle-offline",
 		"clear-cache",
