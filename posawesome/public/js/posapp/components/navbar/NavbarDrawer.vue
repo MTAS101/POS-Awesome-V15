@@ -4,10 +4,10 @@
 		:rail="mini"
 		expand-on-hover
 		width="220"
-		:class="['drawer-custom', { 'drawer-visible': drawerOpen }]"
+		:class="['drawer-custom', { 'drawer-visible': drawerOpen }, rtlClasses]"
 		@mouseleave="handleMouseLeave"
 		temporary
-		location="left"
+		:location="isRtl ? 'right' : 'left'"
 		:scrim="scrimColor"
 	>
 		<div v-if="!mini" class="drawer-header">
@@ -46,8 +46,18 @@
 </template>
 
 <script>
+import { useRtl } from "../../composables/useRtl.js";
+
 export default {
 	name: "NavbarDrawer",
+	setup() {
+		const { isRtl, rtlStyles, rtlClasses } = useRtl();
+		return {
+			isRtl,
+			rtlStyles,
+			rtlClasses
+		};
+	},
 	props: {
 		drawer: Boolean,
 		company: String,

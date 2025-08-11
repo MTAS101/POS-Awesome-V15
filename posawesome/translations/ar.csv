@@ -35,7 +35,7 @@ Closing Amount,مبلغ الإقفال
 Company,الشركة
 Customer,العميل
 Date,التاريخ
-Default Loyalty Program,برنامج الولاء الافتراضي
+Default Loyalty Program,برنامج المكافآت الافتراضي
 Delivery Date,تاريخ التسليم
 Description,الوصف
 Details,التفاصيل
@@ -68,7 +68,7 @@ Items,الأصناف
 Linked Invoices,الفواتير المرتبطة
 Loyalty Point,نقطة مكافأة
 Loyalty Point Scheme,برنامج نقاط المكافآت
-Loyalty Points,نقاط الولاء
+Loyalty Points,نقاط المكافآت
 Max Amount,الحد الأقصى للمبلغ
 Max Discount Percentage Allowed ,الحد الأقصى المسموح به لنسبة الخصم
 Max Quantity,الحد الأقصى للكمية
@@ -84,7 +84,6 @@ Offer Name,اسم العرض
 Open,مفتوحة
 Opening Amount,مبلغ الافتتاح
 Opening Balance Details,تفاصيل الرصيد الافتتاحي
-POS Awesome,نقاط البيع أوسم
 POS Awesome Advance Settings,إعدادات نقاط البيع أوسم المتقدمة
 POS Awesome Settings,إعدادات نقاط البيع أوسم
 POS Closing Shift,إقفال وردية نقطة البيع
@@ -101,7 +100,6 @@ POS Profile,ملف تعريف نقطة البيع
 POS Profile {} does not belongs to company {},ملف تعريف نقطة البيع {} لا ينتمي إلى الشركة {}
 POS Shift,وردية نقطة البيع
 POS Transactions,معاملات نقطة البيع
-POSAwesome,نقاط البيع أوسم
 Payment Reconciliation,تسوية المدفوعات
 Period End Date,تاريخ نهاية الفترة
 Period Start Date,تاريخ بداية الفترة
@@ -223,7 +221,7 @@ Print Last Invoice,طباعة آخر فاتورة
 Sync Offline Invoices,مزامنة الفواتير غير المتصلة
 Go Online/Offline,الاتصال/عدم الاتصال
 Clear Cache,مسح التخزين المؤقت
-About,حول
+About,عن النظام
 Light/Dark Mode,الوضع الفاتح/الداكن
 Logout,تسجيل الخروج
 Select Language,اختيار اللغة
@@ -245,3 +243,20 @@ Sales Return,إرجاع المبيعات
 Cancel Sale,إلغاء البيع
 Offers,عروض
 Coupons,كوبونات
+ms,مللي ثانية
+MB,ميجابايت
+Connected to Server,متصل بالخادم
+To Sync,بانتظار المزامنة
+Synced,تمت المزامنة
+Draft,مسودة
+POS,نقاط البيع
+Awesome,رائع
+No items found,لم يتم العثور على أصناف
+No items in cart,لا توجد أصناف في السلة
+Item not found,الصنف غير موجود
+Customers not found,لم يتم العثور على عملاء
+Charges not found,لم يتم العثور على رسوم
+Address not found,لم يتم العثور على عنوان
+Sales Person not found,لم يتم العثور على مندوب المبيعات
+Group not found,لم يتم العثور على مجموعة
+Territory not found,لم يتم العثور على منطقة

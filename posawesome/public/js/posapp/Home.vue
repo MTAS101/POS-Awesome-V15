@@ -1,35 +1,16 @@
 <template>
-	<v-app class="container1">
+	<v-app class="container1" :class="rtlClasses">
 		<v-main class="main-content">
-			<Navbar
-				:pos-profile="posProfile"
-				:pending-invoices="pendingInvoices"
-				:last-invoice-id="lastInvoiceId"
-				:network-online="networkOnline"
-				:server-online="serverOnline"
-				:server-connecting="serverConnecting"
-				:is-ip-host="isIpHost"
-				:sync-totals="syncTotals"
-				:manual-offline="manualOffline"
-				:is-dark="isDark"
-				:cache-usage="cacheUsage"
-				:cache-usage-loading="cacheUsageLoading"
-				:cache-usage-details="cacheUsageDetails"
-				:cache-ready="cacheReady"
-				:loading-progress="loadingProgress"
-				:loading-active="loadingActive"
-				:loading-message="loadingMessage"
-				@change-page="setPage($event)"
-				@nav-click="handleNavClick"
-				@close-shift="handleCloseShift"
-				@print-last-invoice="handlePrintLastInvoice"
-				@sync-invoices="handleSyncInvoices"
-				@toggle-offline="handleToggleOffline"
-				@toggle-theme="handleToggleTheme"
-				@logout="handleLogout"
-				@refresh-cache-usage="handleRefreshCacheUsage"
-				@update-after-delete="handleUpdateAfterDelete"
-			/>
+			<Navbar :pos-profile="posProfile" :pending-invoices="pendingInvoices" :last-invoice-id="lastInvoiceId"
+				:network-online="networkOnline" :server-online="serverOnline" :server-connecting="serverConnecting"
+				:is-ip-host="isIpHost" :sync-totals="syncTotals" :manual-offline="manualOffline" :is-dark="isDark"
+				:cache-usage="cacheUsage" :cache-usage-loading="cacheUsageLoading"
+				:cache-usage-details="cacheUsageDetails" :cache-ready="cacheReady" :loading-progress="loadingProgress"
+				:loading-active="loadingActive" :loading-message="loadingMessage" @change-page="setPage($event)"
+				@nav-click="handleNavClick" @close-shift="handleCloseShift" @print-last-invoice="handlePrintLastInvoice"
+				@sync-invoices="handleSyncInvoices" @toggle-offline="handleToggleOffline"
+				@toggle-theme="handleToggleTheme" @logout="handleLogout" @refresh-cache-usage="handleRefreshCacheUsage"
+				@update-after-delete="handleUpdateAfterDelete" />
 			<div class="page-content">
 				<component v-bind:is="page" class="mx-4 md-4"></component>
 			</div>
@@ -42,11 +23,11 @@ import Navbar from "./components/Navbar.vue";
 import POS from "./components/pos/Pos.vue";
 import Payments from "./components/payments/Pay.vue";
 import {
-        loadingState,
-        initLoadingSources,
-        setSourceProgress,
-        markSourceLoaded,
-        clearLoadingTimeout,
+	loadingState,
+	initLoadingSources,
+	setSourceProgress,
+	markSourceLoaded,
+	clearLoadingTimeout,
 } from "./utils/loading.js";
 import {
 	getOpeningStorage,
@@ -76,8 +57,17 @@ import {
 	checkExternalConnectivity,
 	checkWebSocketConnectivity,
 } from "./composables/useNetwork.js";
+import { useRtl } from "./composables/useRtl.js";
 
 export default {
+	setup() {
+		const { isRtl, rtlStyles, rtlClasses } = useRtl();
+		return {
+			isRtl,
+			rtlStyles,
+			rtlClasses
+		};
+	},
 	data: function () {
 		return {
 			page: "POS",
@@ -103,23 +93,23 @@ export default {
 			cacheUsageDetails: { total: 0, indexedDB: 0, localStorage: 0 },
 			cacheReady: false,
 
-                        // Loading progress handled via utility
+			// Loading progress handled via utility
 		};
 	},
-        computed: {
-                isDark() {
-                        return this.$theme?.current === "dark";
-                },
-                loadingProgress() {
-                        return loadingState.progress;
-                },
-                loadingActive() {
-                        return loadingState.active;
-                },
-                loadingMessage() {
-                        return loadingState.message;
-                },
-        },
+	computed: {
+		isDark() {
+			return this.$theme?.current === "dark";
+		},
+		loadingProgress() {
+			return loadingState.progress;
+		},
+		loadingActive() {
+			return loadingState.active;
+		},
+		loadingMessage() {
+			return loadingState.message;
+		},
+	},
 	watch: {
 		networkOnline(newVal, oldVal) {
 			if (newVal && !oldVal) {
@@ -143,9 +133,9 @@ export default {
 	mounted() {
 		this.remove_frappe_nav();
 		// Initialize cache ready state early from stored value
-                this.cacheReady = isCacheReady();
-                initLoadingSources(["init", "items", "customers"]);
-                this.initializeData();
+		this.cacheReady = isCacheReady();
+		initLoadingSources(["init", "items", "customers"]);
+		this.initializeData();
 		this.setupNetworkListeners();
 		this.setupEventListeners();
 		this.handleRefreshCacheUsage();
@@ -158,16 +148,16 @@ export default {
 		checkFrappePing,
 		checkCurrentOrigin,
 		checkExternalConnectivity,
-                checkWebSocketConnectivity,
-        setPage(page) {
-                this.page = page;
-        },
+		checkWebSocketConnectivity,
+		setPage(page) {
+			this.page = page;
+		},
 
 		async initializeData() {
 			await initPromise;
 			await memoryInitPromise;
 			this.cacheReady = true;
-			checkDbHealth().catch(() => {});
+			checkDbHealth().catch(() => { });
 			// Load POS profile from cache or storage
 			const openingData = getOpeningStorage();
 			if (openingData && openingData.pos_profile) {
@@ -191,30 +181,30 @@ export default {
 						alert("Local cache nearing capacity. Consider going online to sync.");
 					}
 				})
-				.catch(() => {});
+				.catch(() => { });
 
 			// Check if running on IP host
 			this.isIpHost = /^\d+\.\d+\.\d+\.\d+/.test(window.location.hostname);
 
 			// Initialize manual offline state from cached value
-                        this.manualOffline = isManualOffline();
-                        if (this.manualOffline) {
-                                this.networkOnline = false;
-                                this.serverOnline = false;
-                                window.serverOnline = false;
-                        }
+			this.manualOffline = isManualOffline();
+			if (this.manualOffline) {
+				this.networkOnline = false;
+				this.serverOnline = false;
+				window.serverOnline = false;
+			}
 
-                        markSourceLoaded("init");
-                        
-                        // Fallback: if items/customers don't load within 10 seconds, mark them as loaded
-                        setTimeout(() => {
-                                if (loadingState.active) {
-                                        console.warn("Forcing items/customers to complete due to delay");
-                                        markSourceLoaded("items");
-                                        markSourceLoaded("customers");
-                                }
-                        }, 10000);
-                },
+			markSourceLoaded("init");
+
+			// Fallback: if items/customers don't load within 10 seconds, mark them as loaded
+			setTimeout(() => {
+				if (loadingState.active) {
+					console.warn("Forcing items/customers to complete due to delay");
+					markSourceLoaded("items");
+					markSourceLoaded("customers");
+				}
+			}, 10000);
+		},
 
 		setupEventListeners() {
 			// Listen for POS profile registration
@@ -231,12 +221,12 @@ export default {
 					this.lastInvoiceId = invoiceId;
 				});
 
-                                this.eventBus.on("data-loaded", (name) => {
-                                        markSourceLoaded(name);
-                                });
-                                this.eventBus.on("data-load-progress", ({ name, progress }) => {
-                                        setSourceProgress(name, progress);
-                                });
+				this.eventBus.on("data-loaded", (name) => {
+					markSourceLoaded(name);
+				});
+				this.eventBus.on("data-load-progress", ({ name, progress }) => {
+					setSourceProgress(name, progress);
+				});
 
 				// Allow other components to trigger printing
 				this.eventBus.on("print_last_invoice", () => {
@@ -435,7 +425,7 @@ export default {
 								m.setTaxInclusiveSetting(val);
 							}
 						})
-						.catch(() => {});
+						.catch(() => { });
 				}
 			} catch (e) {
 				console.warn("Failed to refresh tax inclusive setting", e);
@@ -499,6 +489,4 @@ export default {
 	min-height: 100%;
 	height: 100%;
 }
-
-
 </style>

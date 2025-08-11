@@ -1,5 +1,5 @@
 <template>
-	<nav>
+	<nav :class="rtlClasses">
 		<!-- Use the modular NavbarAppBar component -->
 		<NavbarAppBar
 			:pos-profile="posProfile"
@@ -95,7 +95,12 @@
 		/>
 
 		<!-- Snackbar for notifications -->
-		<v-snackbar v-model="snack" :timeout="snackTimeout" :color="snackColor" location="top right">
+		<v-snackbar 
+			v-model="snack" 
+			:timeout="snackTimeout" 
+			:color="snackColor" 
+			:location="isRtl ? 'top left' : 'top right'"
+		>
 			{{ snackText }}
 			<template v-slot:actions>
 				<v-btn color="white" variant="text" @click="snack = false">{{ __("Close") }}</v-btn>
@@ -117,9 +122,18 @@ import DatabaseUsageGadget from "./navbar/DatabaseUsageGadget.vue";
 import { forceClearAllCache } from "../../offline/cache.js";
 import { clearAllCaches } from "../../utils/clearAllCaches.js";
 import { isOffline } from "../../offline/index.js";
+import { useRtl } from "../composables/useRtl.js";
 
 export default {
 	name: "NavBar",
+	setup() {
+		const { isRtl, rtlStyles, rtlClasses } = useRtl();
+		return {
+			isRtl,
+			rtlStyles,
+			rtlClasses
+		};
+	},
 	components: {
 		NavbarAppBar,
 		NavbarDrawer,

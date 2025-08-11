@@ -1,5 +1,5 @@
 <template>
-	<div class="pos-main-container dynamic-container" :style="responsiveStyles">
+	<div class="pos-main-container dynamic-container" :class="rtlClasses" :style="[responsiveStyles, rtlStyles]">
 		<ClosingDialog></ClosingDialog>
 		<Drafts></Drafts>
 		<SalesOrders></SalesOrders>
@@ -9,15 +9,8 @@
 		<Variants></Variants>
 		<OpeningDialog v-if="dialog" :dialog="dialog"></OpeningDialog>
 		<v-row v-show="!dialog" dense class="ma-0 dynamic-main-row">
-			<v-col
-				v-show="!payment && !showOffers && !coupons"
-				xl="5"
-				lg="5"
-				md="5"
-				sm="5"
-				cols="12"
-				class="pos dynamic-col"
-			>
+			<v-col v-show="!payment && !showOffers && !coupons" xl="5" lg="5" md="5" sm="5" cols="12"
+				class="pos dynamic-col">
 				<ItemsSelector></ItemsSelector>
 			</v-col>
 			<v-col v-show="showOffers" xl="5" lg="5" md="5" sm="5" cols="12" class="pos dynamic-col">
@@ -65,18 +58,20 @@ import { useOffers } from "../../composables/useOffers.js";
 // Import the cache cleanup function
 import { clearExpiredCustomerBalances } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
+import { useRtl } from "../../composables/useRtl.js";
 
 export default {
 	setup() {
 		const instance = getCurrentInstance();
 		const responsive = useResponsive();
+		const rtl = useRtl();
 		const shift = usePosShift(() => {
 			if (instance && instance.proxy) {
 				instance.proxy.dialog = true;
 			}
 		});
 		const offers = useOffers();
-		return { ...responsive, ...shift, ...offers };
+		return { ...responsive, ...rtl, ...shift, ...offers };
 	},
 	data: function () {
 		return {

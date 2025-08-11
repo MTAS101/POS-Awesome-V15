@@ -1,5 +1,5 @@
 <template>
-	<div fluid>
+	<div fluid :class="rtlClasses">
 		<v-row v-show="!dialog">
 			<v-col md="8" cols="12" class="pb-2 pr-0">
 				<v-card
@@ -402,9 +402,18 @@ import {
 	getOfflineCustomers,
 } from "../../../offline/index.js";
 import { silentPrint } from "../../plugins/print.js";
+import { useRtl } from "../../composables/useRtl.js";
 
 export default {
 	mixins: [format],
+	setup() {
+		const { isRtl, rtlStyles, rtlClasses } = useRtl();
+		return {
+			isRtl,
+			rtlStyles,
+			rtlClasses
+		};
+	},
 	data: function () {
 		return {
 			dialog: false,
