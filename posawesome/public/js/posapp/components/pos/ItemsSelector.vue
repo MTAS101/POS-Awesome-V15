@@ -169,12 +169,16 @@
 											</v-text-field>
 										</v-card-text>
 										<v-card-actions class="pa-4 pt-0">
-											<v-btn color="error" variant="text" @click="cancelItemSettings"
-												>{{ __("Cancel") }}
+											<v-btn color="error" variant="text" @click="cancelItemSettings">{{
+												__("Cancel")
+											}}
 											</v-btn>
 											<v-spacer></v-spacer>
-											<v-btn color="primary" variant="tonal" @click="applyItemSettings"
-												>{{ __("Apply") }}
+											<v-btn
+												color="primary"
+												variant="tonal"
+												@click="applyItemSettings"
+											>{{ __("Apply") }}
 											</v-btn>
 										</v-card-actions>
 									</v-card>
@@ -388,7 +392,7 @@ import {
 	isOffline,
 	initializeStockCache,
 	searchStoredItems,
-	saveItemsBulk,
+	saveItems,
 	clearStoredItems,
 	getLocalStockCache,
 	setLocalStockCache,
@@ -1147,8 +1151,6 @@ export default {
 			const search = this.get_search(this.first_search);
 			const gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
 			const sr = search || "";
-			const request_token = ++this.items_request_token;
-			const limit = this.itemsPageLimit;
 
 			// Skip if already loading the same data
 			if (!force_server && this.items_loaded && this.items.length > 0) {
@@ -1169,22 +1171,21 @@ export default {
 						item_group: gr,
 						search_value: sr,
 						customer: vm.customer,
-						limit,
+						limit: 1000,
 						offset: 0,
 					},
 				});
 
 				const items = response.message || [];
-
+				
 				// Process items
-				items.forEach((item) => {
+				items.forEach(item => {
 					// Ensure UOMs
 					if (!item.item_uoms || item.item_uoms.length === 0) {
-						item.item_uoms = item.stock_uom
-							? [{ uom: item.stock_uom, conversion_factor: 1.0 }]
-							: [];
+						item.item_uoms = item.stock_uom ? 
+							[{ uom: item.stock_uom, conversion_factor: 1.0 }] : [];
 					}
-
+					
 					// Set default quantity
 					if (item.actual_qty === undefined) {
 						item.actual_qty = 0;
@@ -1192,28 +1193,9 @@ export default {
 				});
 
 				vm.items = items;
-				if (
-					vm.pos_profile &&
-					vm.pos_profile.posa_local_storage &&
-					vm.storageAvailable &&
-					!vm.pos_profile.pose_use_limit_search
-				) {
-					try {
-						await saveItemsBulk(items);
-					} catch (e) {
-						console.error(e);
-						vm.markStorageUnavailable();
-					}
-				}
+				vm.items_loaded = true;
 				vm.eventBus.emit("set_all_items", vm.items);
-				if (items.length === limit) {
-					const progress = Math.min(99, Math.round((items.length / (items.length + limit)) * 100));
-					vm.eventBus.emit("data-load-progress", { name: "items", progress });
-					await vm.backgroundLoadItems(limit, null, false, request_token, items.length);
-				} else {
-					vm.items_loaded = true;
-					vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-				}
+				vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 			} catch (error) {
 				console.error("Failed to load items:", error);
 				frappe.msgprint(__("Failed to load items. Please try again."));
@@ -2053,7 +2035,7 @@ export default {
 						this.searchCache.clear();
 					}
 
-					await saveItemsBulk(this.items);
+					await saveItems(this.items);
 					await savePriceListItems(this.customer_price_list, this.items);
 					this.eventBus.emit("set_all_items", this.items);
 					await this.update_items_details([newItem]);
@@ -2381,31 +2363,33 @@ export default {
 
 			// Apply search filter
 			if (searchTerm) {
-				filteredItems = filteredItems.filter((item) => {
-					const searchFields = [item.item_code, item.item_name, item.barcode, item.description]
-						.filter(Boolean)
-						.map((field) => field.toLowerCase());
-
-					return searchFields.some((field) => field.includes(searchTerm));
+				filteredItems = filteredItems.filter(item => {
+					const searchFields = [
+						item.item_code,
+						item.item_name,
+						item.barcode,
+						item.description
+					].filter(Boolean).map(field => field.toLowerCase());
+					
+					return searchFields.some(field => field.includes(searchTerm));
 				});
 			}
 
 			// Apply item group filter
 			if (this.item_group !== "ALL") {
-				filteredItems = filteredItems.filter(
-					(item) =>
-						item.item_group && item.item_group.toLowerCase() === this.item_group.toLowerCase(),
+				filteredItems = filteredItems.filter(item => 
+					item.item_group && item.item_group.toLowerCase() === this.item_group.toLowerCase()
 				);
 			}
 
 			// Apply zero rate filter
 			if (this.hide_zero_rate_items) {
-				filteredItems = filteredItems.filter((item) => parseFloat(item.rate || 0) > 0);
+				filteredItems = filteredItems.filter(item => parseFloat(item.rate || 0) > 0);
 			}
 
 			// Apply template/variant filter
 			if (this.pos_profile?.posa_show_template_items && this.pos_profile?.posa_hide_variants_items) {
-				filteredItems = filteredItems.filter((item) => !item.variant_of);
+				filteredItems = filteredItems.filter(item => !item.variant_of);
 			}
 
 			// Apply pagination
@@ -2413,7 +2397,7 @@ export default {
 			filteredItems = filteredItems.slice(0, limit);
 
 			// Ensure quantities are defined
-			filteredItems.forEach((item) => {
+			filteredItems.forEach(item => {
 				if (item.actual_qty === undefined || item.actual_qty === null) {
 					item.actual_qty = 0;
 				}
@@ -2456,7 +2440,7 @@ export default {
 
 	created() {
 		console.log("ItemsSelector created - starting initialization");
-
+		
 		// Setup search debounce
 		this.searchDebounce = _.debounce(() => {
 			this.get_items();
@@ -2537,12 +2521,33 @@ export default {
 			}
 		});
 
-		// Refresh item quantities when connection to server is restored
-		this.eventBus.on("server-online", async () => {
-			if (this.items && this.items.length > 0) {
-				await this.update_items_details(this.items);
+					// Refresh item quantities when connection to server is restored
+			this.eventBus.on("server-online", async () => {
+				if (this.items && this.items.length > 0) {
+					await this.update_items_details(this.items);
+				}
+			});
+
+			if (typeof Worker !== "undefined") {
+				try {
+					// Use the plain URL so the service worker can match the cached file
+					// even when offline. Using a query string causes cache lookups to fail
+					// which results in "Failed to fetch a worker script" errors.
+					const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+					this.itemWorker = new Worker(workerUrl, { type: "classic" });
+
+					this.itemWorker.onerror = function (event) {
+						console.error("Worker error:", event);
+						console.error("Message:", event.message);
+						console.error("Filename:", event.filename);
+						console.error("Line number:", event.lineno);
+					};
+					console.log("Created worker");
+				} catch (e) {
+					console.error("Failed to start item worker", e);
+					this.itemWorker = null;
+				}
 			}
-		});
 
 		if (typeof Worker !== "undefined") {
 			try {
