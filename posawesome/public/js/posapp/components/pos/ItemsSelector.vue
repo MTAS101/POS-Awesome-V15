@@ -1140,6 +1140,8 @@ export default {
 			const search = this.get_search(this.first_search);
 			const gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
 			const sr = search || "";
+			const request_token = ++this.items_request_token;
+			const limit = this.itemsPageLimit;
 
 			// Skip if already loading the same data
 			if (!force_server && this.items_loaded && this.items.length > 0) {
@@ -1160,7 +1162,7 @@ export default {
 						item_group: gr,
 						search_value: sr,
 						customer: vm.customer,
-						limit: 1000,
+						limit,
 						offset: 0,
 					},
 				});
@@ -1190,15 +1192,21 @@ export default {
 					!vm.pos_profile.pose_use_limit_search
 				) {
 					try {
-						await saveItemsBulk(vm.items);
+						await saveItemsBulk(items);
 					} catch (e) {
 						console.error(e);
 						vm.markStorageUnavailable();
 					}
 				}
-				vm.items_loaded = true;
 				vm.eventBus.emit("set_all_items", vm.items);
-				vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+				if (items.length === limit) {
+					const progress = Math.min(99, Math.round((items.length / (items.length + limit)) * 100));
+					vm.eventBus.emit("data-load-progress", { name: "items", progress });
+					await vm.backgroundLoadItems(limit, null, false, request_token, items.length);
+				} else {
+					vm.items_loaded = true;
+					vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+				}
 			} catch (error) {
 				console.error("Failed to load items:", error);
 				frappe.msgprint(__("Failed to load items. Please try again."));
@@ -1324,7 +1332,7 @@ export default {
 									await clearStoredItems();
 									clearBefore = false;
 								}
-								await saveItemsBulk(this.items);
+								await saveItemsBulk(rows);
 							} catch (e) {
 								console.error(e);
 								this.markStorageUnavailable();
