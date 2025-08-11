@@ -20,9 +20,7 @@
 				location="top"
 				color="info"
 			></v-progress-linear>
-			<v-overlay :model-value="loading" class="align-center justify-center" absolute>
-				<v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
-			</v-overlay>
+
 			<!-- Add dynamic-padding wrapper like Invoice component -->
 			<div class="dynamic-padding">
 				<div class="sticky-header">
@@ -1212,14 +1210,9 @@ export default {
 			const lastSync = syncSince;
 			if (this.itemWorker && this.storageAvailable) {
 				try {
-					const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-							"X-Frappe-CSRF-Token": frappe.csrf_token,
-						},
-						credentials: "same-origin",
-						body: JSON.stringify({
+					const res = await frappe.call({
+						method: "posawesome.posawesome.api.items.get_items",
+						args: {
 							pos_profile: JSON.stringify(this.pos_profile),
 							price_list: this.customer_price_list,
 							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
@@ -1228,9 +1221,10 @@ export default {
 							modified_after: lastSync,
 							limit,
 							offset,
-						}),
+						},
+						freeze: false,
 					});
-					const text = await res.text();
+					const text = JSON.stringify(res);
 					if (this.items_request_token !== requestToken) {
 						return;
 					}
