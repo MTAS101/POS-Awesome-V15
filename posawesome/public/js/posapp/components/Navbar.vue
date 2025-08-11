@@ -7,6 +7,7 @@
 			:is-dark="isDark"
 			:loading-progress="loadingProgress"
 			:loading-active="loadingActive"
+			:loading-message="loadingMessage"
 			@nav-click="handleNavClick"
 			@go-desk="goDesk"
 			@show-offline-invoices="showOfflineInvoices = true"
@@ -170,6 +171,10 @@ export default {
 		loadingActive: {
 			type: Boolean,
 			default: false,
+		},
+		loadingMessage: {
+			type: String,
+			default: 'Loading app data...',
 		},
 	},
 	data() {
