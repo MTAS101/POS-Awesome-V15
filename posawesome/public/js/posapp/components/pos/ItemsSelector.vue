@@ -10,7 +10,7 @@
 				maxHeight: responsiveStyles['--container-height'],
 				backgroundColor: isDarkTheme ? '#121212' : '',
 				resize: 'vertical',
-				overflow: items_view === 'card' ? 'hidden' : 'auto',
+				overflow: 'auto',
 			}"
 		>
 			<v-progress-linear
@@ -874,12 +874,19 @@ export default {
 				this.isOverflowing = false;
 				return;
 			}
-			const maxHeight = parseFloat(getComputedStyle(el).getPropertyValue("--container-height"));
-			if (isNaN(maxHeight)) {
+
+			const containerHeight = parseFloat(getComputedStyle(el).getPropertyValue("--container-height"));
+			if (isNaN(containerHeight)) {
 				this.isOverflowing = false;
 				return;
 			}
-			this.isOverflowing = el.scrollHeight > maxHeight;
+
+			const stickyHeader = el.closest(".dynamic-padding")?.querySelector(".sticky-header");
+			const headerHeight = stickyHeader ? stickyHeader.offsetHeight : 0;
+			const availableHeight = containerHeight - headerHeight;
+
+			el.style.maxHeight = `${availableHeight}px`;
+			this.isOverflowing = el.scrollHeight > availableHeight;
 		},
 
 		async fetchItemDetails(items) {
@@ -2676,11 +2683,10 @@ export default {
 
 .dynamic-scroll {
 	transition: max-height var(--transition-normal);
-	padding-bottom: var(--dynamic-xs);
+	padding-bottom: var(--dynamic-sm);
 }
 
 .item-container {
-	max-height: var(--container-height);
 	overflow-y: auto;
 	scrollbar-gutter: stable;
 }
