@@ -2,9 +2,18 @@
 	<v-row justify="center">
 		<v-dialog v-model="customerDialog" max-width="600px" persistent>
 			<v-card>
-				<v-card-title>
+				<v-card-title class="d-flex align-center">
 					<span v-if="customer_id" class="text-h5 text-primary">{{ __("Update Customer") }}</span>
 					<span v-else class="text-h5 text-primary">{{ __("Create Customer") }}</span>
+					<v-spacer></v-spacer>
+					<v-switch
+						v-model="hideNonEssential"
+						density="compact"
+						inset
+						hide-details
+						color="primary"
+						:label="__('Hide Non Essential Fields')"
+					></v-switch>
 				</v-card-title>
 				<v-card-text class="pa-0">
 					<v-container>
@@ -42,7 +51,7 @@
 									v-model="mobile_no"
 								></v-text-field>
 							</v-col>
-							<v-col cols="12">
+							<v-col cols="12" v-if="!hideNonEssential">
 								<v-text-field
 									density="compact"
 									color="primary"
@@ -54,7 +63,7 @@
 								></v-text-field>
 							</v-col>
 
-							<v-col cols="12" sm="6">
+							<v-col cols="12" sm="6" v-if="!hideNonEssential">
 								<v-text-field
 									v-model="city"
 									variant="outlined"
@@ -65,7 +74,7 @@
 								></v-text-field>
 							</v-col>
 
-							<v-col cols="12" sm="6">
+							<v-col cols="12" sm="6" v-if="!hideNonEssential">
 								<v-select
 									v-model="country"
 									:items="countries"
@@ -123,7 +132,7 @@
 									class="dark-field"
 								></v-text-field>
 							</v-col>
-							<v-col cols="6">
+							<v-col cols="6" v-if="!hideNonEssential">
 								<v-autocomplete
 									clearable
 									density="compact"
@@ -140,7 +149,7 @@
 								>
 								</v-autocomplete>
 							</v-col>
-							<v-col cols="6">
+							<v-col cols="6" v-if="!hideNonEssential">
 								<v-autocomplete
 									clearable
 									density="compact"
@@ -241,6 +250,7 @@ export default {
 		gender: "",
 		loyalty_points: null,
 		loyalty_program: null,
+		hideNonEssential: false,
 		countries: [
 			"Afghanistan",
 			"Australia",
@@ -282,6 +292,11 @@ export default {
 		],
 	}),
 	watch: {
+		hideNonEssential(val) {
+			if (typeof localStorage !== "undefined") {
+				localStorage.setItem("posawesome_hide_non_essential_fields", JSON.stringify(val));
+			}
+		},
 		birthday(newVal) {
 			// Check if the user has entered 8 digits without separators (e.g., 04111994)
 			if (newVal && /^\d{8}$/.test(newVal)) {
@@ -636,6 +651,12 @@ export default {
 		},
 	},
 	created: function () {
+		if (typeof localStorage !== "undefined") {
+			const saved = localStorage.getItem("posawesome_hide_non_essential_fields");
+			if (saved !== null) {
+				this.hideNonEssential = JSON.parse(saved);
+			}
+		}
 		this.eventBus.on("open_update_customer", (data) => {
 			this.customerDialog = true;
 
