@@ -117,7 +117,8 @@
 												variant="text"
 												density="compact"
 												@click="show_item_settings = false"
-											></v-btn>
+											>
+											</v-btn>
 										</v-card-title>
 										<v-divider></v-divider>
 										<v-card-text class="pa-4">
@@ -172,14 +173,15 @@
 										<v-card-actions class="pa-4 pt-0">
 											<v-btn color="error" variant="text" @click="cancelItemSettings">{{
 												__("Cancel")
-											}}</v-btn>
+											}}
+											</v-btn>
 											<v-spacer></v-spacer>
 											<v-btn
 												color="primary"
 												variant="tonal"
 												@click="applyItemSettings"
-												>{{ __("Apply") }}</v-btn
-											>
+												>{{ __("Apply") }}
+											</v-btn>
 										</v-card-actions>
 									</v-card>
 								</v-dialog>
@@ -257,13 +259,16 @@
 								</v-card-text>
 							</v-card>
 						</div>
-						<div v-else>
+						<div v-else class="items-table-container">
 							<v-data-table-virtual
 								:headers="headers"
 								:items="filtered_items"
 								class="sleek-data-table overflow-y-auto"
 								:style="{ height: 'calc(100% - 80px)' }"
 								item-key="item_code"
+								fixed-header
+								height="100%"
+								:header-props="headerProps"
 								@click:row="click_item_row"
 								@scroll.passive="onListScroll"
 							>
@@ -322,7 +327,7 @@
 						v-model="item_group"
 					></v-select>
 				</v-col>
-				<v-col cols="12" class="mb-2" v-if="pos_profile.posa_enable_price_list_dropdown">
+				<v-col cols="12" class="mb-2" v-if="pos_profile.posa_enable_price_list_dropdown !== false">
 					<v-text-field
 						density="compact"
 						variant="solo"
@@ -382,33 +387,33 @@ import format from "../../format";
 import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
-import {
-	saveItemUOMs,
-	getItemUOMs,
-	getLocalStock,
-	isOffline,
-	initializeStockCache,
-	searchStoredItems,
-	saveItems,
-	clearStoredItems,
-	getLocalStockCache,
-	setLocalStockCache,
-	initPromise,
-	memoryInitPromise,
-	checkDbHealth,
-	getCachedPriceListItems,
-	savePriceListItems,
-	clearPriceListCache,
-	updateLocalStockCache,
-	isStockCacheReady,
-	getCachedItemDetails,
-	saveItemDetailsCache,
-	saveItemGroups,
-	getCachedItemGroups,
-	getItemsLastSync,
-	setItemsLastSync,
-	forceClearAllCache,
-} from "../../../offline/index.js";
+	import {
+		saveItemUOMs,
+		getItemUOMs,
+		getLocalStock,
+		isOffline,
+		initializeStockCache,
+		searchStoredItems,
+		saveItems,
+		clearStoredItems,
+		getLocalStockCache,
+		setLocalStockCache,
+		initPromise,
+		memoryInitPromise,
+		checkDbHealth,
+		getCachedPriceListItems,
+		savePriceListItems,
+		clearPriceListCache,
+		updateLocalStockCache,
+		isStockCacheReady,
+		getCachedItemDetails,
+		saveItemDetailsCache,
+		saveItemGroups,
+		getCachedItemGroups,
+		getItemsLastSync,
+		setItemsLastSync,
+		forceClearAllCache,
+	} from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 
 export default {
@@ -467,6 +472,16 @@ export default {
 		items_per_page: 50,
 		temp_items_per_page: 50,
 		temp_force_server_items: false,
+		// Performance optimizations
+		searchCache: new Map(),
+		itemCache: new Map(),
+		virtualScrollEnabled: true,
+		renderBuffer: 10,
+		lastScrollTop: 0,
+		scrollThrottle: null,
+		searchDebounce: null,
+		// Prevent repeated server fetches when local storage is empty
+		fallbackAttempted: false,
 		// Fixed page size for incremental item loading to avoid
 		// pulling the entire catalog at once.
 		itemsPageLimit: 100,
@@ -659,6 +674,101 @@ export default {
 	},
 
 	methods: {
+		// Performance optimization: Memoized search function
+		memoizedSearch(searchTerm, itemGroup) {
+			const cacheKey = `${searchTerm || ""}_${itemGroup || "ALL"}`;
+
+			// Check if we have a cached result
+			if (this.searchCache && this.searchCache.has(cacheKey)) {
+				const cachedResult = this.searchCache.get(cacheKey);
+				return cachedResult;
+			}
+
+			// Perform the search
+			const result = this.performSearch(searchTerm, itemGroup);
+
+			// Cache the result
+			if (this.searchCache) {
+				this.searchCache.set(cacheKey, result);
+			}
+
+			return result;
+		},
+
+		performSearch(searchTerm, itemGroup) {
+			if (!this.items || !this.items.length) {
+				return [];
+			}
+
+			let filtered = this.items;
+
+			// Filter by item group
+			if (itemGroup !== "ALL") {
+				filtered = filtered.filter(
+					(item) =>
+						item.item_group && item.item_group.toLowerCase().includes(itemGroup.toLowerCase()),
+				);
+			}
+
+			// Filter by search term only if it exists and is long enough
+			if (searchTerm && searchTerm.trim() && searchTerm.trim().length >= 3) {
+				const term = searchTerm.toLowerCase();
+				filtered = filtered.filter(
+					(item) =>
+						item.item_code.toLowerCase().includes(term) ||
+						item.item_name.toLowerCase().includes(term) ||
+						(item.item_barcode && item.item_barcode.some((b) => b.barcode === searchTerm)),
+				);
+			}
+
+			return filtered;
+		},
+
+		async fetchServerItemsTimestamp() {
+			try {
+				const { message } = await frappe.call({
+					method: "frappe.client.get_list",
+					args: {
+						doctype: "Item",
+						fields: ["modified"],
+						order_by: "modified desc",
+						limit_page_length: 1,
+					},
+				});
+				return message && message[0] && message[0].modified;
+			} catch (e) {
+				console.error("Failed to fetch server items timestamp", e);
+				return null;
+			}
+		},
+
+		// Optimized scroll handler with throttling
+		onCardScroll() {
+			if (this.scrollThrottle) return;
+
+			this.scrollThrottle = requestAnimationFrame(() => {
+				try {
+					const el = this.$refs.itemsContainer;
+					if (!el) return;
+
+					const scrollTop = el.scrollTop;
+					const clientHeight = el.clientHeight;
+					const scrollHeight = el.scrollHeight;
+
+					// Only trigger load more if we're near the bottom
+					if (scrollTop + clientHeight >= scrollHeight - 50) {
+						this.currentPage += 1;
+						this.loadVisibleItems();
+					}
+
+					this.lastScrollTop = scrollTop;
+				} catch (error) {
+					console.error("Error in card scroll handler:", error);
+				} finally {
+					this.scrollThrottle = null;
+				}
+			});
+		},
 		markStorageUnavailable(localOnly = false) {
 			if (localOnly) {
 				this.localStorageAvailable = false;
@@ -747,20 +857,22 @@ export default {
 			this.eventBus.emit("set_all_items", this.items);
 			if (pageItems.length) this.update_items_details(pageItems);
 		},
-		onCardScroll() {
-			const el = this.$refs.itemsContainer;
-			if (!el) return;
-			if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
-				this.currentPage += 1;
-				this.loadVisibleItems();
-			}
-		},
 		onListScroll(event) {
-			const el = event.target;
-			if (el.scrollTop + el.clientHeight >= el.scrollHeight - 10) {
-				this.currentPage += 1;
-				this.loadVisibleItems();
-			}
+			if (this.scrollThrottle) return;
+
+			this.scrollThrottle = requestAnimationFrame(() => {
+				try {
+					const el = event.target;
+					if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
+						this.currentPage += 1;
+						this.loadVisibleItems();
+					}
+				} catch (error) {
+					console.error("Error in list scroll handler:", error);
+				} finally {
+					this.scrollThrottle = null;
+				}
+			});
 		},
 		checkItemContainerOverflow() {
 			const el = this.$refs.itemsContainer;
@@ -937,6 +1049,71 @@ export default {
 		show_coupons() {
 			this.eventBus.emit("show_coupons", "true");
 		},
+		async forceLoadItems() {
+			console.log("🚀 forceLoadItems called");
+			try {
+				// Ensure POS profile is available
+				if (!this.pos_profile) {
+					const profile = await ensurePosProfile();
+					if (profile) {
+						this.pos_profile = profile;
+					} else {
+						console.error("❌ Failed to get POS profile");
+						return;
+					}
+				}
+
+				// Go directly to API call for simplicity
+				console.log("🌐 Making direct API call to load items");
+				const requestBody = {
+					pos_profile: JSON.stringify(this.pos_profile),
+					price_list: this.customer_price_list || this.pos_profile.selling_price_list,
+					item_group: "",
+					search_value: "",
+					customer: this.customer,
+					limit: 50,
+					offset: 0,
+				};
+				frappe.dom.freeze();
+				frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: requestBody,
+					callback: (res) => {
+						frappe.dom.unfreeze();
+						if (!res.exc && Array.isArray(res.message)) {
+							this.items = res.message;
+							console.log("✅ Items loaded successfully:", this.items.length, "items");
+
+							// Set default quantities immediately for instant display
+							this.items.forEach((item) => {
+								item.actual_qty = 0; // Set default quantity
+							});
+
+							// Clear search cache when new items are loaded
+							if (this.searchCache) {
+								this.searchCache.clear();
+							}
+
+							this.eventBus.emit("set_all_items", this.items);
+
+							// Force a reactive update immediately
+							this.$nextTick(() => {
+								this.$forceUpdate();
+							});
+
+							// Load quantities in background (non-blocking)
+							setTimeout(() => {
+								this.update_items_details(this.items);
+							}, 100);
+						} else {
+							console.error("❌ Invalid response format");
+						}
+					},
+				});
+			} catch (error) {
+				console.error("❌ Error in forceLoadItems:", error.message);
+			}
+		},
 		async forceReloadItems() {
 			// Clear cached price list items so the reload always
 			// fetches the latest data from the server
@@ -946,395 +1123,80 @@ export default {
 			await this.get_items(true);
 		},
 		async get_items(force_server = false) {
-			await initPromise;
-			await this.ensureStorageHealth();
-			const vm = this;
-
-			const search = this.get_search(this.first_search);
-			const gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
-			const sr = search || "";
-			const key = JSON.stringify({
-				gr,
-				sr,
-				price_list: vm.customer_price_list,
-				customer: vm.customer,
-			});
-
-			if (!force_server) {
-				if (this.pendingGetItems && this.pendingGetItems.key === key) {
-					return this.pendingGetItems.promise;
-				}
-				if (this.items_loaded && this.lastGetItemsKey === key) {
-					this.loading = false;
-					if (this.filtered_items && this.filtered_items.length > 0) {
-						this.update_items_details(this.filtered_items);
+			// Ensure POS profile is available
+			if (!this.pos_profile || !this.pos_profile.name) {
+				console.warn("No POS Profile available, attempting to get it...");
+				// Try to get the current POS profile
+				try {
+					if (frappe.boot && frappe.boot.default_pos_profile) {
+						this.pos_profile = frappe.boot.default_pos_profile;
+					} else {
+						// If still no profile, show error and return
+						console.error("No POS Profile configured");
+						frappe.msgprint(__("Please configure a POS Profile first"));
+						return;
 					}
+				} catch (error) {
+					console.error("Failed to get POS Profile:", error);
 					return;
 				}
 			}
 
-			this.lastGetItemsKey = key;
-			const request_token = ++this.items_request_token;
-			if (!this.pos_profile) {
-				console.error("No POS Profile");
+			const vm = this;
+			const search = this.get_search(this.first_search);
+			const gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
+			const sr = search || "";
+
+			// Skip if already loading the same data
+			if (!force_server && this.items_loaded && this.items.length > 0) {
+				this.loading = false;
 				return;
 			}
 
-			const shouldClear =
-				force_server && this.pos_profile.posa_local_storage && this.storageAvailable && !isOffline();
-			let cleared = false;
-
 			this.loading = true;
-			const syncSince = getItemsLastSync();
 			this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
 
-			const promise = (async () => {
-				// Attempt to load cached items for the current price list
-				if (
-					!force_server &&
-					this.pos_profile &&
-					this.pos_profile.posa_local_storage &&
-					this.storageAvailable &&
-					!this.pos_profile.pose_use_limit_search
-				) {
-					try {
-						const cached = await getCachedPriceListItems(vm.customer_price_list);
-						if (cached && cached.length) {
-							vm.items = cached;
-							vm.items.forEach((it) => {
-								if (!it.item_uoms || it.item_uoms.length === 0) {
-									const cachedUoms = getItemUOMs(it.item_code);
-									if (cachedUoms.length > 0) {
-										it.item_uoms = cachedUoms;
-									} else if (it.stock_uom) {
-										it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
-									}
-								}
-							});
-							this.eventBus.emit("set_all_items", vm.items);
-							vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-							vm.loading = false;
-							vm.items_loaded = true;
-
-							if (vm.items && vm.items.length > 0) {
-								if (vm.items.length <= 500) {
-									vm.prePopulateStockCache(vm.items);
-								}
-								vm.update_items_details(vm.items);
-							}
-							return;
-						}
-					} catch (e) {
-						console.warn("Failed to read cached price list items", e);
-						this.markStorageUnavailable();
-					}
-				}
-
-				// Load from localStorage when available and not forcing
-				if (
-					vm.pos_profile &&
-					vm.pos_profile.posa_local_storage &&
-					this.storageAvailable &&
-					!vm.pos_profile.pose_use_limit_search &&
-					!force_server
-				) {
-					try {
-						const stored = await searchStoredItems({
-							search: sr,
-							itemGroup: gr,
-							limit: this.itemsPageLimit,
-						});
-						if (stored.length) {
-							vm.items = stored;
-							// Fallback to cached UOMs when loading from storage
-							vm.items.forEach((it) => {
-								if (!it.item_uoms || it.item_uoms.length === 0) {
-									const cached = getItemUOMs(it.item_code);
-									if (cached.length > 0) {
-										it.item_uoms = cached;
-									} else if (it.stock_uom) {
-										it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
-									}
-								}
-							});
-							this.eventBus.emit("set_all_items", vm.items);
-							vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-							vm.loading = false;
-							vm.items_loaded = true;
-
-							if (vm.items && vm.items.length > 0) {
-								if (vm.items.length <= 500) {
-									await vm.prePopulateStockCache(vm.items);
-								}
-								vm.update_items_details(vm.items);
-							}
-							return;
-						}
-					} catch (e) {
-						console.warn("Failed to access stored items", e);
-						this.markStorageUnavailable();
-					}
-				}
-				// Removed noisy debug log
-
-				if (this.itemWorker && this.storageAvailable && !this.pos_profile.posa_force_server_items) {
-					try {
-						const res = await fetch("/api/method/posawesome.posawesome.api.items.get_items", {
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-								"X-Frappe-CSRF-Token": frappe.csrf_token,
-							},
-							credentials: "same-origin",
-							body: JSON.stringify({
-								pos_profile: JSON.stringify(vm.pos_profile),
-								price_list: vm.customer_price_list,
-								item_group: gr,
-								search_value: sr,
-								customer: vm.customer,
-								modified_after: syncSince,
-								limit: this.itemsPageLimit,
-								offset: 0,
-							}),
-						});
-
-						const text = await res.text();
-						// console.log(text)
-						this.itemWorker.onmessage = async (ev) => {
-							if (this.items_request_token !== request_token) return;
-							if (ev.data.type === "parsed") {
-								const parsed = ev.data.items;
-								const newItems = parsed.message || parsed;
-								if (syncSince && vm.items && vm.items.length) {
-									const map = new Map(vm.items.map((it) => [it.item_code, it]));
-									newItems.forEach((it) => map.set(it.item_code, it));
-									vm.items = Array.from(map.values());
-								} else {
-									vm.items = newItems;
-								}
-								// Ensure UOMs are available for each item
-								vm.items.forEach((it) => {
-									if (it.item_uoms && it.item_uoms.length > 0) {
-										saveItemUOMs(it.item_code, it.item_uoms);
-									} else {
-										const cached = getItemUOMs(it.item_code);
-										if (cached.length > 0) {
-											it.item_uoms = cached;
-										} else if (it.stock_uom) {
-											it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
-										}
-									}
-								});
-								vm.eventBus.emit("set_all_items", vm.items);
-								const progress = Math.min(
-									99,
-									Math.round(
-										(vm.items.length / (vm.items.length + vm.itemsPageLimit)) * 100,
-									),
-								);
-								vm.eventBus.emit("data-load-progress", { name: "items", progress });
-								if (newItems.length === this.itemsPageLimit) {
-									// Mirror worker path: load more items from the server when the page limit is reached
-									this.backgroundLoadItems(
-										this.itemsPageLimit,
-										syncSince,
-										shouldClear,
-										request_token,
-										vm.items.length,
-									);
-								} else {
-									if (this.storageAvailable && this.localStorageAvailable) {
-										setItemsLastSync(new Date().toISOString());
-									}
-									if (vm.itemWorker) {
-										vm.itemWorker.terminate();
-										vm.itemWorker = null;
-									}
-									vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-									vm.items_loaded = true;
-								}
-								vm.loading = false;
-								console.info("Items Loaded");
-
-								const groups = Array.from(
-									new Set(
-										vm.items
-											.map((it) => it.item_group)
-											.filter((g) => g && g !== "All Item Groups"),
-									),
-								);
-								saveItemGroups(groups);
-
-								// Pre-populate stock cache when items are freshly loaded
-								if (vm.items.length <= 500) {
-									vm.prePopulateStockCache(vm.items);
-								}
-
-								vm.$nextTick(() => {
-									if (
-										vm.search &&
-										vm.pos_profile &&
-										!vm.pos_profile.pose_use_limit_search
-									) {
-										vm.search_onchange();
-									}
-								});
-
-								// Always refresh quantities after items are loaded
-								if (vm.items && vm.items.length > 0) {
-									vm.update_items_details(vm.items);
-								}
-								if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
-									vm.enter_event();
-								}
-							} else if (ev.data.type === "error") {
-								console.error("Item worker parse error:", ev.data.error);
-								vm.loading = false;
-							}
-						};
-						this.itemWorker.postMessage({
-							type: "parse_and_cache",
-							json: text,
-							priceList: vm.customer_price_list || "",
-						});
-					} catch (err) {
-						console.error("Failed to fetch items", err);
-						this.markStorageUnavailable();
-						vm.loading = false;
-					}
-				} else {
-					try {
-						const r = await frappe.call({
-							method: "posawesome.posawesome.api.items.get_items",
-							args: {
-								pos_profile: JSON.stringify(vm.pos_profile),
-								price_list: vm.customer_price_list,
-								item_group: gr,
-								search_value: sr,
-								customer: vm.customer,
-								modified_after: syncSince,
-								limit: vm.itemsPageLimit,
-								offset: 0,
-							},
-						});
-						if (vm.items_request_token !== request_token) return;
-						const newItems = r.message || [];
-						if (syncSince && vm.items && vm.items.length) {
-							const map = new Map(vm.items.map((it) => [it.item_code, it]));
-							newItems.forEach((it) => map.set(it.item_code, it));
-							vm.items = Array.from(map.values());
-						} else {
-							vm.items = newItems;
-						}
-						// Ensure UOMs are available for each item
-						vm.items.forEach((it) => {
-							if (it.item_uoms && it.item_uoms.length > 0) {
-								saveItemUOMs(it.item_code, it.item_uoms);
-							} else {
-								const cached = getItemUOMs(it.item_code);
-								if (cached.length > 0) {
-									it.item_uoms = cached;
-								} else if (it.stock_uom) {
-									it.item_uoms = [{ uom: it.stock_uom, conversion_factor: 1.0 }];
-								}
-							}
-						});
-						vm.eventBus.emit("set_all_items", vm.items);
-						const progress = Math.min(
-							99,
-							Math.round((vm.items.length / (vm.items.length + vm.itemsPageLimit)) * 100),
-						);
-						vm.eventBus.emit("data-load-progress", { name: "items", progress });
-						if (newItems.length === this.itemsPageLimit) {
-							this.backgroundLoadItems(
-								this.itemsPageLimit,
-								syncSince,
-								shouldClear,
-								request_token,
-								vm.items.length,
-							);
-						} else {
-							if (this.storageAvailable && this.localStorageAvailable) {
-								setItemsLastSync(new Date().toISOString());
-							}
-							vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-							vm.items_loaded = true;
-						}
-						if (this.storageAvailable) {
-							try {
-								await savePriceListItems(vm.customer_price_list, vm.items);
-							} catch (e) {
-								console.error(e);
-								this.markStorageUnavailable();
-							}
-						}
-						console.info("Items Loaded");
-
-						const groups = Array.from(
-							new Set(
-								vm.items
-									.map((it) => it.item_group)
-									.filter((g) => g && g !== "All Item Groups"),
-							),
-						);
-						saveItemGroups(groups);
-
-						// Pre-populate stock cache when items are freshly loaded
-						if (vm.items.length <= 500) {
-							vm.prePopulateStockCache(vm.items);
-						}
-
-						vm.$nextTick(() => {
-							if (vm.search && vm.pos_profile && !vm.pos_profile.pose_use_limit_search) {
-								vm.search_onchange();
-							}
-						});
-
-						// Always refresh quantities after items are loaded
-						if (vm.items && vm.items.length > 0) {
-							vm.update_items_details(vm.items);
-						}
-
-						if (
-							vm.pos_profile &&
-							vm.pos_profile.posa_local_storage &&
-							this.storageAvailable &&
-							!vm.pos_profile.pose_use_limit_search
-						) {
-							try {
-								if (shouldClear && !cleared) {
-									await clearStoredItems();
-									cleared = true;
-								}
-								await saveItems(vm.items);
-								vm.items.forEach((it) => {
-									if (it.item_uoms && it.item_uoms.length > 0) {
-										saveItemUOMs(it.item_code, it.item_uoms);
-									}
-								});
-							} catch (e) {
-								console.error(e);
-								this.markStorageUnavailable();
-							}
-						}
-						if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
-							vm.enter_event();
-						}
-					} catch (err) {
-						console.error("Failed to fetch items", err);
-					} finally {
-						vm.loading = false;
-					}
-				}
-			})();
-
-			this.pendingGetItems = { key, promise };
 			try {
-				await promise;
+				// Simple API call to get items
+				const response = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: {
+						pos_profile: JSON.stringify(vm.pos_profile),
+						price_list: vm.customer_price_list,
+						item_group: gr,
+						search_value: sr,
+						customer: vm.customer,
+						limit: 1000,
+						offset: 0,
+					},
+				});
+
+				const items = response.message || [];
+				
+				// Process items
+				items.forEach(item => {
+					// Ensure UOMs
+					if (!item.item_uoms || item.item_uoms.length === 0) {
+						item.item_uoms = item.stock_uom ? 
+							[{ uom: item.stock_uom, conversion_factor: 1.0 }] : [];
+					}
+					
+					// Set default quantity
+					if (item.actual_qty === undefined) {
+						item.actual_qty = 0;
+					}
+				});
+
+				vm.items = items;
+				vm.items_loaded = true;
+				vm.eventBus.emit("set_all_items", vm.items);
+				vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+				
+			} catch (error) {
+				console.error("Failed to load items:", error);
+				frappe.msgprint(__("Failed to load items. Please try again."));
 			} finally {
-				if (this.pendingGetItems && this.pendingGetItems.key === key) {
-					this.pendingGetItems = null;
-				}
+				vm.loading = false;
 			}
 		},
 		async backgroundLoadItems(offset, syncSince, clearBefore = false, requestToken, loaded = offset) {
@@ -2139,7 +2001,7 @@ export default {
 				this.processScannedItem(scannedCode);
 			}, 300);
 		},
-		processScannedItem(scannedCode) {
+		async processScannedItem(scannedCode) {
 			// First try to find exact match by barcode
 			let foundItem = this.items.find(
 				(item) =>
@@ -2154,18 +2016,51 @@ export default {
 				return;
 			}
 
-			// If no exact match, try partial search
-			const searchResults = this.searchItemsByCode(scannedCode);
+			// If not found locally, attempt to fetch from server by barcode
+			try {
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_items_from_barcode",
+					args: {
+						selling_price_list: this.active_price_list,
+						currency: this.pos_profile.currency,
+						barcode: scannedCode,
+					},
+				});
 
-			if (searchResults.length === 1) {
-				console.log("Found item by search:", searchResults[0]);
-				this.addScannedItemToInvoice(searchResults[0], scannedCode);
-			} else if (searchResults.length > 1) {
-				// Multiple matches - show selection dialog
-				this.showMultipleItemsDialog(searchResults, scannedCode);
-			} else {
-				// No matches found
-				this.handleItemNotFound(scannedCode);
+				if (res && res.message) {
+					const newItem = res.message;
+					this.items.push(newItem);
+
+					if (this.searchCache) {
+						this.searchCache.clear();
+					}
+
+					await saveItems(this.items);
+					await savePriceListItems(this.customer_price_list, this.items);
+					this.eventBus.emit("set_all_items", this.items);
+					await this.update_items_details([newItem]);
+					this.addScannedItemToInvoice(newItem, scannedCode);
+					return;
+				}
+
+				frappe.show_alert(
+					{
+						message: `Item not found: ${scannedCode}`,
+						indicator: "red",
+					},
+					5,
+				);
+				return;
+			} catch (e) {
+				console.error("Error fetching item from barcode:", e);
+				frappe.show_alert(
+					{
+						message: `Item not found: ${scannedCode}`,
+						indicator: "red",
+					},
+					5,
+				);
+				return;
 			}
 		},
 		searchItemsByCode(code) {
@@ -2324,6 +2219,38 @@ export default {
 			return !Number.isInteger(value);
 		},
 
+		// Force load quantities for all visible items
+		forceLoadQuantities() {
+			if (this.filtered_items && this.filtered_items.length > 0) {
+				// Set default quantities if not available
+				this.filtered_items.forEach((item) => {
+					if (item.actual_qty === undefined || item.actual_qty === null) {
+						item.actual_qty = 0;
+					}
+				});
+				// Force update quantities from server
+				this.update_items_details(this.filtered_items);
+			}
+		},
+
+		// Ensure all items have quantities set
+		ensureAllItemsHaveQuantities() {
+			if (this.items && this.items.length > 0) {
+				this.items.forEach((item) => {
+					if (item.actual_qty === undefined || item.actual_qty === null) {
+						item.actual_qty = 0;
+					}
+				});
+			}
+			if (this.filtered_items && this.filtered_items.length > 0) {
+				this.filtered_items.forEach((item) => {
+					if (item.actual_qty === undefined || item.actual_qty === null) {
+						item.actual_qty = 0;
+					}
+				});
+			}
+		},
+
 		toggleItemSettings() {
 			this.temp_hide_qty_decimals = this.hide_qty_decimals;
 			this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
@@ -2427,120 +2354,56 @@ export default {
 			return this.getItemsHeaders();
 		},
 		filtered_items() {
-			const searchValue = this.get_search(this.first_search);
-			this.search = searchValue ? searchValue.trim() : searchValue;
-			if (!this.pos_profile || !this.pos_profile.pose_use_limit_search) {
-				let filtred_list = [];
-				let filtred_group_list = [];
-				if (this.item_group != "ALL") {
-					filtred_group_list = this.items.filter((item) =>
-						item.item_group.toLowerCase().includes(this.item_group.toLowerCase()),
-					);
-				} else {
-					filtred_group_list = this.items;
-				}
-				if (!this.search || this.search.length < 3) {
-					let filtered = [];
-					if (
-						this.pos_profile.posa_show_template_items &&
-						this.pos_profile.posa_hide_variants_items
-					) {
-						filtered = filtred_group_list
-							.filter((item) => !item.variant_of)
-							.slice(0, this.itemsPerPage);
-					} else {
-						filtered = filtred_group_list.slice(0, this.itemsPerPage);
-					}
-
-					if (this.hide_zero_rate_items) {
-						filtered = filtered.filter((item) => parseFloat(item.rate) !== 0);
-					}
-
-					// Ensure quantities are defined
-					filtered.forEach((item) => {
-						if (item.actual_qty === undefined) {
-							item.actual_qty = 0;
-						}
-					});
-
-					return filtered;
-				} else if (this.search) {
-					const term = this.search.toLowerCase();
-					// Match barcode directly
-					filtred_list = filtred_group_list.filter((item) =>
-						item.item_barcode.some((b) => b.barcode === this.search),
-					);
-
-					if (filtred_list.length === 0) {
-						// Match by code or name containing the term
-						filtred_list = filtred_group_list.filter(
-							(item) =>
-								item.item_code.toLowerCase().includes(term) ||
-								item.item_name.toLowerCase().includes(term),
-						);
-					}
-
-					if (filtred_list.length === 0) {
-						// Fallback to partial fuzzy match on name
-						const search_combinations = this.generateWordCombinations(this.search);
-						filtred_list = filtred_group_list.filter((item) => {
-							const nameLower = item.item_name.toLowerCase();
-							return search_combinations.some((element) => {
-								element = element.toLowerCase().trim();
-								const element_regex = new RegExp(`.*${element.split("").join(".*")}.*`);
-								return element_regex.test(nameLower);
-							});
-						});
-					}
-
-					// serial or batch number searches rely on server side lookups now
-				}
-
-				let final_filtered_list = [];
-				if (this.pos_profile.posa_show_template_items && this.pos_profile.posa_hide_variants_items) {
-					final_filtered_list = filtred_list.filter((item) => !item.variant_of);
-				} else {
-					final_filtered_list = filtred_list;
-				}
-
-				// When searching, show all matching items. Otherwise, restrict to the configured page size.
-				if (!this.search) {
-					final_filtered_list = final_filtered_list.slice(0, this.itemsPerPage);
-				}
-
-				if (this.hide_zero_rate_items) {
-					final_filtered_list = final_filtered_list.filter((item) => parseFloat(item.rate) !== 0);
-				}
-
-				// Ensure quantities are defined for each item
-				final_filtered_list.forEach((item) => {
-					if (item.actual_qty === undefined) {
-						item.actual_qty = 0;
-					}
-				});
-
-				// Item details will be refreshed via watchers when the filtered
-				// list length changes. Removing the automatic call here prevents
-				// redundant requests each time this computed property re-evaluates.
-
-				return final_filtered_list;
-			} else {
-				const items_list = this.search ? this.items : this.items.slice(0, this.itemsPerPage);
-
-				// Ensure quantities are defined
-				items_list.forEach((item) => {
-					if (item.actual_qty === undefined) {
-						item.actual_qty = 0;
-					}
-				});
-
-				let final_list = items_list;
-				if (this.hide_zero_rate_items) {
-					final_list = final_list.filter((item) => parseFloat(item.rate) !== 0);
-				}
-
-				return final_list;
+			if (!this.items || this.items.length === 0) {
+				return [];
 			}
+
+			const searchTerm = this.get_search(this.first_search).trim().toLowerCase();
+			let filteredItems = [...this.items];
+
+			// Apply search filter
+			if (searchTerm) {
+				filteredItems = filteredItems.filter(item => {
+					const searchFields = [
+						item.item_code,
+						item.item_name,
+						item.barcode,
+						item.description
+					].filter(Boolean).map(field => field.toLowerCase());
+					
+					return searchFields.some(field => field.includes(searchTerm));
+				});
+			}
+
+			// Apply item group filter
+			if (this.item_group !== "ALL") {
+				filteredItems = filteredItems.filter(item => 
+					item.item_group && item.item_group.toLowerCase() === this.item_group.toLowerCase()
+				);
+			}
+
+			// Apply zero rate filter
+			if (this.hide_zero_rate_items) {
+				filteredItems = filteredItems.filter(item => parseFloat(item.rate || 0) > 0);
+			}
+
+			// Apply template/variant filter
+			if (this.pos_profile?.posa_show_template_items && this.pos_profile?.posa_hide_variants_items) {
+				filteredItems = filteredItems.filter(item => !item.variant_of);
+			}
+
+			// Apply pagination
+			const limit = this.enable_custom_items_per_page ? this.items_per_page : this.itemsPerPage;
+			filteredItems = filteredItems.slice(0, limit);
+
+			// Ensure quantities are defined
+			filteredItems.forEach(item => {
+				if (item.actual_qty === undefined || item.actual_qty === null) {
+					item.actual_qty = 0;
+				}
+			});
+
+			return filteredItems;
 		},
 		debounce_search: {
 			get() {
@@ -2575,51 +2438,50 @@ export default {
 		},
 	},
 
-	created() {
-		this.ensureStorageHealth();
+			created() {
+			console.log("ItemsSelector created - starting initialization");
+			
+			// Setup search debounce
+			this.searchDebounce = _.debounce(() => {
+				this.get_items();
+			}, 300);
 
-		memoryInitPromise.then(async () => {
-			const profile = await ensurePosProfile();
-			if (profile) {
-				this.pos_profile = profile;
-				// Load items in small pages to avoid huge payloads
-				await this.ensureStorageHealth();
-				this.itemsPageLimit = this.storageAvailable && this.itemWorker ? 100 : null;
-				if (profile.posa_local_storage && this.storageAvailable) {
-					this.loadVisibleItems(true);
-				} else {
-					await forceClearAllCache();
-					await this.get_items(true);
+			// Load settings
+			this.loadItemSettings();
+
+			// Initialize after memory is ready
+			memoryInitPromise.then(async () => {
+				try {
+					// Ensure POS profile is available
+					if (!this.pos_profile || !this.pos_profile.name) {
+						// Try to get POS profile from boot or current route
+						if (frappe.boot && frappe.boot.default_pos_profile) {
+							this.pos_profile = frappe.boot.default_pos_profile;
+						} else if (frappe.router && frappe.router.current_route) {
+							// Get from current route context
+							const route_context = frappe.router.current_route;
+							if (route_context.pos_profile) {
+								this.pos_profile = route_context.pos_profile;
+							}
+						}
+					}
+
+					// Load initial items if we have a profile
+					if (this.pos_profile && this.pos_profile.name) {
+						console.log("Loading items with POS Profile:", this.pos_profile.name);
+						await this.get_items();
+					} else {
+						console.warn("No POS Profile available during initialization");
+					}
+				} catch (error) {
+					console.error("Error during initialization:", error);
 				}
-			}
-		});
+			});
 
-		this.loadItemSettings();
-		this.$nextTick(function () {});
-		this.eventBus.on("register_pos_profile", async (data) => {
-			await initPromise;
-			await memoryInitPromise;
+		// Event listeners
+		this.eventBus.on("register_pos_profile", (data) => {
 			this.pos_profile = data.pos_profile;
-			// Use a fixed page size to gradually load items
-			await this.ensureStorageHealth();
-			this.itemsPageLimit = this.storageAvailable && this.itemWorker ? 100 : null;
-			if (!this.pos_profile.posa_local_storage || !this.storageAvailable) {
-				if (this.itemWorker) {
-					this.itemWorker.terminate();
-					this.itemWorker = null;
-				}
-				await forceClearAllCache();
-				await this.get_items(true);
-			} else if (this.pos_profile.posa_force_reload_items && !this.pos_profile.posa_smart_reload_mode) {
-				if (!isOffline()) {
-					await this.get_items(true);
-				} else {
-					await this.get_items();
-				}
-			} else {
-				await this.get_items();
-			}
-			this.get_items_groups();
+			this.get_items();
 			this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
 		});
 		this.eventBus.on("update_cur_items_details", () => {
@@ -2659,12 +2521,33 @@ export default {
 			}
 		});
 
-		// Refresh item quantities when connection to server is restored
-		this.eventBus.on("server-online", async () => {
-			if (this.items && this.items.length > 0) {
-				await this.update_items_details(this.items);
+					// Refresh item quantities when connection to server is restored
+			this.eventBus.on("server-online", async () => {
+				if (this.items && this.items.length > 0) {
+					await this.update_items_details(this.items);
+				}
+			});
+
+			if (typeof Worker !== "undefined") {
+				try {
+					// Use the plain URL so the service worker can match the cached file
+					// even when offline. Using a query string causes cache lookups to fail
+					// which results in "Failed to fetch a worker script" errors.
+					const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+					this.itemWorker = new Worker(workerUrl, { type: "classic" });
+
+					this.itemWorker.onerror = function (event) {
+						console.error("Worker error:", event);
+						console.error("Message:", event.message);
+						console.error("Filename:", event.filename);
+						console.error("Line number:", event.lineno);
+					};
+					console.log("Created worker");
+				} catch (e) {
+					console.error("Failed to start item worker", e);
+					this.itemWorker = null;
+				}
 			}
-		});
 
 		// Setup auto-refresh for item quantities
 		// Trigger an immediate refresh once items are available
@@ -2687,21 +2570,30 @@ export default {
 	},
 
 	async mounted() {
-		const profile = await ensurePosProfile();
-		if (!this.pos_profile || Object.keys(this.pos_profile).length === 0) {
-			this.pos_profile = profile || {};
+		// Ensure POS profile is available
+		if (!this.pos_profile || !this.pos_profile.name) {
+			try {
+				// Try to get from global frappe context
+				if (frappe.boot && frappe.boot.default_pos_profile) {
+					this.pos_profile = frappe.boot.default_pos_profile;
+				} else if (window.cur_pos && window.cur_pos.pos_profile) {
+					this.pos_profile = window.cur_pos.pos_profile;
+				}
+			} catch (error) {
+				console.warn("Could not get POS profile in mounted:", error);
+			}
 		}
-		// Apply fixed page size for incremental loading
-		this.itemsPageLimit = this.storageAvailable && this.itemWorker ? 100 : null;
-		if (
-			this.pos_profile &&
-			(!this.pos_profile.posa_local_storage || !this.storageAvailable) &&
-			!this.items_loaded
-		) {
-			await forceClearAllCache();
-			await this.get_items(true);
+
+		// Load items if we have a profile and haven't loaded yet
+		if (this.pos_profile && this.pos_profile.name && !this.items_loaded) {
+			await this.get_items();
 		}
-		this.scan_barcoud();
+
+		// Setup barcode scanner if enabled
+		if (this.pos_profile?.posa_enable_barcode_scanning) {
+			this.scan_barcoud();
+		}
+
 		// Apply the configured items per page on mount
 		this.itemsPerPage = this.items_per_page;
 		window.addEventListener("resize", this.checkItemContainerOverflow);
@@ -2764,7 +2656,9 @@ export default {
 	top: 0;
 	z-index: 100;
 	background-color: var(--surface-primary, #fff);
-	box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.1));
+	padding: var(--dynamic-sm);
+	margin: 0;
+	border-bottom: 1px solid #e0e0e0;
 }
 
 [data-theme="dark"] .sticky-header {
@@ -2814,12 +2708,110 @@ export default {
 }
 
 .sleek-data-table {
-	composes: pos-table;
-	margin: var(--dynamic-xs);
+	/* composes: pos-table; */
+	margin: 0;
+	background-color: transparent;
+	border-radius: 0;
+	overflow: hidden;
+	border: none;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	transition: all 0.3s ease;
 }
 
 .sleek-data-table:hover {
-	box-shadow: var(--shadow-md) !important;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Enhanced table header styling with modern gradients */
+.sleek-data-table :deep(th) {
+	font-weight: 700;
+	font-size: 0.875rem;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	padding: 16px 20px;
+	transition: all 0.3s ease;
+	border-bottom: 3px solid #1976d2;
+	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #dee2e6 100%);
+	color: #2c3e50;
+	position: sticky !important;
+	top: 0 !important;
+	z-index: 10 !important;
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+/* Enhanced dark theme header styling */
+:deep([data-theme="dark"]) .sleek-data-table th,
+:deep(.v-theme--dark) .sleek-data-table th {
+	background: linear-gradient(135deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%) !important;
+	border-bottom: 3px solid #3498db;
+	color: #ecf0f1;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Table wrapper styling */
+.sleek-data-table :deep(.v-data-table__wrapper),
+.sleek-data-table :deep(.v-table__wrapper) {
+	border-radius: var(--border-radius-sm);
+	height: 100%;
+	overflow-y: auto;
+	scrollbar-width: thin;
+	position: relative;
+}
+
+/* Ensure the table container has proper height */
+.sleek-data-table :deep(.v-data-table) {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+/* Table body should scroll while header stays fixed */
+.sleek-data-table :deep(.v-data-table__wrapper tbody) {
+	overflow-y: auto;
+	max-height: calc(100% - 60px); /* Adjust based on header height */
+}
+
+/* Table row styling with gray theme */
+.sleek-data-table :deep(tr) {
+	transition: all 0.2s ease;
+	border-bottom: 1px solid #e0e0e0;
+	background-color: #fafafa;
+}
+
+.sleek-data-table :deep(tr:hover) {
+	background-color: #f0f0f0;
+	transform: translateY(-1px);
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Table cell styling */
+.sleek-data-table :deep(td) {
+	padding: 12px 16px;
+	vertical-align: middle;
+	color: #424242;
+}
+
+/* Dark theme row styling */
+:deep([data-theme="dark"]) .sleek-data-table tr,
+:deep(.v-theme--dark) .sleek-data-table tr {
+	background-color: #2d2d2d;
+	border-bottom: 1px solid #424242;
+}
+
+:deep([data-theme="dark"]) .sleek-data-table tr:hover,
+:deep(.v-theme--dark) .sleek-data-table tr:hover {
+	background-color: #3d3d3d;
+}
+
+:deep([data-theme="dark"]) .sleek-data-table td,
+:deep(.v-theme--dark) .sleek-data-table td {
+	color: #ffffff;
 }
 
 .settings-container {
