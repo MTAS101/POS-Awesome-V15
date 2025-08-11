@@ -185,15 +185,14 @@
 				</div>
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
-                                                <div
-                                                        fluid
-                                                        class="items-grid dynamic-scroll"
-                                                        ref="itemsContainer"
-                                                        v-if="items_view == 'card'"
-                                                        :class="{ 'item-container': isOverflowing }"
-                                                        :style="{ maxHeight: itemContainerHeight }"
-                                                        @scroll.passive="onCardScroll"
-                                                >
+						<div
+							fluid
+							class="items-grid dynamic-scroll"
+							ref="itemsContainer"
+							v-if="items_view == 'card'"
+							:class="{ 'item-container': isOverflowing }"
+							@scroll.passive="onCardScroll"
+						>
 							<v-card
 								v-for="item in filtered_items"
 								:key="item.item_code"
@@ -482,9 +481,8 @@ export default {
 		itemsPageLimit: 100,
 		// Track if the current search was triggered by a scanner
 		search_from_scanner: false,
-                currentPage: 0,
-                isOverflowing: false,
-                itemContainerHeight: null,
+		currentPage: 0,
+		isOverflowing: false,
 	}),
 
 	watch: {
@@ -870,25 +868,19 @@ export default {
 				}
 			});
 		},
-                checkItemContainerOverflow() {
-                        const el = this.$refs.itemsContainer;
-                        if (!el) {
-                                this.isOverflowing = false;
-                                this.itemContainerHeight = null;
-                                return;
-                        }
-                        const parent = el.parentElement;
-                        const parentHeight = parent ? parent.clientHeight : 0;
-                        const topOffset = el.offsetTop;
-                        const maxHeight = parentHeight - topOffset;
-                        if (maxHeight > 0) {
-                                this.itemContainerHeight = `${maxHeight}px`;
-                                this.isOverflowing = el.scrollHeight > maxHeight;
-                        } else {
-                                this.isOverflowing = false;
-                                this.itemContainerHeight = null;
-                        }
-                },
+		checkItemContainerOverflow() {
+			const el = this.$refs.itemsContainer;
+			if (!el) {
+				this.isOverflowing = false;
+				return;
+			}
+			const maxHeight = parseFloat(getComputedStyle(el).getPropertyValue("--container-height"));
+			if (isNaN(maxHeight)) {
+				this.isOverflowing = false;
+				return;
+			}
+			this.isOverflowing = el.scrollHeight > maxHeight;
+		},
 
 		async fetchItemDetails(items) {
 			if (!items || items.length === 0) {
@@ -2688,8 +2680,9 @@ export default {
 }
 
 .item-container {
-        overflow-y: auto;
-        scrollbar-gutter: stable;
+	max-height: var(--container-height);
+	overflow-y: auto;
+	scrollbar-gutter: stable;
 }
 
 .items-grid {
