@@ -15,6 +15,7 @@ from posawesome.posawesome.api.m_pesa import submit_mpesa_payment
 from erpnext.accounts.utils import (
 	QueryPaymentLedger,
 	get_outstanding_invoices as _get_outstanding_invoices,
+	reconcile_against_document,
 )
 from erpnext.accounts.doctype.payment_entry.payment_entry import get_payment_entry
 
@@ -270,11 +271,25 @@ def process_pos_payment(payload):
 	allow_mpesa_reconcile_payments = data.pos_profile.get("posa_allow_mpesa_reconcile_payments")
 	today = nowdate()
 
+	# prepare invoice list once so allocations can update remaining amounts
+	remaining_invoices = []
+	for invoice in data.selected_invoices:
+		invoice_name = invoice.get("voucher_no") or invoice.get("name")
+		if not invoice_name:
+			continue
+		outstanding = flt(invoice.get("outstanding_amount"))
+		if outstanding <= 0:
+			try:
+				si = frappe.get_doc("Sales Invoice", invoice_name)
+				outstanding = flt(si.outstanding_amount)
+			except Exception:
+				outstanding = 0
+		remaining_invoices.append({"name": invoice_name, "outstanding_amount": outstanding})
+
 	new_payments_entry = []
 	all_payments_entry = []
-	created_journal_entries = []
+	reconciled_payments = []
 	errors = []
-	reconcile_doc = None
 
 	# first process mpesa payments
 	if (
@@ -290,23 +305,108 @@ def process_pos_payment(payload):
 			except Exception as e:
 				errors.append(str(e))
 
+	# then reconcile selected payments with invoices
+	if (
+		allow_reconcile_payments
+		and len(data.selected_payments) > 0
+		and data.total_selected_payments > 0
+	):
+		for pay in data.selected_payments:
+			try:
+				payment_name = pay.get("name")
+				pe_doc = frappe.get_doc("Payment Entry", payment_name)
+				unallocated = flt(pe_doc.unallocated_amount)
+				if unallocated <= 0:
+					errors.append(
+						_("Payment {0} is already fully allocated").format(payment_name)
+					)
+					continue
+
+				total_outstanding = sum(
+					inv["outstanding_amount"] for inv in remaining_invoices
+				)
+				if total_outstanding <= 0:
+					errors.append(
+						_(
+							"No outstanding invoices available for allocation of payment {0}"
+						).format(payment_name)
+					)
+					continue
+
+				if unallocated > total_outstanding:
+					errors.append(
+						_(
+							"Allocation amount for payment {0} exceeds outstanding invoices"
+						).format(payment_name)
+					)
+					continue
+
+				entry_list = []
+				remaining_amount = unallocated
+				for inv in remaining_invoices:
+					if remaining_amount <= 0:
+						break
+					if inv["outstanding_amount"] <= 0:
+						continue
+					allocation = min(remaining_amount, inv["outstanding_amount"])
+					if allocation <= 0:
+						continue
+					outstanding_before = inv["outstanding_amount"]
+					entry_list.append(
+						frappe._dict(
+							{
+								"voucher_type": "Payment Entry",
+								"voucher_no": payment_name,
+								"voucher_detail_no": None,
+								"against_voucher_type": "Sales Invoice",
+								"against_voucher": inv["name"],
+								"account": pe_doc.paid_from,
+								"party_type": "Customer",
+								"party": customer,
+								"dr_or_cr": "credit_in_account_currency",
+								"unreconciled_amount": unallocated,
+								"unadjusted_amount": unallocated,
+								"allocated_amount": allocation,
+								"grand_total": outstanding_before,
+								"outstanding_amount": outstanding_before,
+								"exchange_rate": 1,
+								"is_advance": 0,
+								"difference_amount": 0,
+								"cost_center": pe_doc.cost_center,
+							}
+						)
+					)
+					inv["outstanding_amount"] -= allocation
+					remaining_amount -= allocation
+
+				total_allocated = unallocated - remaining_amount
+				if total_allocated <= 0:
+					errors.append(
+						_("No allocation made for payment {0}").format(payment_name)
+					)
+					continue
+
+				reconcile_against_document(entry_list)
+
+				pe_doc.reload()
+
+				allocated_after = unallocated - flt(pe_doc.unallocated_amount)
+				reconciled_payments.append(
+					{
+						"payment_entry": payment_name,
+						"allocated_amount": allocated_after,
+					}
+				)
+				all_payments_entry.append(pe_doc)
+			except Exception as e:
+				errors.append(str(e))
+				frappe.log_error(
+					f"Error allocating payment {payment_name}: {str(e)}",
+					"POS Payment Error",
+				)
+
 	# then process the new payments and allocate invoices
 	if allow_make_new_payments and len(data.payment_methods) > 0 and data.total_payment_methods > 0:
-		# Prepare invoice data
-		remaining_invoices = []
-		for invoice in data.selected_invoices:
-			invoice_name = invoice.get("voucher_no") or invoice.get("name")
-			if not invoice_name:
-				continue
-			outstanding = flt(invoice.get("outstanding_amount"))
-			if outstanding <= 0:
-				try:
-					si = frappe.get_doc("Sales Invoice", invoice_name)
-					outstanding = flt(si.outstanding_amount)
-				except Exception:
-					outstanding = 0
-			remaining_invoices.append({"name": invoice_name, "outstanding_amount": outstanding})
-
 		for payment_method in data.payment_methods:
 			try:
 				amount = flt(payment_method.get("amount"))
@@ -378,33 +478,18 @@ def process_pos_payment(payload):
 			)
 		msg += "</tbody>"
 		msg += "</table>"
-	if len(created_journal_entries) > 0:
-		msg += "<h4>Payment Allocations</h4>"
+	if len(reconciled_payments) > 0:
+		msg += "<h4>Reconciled Payments</h4>"
 		msg += "<table class='table table-bordered'>"
-		msg += "<thead><tr><th>Document</th><th>Amount</th><th>Type</th></tr></thead>"
+		msg += "<thead><tr><th>Payment Entry</th><th>Allocated</th></tr></thead>"
 		msg += "<tbody>"
-		for entry in created_journal_entries:
-			msg += "<tr><td>{0}</td><td>{1}</td><td>{2}</td></tr>".format(
-				entry.get("name"),
-				entry.get("amount"),
-				entry.get("type", "Journal Entry"),
+		for payment in reconciled_payments:
+			msg += "<tr><td>{0}</td><td>{1}</td></tr>".format(
+				payment.get("payment_entry"),
+				payment.get("allocated_amount"),
 			)
 		msg += "</tbody>"
 		msg += "</table>"
-
-		# Show allocated invoices too
-		for entry in created_journal_entries:
-			if entry.get("allocated_invoices"):
-				msg += "<h4>Allocated Invoices</h4>"
-				msg += "<table class='table table-bordered'>"
-				msg += "<thead><tr><th>Invoice</th><th>Amount</th></tr></thead>"
-				msg += "<tbody>"
-				for invoice in entry.get("allocated_invoices"):
-					msg += "<tr><td>{0}</td><td>{1}</td></tr>".format(
-						invoice.get("name"), invoice.get("amount")
-					)
-				msg += "</tbody>"
-				msg += "</table>"
 	if len(errors) > 0:
 		msg += "<h4>Errors</h4>"
 		msg += "<table class='table table-bordered'>"
@@ -420,7 +505,7 @@ def process_pos_payment(payload):
 	return {
 		"new_payments_entry": new_payments_entry,
 		"all_payments_entry": all_payments_entry,
-		"created_journal_entries": created_journal_entries,
+		"reconciled_payments": reconciled_payments,
 		"errors": errors,
 	}
 
