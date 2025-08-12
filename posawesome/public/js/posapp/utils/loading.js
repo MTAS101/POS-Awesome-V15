@@ -9,11 +9,11 @@ export const loadingState = reactive({
   active: false,
   progress: 0,
   sources: {},
-  message: 'Loading app data...',
+  message: __('Loading app data...'),
   sourceMessages: {
-    init: 'Initializing application...',
-    items: 'Loading product catalog...',
-    customers: 'Loading customer database...',
+    init: __('Initializing application...'),
+    items: __('Loading product catalog...'),
+    customers: __('Loading customer database...'),
   },
 });
 
@@ -52,7 +52,7 @@ export function setSourceProgress(name, value) {
   loadingState.sources[name] = value;
 
   // Update message only if it changed
-  const newMessage = loadingState.sourceMessages[name] || `Loading ${name}...`;
+  const newMessage = loadingState.sourceMessages[name] || __(`Loading ${name}...`);
   if (loadingState.message !== newMessage) {
     loadingState.message = newMessage;
   }
@@ -104,17 +104,17 @@ function completeLoading() {
   clearLoadingTimeout(); // Clear the fallback timeout
 
   loadingState.progress = 100;
-  loadingState.message = 'Setup complete!';
+  loadingState.message = __('Setup complete!');
 
   // Brief completion phase, then show ready
   setTimeout(() => {
     if (!loadingState.active) return; // Check if still active
-    loadingState.message = 'Ready!';
+    loadingState.message = __('Ready!');
 
     // Hide after showing ready message
     setTimeout(() => {
       loadingState.active = false;
-      loadingState.message = 'Loading app data...';
+      loadingState.message = __('Loading app data...');
       // Reset for next use
       sourceCount = 0;
       completedSum = 0;
@@ -135,7 +135,7 @@ export function startLoadingTimeout() {
   // Set a maximum loading time of 30 seconds
   loadingTimeout = setTimeout(() => {
     console.warn('Loading timeout reached, forcing loading state to complete');
-    loadingState.message = 'Taking longer than expected...';
+    loadingState.message = __('Taking longer than expected...');
     completeLoading();
   }, 30000);
 }
@@ -157,7 +157,7 @@ export function resetLoadingState() {
   clearLoadingTimeout();
   loadingState.active = false;
   loadingState.progress = 0;
-  loadingState.message = 'Loading app data...';
+  loadingState.message = __('Loading app data...');
   loadingState.sources = {};
   sourceCount = 0;
   completedSum = 0;

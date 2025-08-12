@@ -1,4 +1,4 @@
-Account,الحساب
+﻿Account,الحساب
 Account Head,رئيس الحسابات
 Accounts Manager,مدير الحسابات
 Accounts User,مستخدم الحسابات
@@ -67,7 +67,7 @@ Item Rate Should Less Then,يجب أن يكون سعر الصنف أقل من
 Items,الأصناف
 Linked Invoices,الفواتير المرتبطة
 Loyalty Point,نقطة مكافأة
-Loyalty Point Scheme,برنامج نقاط المكافآت
+Loyalty Point Scheme,برنامج المكافآت
 Loyalty Points,نقاط المكافآت
 Max Amount,الحد الأقصى للمبلغ
 Max Discount Percentage Allowed ,الحد الأقصى المسموح به لنسبة الخصم
@@ -145,7 +145,6 @@ User {} has been disabled. Please select valid user/cashier,تم تعطيل ال
 Valid From,صالح من
 Valid Upto,صالح حتى
 Warehouse,المستودع
-is Offer,عرض
 Type,النوع
 Total Qty,إجمالي الكمية
 Available QTY, الكمية المتاحة
@@ -159,14 +158,14 @@ Always fetch items from server,جلب الأصناف دائماً من الخا�
 Cancel,إلغاء
 Change Language,تغيير اللغة
 Close,إغلاق
-Language will be changed to:,سيتم تغيير اللغة إلى:
+Language will be changed to,سيتم تغيير اللغة إلى
 Apply,تطبيق
 Clear,مسح
 Back,رجوع
 Select,اختيار
 Search,بحث
 Yes, Cancel sale,نعم، إلغاء البيع
-Cancel Sale ?,إلغاء البيع؟
+Cancel Sale,إلغاء البيع 
 No Item has this barcode,لا يوجد صنف بهذا الباركود
 Item not found,الصنف غير موجود
 No invoices found. Try different search criteria.,لم يتم العثور على فواتير. جرب معايير بحث مختلفة
@@ -187,11 +186,6 @@ Address Line 1,العنوان السطر 1
 Columns,الأعمدة
 Name,الاسم
 QTY,الكمية
-UOM,وحدة القياس
-Rate,السعر
-Discount %,نسبة الخصم ٪
-Amount,المبلغ
-Offer?,عرض؟
 Additional Discount,خصم إضافي
 Items Discounts,خصومات الأصناف
 Total,الإجمالي
@@ -202,11 +196,8 @@ Sales Return,مرتجع مبيعات
 Paid Amount,المبلغ المدفوع
 Paid Change,الباقي المدفوع
 Credit Change,الباقي الائتماني
-Net Total,صافي الإجمالي
 Tax and Charges,الضرائب والرسوم
 Total Amount,إجمالي المبلغ
-Discount Amount,مبلغ الخصم
-Grand Total,الإجمالي الكلي
 Rounded Total,الإجمالي المدور
 Get Payments,الحصول على المدفوعات
 Request,طلب
@@ -229,18 +220,8 @@ Item Selector Settings,إعدادات محدد الأصناف
 Hide zero rated items,إخفاء الأصناف ذات السعر صفر
 Custom items per page,عدد مخصص من الأصناف لكل صفحة
 Always fetch items from server (ignore local cache),جلب الأصناف دائماً من الخادم (تجاهل التخزين المحلي)
-Search Items,البحث عن الأصناف
-QTY,الكمية
-Settings,الإعدادات
-Reload Items,إعادة تحميل الأصناف
-Scan with Camera,المسح بالكاميرا
-Hide quantity decimals,إخفاء عشريات الكمية
-Always fetch items from server,جلب الأصناف دائماً من الخادم
 POS Awesome,نقاط البيع 
-Fetch Items Directly from Server,جلب الأصناف مباشرة من الخادم
 Select S.O, اختر أمر البيع 
-Sales Return,إرجاع المبيعات
-Cancel Sale,إلغاء البيع
 Offers,عروض
 Coupons,كوبونات
 ms,مللي ثانية
@@ -248,15 +229,247 @@ MB,ميجابايت
 Connected to Server,متصل بالخادم
 To Sync,بانتظار المزامنة
 Synced,تمت المزامنة
-Draft,مسودة
 POS,نقاط البيع
-Awesome,رائع
+Awesome,الرائع
 No items found,لم يتم العثور على أصناف
 No items in cart,لا توجد أصناف في السلة
-Item not found,الصنف غير موجود
 Customers not found,لم يتم العثور على عملاء
 Charges not found,لم يتم العثور على رسوم
 Address not found,لم يتم العثور على عنوان
 Sales Person not found,لم يتم العثور على مندوب المبيعات
 Group not found,لم يتم العثور على مجموعة
 Territory not found,لم يتم العثور على منطقة
+Total Outstanding,إجمالي المستحق
+Total Unallocated,إجمالي غير المخصص
+Action,إجراء
+Add New Address,إضافة عنوان جديد
+Add/Edit Coupon Conditions,إضافة/تعديل شروط القسيمة
+All Caught Up!,أنت على اطلاع كامل!
+All Synced,تمت المزامنة بالكامل
+App information,معلومات التطبيق
+Applied,تم التطبيق
+Apps,التطبيقات
+Are you sure you want to close? All entered data will be lost.,هل أنت متأكد أنك تريد الإغلاق؟ سيتم فقدان جميع البيانات المدخلة.
+Available,المتوفر
+Balance will be updated when connection is restored,سيتم تحديث الرصيد عند استعادة الاتصال
+Basic Information,المعلومات الأساسية
+Batch Information,معلومات الدفعة
+Breakdown,تفصيل
+Built with Frappe,تم تطويره باستخدام Frappe
+CPU Cores,عدد أنوية المعالج
+CPU Load,استخدام المعالج
+Cache Usage,استخدام الذاكرة المخبأة
+Cache cleared successfully,تم مسح الذاكرة المخبأة بنجاح
+Calculating,جارٍ الحساب
+Camera Access Required,يتطلب الوصول إلى الكاميرا
+Camera access aborted.,تم إلغاء الوصول إلى الكاميرا.
+Camera permission denied. Please allow camera access in your browser settings.,تم رفض إذن الكاميرا. يرجى السماح بالوصول إلى الكاميرا من إعدادات المتصفح.
+Cannot Save Offline Invoice,لا يمكن حفظ الفاتورة في وضع عدم الاتصال
+Cannot Save Offline Payment,لا يمكن حفظ الدفع في وضع عدم الاتصال
+Cannot clear cache while offline,لا يمكن مسح الذاكرة المخبأة في وضع عدم الاتصال
+Card,بطاقة
+Change Price,تغيير السعر
+Change interface language,تغيير لغة الواجهة
+Choose your preferred language for the POS interface,اختر لغتك المفضلة لواجهة نقاط البيع
+Click to refresh,انقر للتحديث
+Client CPU Lag,تأخير المعالج لدى العميل
+Client Memory Usage,استخدام ذاكرة العميل
+Client Metrics,إحصائيات العميل
+Close Scanner,إغلاق الماسح
+Closing POS Shift,إغلاق وردية نقاط البيع
+Code,الرمز
+Code scanned successfully,تم مسح الرمز بنجاح
+Confirm Close,تأكيد الإغلاق
+Confirm Mobile Number,تأكيد رقم الجوال
+Connections,الاتصالات
+Continue Editing,متابعة التعديل
+Could not fetch latest balance from server,تعذر جلب الرصيد الأخير من الخادم
+Coupon,قسيمة
+Create Customer,إنشاء عميل
+Create POS Opening Shift,إنشاء وردية فتح نقاط البيع
+Current Event Loop Lag,تأخير دورة الأحداث الحالية
+Custom Due Days,أيام استحقاق مخصصة
+Customer Balance,رصيد العميل
+Customer Name is required,اسم العميل مطلوب
+Customer balance unavailable offline,رصيد العميل غير متاح في وضع عدم الاتصال
+Customer created successfully.,تم إنشاء العميل بنجاح.
+Customer creation failed.,فشل إنشاء العميل.
+Customer group is required,مجموعة العملاء مطلوبة
+Customer saved offline,تم حفظ العميل في وضع عدم الاتصال
+Customer territory is required,منطقة العميل مطلوبة
+Customer updated successfully.,تم تحديث العميل بنجاح.
+Dark Mode,الوضع الداكن
+Database Health,صحة قاعدة البيانات
+Database Info,معلومات قاعدة البيانات
+Database health affects overall system speed and reliability.,صحة قاعدة البيانات تؤثر على سرعة النظام وموثوقيته.
+Decrease,إنقاص
+Delete Invoice,حذف الفاتورة
+Delivery Information,معلومات التسليم
+Detecting formats,جارٍ اكتشاف التنسيقات
+Device Memory,ذاكرة الجهاز
+Disable offline mode,تعطيل وضع عدم الاتصال
+Due Date,تاريخ الاستحقاق
+End current session,إنهاء الجلسة الحالية
+Error Loading Data,خطأ في تحميل البيانات
+Error accessing camera,خطأ في الوصول إلى الكاميرا
+Error adding offer to items,خطأ في إضافة العرض إلى العناصر
+Error calculating prices,خطأ في حساب الأسعار
+Error deleting offer from items,خطأ في حذف العرض من العناصر
+Error fetching customer balance,خطأ في جلب رصيد العميل
+Error loading currencies,خطأ في تحميل العملات
+Error processing payment,خطأ في معالجة الدفع
+Error removing price offer,خطأ في إزالة عرض السعر
+Error searching invoices,خطأ في البحث عن الفواتير
+Error submitting invoice,خطأ في إرسال الفاتورة
+Error submitting invoice No response from server,خطأ في إرسال الفاتورة لا يوجد استجابة من الخادم
+Error toggling item details,خطأ في تبديل تفاصيل العنصر
+Error updating item details,خطأ في تحديث تفاصيل العنصر
+Event-loop lag measures how busy your browser is. Lower is better.,Event-loop lag measures how busy your browser is. Lower is better.
+Failed to clear cache,فشل في مسح الذاكرة المخبأة
+Failed to load items. Please try again.,فشل تحميل العناصر. يرجى المحاولة مرة أخرى.
+Fixing payment amounts for return invoice,تصحيح مبالغ الدفع لفاتورة الإرجاع
+Flash Off,إيقاف الفلاش
+Flash On,تشغيل الفلاش
+Full Name,الاسم الكامل
+Go Offline,الانتقال إلى وضع عدم الاتصال
+Go Online,الاتصال بالإنترنت
+Hide Non Essential Fields,إخفاء الحقول غير الأساسية
+Increase,زيادة
+IndexedDB,IndexedDB
+Initialize your shift with opening balances,ابدأ ورديتك بالأرصدة الافتتاحية
+Installed Applications,التطبيقات المثبتة
+Invalid closing amount,مبلغ إغلاق غير صالح
+Invoice,فاتورة
+Invoice saved offline,تم حفظ الفاتورة في وضع عدم الاتصال
+Invoices,الفواتير
+Item,عنصر
+Item order updated,تم تحديث ترتيب العناصر
+Item price updated,تم تحديث سعر العنصر
+Items per page,عدد العناصر لكل صفحة
+Language,اللغة
+Light Mode,الوضع الفاتح
+Load More Invoices,تحميل المزيد من الفواتير
+Load Sales Invoice,تحميل فاتورة المبيعات
+Load previously saved invoices,تحميل الفواتير المحفوظة مسبقًا
+Loading cache,جارٍ تحميل الذاكرة المخبأة
+Loading database stats,جارٍ تحميل إحصائيات قاعدة البيانات
+Loading server CPU/memory usage,جارٍ تحميل استخدام المعالج/الذاكرة للخادم
+Loading,جارٍ التحميل
+Loyalty Point Offer Applied,تم تطبيق عرض نقاط المكافأة
+Manage your offline transactions,إدارة معاملاتك في وضع عدم الاتصال
+Mode,الوضع
+Multiple Items Found,تم العثور على عناصر متعددة
+Negative values not allowed,القيم السالبة غير مسموح بها
+New Offer Available,عرض جديد متاح
+New Price List Rate,سعر قائمة جديد
+No invoices found,لم يتم العثور على فواتير
+No offline invoices pending synchronization,لا توجد فواتير غير متصلة بانتظار المزامنة
+Nobile Number,رقم الجوال
+Offline Invoices,الفواتير في وضع عدم الاتصال
+Order,طلب
+Outstanding,مستحق
+Paid,مدفوع
+Payment ID,معرّف الدفع
+Payment Methods,طرق الدفع
+Payment Request took too long to respond. Please try requesting for payment again,استغرق طلب الدفع وقتًا طويلاً للاستجابة. يرجى إعادة المحاولة.
+Payment name not found. Cannot open print view.,لم يتم العثور على اسم الدفع. لا يمكن فتح عرض الطباعة.
+Payment request failed,فشل طلب الدفع
+Payment saved offline,تم حفظ الدفع في وضع عدم الاتصال
+Payment submitted but print function could not be executed. Payment name not found.,تم إرسال الدفع ولكن لم يتم تنفيذ الطباعة. لم يتم العثور على اسم الدفع.
+Payments,المدفوعات
+Peak Memory,أقصى استخدام للذاكرة
+Peak Server,أقصى استخدام للخادم
+Peak,الذروة
+Pending,قيد الانتظار
+Pending Invoices,الفواتير المعلقة
+Please allow camera access to scan codes,يرجى السماح بالوصول إلى الكاميرا لمسح الرموز
+Please configure a POS Profile first,يرجى إعداد ملف تعريف نقاط البيع أولاً
+Please make a payment or select an payment,يرجى إجراء الدفع أو اختيار وسيلة دفع
+Please request phone payment or use another payment method,يرجى طلب الدفع عبر الهاتف أو استخدام طريقة دفع أخرى
+Please select a customer,يرجى اختيار عميل
+Please select a customer first,يرجى اختيار العميل أولاً
+Please select an invoice,يرجى اختيار فاتورة
+Please set the customer's mobile number,يرجى إدخال رقم جوال العميل
+Position the QR code or barcode within the scanning area,ضع رمز QR أو الباركود داخل منطقة المسح
+Pricing & Discounts,التسعير والخصومات
+Print Draft,طباعة المسودة
+Processing Payment,جارٍ معالجة الدفع
+Quick Actions,إجراءات سريعة
+Reconcile payment methods and close shift,تسوية طرق الدفع وإغلاق الوردية
+Remove,إزالة
+Remove local data and refresh,إزالة البيانات المحلية وتحديث
+Reprint previous transaction,إعادة طباعة المعاملة السابقة
+Required columns cannot be hidden,لا يمكن إخفاء الأعمدة المطلوبة
+Retry,إعادة المحاولة
+Return without Invoice,إرجاع بدون فاتورة
+Rows,الصفوف
+Scan QR Code/Barcode,مسح رمز QR/الباركود
+Search Mpesa Payments,بحث مدفوعات Mpesa
+Secure context (HTTPS) required for camera access.,يتطلب الوصول إلى الكاميرا سياق آمن (HTTPS).
+Select Columns to Display,اختر الأعمدة لعرضها
+Select Payment,اختر الدفع
+Select Return Invoice,اختر فاتورة الإرجاع
+Select Sales Orders,اختر أوامر المبيعات
+Serial Numbers,الأرقام التسلسلية
+Server CPU Usage,استخدام المعالج للخادم
+Server Health,صحة الخادم
+Server Memory Usage,استخدام ذاكرة الخادم
+Server Metrics,إحصائيات الخادم
+Server Uptime,مدة تشغيل الخادم
+Sign out of session,تسجيل الخروج من الجلسة
+Size,الحجم
+Slow Queries,الاستعلامات البطيئة
+Stock Information,معلومات المخزون
+STOCK UOM,وحدة قياس المخزون
+Successfully scanned,تم المسح بنجاح
+Switch Camera,تبديل الكاميرا
+Switch theme appearance,تبديل مظهر السمة
+Switched to,تم التبديل إلى
+Sync All,مزامنة الكل
+System Information,معلومات النظام
+Tables,الجداول
+The app stores data locally for offline use. This is called cache.,يقوم التطبيق بتخزين البيانات محليًا للاستخدام في وضع عدم الاتصال. يُعرف ذلك بالذاكرة المخبأة.
+These invoices will be synced when connection is restored,سيتم مزامنة هذه الفواتير عند استعادة الاتصال
+This coupon already used !,تم استخدام هذه القسيمة بالفعل!
+This is an item template. Please choose a variant.,هذا قالب عنصر. يرجى اختيار متغير.
+Time,الوقت
+Tip Clear cache regularly to free up space and keep the app fast.,نصيحة امسح الذاكرة المخبأة بانتظام لتوفير المساحة والحفاظ على سرعة التطبيق.
+Tip Close unused tabs or apps to reduce lag.,نصيحة أغلق علامات التبويب أو التطبيقات غير المستخدمة لتقليل التأخير.
+Tip Monitor slow queries and table size for optimal performance.,نصيحة راقب الاستعلامات البطيئة وحجم الجداول للحصول على أداء مثالي.
+Top Tables,أعلى الجداول
+Total Invoices,إجمالي الفواتير
+Total Mpesa,إجمالي Mpesa
+Total Payments,إجمالي المدفوعات
+Total Selected ,الإجمالي المحدد
+Total Size,إجمالي الحجم
+UOM not found,لم يتم العثور على وحدة القياس
+Unallocated,غير مخصص
+Unknown error,خطأ غير معروف
+Update,تحديث
+Update Customer,تحديث العميل
+Updates automatically,يتم التحديث تلقائيًا
+Upload pending transactions,تحميل المعاملات المعلقة
+Usage,الاستخدام
+Usage Stats,إحصائيات الاستخدام
+Use date range to search for older invoices,استخدم نطاق التاريخ للبحث عن الفواتير القديمة
+Used,المستخدم
+Using cached customer balance,استخدام رصيد العميل من الذاكرة المخبأة
+Verify closing amounts for each payment method,تحقق من مبالغ الإغلاق لكل طريقة دفع
+Waiting for payment,في انتظار الدفع
+Warning High cache usage may affect performance.,تحذير الاستخدام العالي للذاكرة المخبأة قد يؤثر على الأداء.
+Warning High lag may indicate heavy processing or browser slowness.,تحذير التأخير العالي قد يشير إلى معالجة ثقيلة أو بطء في المتصفح.
+Work without server connection,العمل بدون اتصال بالخادم
+"Yes, Cancel sale",نعم، ألغِ البيع
+"Yes, Close",نعم، إغلاق
+add,إضافة
+localStorage,التخزين المحلي
+Card,كبطاقات
+List,كقائمة
+Setup complete!,اكتمل الإعداد
+Ready!,جاهز
+Loading app data...,جارٍ تحميل بيانات التطبيق...
+Taking longer than expected...,يستغرق وقتًا أطول من المتوقع...
+Loading,جارٍ التحميل
+Initializing application...,جارٍ تهيئة التطبيق...
+Loading product catalog...,جارٍ تحميل كتالوج المنتجات...
+Loading customer database...,جارٍ تحميل قاعدة بيانات العملاء...
