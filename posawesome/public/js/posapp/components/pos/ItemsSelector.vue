@@ -261,12 +261,13 @@ import {
 	getLocalStock,
 	isOffline,
 	initializeStockCache,
-	searchStoredItems,
-	saveItemsBulk,
-	clearStoredItems,
-	getLocalStockCache,
-	setLocalStockCache,
-	initPromise,
+        searchStoredItems,
+        saveItemsBulk,
+        saveItems,
+        clearStoredItems,
+        getLocalStockCache,
+        setLocalStockCache,
+        initPromise,
 	memoryInitPromise,
 	checkDbHealth,
 	getCachedPriceListItems,
@@ -1066,17 +1067,34 @@ export default {
 					}
 				});
 
-				vm.items = items;
-				vm.items_loaded = true;
-				vm.eventBus.emit("set_all_items", vm.items);
-				vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-			} catch (error) {
-				console.error("Failed to load items:", error);
-				frappe.msgprint(__("Failed to load items. Please try again."));
-			} finally {
-				vm.loading = false;
-			}
-		},
+                                vm.items = items;
+                                vm.items_loaded = true;
+                                vm.eventBus.emit("set_all_items", vm.items);
+                                vm.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+
+                                if (
+                                        vm.pos_profile &&
+                                        vm.pos_profile.posa_local_storage &&
+                                        vm.storageAvailable &&
+                                        !vm.pos_profile.pose_use_limit_search
+                                ) {
+                                        try {
+                                                if (force_server) {
+                                                        await clearStoredItems();
+                                                }
+                                                await saveItemsBulk(vm.items);
+                                        } catch (e) {
+                                                console.error("Failed to persist items locally", e);
+                                                vm.markStorageUnavailable();
+                                        }
+                                }
+                        } catch (error) {
+                                console.error("Failed to load items:", error);
+                                frappe.msgprint(__("Failed to load items. Please try again."));
+                        } finally {
+                                vm.loading = false;
+                        }
+                },
 		async backgroundLoadItems(offset, syncSince, clearBefore = false, requestToken, loaded = offset) {
 			const limit = this.itemsPageLimit;
 			// When the limit is extremely high, treat it as
