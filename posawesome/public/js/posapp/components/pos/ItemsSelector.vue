@@ -1,108 +1,56 @@
 <template>
 	<div :style="responsiveStyles">
-		<v-card
-			:class="[
-				'selection mx-auto my-0 py-0 mt-3 pos-card dynamic-card resizable',
-				isDarkTheme ? '' : 'bg-grey-lighten-5',
-				rtlClasses,
-			]"
-			:style="{
-				height: responsiveStyles['--container-height'],
-				maxHeight: responsiveStyles['--container-height'],
-				backgroundColor: isDarkTheme ? '#121212' : '',
-				resize: 'vertical',
-				overflow: 'auto',
-			}"
-		>
-			<v-progress-linear
-				:active="loading"
-				:indeterminate="loading"
-				absolute
-				location="top"
-				color="info"
-			></v-progress-linear>
+		<v-card :class="[
+			'selection mx-auto my-0 py-0 mt-3 pos-card dynamic-card resizable',
+			isDarkTheme ? '' : 'bg-grey-lighten-5',
+			rtlClasses
+		]" :style="{
+			height: responsiveStyles['--container-height'],
+			maxHeight: responsiveStyles['--container-height'],
+			backgroundColor: isDarkTheme ? '#121212' : '',
+			resize: 'vertical',
+			overflow: 'auto',
+		}">
+			<v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
+				color="info"></v-progress-linear>
 
 			<!-- Add dynamic-padding wrapper like Invoice component -->
 			<div class="dynamic-padding">
 				<div class="sticky-header">
 					<v-row class="items">
 						<v-col class="pb-0">
-							<v-text-field
-								density="compact"
-								clearable
-								autofocus
-								variant="solo"
-								color="primary"
+							<v-text-field density="compact" clearable autofocus variant="solo" color="primary"
 								:label="frappe._('Search Items')"
-								hint="Search by item code, serial number, batch no or barcode"
-								hide-details
-								v-model="debounce_search"
-								@keydown.esc="esc_event"
-								@keydown.enter="search_onchange"
-								@click:clear="clearSearch"
-								prepend-inner-icon="mdi-magnify"
-								@focus="handleItemSearchFocus"
-								ref="debounce_search"
-							>
+								hint="Search by item code, serial number, batch no or barcode" hide-details
+								v-model="debounce_search" @keydown.esc="esc_event" @keydown.enter="search_onchange"
+								@click:clear="clearSearch" prepend-inner-icon="mdi-magnify"
+								@focus="handleItemSearchFocus" ref="debounce_search">
 								<!-- Add camera scan button if enabled -->
 								<template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
-									<v-btn
-										icon="mdi-camera"
-										size="small"
-										color="primary"
-										variant="text"
-										@click="startCameraScanning"
-										:title="__('Scan with Camera')"
-									>
+									<v-btn icon="mdi-camera" size="small" color="primary" variant="text"
+										@click="startCameraScanning" :title="__('Scan with Camera')">
 									</v-btn>
 								</template>
 							</v-text-field>
 						</v-col>
 						<v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
-							<v-text-field
-								density="compact"
-								variant="solo"
-								color="primary"
-								:label="frappe._('QTY')"
-								hide-details
-								v-model="debounce_qty"
-								type="text"
-								@keydown.enter="enter_event"
-								@keydown.esc="esc_event"
-								@focus="clearQty"
-							></v-text-field>
+							<v-text-field density="compact" variant="solo" color="primary" :label="frappe._('QTY')"
+								hide-details v-model="debounce_qty" type="text" @keydown.enter="enter_event"
+								@keydown.esc="esc_event" @focus="clearQty"></v-text-field>
 						</v-col>
 						<v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
-							<v-checkbox
-								v-model="new_line"
-								color="accent"
-								value="true"
-								label="NLine"
-								density="default"
-								hide-details
-							></v-checkbox>
+							<v-checkbox v-model="new_line" color="accent" value="true" label="NLine" density="default"
+								hide-details></v-checkbox>
 						</v-col>
 						<v-col cols="12" class="dynamic-margin-xs">
 							<div class="settings-container">
-								<v-btn
-									density="compact"
-									variant="text"
-									color="primary"
-									prepend-icon="mdi-cog-outline"
-									@click="toggleItemSettings"
-									class="settings-btn"
-								>
+								<v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-cog-outline"
+									@click="toggleItemSettings" class="settings-btn">
 									{{ __("Settings") }}
 								</v-btn>
 								<v-spacer></v-spacer>
-								<v-btn
-									density="compact"
-									variant="text"
-									color="primary"
-									prepend-icon="mdi-refresh"
-									@click="forceReloadItems"
-									class="settings-btn"
-								>
+								<v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-refresh"
+									@click="forceReloadItems" class="settings-btn">
 									{{ __("Reload Items") }}
 								</v-btn>
 
@@ -111,71 +59,39 @@
 										<v-card-title class="text-h6 pa-4 d-flex align-center">
 											<span>{{ __("Item Selector Settings") }}</span>
 											<v-spacer></v-spacer>
-											<v-btn
-												icon="mdi-close"
-												variant="text"
-												density="compact"
-												@click="show_item_settings = false"
-											>
+											<v-btn icon="mdi-close" variant="text" density="compact"
+												@click="show_item_settings = false">
 											</v-btn>
 										</v-card-title>
 										<v-divider></v-divider>
 										<v-card-text class="pa-4">
-											<v-switch
-												v-model="temp_hide_qty_decimals"
-												:label="__('Hide quantity decimals')"
-												hide-details
-												density="compact"
-												color="primary"
-												class="mb-2"
-											></v-switch>
-											<v-switch
-												v-model="temp_hide_zero_rate_items"
-												:label="__('Hide zero rated items')"
-												hide-details
-												density="compact"
-												color="primary"
-											></v-switch>
-											<v-switch
-												v-model="temp_enable_custom_items_per_page"
-												:label="__('Custom items per page')"
-												hide-details
-												density="compact"
-												color="primary"
-												class="mb-2"
-											>
+											<v-switch v-model="temp_hide_qty_decimals"
+												:label="__('Hide quantity decimals')" hide-details density="compact"
+												color="primary" class="mb-2"></v-switch>
+											<v-switch v-model="temp_hide_zero_rate_items"
+												:label="__('Hide zero rated items')" hide-details density="compact"
+												color="primary"></v-switch>
+											<v-switch v-model="temp_enable_custom_items_per_page"
+												:label="__('Custom items per page')" hide-details density="compact"
+												color="primary" class="mb-2">
 											</v-switch>
-											<v-checkbox
-												v-model="temp_force_server_items"
-												:label="
-													__('Always fetch items from server (ignore local cache)')
-												"
-												hide-details
-												density="compact"
-												color="primary"
-												class="mb-2"
-											></v-checkbox>
-											<v-text-field
-												v-if="temp_enable_custom_items_per_page"
-												v-model="temp_items_per_page"
-												type="number"
-												density="compact"
-												variant="outlined"
-												color="primary"
-												:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
-												hide-details
-												:label="__('Items per page')"
-												class="mb-2 dark-field"
-											>
+											<v-checkbox v-model="temp_force_server_items" :label="__('Always fetch items from server (ignore local cache)')
+												" hide-details density="compact" color="primary" class="mb-2"></v-checkbox>
+											<v-text-field v-if="temp_enable_custom_items_per_page"
+												v-model="temp_items_per_page" type="number" density="compact"
+												variant="outlined" color="primary"
+												:bg-color="isDarkTheme ? '#1E1E1E' : 'white'" hide-details
+												:label="__('Items per page')" class="mb-2 dark-field">
 											</v-text-field>
 										</v-card-text>
 										<v-card-actions class="pa-4 pt-0">
-											<v-btn color="error" variant="text" @click="cancelItemSettings"
-												>{{ __("Cancel") }}
+											<v-btn color="error" variant="text" @click="cancelItemSettings">{{
+												__("Cancel")
+											}}
 											</v-btn>
 											<v-spacer></v-spacer>
-											<v-btn color="primary" variant="tonal" @click="applyItemSettings"
-												>{{ __("Apply") }}
+											<v-btn color="primary" variant="tonal" @click="applyItemSettings">{{
+												__("Apply") }}
 											</v-btn>
 										</v-card-actions>
 									</v-card>
@@ -187,36 +103,18 @@
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
 						<div v-if="items_view == 'card'" class="items-card-container">
-							<div
-								class="items-card-grid"
-								ref="itemsContainer"
-								@scroll.passive="onCardScroll"
-								:class="{ 'item-container': isOverflowing }"
-							>
-								<div
-									v-for="item in filtered_items"
-									:key="item.item_code"
-									class="card-item-card"
-									@click="add_item(item)"
-									:draggable="true"
-									@dragstart="onDragStart($event, item)"
-									@dragend="onDragEnd"
-								>
+							<div class="items-card-grid" ref="itemsContainer" @scroll.passive="onCardScroll"
+								:class="{ 'item-container': isOverflowing }">
+								<div v-for="item in filtered_items" :key="item.item_code" 
+									class="card-item-card" @click="add_item(item)"
+									:draggable="true" @dragstart="onDragStart($event, item)" @dragend="onDragEnd">
 									<div class="card-item-image-container">
-										<v-img
-											:src="
-												item.image ||
-												'/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
-											"
-											class="card-item-image"
-											aspect-ratio="1"
-											:alt="item.item_name"
-										>
+										<v-img :src="item.image || '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'"
+											class="card-item-image" aspect-ratio="1"
+											:alt="item.item_name">
 											<template v-slot:placeholder>
 												<div class="image-placeholder">
-													<v-icon size="40" color="grey-lighten-2"
-														>mdi-image</v-icon
-													>
+													<v-icon size="40" color="grey-lighten-2">mdi-image</v-icon>
 												</div>
 											</template>
 										</v-img>
@@ -230,36 +128,21 @@
 											<div class="card-item-price">
 												<div class="primary-price">
 													<span class="currency-symbol">
-														{{
-															currencySymbol(
-																item.original_currency ||
-																	pos_profile.currency,
-															)
-														}}
+														{{ currencySymbol(item.original_currency || pos_profile.currency) }}
 													</span>
 													<span class="price-amount">
 														{{
 															format_currency(
 																item.base_price_list_rate || item.rate,
-																item.original_currency ||
-																	pos_profile.currency,
-																ratePrecision(
-																	item.base_price_list_rate || item.rate,
-																),
+																item.original_currency || pos_profile.currency,
+																ratePrecision(item.base_price_list_rate || item.rate),
 															)
 														}}
 													</span>
 												</div>
-												<div
-													v-if="
-														pos_profile.posa_allow_multi_currency &&
-														selected_currency !== pos_profile.currency
-													"
-													class="secondary-price"
-												>
-													<span class="currency-symbol">{{
-														currencySymbol(selected_currency)
-													}}</span>
+												<div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+													class="secondary-price">
+													<span class="currency-symbol">{{ currencySymbol(selected_currency) }}</span>
 													<span class="price-amount">
 														{{
 															format_currency(
@@ -272,21 +155,9 @@
 												</div>
 											</div>
 											<div class="card-item-stock">
-												<v-icon size="small" class="stock-icon"
-													>mdi-package-variant</v-icon
-												>
-												<span
-													class="stock-amount"
-													:class="{
-														'negative-number': isNegative(item.actual_qty),
-													}"
-												>
-													{{
-														format_number(
-															item.actual_qty,
-															hide_qty_decimals ? 0 : 4,
-														) || 0
-													}}
+												<v-icon size="small" class="stock-icon">mdi-package-variant</v-icon>
+												<span class="stock-amount" :class="{ 'negative-number': isNegative(item.actual_qty) }">
+													{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) || 0 }}
 												</span>
 												<span class="stock-uom">{{ item.stock_uom || "" }}</span>
 											</div>
@@ -296,19 +167,11 @@
 							</div>
 						</div>
 						<div v-else class="items-table-container">
-							<v-data-table-virtual
-								:headers="headers"
-								:items="filtered_items"
-								class="sleek-data-table overflow-y-auto"
-								:style="{ height: 'calc(100% - 80px)' }"
-								item-key="item_code"
-								fixed-header
-								height="100%"
-								:header-props="headerProps"
-								:no-data-text="__('No items found')"
-								@click:row="click_item_row"
-								@scroll.passive="onListScroll"
-							>
+							<v-data-table-virtual :headers="headers" :items="filtered_items"
+								class="sleek-data-table overflow-y-auto" :style="{ height: 'calc(100% - 80px)' }"
+								item-key="item_code" fixed-header height="100%" :header-props="headerProps"
+								:no-data-text="__('No items found')" @click:row="click_item_row"
+								@scroll.passive="onListScroll">
 								<template v-slot:item.rate="{ item }">
 									<div>
 										<div class="text-primary">
@@ -323,13 +186,10 @@
 												)
 											}}
 										</div>
-										<div
-											v-if="
-												pos_profile.posa_allow_multi_currency &&
-												selected_currency !== pos_profile.currency
-											"
-											class="text-success"
-										>
+										<div v-if="
+											pos_profile.posa_allow_multi_currency &&
+											selected_currency !== pos_profile.currency
+										" class="text-success">
 											{{ currencySymbol(selected_currency) }}
 											{{
 												format_currency(
@@ -342,11 +202,10 @@
 									</div>
 								</template>
 								<template v-slot:item.actual_qty="{ item }">
-									<span
-										class="golden--text"
-										:class="{ 'negative-number': isNegative(item.actual_qty) }"
-										>{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) }}</span
-									>
+									<span class="golden--text"
+										:class="{ 'negative-number': isNegative(item.actual_qty) }">{{
+											format_number(item.actual_qty, hide_qty_decimals ? 0 : 4)
+										}}</span>
 								</template>
 							</v-data-table-virtual>
 						</div>
@@ -357,25 +216,12 @@
 		<v-card class="cards mb-0 mt-3 dynamic-padding resizable" style="resize: vertical; overflow: auto">
 			<v-row no-gutters align="center" justify="center" class="dynamic-spacing-sm">
 				<v-col cols="12" class="mb-2">
-					<v-select
-						:items="items_group"
-						:label="frappe._('Items Group')"
-						density="compact"
-						variant="solo"
-						hide-details
-						v-model="item_group"
-					></v-select>
+					<v-select :items="items_group" :label="frappe._('Items Group')" density="compact" variant="solo"
+						hide-details v-model="item_group"></v-select>
 				</v-col>
 				<v-col cols="12" class="mb-2" v-if="pos_profile.posa_enable_price_list_dropdown !== false">
-					<v-text-field
-						density="compact"
-						variant="solo"
-						color="primary"
-						:label="frappe._('Price List')"
-						hide-details
-						:model-value="active_price_list"
-						readonly
-					></v-text-field>
+					<v-text-field density="compact" variant="solo" color="primary" :label="frappe._('Price List')"
+						hide-details :model-value="active_price_list" readonly></v-text-field>
 				</v-col>
 				<v-col cols="3" class="dynamic-margin-xs">
 					<v-btn-toggle v-model="items_view" color="primary" group density="compact" rounded>
@@ -384,38 +230,21 @@
 					</v-btn-toggle>
 				</v-col>
 				<v-col cols="5" class="dynamic-margin-xs">
-					<v-btn
-						size="small"
-						block
-						color="warning"
-						variant="text"
-						@click="show_offers"
-						class="action-btn-consistent"
-					>
+					<v-btn size="small" block color="warning" variant="text" @click="show_offers"
+						class="action-btn-consistent">
 						{{ offersCount }} {{ __("Offers") }}
 					</v-btn>
 				</v-col>
 				<v-col cols="4" class="dynamic-margin-xs">
-					<v-btn
-						size="small"
-						block
-						color="primary"
-						variant="text"
-						@click="show_coupons"
-						class="action-btn-consistent"
-						>{{ couponsCount }} {{ __("Coupons") }}</v-btn
-					>
+					<v-btn size="small" block color="primary" variant="text" @click="show_coupons"
+						class="action-btn-consistent">{{ couponsCount }} {{ __("Coupons") }}</v-btn>
 				</v-col>
 			</v-row>
 		</v-card>
 
 		<!-- Camera Scanner Component -->
-		<CameraScanner
-			v-if="pos_profile.posa_enable_camera_scanning"
-			ref="cameraScanner"
-			:scan-type="pos_profile.posa_camera_scan_type || 'Both'"
-			@barcode-scanned="onBarcodeScanned"
-		/>
+		<CameraScanner v-if="pos_profile.posa_enable_camera_scanning" ref="cameraScanner"
+			:scan-type="pos_profile.posa_camera_scan_type || 'Both'" @barcode-scanned="onBarcodeScanned" />
 	</div>
 </template>
 
@@ -1224,12 +1053,11 @@ export default {
 				const items = response.message || [];
 
 				// Process items
-				items.forEach((item) => {
+				items.forEach(item => {
 					// Ensure UOMs
 					if (!item.item_uoms || item.item_uoms.length === 0) {
-						item.item_uoms = item.stock_uom
-							? [{ uom: item.stock_uom, conversion_factor: 1.0 }]
-							: [];
+						item.item_uoms = item.stock_uom ?
+							[{ uom: item.stock_uom, conversion_factor: 1.0 }] : [];
 					}
 
 					// Set default quantity
@@ -1585,17 +1413,8 @@ export default {
 
 			vm.search = (query || "").trim();
 
-			const belowThreshold =
-				vm.pos_profile && vm.pos_profile.pose_use_limit_search && vm.search.length < 3;
-
-			if (!vm.search || belowThreshold) {
+			if (!vm.search) {
 				vm.search_from_scanner = false;
-				if (vm.pos_profile && vm.pos_profile.posa_local_storage && vm.storageAvailable) {
-					await vm.loadVisibleItems(true);
-				} else {
-					vm.items_loaded = false;
-					vm.get_items();
-				}
 				return;
 			}
 
@@ -1603,10 +1422,12 @@ export default {
 
 			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 				// Only trigger search when query length meets minimum threshold
-				if (vm.pos_profile && (!vm.pos_profile.posa_local_storage || !vm.storageAvailable)) {
-					vm.get_items(true);
-				} else {
-					vm.get_items();
+				if (vm.search && vm.search.length >= 3) {
+					if (vm.pos_profile && (!vm.pos_profile.posa_local_storage || !vm.storageAvailable)) {
+						vm.get_items(true);
+					} else {
+						vm.get_items();
+					}
 				}
 			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
 				if (vm.storageAvailable) {
@@ -2000,12 +1821,7 @@ export default {
 			this.search_backup = this.first_search;
 			this.first_search = "";
 			this.search = "";
-			if (this.pos_profile && this.pos_profile.posa_local_storage && this.storageAvailable) {
-				this.loadVisibleItems(true);
-			} else {
-				this.items_loaded = false;
-				this.get_items();
-			}
+			// No need to call get_items() again
 		},
 
 		restoreSearch() {
@@ -2421,31 +2237,33 @@ export default {
 
 			// Apply search filter
 			if (searchTerm) {
-				filteredItems = filteredItems.filter((item) => {
-					const searchFields = [item.item_code, item.item_name, item.barcode, item.description]
-						.filter(Boolean)
-						.map((field) => field.toLowerCase());
+				filteredItems = filteredItems.filter(item => {
+					const searchFields = [
+						item.item_code,
+						item.item_name,
+						item.barcode,
+						item.description
+					].filter(Boolean).map(field => field.toLowerCase());
 
-					return searchFields.some((field) => field.includes(searchTerm));
+					return searchFields.some(field => field.includes(searchTerm));
 				});
 			}
 
 			// Apply item group filter
 			if (this.item_group !== "ALL") {
-				filteredItems = filteredItems.filter(
-					(item) =>
-						item.item_group && item.item_group.toLowerCase() === this.item_group.toLowerCase(),
+				filteredItems = filteredItems.filter(item =>
+					item.item_group && item.item_group.toLowerCase() === this.item_group.toLowerCase()
 				);
 			}
 
 			// Apply zero rate filter
 			if (this.hide_zero_rate_items) {
-				filteredItems = filteredItems.filter((item) => parseFloat(item.rate || 0) > 0);
+				filteredItems = filteredItems.filter(item => parseFloat(item.rate || 0) > 0);
 			}
 
 			// Apply template/variant filter
 			if (this.pos_profile?.posa_show_template_items && this.pos_profile?.posa_hide_variants_items) {
-				filteredItems = filteredItems.filter((item) => !item.variant_of);
+				filteredItems = filteredItems.filter(item => !item.variant_of);
 			}
 
 			// Apply pagination
@@ -2453,7 +2271,7 @@ export default {
 			filteredItems = filteredItems.slice(0, limit);
 
 			// Ensure quantities are defined
-			filteredItems.forEach((item) => {
+			filteredItems.forEach(item => {
 				if (item.actual_qty === undefined || item.actual_qty === null) {
 					item.actual_qty = 0;
 				}
@@ -2788,16 +2606,11 @@ export default {
 .text-success,
 .golden--text {
 	/* Enhanced Arabic number font stack for maximum clarity */
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 	/* Force lining numbers for consistent height and alignment */
 	font-variant-numeric: lining-nums tabular-nums;
 	/* Additional OpenType features for better Arabic number rendering */
-	font-feature-settings:
-		"tnum" 1,
-		"lnum" 1,
-		"kern" 1;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
 	/* Ensure crisp rendering */
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
@@ -2810,14 +2623,9 @@ export default {
 	color: #d32f2f !important;
 	font-weight: 600;
 	/* Same enhanced font stack for negative numbers */
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 	font-variant-numeric: lining-nums tabular-nums;
-	font-feature-settings:
-		"tnum" 1,
-		"lnum" 1,
-		"kern" 1;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 }
@@ -2827,14 +2635,9 @@ export default {
 .v-select :deep(input),
 .v-autocomplete :deep(input) {
 	/* Enhanced Arabic number font stack for input fields */
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 	font-variant-numeric: lining-nums tabular-nums;
-	font-feature-settings:
-		"tnum" 1,
-		"lnum" 1,
-		"kern" 1;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	letter-spacing: 0.01em;
@@ -2842,14 +2645,9 @@ export default {
 
 /* Enhanced card text for better Arabic number display */
 .dynamic-item-card .v-card-text {
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 	font-variant-numeric: lining-nums tabular-nums;
-	font-feature-settings:
-		"tnum" 1,
-		"lnum" 1,
-		"kern" 1;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 }
@@ -2951,9 +2749,7 @@ export default {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	/* Enhanced Arabic font support */
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 }
 
 .card-item-code {
@@ -2964,9 +2760,7 @@ export default {
 	padding: 2px 6px;
 	border-radius: 4px;
 	/* Enhanced Arabic font support */
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 }
 
 .card-item-details {
@@ -3002,20 +2796,13 @@ export default {
 .currency-symbol {
 	opacity: 0.8;
 	font-size: 0.85em;
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 }
 
 .price-amount {
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 	font-variant-numeric: lining-nums tabular-nums;
-	font-feature-settings:
-		"tnum" 1,
-		"lnum" 1,
-		"kern" 1;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 }
@@ -3036,14 +2823,9 @@ export default {
 
 .stock-amount {
 	font-weight: 600;
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 	font-variant-numeric: lining-nums tabular-nums;
-	font-feature-settings:
-		"tnum" 1,
-		"lnum" 1,
-		"kern" 1;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 }
@@ -3128,14 +2910,9 @@ export default {
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
 	/* Enhanced Arabic number font stack */
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 	font-variant-numeric: lining-nums tabular-nums;
-	font-feature-settings:
-		"tnum" 1,
-		"lnum" 1,
-		"kern" 1;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 }
@@ -3193,14 +2970,9 @@ export default {
 	vertical-align: middle;
 	color: #424242;
 	/* Enhanced Arabic number font stack */
-	font-family:
-		"SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma",
-		sans-serif;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
 	font-variant-numeric: lining-nums tabular-nums;
-	font-feature-settings:
-		"tnum" 1,
-		"lnum" 1,
-		"kern" 1;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	letter-spacing: 0.01em;
