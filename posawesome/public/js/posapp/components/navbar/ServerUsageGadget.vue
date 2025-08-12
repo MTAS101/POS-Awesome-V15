@@ -214,10 +214,19 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 </script>
 
 <style scoped>
+/* Force LTR formatting for server usage gadget */
+.cpu-gadget-section,
+.cpu-gadget-section * {
+	direction: ltr !important;
+	text-align: left !important;
+}
+
 .cpu-gadget-section {
 	display: flex;
 	align-items: center;
 	margin: 0 8px;
+	direction: ltr;
+	text-align: left;
 }
 
 .cpu-meter-container {
@@ -239,6 +248,8 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 
 .cpu-tooltip-content {
 	@apply p-3 min-w-[180px];
+	direction: ltr;
+	text-align: left;
 }
 
 .cpu-tooltip-title {
@@ -252,6 +263,8 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	font-size: 12px;
 	margin-bottom: 8px;
 	line-height: 1.5;
+	direction: ltr;
+	text-align: left;
 }
 
 .cpu-tooltip-action {
@@ -261,6 +274,8 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	align-items: center;
 	margin-top: 8px;
 	color: var(--primary);
+	direction: ltr;
+	text-align: left;
 }
 
 .cpu-tooltip-bar {
@@ -294,18 +309,24 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	display: flex;
 	align-items: center;
 	margin-bottom: 4px;
+	direction: ltr;
+	text-align: left;
 }
 .cpu-tooltip-tip {
 	color: #1976d2;
 	font-size: 12px;
 	display: flex;
 	align-items: center;
+	direction: ltr;
+	text-align: left;
 }
 .cpu-tooltip-explanation {
 	color: #0288d1;
 	font-size: 12px;
 	display: flex;
 	align-items: center;
+	direction: ltr;
+	text-align: left;
 }
 
 .cpu-sparkline-wrapper {
@@ -323,6 +344,7 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	color: #4caf50;
 	min-width: 48px;
 	text-align: right;
+	direction: ltr;
 }
 .cpu-tooltip-sparkline {
 	width: 180px;
@@ -362,6 +384,8 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	color: #1a237e !important;
 	box-shadow: 0 4px 16px rgba(25, 118, 210, 0.1) !important;
 	border: 1px solid #90caf9 !important;
+	direction: ltr !important;
+	text-align: left !important;
 }
 
 .cpu-tooltip-title,
@@ -376,6 +400,8 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	background: #26344d !important;
 	color: #fff !important;
 	border: 1px solid #1976d2 !important;
+	direction: ltr !important;
+	text-align: left !important;
 }
 
 :deep([data-theme="dark"]) .cpu-tooltip-title,
@@ -390,5 +416,7 @@ const peakPercent = computed(() => Math.round(Math.min(peakLag.value, 100)));
 	margin-bottom: 4px;
 	color: var(--primary);
 	opacity: 0.85;
+	direction: ltr;
+	text-align: left;
 }
 </style>
