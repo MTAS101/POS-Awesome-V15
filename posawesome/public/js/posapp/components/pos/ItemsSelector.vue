@@ -102,52 +102,69 @@
 				</div>
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
-						<div fluid class="items-grid dynamic-scroll" ref="itemsContainer" v-if="items_view == 'card'"
-							:class="{ 'item-container': isOverflowing }" @scroll.passive="onCardScroll">
-							<v-card v-for="item in filtered_items" :key="item.item_code" hover class="dynamic-item-card"
-								:draggable="true" @dragstart="onDragStart($event, item)" @dragend="onDragEnd"
-								@click="add_item(item)">
-								<v-img :src="item.image ||
-									'/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
-									" class="text-white align-end" gradient="to bottom, rgba(0,0,0,0), rgba(0,0,0,0.4)" height="100px">
-									<v-card-text class="text-caption px-1 pb-0 truncate">{{
-										item.item_name
-									}}</v-card-text>
-								</v-img>
-								<v-card-text class="text--primary pa-1">
-									<div class="text-caption text-primary truncate">
-										{{
-											currencySymbol(item.original_currency || pos_profile.currency) ||
-											""
-										}}
-										{{
-											format_currency(
-												item.base_price_list_rate || item.rate,
-												item.original_currency || pos_profile.currency,
-												ratePrecision(item.base_price_list_rate || item.rate),
-											)
-										}}
+						<div v-if="items_view == 'card'" class="items-card-container">
+							<div class="items-card-grid" ref="itemsContainer" @scroll.passive="onCardScroll"
+								:class="{ 'item-container': isOverflowing }">
+								<div v-for="item in filtered_items" :key="item.item_code" 
+									class="card-item-card" @click="add_item(item)"
+									:draggable="true" @dragstart="onDragStart($event, item)" @dragend="onDragEnd">
+									<div class="card-item-image-container">
+										<v-img :src="item.image || '/assets/posawesome/js/posapp/components/pos/placeholder-image.png'"
+											class="card-item-image" aspect-ratio="1"
+											:alt="item.item_name">
+											<template v-slot:placeholder>
+												<div class="image-placeholder">
+													<v-icon size="40" color="grey-lighten-2">mdi-image</v-icon>
+												</div>
+											</template>
+										</v-img>
 									</div>
-									<div v-if="
-										pos_profile.posa_allow_multi_currency &&
-										selected_currency !== pos_profile.currency
-									" class="text-caption text-success truncate">
-										{{ currencySymbol(selected_currency) || "" }}
-										{{
-											format_currency(
-												item.rate,
-												selected_currency,
-												ratePrecision(item.rate),
-											)
-										}}
+									<div class="card-item-content">
+										<div class="card-item-header">
+											<h4 class="card-item-name">{{ item.item_name }}</h4>
+											<span class="card-item-code">{{ item.item_code }}</span>
+										</div>
+										<div class="card-item-details">
+											<div class="card-item-price">
+												<div class="primary-price">
+													<span class="currency-symbol">
+														{{ currencySymbol(item.original_currency || pos_profile.currency) }}
+													</span>
+													<span class="price-amount">
+														{{
+															format_currency(
+																item.base_price_list_rate || item.rate,
+																item.original_currency || pos_profile.currency,
+																ratePrecision(item.base_price_list_rate || item.rate),
+															)
+														}}
+													</span>
+												</div>
+												<div v-if="pos_profile.posa_allow_multi_currency && selected_currency !== pos_profile.currency"
+													class="secondary-price">
+													<span class="currency-symbol">{{ currencySymbol(selected_currency) }}</span>
+													<span class="price-amount">
+														{{
+															format_currency(
+																item.rate,
+																selected_currency,
+																ratePrecision(item.rate),
+															)
+														}}
+													</span>
+												</div>
+											</div>
+											<div class="card-item-stock">
+												<v-icon size="small" class="stock-icon">mdi-package-variant</v-icon>
+												<span class="stock-amount" :class="{ 'negative-number': isNegative(item.actual_qty) }">
+													{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) || 0 }}
+												</span>
+												<span class="stock-uom">{{ item.stock_uom || "" }}</span>
+											</div>
+										</div>
 									</div>
-									<div class="text-caption golden--text truncate"
-										:class="{ 'negative-number': isNegative(item.actual_qty) }">
-										{{ format_number(item.actual_qty, hide_qty_decimals ? 0 : 4) || 0 }}
-										{{ item.stock_uom || "" }}
-									</div>
-								</v-card-text>
-							</v-card>
+								</div>
+							</div>
 						</div>
 						<div v-else class="items-table-container">
 							<v-data-table-virtual :headers="headers" :items="filtered_items"
@@ -728,6 +745,7 @@ export default {
 				}
 			});
 		},
+
 		checkItemContainerOverflow() {
 			const el = this.$refs.itemsContainer;
 			if (!el) {
@@ -2634,6 +2652,228 @@ export default {
 	-moz-osx-font-smoothing: grayscale;
 }
 
+/* Enhanced Card View Grid Layout - 3 items per row */
+.items-card-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 16px;
+	padding: 16px;
+	height: calc(100% - 80px);
+	overflow-y: auto;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.items-card-grid::-webkit-scrollbar {
+	width: 8px;
+}
+
+.items-card-grid::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.items-card-grid::-webkit-scrollbar-thumb {
+	background-color: rgba(0, 0, 0, 0.2);
+	border-radius: 4px;
+}
+
+.card-item-card {
+	background-color: var(--surface-secondary, #ffffff);
+	border-radius: 12px;
+	border: 1px solid rgba(0, 0, 0, 0.08);
+	overflow: hidden;
+	transition: all 0.3s ease;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	height: auto;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.card-item-card:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+	border-color: var(--primary-color, #1976d2);
+}
+
+.card-item-image-container {
+	position: relative;
+	height: 120px;
+	overflow: hidden;
+	background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.card-item-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	transition: transform 0.3s ease;
+}
+
+.card-item-card:hover .card-item-image {
+	transform: scale(1.05);
+}
+
+.image-placeholder {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
+}
+
+.card-item-content {
+	padding: 12px 16px 16px;
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.card-item-header {
+	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+	padding-bottom: 8px;
+	margin-bottom: 4px;
+}
+
+.card-item-name {
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: var(--text-primary, #2c3e50);
+	margin: 0 0 4px 0;
+	line-height: 1.3;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	/* Enhanced Arabic font support */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+}
+
+.card-item-code {
+	font-size: 0.75rem;
+	color: var(--text-secondary, #6c757d);
+	font-weight: 500;
+	background: rgba(0, 0, 0, 0.04);
+	padding: 2px 6px;
+	border-radius: 4px;
+	/* Enhanced Arabic font support */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+}
+
+.card-item-details {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	flex: 1;
+}
+
+.card-item-price {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.primary-price {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	font-weight: 600;
+	color: var(--primary-color, #1976d2);
+}
+
+.secondary-price {
+	display: flex;
+	align-items: center;
+	gap: 2px;
+	font-weight: 500;
+	color: #4caf50;
+	font-size: 0.875rem;
+}
+
+.currency-symbol {
+	opacity: 0.8;
+	font-size: 0.85em;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+}
+
+.price-amount {
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.card-item-stock {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 8px;
+	background: rgba(0, 0, 0, 0.02);
+	border-radius: 6px;
+	margin-top: auto;
+}
+
+.stock-icon {
+	color: var(--text-secondary, #6c757d);
+}
+
+.stock-amount {
+	font-weight: 600;
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+.stock-uom {
+	font-size: 0.75rem;
+	color: var(--text-secondary, #6c757d);
+	font-weight: 500;
+}
+
+/* Dark theme support for card view */
+:deep([data-theme="dark"]) .card-item-card,
+:deep(.v-theme--dark) .card-item-card {
+	background-color: var(--surface-secondary, #2c2c2c);
+	border-color: rgba(255, 255, 255, 0.12);
+}
+
+:deep([data-theme="dark"]) .card-item-card:hover,
+:deep(.v-theme--dark) .card-item-card:hover {
+	border-color: var(--primary-color, #90caf9);
+}
+
+:deep([data-theme="dark"]) .card-item-image-container,
+:deep(.v-theme--dark) .card-item-image-container {
+	background: linear-gradient(135deg, #3a3a3a 0%, #2c2c2c 100%);
+}
+
+:deep([data-theme="dark"]) .image-placeholder,
+:deep(.v-theme--dark) .image-placeholder {
+	background: linear-gradient(135deg, #404040 0%, #353535 100%);
+}
+
+:deep([data-theme="dark"]) .card-item-name,
+:deep(.v-theme--dark) .card-item-name {
+	color: var(--text-primary, #ffffff);
+}
+
+:deep([data-theme="dark"]) .card-item-code,
+:deep(.v-theme--dark) .card-item-code {
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--text-secondary, #b0b0b0);
+}
+
+:deep([data-theme="dark"]) .card-item-stock,
+:deep(.v-theme--dark) .card-item-stock {
+	background: rgba(255, 255, 255, 0.05);
+}
+
 .sleek-data-table {
 	/* composes: pos-table; */
 	margin: 0;
@@ -2795,6 +3035,14 @@ export default {
 }
 
 /* Responsive breakpoints */
+@media (max-width: 1200px) {
+	.items-card-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 12px;
+		padding: 12px;
+	}
+}
+
 @media (max-width: 768px) {
 	.dynamic-padding {
 		/* Reduce spacing uniformly on smaller screens */
@@ -2808,6 +3056,28 @@ export default {
 	.action-btn-consistent {
 		padding: var(--dynamic-xs) !important;
 		font-size: 0.875rem !important;
+	}
+
+	.items-card-grid {
+		grid-template-columns: 1fr;
+		gap: 10px;
+		padding: 10px;
+	}
+
+	.card-item-image-container {
+		height: 100px;
+	}
+
+	.card-item-content {
+		padding: 10px 12px 12px;
+	}
+
+	.card-item-name {
+		font-size: 0.85rem;
+	}
+
+	.card-item-code {
+		font-size: 0.7rem;
 	}
 }
 
