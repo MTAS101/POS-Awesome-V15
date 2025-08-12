@@ -184,7 +184,6 @@ def get_items(
 		offset=None,
 	):
 		pos_profile = json.loads(pos_profile)
-		condition = ""
 
 		# Clear quantity cache to ensure fresh values on each search
 		try:
@@ -195,18 +194,13 @@ def get_items(
 		except Exception as e:
 			frappe.log_error(f"Error clearing bin_qty_cache: {str(e)}", "POS Awesome")
 
-		warehouse = pos_profile.get("warehouse")
 		use_limit_search = pos_profile.get("posa_use_limit_search")
 		search_serial_no = pos_profile.get("posa_search_serial_no")
-		search_batch_no = pos_profile.get("posa_search_batch_no")
 		posa_show_template_items = pos_profile.get("posa_show_template_items")
 		posa_display_items_in_stock = pos_profile.get("posa_display_items_in_stock")
-		search_limit = 0
 
 		if not price_list:
 			price_list = pos_profile.get("selling_price_list")
-
-		limit_clause = ""
 
 		def _to_positive_int(value):
 			"""Convert the input to a non-negative integer if possible."""
@@ -219,40 +213,9 @@ def get_items(
 		limit = _to_positive_int(limit)
 		offset = _to_positive_int(offset)
 
-		if limit is not None:
-			limit_clause = f" LIMIT {limit}"
-			if offset:
-				limit_clause += f" OFFSET {offset}"
-
-		condition += get_item_group_condition(pos_profile.get("name"))
-
-		if use_limit_search and limit is None:
+		search_limit = 0
+		if use_limit_search:
 			search_limit = pos_profile.get("posa_search_limit") or 500
-			data = {}
-			if search_value:
-				data = search_serial_or_batch_or_barcode_number(search_value, search_serial_no)
-
-			item_code = data.get("item_code") if data.get("item_code") else search_value
-			serial_no = data.get("serial_no") if data.get("serial_no") else ""
-			batch_no = data.get("batch_no") if data.get("batch_no") else ""
-			barcode = data.get("barcode") if data.get("barcode") else ""
-
-			condition += get_search_items_conditions(item_code, serial_no, batch_no, barcode)
-			if item_group:
-				# Escape item_group to avoid SQL errors with special characters
-				safe_item_group = frappe.db.escape("%" + item_group + "%")
-				condition += " AND item_group like {item_group}".format(item_group=safe_item_group)
-
-			# Always apply a search limit when limit search is enabled
-			limit_clause = " LIMIT {search_limit}".format(search_limit=search_limit)
-
-			# If force reload is enabled and the user is explicitly searching,
-			# remove the limit to return all matching items
-			if pos_profile.get("posa_force_reload_items") and search_value:
-				limit_clause = ""
-
-		if not posa_show_template_items:
-			condition += " AND has_variants = 0"
 
 		result = []
 
@@ -394,15 +357,6 @@ def get_items(
 			limit,
 			offset,
 		)
-
-
-def get_item_group_condition(pos_profile):
-	cond = " and 1=1"
-	item_groups = get_item_groups(pos_profile)
-	if item_groups:
-		cond = " and item_group in (%s)" % (", ".join(["%s"] * len(item_groups)))
-
-	return cond % tuple(item_groups)
 
 
 def get_root_of(doctype):
@@ -1312,18 +1266,18 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
 
 
 def get_stock_availability(item_code, warehouse):
-        actual_qty = (
-                frappe.db.get_value(
-                        "Bin",
-                        filters={
-                                "item_code": item_code,
-                                "warehouse": warehouse,
-                        },
-                        fieldname="actual_qty",
-                )
-                or 0.0
-        )
-        return actual_qty
+	actual_qty = (
+		frappe.db.get_value(
+			"Bin",
+			filters={
+				"item_code": item_code,
+				"warehouse": warehouse,
+			},
+			fieldname="actual_qty",
+		)
+		or 0.0
+	)
+	return actual_qty
 
 
 @frappe.whitelist()
@@ -2337,19 +2291,6 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
 	if batch_no_data:
 		return batch_no_data
 	return {}
-
-
-def get_search_items_conditions(item_code, serial_no, batch_no, barcode):
-	"""Build item search conditions safely."""
-	# Gracefully handle missing item_code values to avoid TypeErrors
-	item_code = item_code or ""
-
-	if item_code and (serial_no or batch_no or barcode):
-		return " and name = {0}".format(frappe.db.escape(item_code))
-
-	return """ and (name like {item_code} or item_name like {item_code})""".format(
-		item_code=frappe.db.escape("%" + item_code + "%")
-	)
 
 
 @frappe.whitelist()
