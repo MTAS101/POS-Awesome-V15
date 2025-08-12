@@ -196,7 +196,7 @@ def get_items(
 
 		today = nowdate()
 		warehouse = pos_profile.get("warehouse")
-		use_limit_search = pos_profile.get("pose_use_limit_search")
+		use_limit_search = pos_profile.get("posa_use_limit_search")
 		search_serial_no = pos_profile.get("posa_search_serial_no")
 		search_batch_no = pos_profile.get("posa_search_batch_no")
 		posa_show_template_items = pos_profile.get("posa_show_template_items")
@@ -237,7 +237,7 @@ def get_items(
 			batch_no = data.get("batch_no") if data.get("batch_no") else ""
 			barcode = data.get("barcode") if data.get("barcode") else ""
 
-			condition += get_seearch_items_conditions(item_code, serial_no, batch_no, barcode)
+			condition += get_search_items_conditions(item_code, serial_no, batch_no, barcode)
 			if item_group:
 				# Escape item_group to avoid SQL errors with special characters
 				safe_item_group = frappe.db.escape("%" + item_group + "%")
@@ -2411,12 +2411,12 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
 	return {}
 
 
-def get_seearch_items_conditions(item_code, serial_no, batch_no, barcode):
+def get_search_items_conditions(item_code, serial_no, batch_no, barcode):
 	"""Build item search conditions safely."""
 	# Gracefully handle missing item_code values to avoid TypeErrors
 	item_code = item_code or ""
 
-	if serial_no or batch_no or barcode:
+	if item_code and (serial_no or batch_no or barcode):
 		return " and name = {0}".format(frappe.db.escape(item_code))
 
 	return """ and (name like {item_code} or item_name like {item_code})""".format(
