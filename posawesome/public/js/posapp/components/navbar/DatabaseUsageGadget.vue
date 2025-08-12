@@ -117,10 +117,19 @@ const sparklinePoints = computed(() => {
 </script>
 
 <style scoped>
+/* Force LTR formatting for database gadget */
+.db-gadget-section,
+.db-gadget-section * {
+	direction: ltr !important;
+	text-align: left !important;
+}
+
 .db-gadget-section {
 	display: flex;
 	align-items: center;
 	margin: 0 8px;
+	direction: ltr;
+	text-align: left;
 }
 .db-meter-container {
 	cursor: pointer;
@@ -139,10 +148,13 @@ const sparklinePoints = computed(() => {
 	color: #1976d2;
 	min-width: 48px;
 	text-align: right;
+	direction: ltr;
 }
 .db-tooltip-content {
 	padding: 14px;
 	min-width: 220px;
+	direction: ltr;
+	text-align: left;
 }
 .db-tooltip-title {
 	font-weight: 600;
@@ -154,6 +166,8 @@ const sparklinePoints = computed(() => {
 	font-size: 12px;
 	margin-bottom: 8px;
 	line-height: 1.5;
+	direction: ltr;
+	text-align: left;
 }
 .db-tooltip-section-title {
 	font-weight: 600;
@@ -161,6 +175,8 @@ const sparklinePoints = computed(() => {
 	margin-bottom: 4px;
 	color: var(--primary);
 	opacity: 0.85;
+	direction: ltr;
+	text-align: left;
 }
 .db-tooltip-subtitle {
 	font-size: 12px;
@@ -177,6 +193,8 @@ const sparklinePoints = computed(() => {
 	margin-bottom: 2px;
 	display: flex;
 	align-items: center;
+	direction: ltr;
+	text-align: left;
 }
 .db-tooltip-warning {
 	color: #d32f2f;
@@ -184,18 +202,24 @@ const sparklinePoints = computed(() => {
 	display: flex;
 	align-items: center;
 	margin-bottom: 4px;
+	direction: ltr;
+	text-align: left;
 }
 .db-tooltip-tip {
 	color: #1976d2;
 	font-size: 12px;
 	display: flex;
 	align-items: center;
+	direction: ltr;
+	text-align: left;
 }
 .db-tooltip-explanation {
 	color: #0288d1;
 	font-size: 12px;
 	display: flex;
 	align-items: center;
+	direction: ltr;
+	text-align: left;
 }
 /* Match ServerUsageGadget tooltip background and text color */
 :deep(.v-tooltip .v-overlay__content),
@@ -204,6 +228,8 @@ const sparklinePoints = computed(() => {
 	color: #1a237e !important;
 	box-shadow: 0 4px 16px rgba(25, 118, 210, 0.1) !important;
 	border: 1px solid #90caf9 !important;
+	direction: ltr !important;
+	text-align: left !important;
 }
 
 .db-tooltip-title,
@@ -219,6 +245,8 @@ const sparklinePoints = computed(() => {
 	background: #26344d !important;
 	color: #fff !important;
 	border: 1px solid #1976d2 !important;
+	direction: ltr !important;
+	text-align: left !important;
 }
 
 :deep([data-theme="dark"]) .db-tooltip-title,

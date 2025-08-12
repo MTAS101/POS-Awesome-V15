@@ -150,3 +150,36 @@ DocType: POS Offer,Warehouse,Armazém
 apps/posawesome/posawesome/posawesome/page/posapp/posapp.js,is Offer,é Oferta
 apps/posawesome/posawesome/posawesome/page/posapp/posapp.js,Type,Tipo
 apps/posawesome/posawesome/posawesome/page/posapp/posapp.js,Total Qty,Qtd TotalCustom Field - label: POS Profile-posa_create_only_sales_order,Create Only Sales Order,Criar Apenas Ordem de Venda
+Menu,Menu
+Actions,Ações
+Close Shift,Fechar Turno
+End current session,Finalizar sessão atual
+Print Last Invoice,Imprimir Última Fatura
+Reprint previous transaction,Reimprimir transação anterior
+Sync Offline Invoices,Sincronizar Faturas Offline
+Upload pending transactions,Carregar transações pendentes
+Go Online,Conectar
+Go Offline,Desconectar
+Disable offline mode,Desativar modo offline
+Work without server connection,Trabalhar sem conexão com servidor
+Clear Cache,Limpar Cache
+Remove local data and refresh,Remover dados locais e atualizar
+About,Sobre
+App information,Informações do aplicativo
+Language,Idioma
+Change interface language,Alterar idioma da interface
+Light Mode,Modo Claro
+Dark Mode,Modo Escuro
+Switch theme appearance,Alternar aparência do tema
+Logout,Sair
+Sign out of session,Sair da sessão
+Select Language,Selecionar Idioma
+Choose your preferred language for the POS interface,Escolha seu idioma preferido para a interface POS
+Language will be changed to,O idioma será alterado para
+Cancel,Cancelar
+Change Language,Alterar Idioma
+Close,Fechar
+Cannot change language - same language selected,Não é possível alterar o idioma - mesmo idioma selecionado
+Language changed successfully! Reloading...,Idioma alterado com sucesso! Recarregando...
+Failed to change language,Falha ao alterar o idioma
+Unknown error,Erro desconhecido
