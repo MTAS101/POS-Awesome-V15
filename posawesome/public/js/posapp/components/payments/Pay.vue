@@ -698,12 +698,12 @@ export default {
 			}
 
 			try {
-				const r = await frappe.call({
-					method: "posawesome.posawesome.api.posapp.get_customer_info",
-					args: {
-						customer: vm.customer_name,
-					},
-				});
+                                const r = await frappe.call({
+                                        method: "posawesome.posawesome.api.customers.get_customer_info",
+                                        args: {
+                                                customer: vm.customer_name,
+                                        },
+                                });
 				const message = r.message;
 				if (!r.exc) {
 					vm.customer_info = {
