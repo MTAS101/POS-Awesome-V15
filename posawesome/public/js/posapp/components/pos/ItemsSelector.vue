@@ -2583,6 +2583,57 @@ export default {
 	color: #4caf50 !important;
 }
 
+/* Enhanced Arabic number support for ItemsSelector */
+.text-primary,
+.text-success,
+.golden--text {
+	/* Enhanced Arabic number font stack for maximum clarity */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	/* Force lining numbers for consistent height and alignment */
+	font-variant-numeric: lining-nums tabular-nums;
+	/* Additional OpenType features for better Arabic number rendering */
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	/* Ensure crisp rendering */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	/* Better number spacing */
+	letter-spacing: 0.02em;
+}
+
+/* Enhanced negative number styling for Arabic context */
+.negative-number {
+	color: #d32f2f !important;
+	font-weight: 600;
+	/* Same enhanced font stack for negative numbers */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Enhanced input fields for Arabic number support */
+.v-text-field :deep(input),
+.v-select :deep(input),
+.v-autocomplete :deep(input) {
+	/* Enhanced Arabic number font stack for input fields */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	letter-spacing: 0.01em;
+}
+
+/* Enhanced card text for better Arabic number display */
+.dynamic-item-card .v-card-text {
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
 .sleek-data-table {
 	/* composes: pos-table; */
 	margin: 0;
@@ -2600,7 +2651,7 @@ export default {
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Enhanced table header styling with modern gradients */
+/* Enhanced table header styling with modern gradients and Arabic support */
 .sleek-data-table :deep(th) {
 	font-weight: 700;
 	font-size: 0.875rem;
@@ -2618,6 +2669,12 @@ export default {
 	-webkit-backdrop-filter: blur(10px);
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 	text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+	/* Enhanced Arabic number font stack */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 /* Enhanced dark theme header styling */
@@ -2667,11 +2724,18 @@ export default {
 	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Table cell styling */
+/* Table cell styling with Arabic number support */
 .sleek-data-table :deep(td) {
 	padding: 12px 16px;
 	vertical-align: middle;
 	color: #424242;
+	/* Enhanced Arabic number font stack */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	letter-spacing: 0.01em;
 }
 
 /* Dark theme row styling */

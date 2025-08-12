@@ -403,6 +403,7 @@ export default {
 		isReturnInvoice: Boolean,
 		toggleOffer: Function,
 		changePriceListRate: Function,
+		isNegative: Function,
 	},
 	data() {
 		return {
@@ -889,7 +890,7 @@ export default {
 	box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.2) !important;
 }
 
-/* Currency and amount display */
+/* Currency and amount display with enhanced Arabic number support */
 .currency-display {
 	display: flex;
 	align-items: center;
@@ -900,11 +901,57 @@ export default {
 	opacity: 0.7;
 	margin-right: 2px;
 	font-size: 0.85em;
+	font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
 .amount-value {
 	font-weight: 500;
 	text-align: left;
+	/* Enhanced Arabic number font stack for maximum clarity */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	/* Force lining numbers for consistent height and alignment */
+	font-variant-numeric: lining-nums tabular-nums;
+	/* Additional OpenType features for better Arabic number rendering */
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	/* Ensure crisp rendering */
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	/* Better number spacing */
+	letter-spacing: 0.02em;
+}
+
+/* Enhanced negative number styling for Arabic context */
+.negative-number {
+	color: #d32f2f !important;
+	font-weight: 600;
+	/* Same enhanced font stack for negative numbers */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Enhanced form fields for Arabic number input */
+.form-field :deep(.v-field) input,
+.form-field :deep(.v-field) textarea {
+	/* Enhanced Arabic number font stack for input fields */
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	letter-spacing: 0.01em;
+}
+
+/* Enhanced Arabic support for all numeric displays in the table */
+.modern-items-table :deep(td),
+.modern-items-table :deep(th) {
+	font-family: "SF Pro Display", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "Noto Sans Arabic", "Tahoma", sans-serif;
+	font-variant-numeric: lining-nums tabular-nums;
+	font-feature-settings: "tnum" 1, "lnum" 1, "kern" 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
 
 /* Drag and drop styles */
