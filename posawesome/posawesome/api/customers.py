@@ -5,7 +5,7 @@
 from __future__ import unicode_literals
 import json
 import frappe
-from frappe.utils import nowdate, flt, cstr
+from frappe.utils import nowdate, flt, cstr, get_datetime
 from frappe import _
 from erpnext.accounts.doctype.loyalty_program.loyalty_program import (
 	get_loyalty_program_details_with_points,
@@ -67,7 +67,11 @@ def get_customer_names(pos_profile, limit=None, offset=None, modified_after=None
 			filters["customer_group"] = ["in", customer_groups]
 
 		if modified_after:
-		        filters["modified"] = [">", modified_after]
+			try:
+				parsed_modified_after = get_datetime(modified_after)
+			except Exception:
+				frappe.throw(_("modified_after must be a valid ISO datetime"))
+			filters["modified"] = [">", parsed_modified_after.isoformat()]
 
 		customers = frappe.get_all(
 		        "Customer",
@@ -337,7 +341,7 @@ def set_customer_info(customer, fieldname, value=""):
 def get_customer_addresses(customer):
 	return frappe.db.sql(
 		"""
-	SELECT 
+	SELECT
 	    address.name,
 	    address.address_line1,
 	    address.address_line2,

@@ -11,17 +11,17 @@ from erpnext.stock.doctype.batch.batch import (
 )
 from erpnext.stock.get_item_details import get_item_details
 from frappe import _
-from frappe.utils import cstr, flt, nowdate
+from frappe.utils import cstr, flt, nowdate, get_datetime
 from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
 
 
-def get_seearch_items_conditions(item_code, serial_no, batch_no, barcode):
+def get_search_items_conditions(item_code, serial_no, batch_no, barcode):
 	"""Build item search conditions safely."""
 	# Gracefully handle missing item_code values to avoid TypeErrors
 	item_code = item_code or ""
 
-	if serial_no or batch_no or barcode:
+	if item_code and (serial_no or batch_no or barcode):
 		return f" and name = {frappe.db.escape(item_code)}"
 
 	return """ and (name like {item_code} or item_name like {item_code})""".format(
@@ -115,7 +115,7 @@ def get_items(
 
 		today = nowdate()
 		warehouse = pos_profile.get("warehouse")
-		use_limit_search = pos_profile.get("pose_use_limit_search")
+		use_limit_search = pos_profile.get("posa_use_limit_search")
 		search_serial_no = pos_profile.get("posa_search_serial_no")
 		search_batch_no = pos_profile.get("posa_search_batch_no")
 		posa_show_template_items = pos_profile.get("posa_show_template_items")
@@ -156,7 +156,7 @@ def get_items(
 			batch_no = data.get("batch_no") if data.get("batch_no") else ""
 			barcode = data.get("barcode") if data.get("barcode") else ""
 
-			condition += get_seearch_items_conditions(item_code, serial_no, batch_no, barcode)
+			condition += get_search_items_conditions(item_code, serial_no, batch_no, barcode)
 			if item_group:
 				# Escape item_group to avoid SQL errors with special characters
 				safe_item_group = frappe.db.escape("%" + item_group + "%")
@@ -178,7 +178,11 @@ def get_items(
 		# Build ORM filters
 		filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
 		if modified_after:
-			filters["modified"] = [">", modified_after]
+			try:
+				parsed_modified_after = get_datetime(modified_after)
+			except Exception:
+				frappe.throw(_("modified_after must be a valid ISO datetime"))
+			filters["modified"] = [">", parsed_modified_after.isoformat()]
 
 		# Add item group filter
 		item_groups = get_item_groups(pos_profile.get("name"))
@@ -944,7 +948,7 @@ def update_price_list_rate(item_code, price_list, rate, uom=None):
 	if uom:
 		filters["uom"] = uom
 	else:
-		filters["uom"] = ["", None]
+		filters["uom"] = ["in", ["", None]]
 
 	name = frappe.db.exists("Item Price", filters)
 	if name:
