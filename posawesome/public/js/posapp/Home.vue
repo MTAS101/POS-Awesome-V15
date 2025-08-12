@@ -379,7 +379,7 @@ export default {
 		},
 
 		handleLogout() {
-			window.location.href = "/api/method/logout?redirect-to=/app";
+			window.location.href = "/app";
 		},
 
 		handleRefreshCacheUsage() {
