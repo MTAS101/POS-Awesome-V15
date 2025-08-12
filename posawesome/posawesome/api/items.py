@@ -11,46 +11,24 @@ from erpnext.stock.doctype.batch.batch import (
 )
 from erpnext.stock.get_item_details import get_item_details
 from frappe import _
-from frappe.utils import cstr, flt, nowdate, get_datetime
+from frappe.utils import cstr, flt, get_datetime, nowdate
 from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
 
 
-def get_search_items_conditions(item_code, serial_no, batch_no, barcode):
-	"""Build item search conditions safely."""
-	# Gracefully handle missing item_code values to avoid TypeErrors
-	item_code = item_code or ""
-
-	if item_code and (serial_no or batch_no or barcode):
-		return f" and name = {frappe.db.escape(item_code)}"
-
-	return """ and (name like {item_code} or item_name like {item_code})""".format(
-		item_code=frappe.db.escape("%" + item_code + "%")
-	)
-
-
-def get_item_group_condition(pos_profile):
-	cond = " and 1=1"
-	item_groups = get_item_groups(pos_profile)
-	if item_groups:
-		cond = " and item_group in ({})".format(", ".join(["%s"] * len(item_groups)))
-
-	return cond % tuple(item_groups)
-
-
 def get_stock_availability(item_code, warehouse):
-        actual_qty = (
-                frappe.db.get_value(
-                        "Bin",
-                        filters={
-                                "item_code": item_code,
-                                "warehouse": warehouse,
-                        },
-                        fieldname="actual_qty",
-                )
-                or 0.0
-        )
-        return actual_qty
+	actual_qty = (
+		frappe.db.get_value(
+			"Bin",
+			filters={
+				"item_code": item_code,
+				"warehouse": warehouse,
+			},
+			fieldname="actual_qty",
+		)
+		or 0.0
+	)
+	return actual_qty
 
 
 @frappe.whitelist()
@@ -100,75 +78,38 @@ def get_items(
 		modified_after=None,
 	):
 		pos_profile = json.loads(pos_profile)
-		condition = ""
 
 		# Clear quantity cache to ensure fresh values on each search
 		try:
-			if hasattr(frappe.local.cache, "delete_key"):
-				frappe.local.cache.delete_key("bin_qty_cache")
-			elif frappe.cache().get_value("bin_qty_cache"):
-				frappe.cache().delete_value("bin_qty_cache")
+		       if hasattr(frappe.local.cache, "delete_key"):
+			       frappe.local.cache.delete_key("bin_qty_cache")
+		       elif frappe.cache().get_value("bin_qty_cache"):
+			       frappe.cache().delete_value("bin_qty_cache")
 		except Exception as e:
-			frappe.log_error(f"Error clearing bin_qty_cache: {e!s}", "POS Awesome")
+		       frappe.log_error(f"Error clearing bin_qty_cache: {e!s}", "POS Awesome")
 
-		warehouse = pos_profile.get("warehouse")
 		use_limit_search = pos_profile.get("posa_use_limit_search")
 		search_serial_no = pos_profile.get("posa_search_serial_no")
-		search_batch_no = pos_profile.get("posa_search_batch_no")
 		posa_show_template_items = pos_profile.get("posa_show_template_items")
 		posa_display_items_in_stock = pos_profile.get("posa_display_items_in_stock")
-		search_limit = 0
 
 		if not price_list:
-			price_list = pos_profile.get("selling_price_list")
-
-		limit_clause = ""
+		       price_list = pos_profile.get("selling_price_list")
 
 		def _to_positive_int(value):
-			"""Convert the input to a non-negative integer if possible."""
-			try:
-				ivalue = int(value)
-				return ivalue if ivalue >= 0 else None
-			except (TypeError, ValueError):
-				return None
+		       """Convert the input to a non-negative integer if possible."""
+		       try:
+			       ivalue = int(value)
+			       return ivalue if ivalue >= 0 else None
+		       except (TypeError, ValueError):
+			       return None
 
 		limit = _to_positive_int(limit)
 		offset = _to_positive_int(offset)
 
-		if limit is not None:
-			limit_clause = f" LIMIT {limit}"
-			if offset:
-				limit_clause += f" OFFSET {offset}"
-
-		condition += get_item_group_condition(pos_profile.get("name"))
-
-		if use_limit_search and limit is None:
+		search_limit = 0
+		if use_limit_search:
 			search_limit = pos_profile.get("posa_search_limit") or 500
-			data = {}
-			if search_value:
-				data = search_serial_or_batch_or_barcode_number(search_value, search_serial_no)
-
-			item_code = data.get("item_code") if data.get("item_code") else search_value
-			serial_no = data.get("serial_no") if data.get("serial_no") else ""
-			batch_no = data.get("batch_no") if data.get("batch_no") else ""
-			barcode = data.get("barcode") if data.get("barcode") else ""
-
-			condition += get_search_items_conditions(item_code, serial_no, batch_no, barcode)
-			if item_group:
-				# Escape item_group to avoid SQL errors with special characters
-				safe_item_group = frappe.db.escape("%" + item_group + "%")
-				condition += f" AND item_group like {safe_item_group}"
-
-			# Always apply a search limit when limit search is enabled
-			limit_clause = f" LIMIT {search_limit}"
-
-			# If force reload is enabled and the user is explicitly searching,
-			# remove the limit to return all matching items
-			if pos_profile.get("posa_force_reload_items") and search_value:
-				limit_clause = ""
-
-		if not posa_show_template_items:
-			condition += " AND has_variants = 0"
 
 		result = []
 
@@ -329,7 +270,7 @@ def get_items(
 def get_items_groups():
 	return frappe.db.sql(
 		"""select name from `tabItem Group`
-	    where is_group = 0 order by name limit 500""",
+		where is_group = 0 order by name limit 500""",
 		as_dict=1,
 	)
 
