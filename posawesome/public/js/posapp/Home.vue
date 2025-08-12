@@ -378,9 +378,9 @@ export default {
 			this.$theme.toggle();
 		},
 
-		handleLogout() {
-			window.location.href = "/app";
-		},
+               handleLogout() {
+                       window.location.href = "/?cmd=logout&redirect-to=/app";
+               },
 
 		handleRefreshCacheUsage() {
 			this.cacheUsageLoading = true;
