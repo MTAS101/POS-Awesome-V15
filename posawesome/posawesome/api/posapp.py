@@ -1304,20 +1304,18 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None):
 
 
 def get_stock_availability(item_code, warehouse):
-	actual_qty = (
-		frappe.db.get_value(
-			"Stock Ledger Entry",
-			filters={
-				"item_code": item_code,
-				"warehouse": warehouse,
-				"is_cancelled": 0,
-			},
-			fieldname="qty_after_transaction",
-			order_by="posting_date desc, posting_time desc, creation desc",
-		)
-		or 0.0
-	)
-	return actual_qty
+        actual_qty = (
+                frappe.db.get_value(
+                        "Bin",
+                        filters={
+                                "item_code": item_code,
+                                "warehouse": warehouse,
+                        },
+                        fieldname="actual_qty",
+                )
+                or 0.0
+        )
+        return actual_qty
 
 
 @frappe.whitelist()
