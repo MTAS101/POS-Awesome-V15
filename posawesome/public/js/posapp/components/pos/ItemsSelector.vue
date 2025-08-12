@@ -1817,12 +1817,15 @@ export default {
 
 			return combinations;
 		},
-		clearSearch() {
-			this.search_backup = this.first_search;
-			this.first_search = "";
-			this.search = "";
-			// No need to call get_items() again
-		},
+                clearSearch() {
+                        this.search_backup = this.first_search;
+                        this.first_search = "";
+                        this.search = "";
+                        // Reset the visible items to the full list
+                        this.loadVisibleItems(true);
+                        // Refresh items from the server if needed
+                        this.get_items();
+                },
 
 		restoreSearch() {
 			if (this.first_search === "") {
