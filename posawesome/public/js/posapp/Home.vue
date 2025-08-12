@@ -148,10 +148,10 @@ export default {
 		checkFrappePing,
 		checkCurrentOrigin,
 		checkExternalConnectivity,
-		checkWebSocketConnectivity,
-		setPage(page) {
-			this.page = page;
-		},
+                checkWebSocketConnectivity,
+        setPage(page) {
+                this.page = page;
+        },
 
 		async initializeData() {
 			await initPromise;
@@ -489,4 +489,6 @@ export default {
 	min-height: 100%;
 	height: 100%;
 }
+
+
 </style>
