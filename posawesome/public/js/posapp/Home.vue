@@ -19,6 +19,7 @@
 </template>
 
 <script>
+/* global frappe */
 import Navbar from "./components/Navbar.vue";
 import POS from "./components/pos/Pos.vue";
 import Payments from "./components/payments/Pay.vue";
@@ -373,17 +374,21 @@ export default {
 			}
 		},
 
-		handleToggleTheme() {
-			// Use the global theme plugin instead of local state
-			this.$theme.toggle();
-		},
+                handleToggleTheme() {
+                        // Use the global theme plugin instead of local state
+                        this.$theme.toggle();
+                },
 
-		handleLogout() {
-			window.location.href = "/app";
-		},
+                handleLogout() {
+                        frappe
+                                .call("logout")
+                                .finally(() => {
+                                        window.location.href = "/app";
+                                });
+                },
 
-		handleRefreshCacheUsage() {
-			this.cacheUsageLoading = true;
+                handleRefreshCacheUsage() {
+                        this.cacheUsageLoading = true;
 			getCacheUsageEstimate()
 				.then((usage) => {
 					this.cacheUsage = usage.percentage || 0;
