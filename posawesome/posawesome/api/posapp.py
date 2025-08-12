@@ -270,16 +270,24 @@ def get_items(
 		if use_limit_search and search_value:
 			data = search_serial_or_batch_or_barcode_number(search_value, search_serial_no)
 			item_code = data.get("item_code") if data.get("item_code") else search_value
+			min_search_len = 2
 
-			or_filters = [
-				["name", "like", f"%{item_code}%"],
-				["item_name", "like", f"%{item_code}%"],
-			]
+			if len(search_value) >= min_search_len:
+				or_filters = [
+					["name", "like", f"%{item_code}%"],
+					["item_name", "like", f"%{item_code}%"],
+				]
 
-			# Check for exact barcode match
-			if data.get("item_code"):
-				filters["name"] = data.get("item_code")
-				or_filters = []
+				# Prefer exact match when barcode/serial/batch resolves to item_code
+				if data.get("item_code"):
+					filters["name"] = data.get("item_code")
+					or_filters = []
+			else:
+				# For short inputs, only attempt exact matches
+				if data.get("item_code"):
+					filters["name"] = data.get("item_code")
+				else:
+					filters["name"] = item_code
 		if item_group and item_group.upper() != "ALL":
 			filters["item_group"] = ["like", f"%{item_group}%"]
 
