@@ -14,8 +14,8 @@ from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
 from frappe.utils.background_jobs import enqueue
 from erpnext.accounts.party import get_party_bank_account
 from erpnext.stock.doctype.batch.batch import (
-	get_batch_no,
-	get_batch_qty,
+        get_batch_no,
+        get_batch_qty,
 )
 from erpnext.accounts.doctype.payment_request.payment_request import (
 	get_dummy_message,
@@ -33,6 +33,7 @@ from posawesome.posawesome.doctype.delivery_charges.delivery_charges import (
 from frappe.utils.caching import redis_cache
 from typing import List, Dict
 from .items import get_items_details as fetch_items_details
+from .utils import HAS_VARIANTS_EXCLUSION
 
 
 def ensure_child_doctype(doc, table_field, child_doctype):
@@ -255,7 +256,7 @@ def get_items(
 			filters["item_group"] = ["like", f"%{item_group}%"]
 
 		if not posa_show_template_items:
-			filters["has_variants"] = 0
+			filters.update(HAS_VARIANTS_EXCLUSION)
 
 		# Determine limit
 		limit_page_length = None

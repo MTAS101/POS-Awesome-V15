@@ -1,6 +1,9 @@
 from __future__ import annotations
 import frappe
 
+# Reusable ORM filter to exclude template items
+HAS_VARIANTS_EXCLUSION = {"has_variants": 0}
+
 @frappe.whitelist()
 def get_active_pos_profile(user=None):
     """Return the active POS profile for the given user."""

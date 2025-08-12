@@ -14,6 +14,7 @@ from frappe import _
 from frappe.utils import cstr, flt, get_datetime, nowdate
 from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
+from .utils import HAS_VARIANTS_EXCLUSION
 
 
 def get_stock_availability(item_code, warehouse):
@@ -156,7 +157,7 @@ def get_items(
 			filters["item_group"] = ["like", f"%{item_group}%"]
 
 		if not posa_show_template_items:
-			filters["has_variants"] = 0
+			filters.update(HAS_VARIANTS_EXCLUSION)
 
 		# Determine limit
 		limit_page_length = None
