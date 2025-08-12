@@ -32,6 +32,7 @@ from posawesome.posawesome.doctype.delivery_charges.delivery_charges import (
 )
 from frappe.utils.caching import redis_cache
 from typing import List, Dict
+from .items import get_items_details as fetch_items_details
 
 
 def ensure_child_doctype(doc, table_field, child_doctype):
@@ -48,11 +49,11 @@ def get_opening_dialog_data():
 	# Get only POS Profiles where current user is defined in POS Profile User table
 	pos_profiles_data = frappe.db.sql(
 		"""
-        SELECT DISTINCT p.name, p.company, p.currency 
-        FROM `tabPOS Profile` p
-        INNER JOIN `tabPOS Profile User` u ON u.parent = p.name
-        WHERE p.disabled = 0 AND u.user = %s
-        ORDER BY p.name
+	SELECT DISTINCT p.name, p.company, p.currency 
+	FROM `tabPOS Profile` p
+	INNER JOIN `tabPOS Profile User` u ON u.parent = p.name
+	WHERE p.disabled = 0 AND u.user = %s
+	ORDER BY p.name
     """,
 		frappe.session.user,
 		as_dict=1,
@@ -194,7 +195,6 @@ def get_items(
 		except Exception as e:
 			frappe.log_error(f"Error clearing bin_qty_cache: {str(e)}", "POS Awesome")
 
-		today = nowdate()
 		warehouse = pos_profile.get("warehouse")
 		use_limit_search = pos_profile.get("posa_use_limit_search")
 		search_serial_no = pos_profile.get("posa_search_serial_no")
@@ -325,88 +325,18 @@ def get_items(
 		)
 
 		if items_data:
-			items = [d.item_code for d in items_data]
-			price_list_currency = frappe.db.get_value("Price List", price_list, "currency")
-			item_prices_data = frappe.get_all(
-				"Item Price",
-				fields=["item_code", "price_list_rate", "currency", "uom"],
-				filters={
-					"price_list": price_list,
-					"item_code": ["in", items],
-					"currency": price_list_currency or pos_profile.get("currency"),
-					"selling": 1,
-					"valid_from": ["<=", today],
-					"customer": ["in", ["", None, customer]],
-				},
-				or_filters=[
-					["valid_upto", ">=", today],
-					["valid_upto", "in", ["", None]],
-				],
-				order_by="valid_from ASC, valid_upto DESC",
+			details = fetch_items_details(
+				json.dumps(pos_profile),
+				json.dumps(items_data),
+				price_list=price_list,
+				customer=customer,
 			)
-
-			item_prices = {}
-			for d in item_prices_data:
-				item_prices.setdefault(d.item_code, {})
-				item_prices[d.item_code][d.get("uom") or "None"] = d
+			detail_map = {d["item_code"]: d for d in details}
 
 			for item in items_data:
 				item_code = item.item_code
-				item_price = {}
-				if item_prices.get(item_code):
-					item_price = (
-						item_prices.get(item_code).get(item.stock_uom)
-						or item_prices.get(item_code).get("None")
-						or {}
-					)
-				item_barcode = frappe.get_all(
-					"Item Barcode",
-					filters={"parent": item_code},
-					fields=["barcode", "posa_uom"],
-				)
-				batch_no_data = []
-				if search_batch_no or item.has_batch_no:
-					batch_list = get_batch_qty(warehouse=warehouse, item_code=item_code)
-					if batch_list:
-						for batch in batch_list:
-							if batch.qty > 0 and batch.batch_no:
-								batch_doc = frappe.get_cached_doc("Batch", batch.batch_no)
-								if (
-									str(batch_doc.expiry_date) > str(today)
-									or batch_doc.expiry_date in ["", None]
-								) and batch_doc.disabled == 0:
-									batch_no_data.append(
-										{
-											"batch_no": batch.batch_no,
-											"batch_qty": batch.qty,
-											"expiry_date": batch_doc.expiry_date,
-											"batch_price": batch_doc.posa_batch_price,
-											"manufacturing_date": batch_doc.manufacturing_date,
-										}
-									)
-				serial_no_data = []
-				if search_serial_no or item.has_serial_no:
-					serial_no_data = frappe.get_all(
-						"Serial No",
-						filters={
-							"item_code": item_code,
-							"status": "Active",
-							"warehouse": warehouse,
-						},
-						fields=["name as serial_no"],
-					)
-				# Fetch UOM conversion details for the item
-				uoms = frappe.get_all(
-					"UOM Conversion Detail",
-					filters={"parent": item_code},
-					fields=["uom", "conversion_factor"],
-				)
-				stock_uom = item.stock_uom
-				if stock_uom and not any(u.get("uom") == stock_uom for u in uoms):
-					uoms.append({"uom": stock_uom, "conversion_factor": 1.0})
-				item_stock_qty = 0
-				if pos_profile.get("posa_display_items_in_stock") or use_limit_search:
-					item_stock_qty = get_stock_availability(item_code, pos_profile.get("warehouse"))
+				detail = detail_map.get(item_code, {})
+
 				attributes = ""
 				if pos_profile.get("posa_show_template_items") and item.has_variants:
 					attributes = get_item_attributes(item.item_code)
@@ -417,31 +347,23 @@ def get_items(
 						fields=["attribute", "attribute_value"],
 						filters={"parent": item.item_code, "parentfield": "attributes"},
 					)
+
 				if (
 					posa_display_items_in_stock
-					and (not item_stock_qty or item_stock_qty < 0)
+					and (not detail.get("actual_qty") or detail.get("actual_qty") < 0)
 					and not item.has_variants
 				):
-					pass
-				else:
-					row = {}
-					row.update(item)
-					row.update(
-						{
-							"rate": item_price.get("price_list_rate") or 0,
-							"currency": item_price.get("currency")
-							or price_list_currency
-							or pos_profile.get("currency"),
-							"item_barcode": item_barcode or [],
-							"actual_qty": item_stock_qty or 0,
-							"serial_no_data": serial_no_data or [],
-							"batch_no_data": batch_no_data or [],
-							"attributes": attributes or "",
-							"item_attributes": item_attributes or "",
-							"item_uoms": uoms or [],
-						}
-					)
-					result.append(row)
+					continue
+
+				row = {}
+				row.update(item)
+				row.update(detail)
+				row.update({
+					"attributes": attributes or "",
+					"item_attributes": item_attributes or "",
+				})
+				result.append(row)
+
 		return result
 
 	if use_price_list:
@@ -1536,19 +1458,19 @@ def create_customer(
 
 @frappe.whitelist()
 def get_items_from_barcode(selling_price_list, currency, barcode):
-        search_item = frappe.get_all(
-                "Item Barcode",
-                filters={"barcode": barcode},
-                fields=["parent", "barcode", "posa_uom"],
-        )
-        if len(search_item) == 0:
-                return ""
-        item_code = search_item[0].parent
-        item_list = frappe.get_all(
-                "Item",
-                filters={"name": item_code},
-                fields=[
-                        "name",
+	search_item = frappe.get_all(
+		"Item Barcode",
+		filters={"barcode": barcode},
+		fields=["parent", "barcode", "posa_uom"],
+	)
+	if len(search_item) == 0:
+		return ""
+	item_code = search_item[0].parent
+	item_list = frappe.get_all(
+		"Item",
+		filters={"name": item_code},
+		fields=[
+			"name",
 			"item_name",
 			"description",
 			"stock_uom",
@@ -1562,67 +1484,67 @@ def get_items_from_barcode(selling_price_list, currency, barcode):
 		],
 	)
 
-        if item_list[0]:
-                item = item_list[0]
+	if item_list[0]:
+		item = item_list[0]
 
-                # Determine UOM from barcode if provided
-                barcode_uom = search_item[0].get("posa_uom")
+		# Determine UOM from barcode if provided
+		barcode_uom = search_item[0].get("posa_uom")
 
-                # Try to fetch Item Price for the barcode UOM first
-                item_price = None
-                if barcode_uom:
-                        item_price = frappe.db.get_value(
-                                "Item Price",
-                                {
-                                        "price_list": selling_price_list,
-                                        "item_code": item_code,
-                                        "uom": barcode_uom,
-                                },
-                                ["price_list_rate", "currency"],
-                                as_dict=True,
-                        )
+		# Try to fetch Item Price for the barcode UOM first
+		item_price = None
+		if barcode_uom:
+			item_price = frappe.db.get_value(
+				"Item Price",
+				{
+					"price_list": selling_price_list,
+					"item_code": item_code,
+					"uom": barcode_uom,
+				},
+				["price_list_rate", "currency"],
+				as_dict=True,
+			)
 
-                # Fallback to existing logic when no UOM price found
-                if not item_price:
-                        filters = {"price_list": selling_price_list, "item_code": item_code}
-                        prices_with_uom = frappe.db.count(
-                                "Item Price",
-                                filters={
-                                        "price_list": selling_price_list,
-                                        "item_code": item_code,
-                                        "uom": item.stock_uom,
-                                },
-                        )
+		# Fallback to existing logic when no UOM price found
+		if not item_price:
+			filters = {"price_list": selling_price_list, "item_code": item_code}
+			prices_with_uom = frappe.db.count(
+				"Item Price",
+				filters={
+					"price_list": selling_price_list,
+					"item_code": item_code,
+					"uom": item.stock_uom,
+				},
+			)
 
-                        if prices_with_uom > 0:
-                                filters["uom"] = item.stock_uom
-                        else:
-                                filters["uom"] = ["in", ["", None, item.stock_uom]]
+			if prices_with_uom > 0:
+				filters["uom"] = item.stock_uom
+			else:
+				filters["uom"] = ["in", ["", None, item.stock_uom]]
 
-                        item_prices_data = frappe.get_all(
-                                "Item Price",
-                                fields=["item_code", "price_list_rate", "currency"],
-                                filters=filters,
-                        )
+			item_prices_data = frappe.get_all(
+				"Item Price",
+				fields=["item_code", "price_list_rate", "currency"],
+				filters=filters,
+			)
 
-                        if item_prices_data:
-                                item_price = item_prices_data[0]
+			if item_prices_data:
+				item_price = item_prices_data[0]
 
-                rate = item_price.get("price_list_rate") if item_price else 0
-                currency = item_price.get("currency") if item_price else currency
+		rate = item_price.get("price_list_rate") if item_price else 0
+		currency = item_price.get("currency") if item_price else currency
 
-                item.update(
-                        {
-                                "rate": rate,
-                                "currency": currency,
-                                "item_code": item_code,
-                                "barcode": barcode,
-                                "uom": barcode_uom or item.get("stock_uom"),
-                                "actual_qty": 0,
-                                "item_barcode": search_item,
-                        }
-                )
-                return item
+		item.update(
+			{
+				"rate": rate,
+				"currency": currency,
+				"item_code": item_code,
+				"barcode": barcode,
+				"uom": barcode_uom or item.get("stock_uom"),
+				"actual_qty": 0,
+				"item_barcode": search_item,
+			}
+		)
+		return item
 
 
 @frappe.whitelist()
@@ -1692,8 +1614,8 @@ def search_invoices_for_return(
 
 	Returns:
 	    Dictionary with:
-	        - invoices: List of invoice documents
-	        - has_more: Boolean indicating if there are more invoices to load
+		- invoices: List of invoice documents
+		- has_more: Boolean indicating if there are more invoices to load
 	"""
 	# Start with base filters
 	filters = {
@@ -1762,11 +1684,11 @@ def search_invoices_for_return(
 		# Build the WHERE clause for the query
 		where_clause = " OR ".join(conditions)
 		customer_query = f"""
-            SELECT name 
-            FROM `tabCustomer`
-            WHERE {where_clause}
-            LIMIT 100
-        """
+	    SELECT name 
+	    FROM `tabCustomer`
+	    WHERE {where_clause}
+	    LIMIT 100
+	"""
 
 		customers = frappe.db.sql(customer_query, params, as_dict=True)
 		customer_ids = [c.name for c in customers]
@@ -1911,15 +1833,15 @@ def get_offers(profile):
 	}
 	data = frappe.db.sql(
 		"""
-        SELECT *
-        FROM `tabPOS Offer`
-        WHERE 
-        disable = 0 AND
-        company = %(company)s AND
-        (pos_profile is NULL OR pos_profile  = '' OR  pos_profile = %(pos_profile)s) AND
-        (warehouse is NULL OR warehouse  = '' OR  warehouse = %(warehouse)s) AND
-        (valid_from is NULL OR valid_from  = '' OR  valid_from <= %(valid_from)s) AND
-        (valid_upto is NULL OR valid_from  = '' OR  valid_upto >= %(valid_upto)s)
+	SELECT *
+	FROM `tabPOS Offer`
+	WHERE 
+	disable = 0 AND
+	company = %(company)s AND
+	(pos_profile is NULL OR pos_profile  = '' OR  pos_profile = %(pos_profile)s) AND
+	(warehouse is NULL OR warehouse	 = '' OR  warehouse = %(warehouse)s) AND
+	(valid_from is NULL OR valid_from  = '' OR  valid_from <= %(valid_from)s) AND
+	(valid_upto is NULL OR valid_from  = '' OR  valid_upto >= %(valid_upto)s)
     """,
 		values=values,
 		as_dict=1,
@@ -1931,23 +1853,23 @@ def get_offers(profile):
 def get_customer_addresses(customer):
 	return frappe.db.sql(
 		"""
-        SELECT 
-            address.name,
-            address.address_line1,
-            address.address_line2,
-            address.address_title,
-            address.city,
-            address.state,
-            address.country,
-            address.address_type
-        FROM `tabAddress` as address
-        INNER JOIN `tabDynamic Link` AS link
+	SELECT 
+	    address.name,
+	    address.address_line1,
+	    address.address_line2,
+	    address.address_title,
+	    address.city,
+	    address.state,
+	    address.country,
+	    address.address_type
+	FROM `tabAddress` as address
+	INNER JOIN `tabDynamic Link` AS link
 				ON address.name = link.parent
-        WHERE link.link_doctype = 'Customer'
-            AND link.link_name = '{0}'
-            AND address.disabled = 0
-        ORDER BY address.name
-        """.format(customer),
+	WHERE link.link_doctype = 'Customer'
+	    AND link.link_name = '{0}'
+	    AND address.disabled = 0
+	ORDER BY address.name
+	""".format(customer),
 		as_dict=1,
 	)
 
@@ -2306,25 +2228,25 @@ def get_customer_info(customer):
 
 	addresses = frappe.db.sql(
 		"""
-        SELECT
-            address.name as address_name,
-            address.address_line1,
-            address.address_line2,
-            address.city,
-            address.state,
-            address.country,
-            address.address_type
-        FROM `tabAddress` address
-        INNER JOIN `tabDynamic Link` link
-            ON (address.name = link.parent)
-        WHERE
-            link.link_doctype = 'Customer'
-            AND link.link_name = %s
-            AND address.disabled = 0
-            AND address.address_type = 'Shipping'
-        ORDER BY address.creation DESC
-        LIMIT 1
-        """,
+	SELECT
+	    address.name as address_name,
+	    address.address_line1,
+	    address.address_line2,
+	    address.city,
+	    address.state,
+	    address.country,
+	    address.address_type
+	FROM `tabAddress` address
+	INNER JOIN `tabDynamic Link` link
+	    ON (address.name = link.parent)
+	WHERE
+	    link.link_doctype = 'Customer'
+	    AND link.link_name = %s
+	    AND address.disabled = 0
+	    AND address.address_type = 'Shipping'
+	ORDER BY address.creation DESC
+	LIMIT 1
+	""",
 		(customer.name,),
 		as_dict=True,
 	)
