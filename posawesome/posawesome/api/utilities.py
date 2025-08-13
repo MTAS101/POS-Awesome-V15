@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import json
 import frappe
 from frappe.utils import cstr, add_to_date, get_datetime
+from typing import List, Dict
 import time
 import os
 import psutil
@@ -131,7 +132,7 @@ def get_selling_price_lists():
 
 
 @frappe.whitelist()
-def get_app_info():
+def get_app_info() -> Dict[str, List[Dict[str, str]]]:
 	"""
 	Return a list of installed apps and their versions.
 	"""
@@ -190,9 +191,9 @@ def get_language_options():
 
 	languages = {"en"}
 
-       def normalize(code):
-               """Return language code normalized for comparison."""
-               return code.strip().lower().replace("_", "-")
+	def normalize(code: str) -> str:
+		"""Return language code normalized for comparison."""
+		return code.strip().lower().replace("_", "-")
 
 	# Collect languages from translation CSV files
 	for app in frappe.get_installed_apps():
@@ -213,7 +214,7 @@ def get_language_options():
 
 
 @frappe.whitelist()
-def get_translation_dict(lang):
+def get_translation_dict(lang: str) -> dict:
 	"""Return translations for the given language from all installed apps."""
 	from frappe.translate import get_translations_from_csv
 
@@ -248,7 +249,7 @@ def get_translation_dict(lang):
 
 
 @frappe.whitelist()
-def get_pos_profile_tax_inclusive(pos_profile):
+def get_pos_profile_tax_inclusive(pos_profile: str):
 	"""Return the 'posa_tax_inclusive' setting for the given POS Profile."""
 	if not pos_profile:
 		return None

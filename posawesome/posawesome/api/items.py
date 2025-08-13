@@ -336,8 +336,8 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 
 	from collections import defaultdict
 
-	attributes_meta = defaultdict(set)
-	item_attr_map = defaultdict(list)
+	attributes_meta: dict[str, set] = defaultdict(set)
+	item_attr_map: dict[str, list] = defaultdict(list)
 
 	for row in attr_rows:
 		attributes_meta[row.attribute].add(row.attribute_value)
