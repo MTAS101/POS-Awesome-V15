@@ -6,7 +6,7 @@ import json
 import frappe
 from erpnext.accounts.party import get_party_account
 from erpnext.selling.doctype.sales_order.sales_order import make_sales_invoice
-from frappe.utils import getdate, nowdate
+from frappe.utils import getdate, now, nowdate
 
 from posawesome.posawesome.api.payment_entry import create_payment_entry
 
@@ -18,26 +18,51 @@ def _payment_entry_job(order_name, payments):
 
 
 @frappe.whitelist()
-def search_orders(company, currency, order_name=None):
-	filters = {
-		"billing_status": ["in", ["Not Billed", "Partly Billed"]],
-		"docstatus": 1,
-		"company": company,
-		"currency": currency,
-	}
-	if order_name:
-		filters["name"] = ["like", f"%{order_name}%"]
-	orders_list = frappe.get_list(
-		"Sales Order",
-		filters=filters,
-		fields=["name"],
-		limit_page_length=0,
-		order_by="customer",
-	)
-	data = []
-	for order in orders_list:
-		data.append(frappe.get_doc("Sales Order", order["name"]))
-	return data
+def search_orders(company, currency, order_name=None, limit=None, offset=None):
+        """Search for sales orders with pagination support.
+
+        Args:
+            company: Company to filter by
+            currency: Currency to filter by
+            order_name: Optional order name search term
+            limit: Maximum number of results to return (capped)
+            offset: Number of records to skip
+        """
+
+        MAX_PAGE_LENGTH = 500
+
+        def _to_positive_int(value):
+                try:
+                        ivalue = int(value)
+                        return ivalue if ivalue >= 0 else None
+                except (TypeError, ValueError):
+                        return None
+
+        limit = _to_positive_int(limit) or 0
+        if limit == 0 or limit > MAX_PAGE_LENGTH:
+                limit = MAX_PAGE_LENGTH
+        offset = _to_positive_int(offset) or 0
+
+        filters = {
+                "billing_status": ["in", ["Not Billed", "Partly Billed"]],
+                "docstatus": 1,
+                "company": company,
+                "currency": currency,
+        }
+        if order_name:
+                filters["name"] = ["like", f"%{order_name}%"]
+        orders_list = frappe.get_list(
+                "Sales Order",
+                filters=filters,
+                fields=["name"],
+                limit_start=offset,
+                limit_page_length=limit,
+                order_by="customer",
+        )
+        data = []
+        for order in orders_list:
+                data.append(frappe.get_doc("Sales Order", order["name"]))
+        return {"orders": data, "server_timestamp": now()}
 
 
 def _map_delivery_dates(data):
