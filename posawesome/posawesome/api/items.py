@@ -14,6 +14,7 @@ from frappe import _
 from frappe.utils import cstr, flt, get_datetime, nowdate
 from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
+
 from .utils import HAS_VARIANTS_EXCLUSION
 
 
@@ -45,17 +46,23 @@ def get_items(
 ):
 	_pos_profile = json.loads(pos_profile)
 	use_price_list = _pos_profile.get("posa_use_server_cache")
+	pos_profile_name = _pos_profile.get("name")
+	warehouse = _pos_profile.get("warehouse")
+	ttl = _pos_profile.get("posa_server_cache_duration")
+	if ttl:
+		ttl = int(ttl) * 60
 
-	@redis_cache(ttl=60)
+	@redis_cache(ttl=ttl or 300)
 	def __get_items(
-		pos_profile,
+		_pos_profile_name,
+		_warehouse,
 		price_list,
-		item_group,
+		customer,
 		search_value,
-		customer=None,
-		limit=None,
-		offset=None,
-		modified_after=None,
+		limit,
+		offset,
+		modified_after,
+		item_group,
 	):
 		return _get_items(
 			pos_profile,
@@ -79,15 +86,6 @@ def get_items(
 		modified_after=None,
 	):
 		pos_profile = json.loads(pos_profile)
-
-		# Clear quantity cache to ensure fresh values on each search
-		try:
-		       if hasattr(frappe.local.cache, "delete_key"):
-			       frappe.local.cache.delete_key("bin_qty_cache")
-		       elif frappe.cache().get_value("bin_qty_cache"):
-			       frappe.cache().delete_value("bin_qty_cache")
-		except Exception as e:
-		       frappe.log_error(f"Error clearing bin_qty_cache: {e!s}", "POS Awesome")
 
 		use_limit_search = pos_profile.get("posa_use_limit_search")
 		search_serial_no = pos_profile.get("posa_search_serial_no")
@@ -245,14 +243,15 @@ def get_items(
 
 	if use_price_list:
 		return __get_items(
-			pos_profile,
+			pos_profile_name,
+			warehouse,
 			price_list,
-			item_group,
-			search_value,
 			customer,
+			search_value,
 			limit,
 			offset,
 			modified_after,
+			item_group,
 		)
 	else:
 		return _get_items(
