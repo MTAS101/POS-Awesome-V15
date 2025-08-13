@@ -382,9 +382,11 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 		if not item_codes:
 			return []
 		today = nowdate()
+		# Fetch both generic and customer-specific prices, ensuring that
+		# customer prices override generic ones when present.
 		return frappe.get_all(
 			"Item Price",
-			fields=["item_code", "price_list_rate", "currency", "uom"],
+			fields=["item_code", "price_list_rate", "currency", "uom", "customer"],
 			filters={
 				"price_list": price_list,
 				"item_code": ["in", item_codes],
@@ -394,7 +396,9 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 				"customer": ["in", ["", None, customer]],
 			},
 			or_filters=[["valid_upto", ">=", today], ["valid_upto", "in", ["", None]]],
-			order_by="valid_from ASC, valid_upto DESC",
+			# Order so that generic prices come first and
+			# customer-specific prices (if any) override them.
+			order_by="ifnull(customer, '') ASC, valid_from ASC, valid_upto DESC",
 		)
 
 	@redis_cache(ttl=ttl or 300)
@@ -499,7 +503,34 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 		)
 
 	price_list = price_list or pos_profile.get("selling_price_list")
-	price_list_currency = frappe.db.get_value("Price List", price_list, "currency") or pos_profile.get("currency")
+	today = nowdate()
+	price_list_currency = (
+		frappe.db.get_value("Price List", price_list, "currency")
+		or pos_profile.get("currency")
+	)
+
+	company = pos_profile.get("company")
+	allow_multi_currency = pos_profile.get("posa_allow_multi_currency") or 0
+	company_currency = (
+		frappe.db.get_value("Company", company, "default_currency") if company else None
+	)
+
+	exchange_rate = 1
+	if (
+		company_currency
+		and price_list_currency
+		and price_list_currency != company_currency
+		and allow_multi_currency
+	):
+		from erpnext.setup.utils import get_exchange_rate
+
+		try:
+			exchange_rate = get_exchange_rate(price_list_currency, company_currency, today)
+		except Exception:
+			frappe.log_error(
+				f"Missing exchange rate from {price_list_currency} to {company_currency}",
+				"POS Awesome",
+			)
 
 	item_codes = [d.get("item_code") for d in items_data if d.get("item_code") and not d.get("has_variants")]
 	item_codes_tuple = _to_tuple(item_codes)
@@ -579,7 +610,12 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 				"serial_no_data": serial_map.get(item_code, []),
 				"rate": item_price.get("price_list_rate") or 0,
 				"price_list_rate": item_price.get("price_list_rate") or 0,
-				"currency": item_price.get("currency") or price_list_currency or pos_profile.get("currency"),
+				"currency": item_price.get("currency")
+				or price_list_currency
+				or pos_profile.get("currency"),
+				"price_list_currency": price_list_currency,
+				"plc_conversion_rate": exchange_rate,
+				"conversion_rate": exchange_rate,
 			}
 		)
 
