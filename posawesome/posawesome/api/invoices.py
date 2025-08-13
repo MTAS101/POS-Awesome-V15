@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import json
+from typing import Dict, List
 
 import frappe
 from erpnext.accounts.doctype.sales_invoice.sales_invoice import get_bank_cash_account
@@ -23,7 +24,7 @@ from posawesome.posawesome.api.utilities import (
 )  # Updated imports
 
 
-def get_latest_rate(from_currency, to_currency):
+def get_latest_rate(from_currency: str, to_currency: str):
 	"""Return the most recent Currency Exchange rate and its date."""
 	rate_doc = frappe.get_all(
 		"Currency Exchange",
@@ -640,7 +641,7 @@ def get_available_currencies():
 
 
 @frappe.whitelist()
-def fetch_exchange_rate(currency, company, posting_date=None):
+def fetch_exchange_rate(currency: str, company: str, posting_date: str = None):
 	"""Return latest exchange rate and its date."""
 	company_currency = frappe.get_cached_value("Company", company, "default_currency")
 	rate, date = get_latest_rate(currency, company_currency)
@@ -648,14 +649,14 @@ def fetch_exchange_rate(currency, company, posting_date=None):
 
 
 @frappe.whitelist()
-def fetch_exchange_rate_pair(from_currency, to_currency, posting_date=None):
+def fetch_exchange_rate_pair(from_currency: str, to_currency: str, posting_date: str = None):
 	"""Return latest exchange rate between two currencies along with rate date."""
 	rate, date = get_latest_rate(from_currency, to_currency)
 	return {"exchange_rate": rate, "date": date}
 
 
 @frappe.whitelist()
-def get_price_list_currency(price_list):
+def get_price_list_currency(price_list: str) -> str:
 	"""Return the currency of the given Price List."""
 	if not price_list:
 		return None
