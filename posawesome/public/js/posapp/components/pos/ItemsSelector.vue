@@ -756,12 +756,22 @@ export default {
 			// Filter by search term only if it exists and is long enough
 			if (searchTerm && searchTerm.trim() && searchTerm.trim().length >= 3) {
 				const term = searchTerm.toLowerCase();
-				filtered = filtered.filter(
-					(item) =>
+				filtered = filtered.filter((item) => {
+					const barcodeMatch =
+						(Array.isArray(item.item_barcode) &&
+							item.item_barcode.some(
+								(b) => b.barcode && b.barcode.toLowerCase().includes(term),
+							)) ||
+						(Array.isArray(item.barcodes) &&
+							item.barcodes.some((bc) => String(bc).toLowerCase().includes(term))) ||
+						(item.barcode && String(item.barcode).toLowerCase().includes(term));
+
+					return (
 						item.item_code.toLowerCase().includes(term) ||
 						item.item_name.toLowerCase().includes(term) ||
-						(item.item_barcode && item.item_barcode.some((b) => b.barcode === searchTerm)),
-				);
+						barcodeMatch
+					);
+				});
 			}
 
 			return filtered;
@@ -1605,12 +1615,14 @@ export default {
 			const qty = this.get_item_qty(this.first_search);
 			const new_item = { ...this.filtered_items[0] };
 			new_item.qty = flt(qty);
-			new_item.item_barcode.forEach((element) => {
-				if (this.search == element.barcode) {
-					new_item.uom = element.posa_uom;
-					match = true;
-				}
-			});
+			if (Array.isArray(new_item.item_barcode)) {
+				new_item.item_barcode.forEach((element) => {
+					if (this.search == element.barcode) {
+						new_item.uom = element.posa_uom;
+						match = true;
+					}
+				});
+			}
 			if (this.flags.serial_no) {
 				new_item.to_set_serial_no = this.flags.serial_no;
 			}
@@ -2104,12 +2116,14 @@ export default {
 		},
 		async processScannedItem(scannedCode) {
 			// First try to find exact match by barcode
-			let foundItem = this.items.find(
-				(item) =>
+			let foundItem = this.items.find((item) => {
+				const barcodeMatch =
 					item.barcode === scannedCode ||
-					item.item_code === scannedCode ||
-					(item.barcodes && item.barcodes.some((bc) => bc.barcode === scannedCode)),
-			);
+					(Array.isArray(item.item_barcode) &&
+						item.item_barcode.some((b) => b.barcode === scannedCode)) ||
+					(Array.isArray(item.barcodes) && item.barcodes.some((bc) => String(bc) === scannedCode));
+				return barcodeMatch || item.item_code === scannedCode;
+			});
 
 			if (foundItem) {
 				console.log("Found item by exact match:", foundItem);
@@ -2167,12 +2181,18 @@ export default {
 		searchItemsByCode(code) {
 			return this.items.filter((item) => {
 				const searchTerm = code.toLowerCase();
+				const barcodeMatch =
+					(item.barcode && item.barcode.toLowerCase().includes(searchTerm)) ||
+					(Array.isArray(item.barcodes) &&
+						item.barcodes.some((bc) => String(bc).toLowerCase().includes(searchTerm))) ||
+					(Array.isArray(item.item_barcode) &&
+						item.item_barcode.some(
+							(b) => b.barcode && b.barcode.toLowerCase().includes(searchTerm),
+						));
 				return (
 					item.item_code.toLowerCase().includes(searchTerm) ||
 					item.item_name.toLowerCase().includes(searchTerm) ||
-					(item.barcode && item.barcode.toLowerCase().includes(searchTerm)) ||
-					(item.barcodes &&
-						item.barcodes.some((bc) => bc.barcode.toLowerCase().includes(searchTerm)))
+					barcodeMatch
 				);
 			});
 		},
@@ -2465,7 +2485,23 @@ export default {
 			// Apply search filter
 			if (searchTerm) {
 				filteredItems = filteredItems.filter((item) => {
-					const searchFields = [item.item_code, item.item_name, item.barcode, item.description]
+					const barcodeList = [];
+					if (Array.isArray(item.item_barcode)) {
+						barcodeList.push(...item.item_barcode.map((b) => b.barcode).filter(Boolean));
+					} else if (item.item_barcode) {
+						barcodeList.push(String(item.item_barcode));
+					}
+					if (Array.isArray(item.barcodes)) {
+						barcodeList.push(...item.barcodes.map((b) => String(b)).filter(Boolean));
+					}
+
+					const searchFields = [
+						item.item_code,
+						item.item_name,
+						item.barcode,
+						item.description,
+						...barcodeList,
+					]
 						.filter(Boolean)
 						.map((field) => field.toLowerCase());
 
