@@ -11,7 +11,7 @@ from erpnext.stock.doctype.batch.batch import (
 )
 from erpnext.stock.get_item_details import get_item_details
 from frappe import _
-from frappe.utils import cstr, flt, get_datetime, nowdate
+from frappe.utils import cstr, flt, get_datetime, nowdate, now_datetime
 from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
 
@@ -103,12 +103,17 @@ def get_items(
 		       except (TypeError, ValueError):
 			       return None
 
-		limit = _to_positive_int(limit)
-		offset = _to_positive_int(offset)
+                limit = _to_positive_int(limit)
+                offset = _to_positive_int(offset) or 0
 
-		search_limit = 0
-		if use_limit_search:
-			search_limit = pos_profile.get("posa_search_limit") or 500
+                # Always enforce a reasonable upper cap on limits
+                max_limit = 1000
+                default_limit = (
+                        pos_profile.get("posa_search_limit") if use_limit_search else 500
+                )
+                if limit is None:
+                        limit = default_limit or 500
+                limit = min(limit, max_limit)
 
 		result = []
 
@@ -157,43 +162,31 @@ def get_items(
 		if not posa_show_template_items:
 			filters.update(HAS_VARIANTS_EXCLUSION)
 
-		# Determine limit
-		limit_page_length = None
-		limit_start = None
-
-		# When a specific search term is provided, fetch all matching
-		# items. Applying a limit in this scenario can truncate results
-		# and prevent relevant items from appearing in the item selector.
-		if not search_value:
-			if limit is not None:
-				limit_page_length = limit
-				if offset:
-					limit_start = offset
-			elif use_limit_search:
-				limit_page_length = search_limit
-				if pos_profile.get("posa_force_reload_items"):
-					limit_page_length = None
+                # Apply limit and offset uniformly to protect the database
+                limit_page_length = limit
+                limit_start = offset
 
 		items_data = frappe.get_all(
 			"Item",
 			filters=filters,
 			or_filters=or_filters if or_filters else None,
-			fields=[
-				"name as item_code",
-				"item_name",
-				"description",
-				"stock_uom",
-				"image",
-				"is_stock_item",
-				"has_variants",
-				"variant_of",
-				"item_group",
-				"idx",
-				"has_batch_no",
-				"has_serial_no",
-				"max_discount",
-				"brand",
-			],
+                        fields=[
+                                "name as item_code",
+                                "item_name",
+                                "description",
+                                "stock_uom",
+                                "image",
+                                "is_stock_item",
+                                "has_variants",
+                                "variant_of",
+                                "item_group",
+                                "idx",
+                                "has_batch_no",
+                                "has_serial_no",
+                                "max_discount",
+                                "brand",
+                                "modified",
+                        ],
 			limit_start=limit_start,
 			limit_page_length=limit_page_length,
 			order_by="item_name asc",
@@ -239,7 +232,8 @@ def get_items(
 				})
 				result.append(row)
 
-		return result
+                frappe.response["server_timestamp"] = now_datetime().isoformat()
+                return result
 
 	if use_price_list:
 		return __get_items(

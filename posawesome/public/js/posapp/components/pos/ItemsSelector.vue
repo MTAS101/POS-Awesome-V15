@@ -1376,9 +1376,9 @@ export default {
 							newLoaded,
 						);
 					} else {
-						if (this.storageAvailable && this.localStorageAvailable) {
-							setItemsLastSync(new Date().toISOString());
-						}
+                                                if (this.storageAvailable && this.localStorageAvailable) {
+                                                        setItemsLastSync(res.server_timestamp || new Date().toISOString());
+                                                }
 						if (this.itemWorker) {
 							this.itemWorker.terminate();
 							this.itemWorker = null;
@@ -1447,9 +1447,9 @@ export default {
 								newLoaded,
 							);
 						} else {
-							if (this.storageAvailable && this.localStorageAvailable) {
-								setItemsLastSync(new Date().toISOString());
-							}
+                                                        if (this.storageAvailable && this.localStorageAvailable) {
+                                                                setItemsLastSync(r.server_timestamp || new Date().toISOString());
+                                                        }
 							if (this.items && this.items.length > 0) {
 								await this.prePopulateStockCache(this.items);
 							}
