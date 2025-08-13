@@ -17,6 +17,8 @@ from frappe.utils.caching import redis_cache
 
 from .utils import HAS_VARIANTS_EXCLUSION
 
+LIKE_SEARCH_LIMIT = 1000
+
 
 def get_stock_availability(item_code, warehouse):
 	actual_qty = (
@@ -157,23 +159,23 @@ def get_items(
 		if not posa_show_template_items:
 			filters.update(HAS_VARIANTS_EXCLUSION)
 
-		# Determine limit
-		limit_page_length = None
-		limit_start = None
+			# Determine limit
+			limit_page_length = None
+			limit_start = None
 
-		# When a specific search term is provided, fetch all matching
-		# items. Applying a limit in this scenario can truncate results
-		# and prevent relevant items from appearing in the item selector.
-		if not search_value:
-			if limit is not None:
-				limit_page_length = limit
+			if search_value and or_filters:
+				limit_page_length = min(search_limit or LIKE_SEARCH_LIMIT, LIKE_SEARCH_LIMIT)
 				if offset:
 					limit_start = offset
-			elif use_limit_search:
-				limit_page_length = search_limit
-				if pos_profile.get("posa_force_reload_items"):
-					limit_page_length = None
-
+			elif not search_value:
+				if limit is not None:
+					limit_page_length = limit
+					if offset:
+						limit_start = offset
+				elif use_limit_search:
+					limit_page_length = search_limit
+					if pos_profile.get("posa_force_reload_items"):
+						limit_page_length = None
 		items_data = frappe.get_all(
 			"Item",
 			filters=filters,
