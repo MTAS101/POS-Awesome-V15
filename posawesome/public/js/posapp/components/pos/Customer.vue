@@ -319,7 +319,7 @@ export default {
                                        if (rows.length === limit) {
                                                this.backgroundLoadCustomers(offset + limit, syncSince, newLoaded);
                                        } else {
-                                               setCustomersLastSync(r.server_timestamp || new Date().toISOString());
+                                               setCustomersLastSync(new Date().toISOString());
                                                this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
                                                this.eventBus.emit("data-loaded", "customers");
                                                this.customers_loaded = true;
@@ -396,7 +396,7 @@ export default {
                                                        vm.eventBus.emit("data-load-progress", { name: "customers", progress });
                                                        vm.backgroundLoadCustomers(vm.customersPageLimit, syncSince, vm.customers.length);
                                                } else {
-                                                       setCustomersLastSync(r.server_timestamp || new Date().toISOString());
+                                                       setCustomersLastSync(new Date().toISOString());
                                                        vm.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
                                                        vm.eventBus.emit("data-loaded", "customers");
                                                        vm.customers_loaded = true;

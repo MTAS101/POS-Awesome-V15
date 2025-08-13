@@ -5,7 +5,7 @@
 from __future__ import unicode_literals
 import json
 import frappe
-from frappe.utils import nowdate, flt, cstr, get_datetime, now_datetime
+from frappe.utils import nowdate, flt, cstr, get_datetime
 from frappe import _
 from erpnext.accounts.doctype.loyalty_program.loyalty_program import (
 	get_loyalty_program_details_with_points,
@@ -58,23 +58,9 @@ def get_customer_names(pos_profile, limit=None, offset=None, modified_after=None
 	def __get_customer_names(pos_profile, limit=None, offset=None, modified_after=None):
 		return _get_customer_names(pos_profile, limit, offset, modified_after)
 
-        def _get_customer_names(pos_profile, limit=None, offset=None, modified_after=None):
-                pos_profile = json.loads(pos_profile)
-                filters = {"disabled": 0}
-
-                def _to_positive_int(value):
-                        try:
-                                ivalue = int(value)
-                                return ivalue if ivalue >= 0 else None
-                        except (TypeError, ValueError):
-                                return None
-
-                limit = _to_positive_int(limit)
-                offset = _to_positive_int(offset) or 0
-                max_limit = 1000
-                if limit is None:
-                        limit = 500
-                limit = min(limit, max_limit)
+	def _get_customer_names(pos_profile, limit=None, offset=None, modified_after=None):
+		pos_profile = json.loads(pos_profile)
+		filters = {"disabled": 0}
 
 		customer_groups = get_customer_groups(pos_profile)
 		if customer_groups:
@@ -90,21 +76,19 @@ def get_customer_names(pos_profile, limit=None, offset=None, modified_after=None
 		customers = frappe.get_all(
 		        "Customer",
 		        filters=filters,
-                        fields=[
-                                "name",
-                                "mobile_no",
-                                "email_id",
-                                "tax_id",
-                                "customer_name",
-                                "primary_address",
-                                "modified",
-                        ],
-                        order_by="name",
-                        limit_start=offset,
-                        limit_page_length=limit,
-                )
-                frappe.response["server_timestamp"] = now_datetime().isoformat()
-                return customers
+		        fields=[
+				"name",
+				"mobile_no",
+				"email_id",
+				"tax_id",
+				"customer_name",
+				"primary_address",
+			],
+		        order_by="name",
+		        limit_start=offset,
+		        limit_page_length=limit,
+		)
+		return customers
 
 	if _pos_profile.get("posa_use_server_cache") and not (limit or offset or modified_after):
 		return __get_customer_names(pos_profile, limit, offset, modified_after)
