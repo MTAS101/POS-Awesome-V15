@@ -126,7 +126,7 @@ def get_items(
 		# Build ORM filters
 		filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
 		if start_after:
-			filters["name"] = [">", start_after]
+			filters["item_name"] = [">", start_after]
 		if modified_after:
 			try:
 				parsed_modified_after = get_datetime(modified_after)
@@ -177,8 +177,6 @@ def get_items(
 		limit_page_length = None
 		limit_start = None
 		order_by = "item_name asc"
-		if start_after:
-			order_by = "name asc"
 
 		# When a specific search term is provided, fetch all matching
 		# items. Applying a limit in this scenario can truncate results
