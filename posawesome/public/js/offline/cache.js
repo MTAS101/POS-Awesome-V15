@@ -128,15 +128,26 @@ export function reduceCacheUsage() {
 // --- Generic getters and setters for cached data ----------------------------
 
 export async function getStoredItems() {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
-		const items = await db.table("items").toArray();
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                const items = await db.table("items").toArray();
                return items;
-	} catch (e) {
-		console.error("Failed to get stored items", e);
-		return [];
-	}
+        } catch (e) {
+                console.error("Failed to get stored items", e);
+                return [];
+        }
+}
+
+export async function getStoredItemsCount() {
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                return await db.table("items").count();
+        } catch (e) {
+                console.error("Failed to count stored items", e);
+                return 0;
+        }
 }
 
 export async function saveItems(items) {

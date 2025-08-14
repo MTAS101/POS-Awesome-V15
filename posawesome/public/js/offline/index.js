@@ -13,11 +13,12 @@ export {
 
 // Cache exports
 export {
-	memory,
-	memoryInitPromise,
-	getStoredItems,
-	saveItems,
-	clearStoredItems,
+        memory,
+        memoryInitPromise,
+        getStoredItems,
+        getStoredItemsCount,
+        saveItems,
+        clearStoredItems,
 	getCustomerStorage,
 	setCustomerStorage,
 	getItemsLastSync,
