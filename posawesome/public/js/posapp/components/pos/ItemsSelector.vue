@@ -2649,11 +2649,15 @@ export default {
 		});
 
 		// Event listeners
-		this.eventBus.on("register_pos_profile", (data) => {
-			this.pos_profile = data.pos_profile;
-			this.get_items();
-			this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
-		});
+               this.eventBus.on("register_pos_profile", async (data) => {
+                       this.pos_profile = data.pos_profile;
+                       if (this.items.length === 0) {
+                               await this.get_items(true);
+                       } else {
+                               await this.get_items();
+                       }
+                       this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
+               });
 		this.eventBus.on("update_cur_items_details", () => {
 			this.update_cur_items_details();
 		});
@@ -2760,36 +2764,40 @@ export default {
 		});
 	},
 
-	async mounted() {
-		// Ensure POS profile is available
-		if (!this.pos_profile || !this.pos_profile.name) {
-			try {
-				// Try to get from global frappe context
-				if (frappe.boot && frappe.boot.pos_profile) {
-					this.pos_profile = frappe.boot.pos_profile;
-				} else if (window.cur_pos && window.cur_pos.pos_profile) {
-					this.pos_profile = window.cur_pos.pos_profile;
-				}
-			} catch (error) {
-				console.warn("Could not get POS profile in mounted:", error);
-			}
-		}
+       async mounted() {
+               // Ensure POS profile is available
+               if (!this.pos_profile || !this.pos_profile.name) {
+                       try {
+                               // Try to get from global frappe context
+                               if (frappe.boot && frappe.boot.pos_profile) {
+                                       this.pos_profile = frappe.boot.pos_profile;
+                               } else if (window.cur_pos && window.cur_pos.pos_profile) {
+                                       this.pos_profile = window.cur_pos.pos_profile;
+                               }
+                       } catch (error) {
+                               console.warn("Could not get POS profile in mounted:", error);
+                       }
 
-		// Load items if we have a profile and haven't loaded yet
-		if (this.pos_profile && this.pos_profile.name && !this.items_loaded) {
-			await this.get_items();
-		}
+                       if (!this.pos_profile || !this.pos_profile.name) {
+                               this.pos_profile = await ensurePosProfile();
+                       }
+               }
 
-		// Setup barcode scanner if enabled
-		if (this.pos_profile?.posa_enable_barcode_scanning) {
-			this.scan_barcoud();
-		}
+               // Load items if we have a profile
+               if (this.pos_profile && this.pos_profile.name) {
+                       await this.get_items(this.items.length === 0);
+               }
 
-		// Apply the configured items per page on mount
-		this.itemsPerPage = this.items_per_page;
-		window.addEventListener("resize", this.checkItemContainerOverflow);
-		this.$nextTick(this.checkItemContainerOverflow);
-	},
+               // Setup barcode scanner if enabled
+               if (this.pos_profile?.posa_enable_barcode_scanning) {
+                       this.scan_barcoud();
+               }
+
+               // Apply the configured items per page on mount
+               this.itemsPerPage = this.items_per_page;
+               window.addEventListener("resize", this.checkItemContainerOverflow);
+               this.$nextTick(this.checkItemContainerOverflow);
+       },
 
 	beforeUnmount() {
 		// Clear interval when component is destroyed
