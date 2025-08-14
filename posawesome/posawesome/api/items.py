@@ -151,20 +151,21 @@ def get_items(
 				or_filters = [
 					["name", "like", f"{item_code}%"],
 					["item_name", "like", f"{item_code}%"],
+					["item_code", "like", f"%{item_code}%"],
 				]
 				item_code_for_search = item_code
 
 				# Prefer exact match when barcode/serial/batch resolves to item_code
 				if data.get("item_code"):
-					filters["name"] = data.get("item_code")
+					filters["item_code"] = data.get("item_code")
 					or_filters = []
 				item_code_for_search = None
 			else:
 				# For short inputs, only attempt exact matches
 				if data.get("item_code"):
-					filters["name"] = data.get("item_code")
+					filters["item_code"] = data.get("item_code")
 				else:
-					filters["name"] = item_code
+					filters["item_code"] = item_code
 
 		if item_group and item_group.upper() != "ALL":
 			filters["item_group"] = ["like", f"%{item_group}%"]
@@ -197,7 +198,8 @@ def get_items(
 			filters=filters,
 			or_filters=or_filters if or_filters else None,
 			fields=[
-				"name as item_code",
+				"name",
+				"item_code",
 				"item_name",
 				"stock_uom",
 				"is_stock_item",
@@ -223,9 +225,11 @@ def get_items(
 				or_filters=[
 					["name", "like", f"%{item_code_for_search}%"],
 					["item_name", "like", f"%{item_code_for_search}%"],
+					["item_code", "like", f"%{item_code_for_search}%"],
 				],
 				fields=[
-					"name as item_code",
+					"name",
+					"item_code",
 					"item_name",
 					"stock_uom",
 					"is_stock_item",
@@ -260,13 +264,13 @@ def get_items(
 
 				attributes = ""
 				if pos_profile.get("posa_show_template_items") and item.has_variants:
-					attributes = get_item_attributes(item.item_code)
+					attributes = get_item_attributes(item.name)
 				item_attributes = ""
 				if pos_profile.get("posa_show_template_items") and item.variant_of:
 					item_attributes = frappe.get_all(
 						"Item Variant Attribute",
 						fields=["attribute", "attribute_value"],
-						filters={"parent": item.item_code, "parentfield": "attributes"},
+						filters={"parent": item.name, "parentfield": "attributes"},
 					)
 
 				if (
