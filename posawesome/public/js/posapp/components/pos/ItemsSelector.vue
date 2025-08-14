@@ -1300,10 +1300,10 @@ export default {
 					}
 				}
 
-                                if (hasMore) {
-                                        const last = items[items.length - 1]?.item_code || null;
-                                        this.backgroundLoadItems(last, null, false, requestToken, items.length);
-                                }
+                               if (hasMore) {
+                                       const last = items[items.length - 1]?.item_name || null;
+                                       this.backgroundLoadItems(last, null, false, requestToken, items.length);
+                               }
 			} catch (error) {
 				console.error("Failed to load items:", error);
 				frappe.msgprint(__("Failed to load items. Please try again."));
@@ -1343,7 +1343,7 @@ export default {
 					if (this.items_request_token !== requestToken) {
 						return;
 					}
-                                        let lastItemCode = null;
+                                       let lastItemName = null;
                                         const count = await new Promise((resolve) => {
                                                 this.itemWorker.onmessage = async (ev) => {
                                                         if (this.items_request_token !== requestToken) {
@@ -1357,7 +1357,7 @@ export default {
                                                                         if (existing) Object.assign(existing, it);
                                                                         else this.items.push(it);
                                                                 });
-                                                                lastItemCode = newItems[newItems.length - 1]?.item_code || null;
+                                                               lastItemName = newItems[newItems.length - 1]?.item_name || null;
                                                                 this.eventBus.emit("set_all_items", this.items);
                                                                 if (
                                                                         this.pos_profile &&
@@ -1394,15 +1394,15 @@ export default {
                                         const newLoaded = loaded + count;
                                         const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
                                         this.eventBus.emit("data-load-progress", { name: "items", progress });
-                                        if (count === limit) {
-                                                await this.backgroundLoadItems(
-                                                        lastItemCode,
-                                                        syncSince,
-                                                        clearBefore,
-                                                        requestToken,
-                                                        newLoaded,
-                                                );
-                                        } else {
+                                       if (count === limit) {
+                                               await this.backgroundLoadItems(
+                                                       lastItemName,
+                                                       syncSince,
+                                                       clearBefore,
+                                                       requestToken,
+                                                       newLoaded,
+                                               );
+                                       } else {
 						if (this.storageAvailable && this.localStorageAvailable) {
 							setItemsLastSync(new Date().toISOString());
 						}
@@ -1466,16 +1466,16 @@ export default {
 						const newLoaded = loaded + rows.length;
 						const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
 						this.eventBus.emit("data-load-progress", { name: "items", progress });
-                                                if (rows.length === limit) {
-                                                        const nextStart = rows[rows.length - 1]?.item_code || null;
-                                                        await this.backgroundLoadItems(
-                                                                nextStart,
-                                                                syncSince,
-                                                                clearBefore,
-                                                                requestToken,
-                                                                newLoaded,
-                                                        );
-                                                } else {
+                                               if (rows.length === limit) {
+                                                       const nextStart = rows[rows.length - 1]?.item_name || null;
+                                                       await this.backgroundLoadItems(
+                                                               nextStart,
+                                                               syncSince,
+                                                               clearBefore,
+                                                               requestToken,
+                                                               newLoaded,
+                                                       );
+                                               } else {
 							if (this.storageAvailable && this.localStorageAvailable) {
 								setItemsLastSync(new Date().toISOString());
 							}
