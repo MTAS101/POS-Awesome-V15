@@ -1211,9 +1211,9 @@ export default {
 				console.warn("No POS Profile available, attempting to get it...");
 				// Try to get the current POS profile
 				try {
-					if (frappe.boot && frappe.boot.default_pos_profile) {
-						this.pos_profile = frappe.boot.default_pos_profile;
-					} else {
+                                       if (frappe.boot && frappe.boot.pos_profile) {
+                                               this.pos_profile = frappe.boot.pos_profile;
+                                       } else {
 						// If still no profile, show error and return
 						console.error("No POS Profile configured");
 						frappe.msgprint(__("Please configure a POS Profile first"));
@@ -2619,9 +2619,9 @@ export default {
 				// Ensure POS profile is available
 				if (!this.pos_profile || !this.pos_profile.name) {
 					// Try to get POS profile from boot or current route
-					if (frappe.boot && frappe.boot.default_pos_profile) {
-						this.pos_profile = frappe.boot.default_pos_profile;
-					} else if (frappe.router && frappe.router.current_route) {
+                                       if (frappe.boot && frappe.boot.pos_profile) {
+                                               this.pos_profile = frappe.boot.pos_profile;
+                                       } else if (frappe.router && frappe.router.current_route) {
 						// Get from current route context
 						const route_context = frappe.router.current_route;
 						if (route_context.pos_profile) {
@@ -2760,9 +2760,9 @@ export default {
 		if (!this.pos_profile || !this.pos_profile.name) {
 			try {
 				// Try to get from global frappe context
-				if (frappe.boot && frappe.boot.default_pos_profile) {
-					this.pos_profile = frappe.boot.default_pos_profile;
-				} else if (window.cur_pos && window.cur_pos.pos_profile) {
+                               if (frappe.boot && frappe.boot.pos_profile) {
+                                       this.pos_profile = frappe.boot.pos_profile;
+                               } else if (window.cur_pos && window.cur_pos.pos_profile) {
 					this.pos_profile = window.cur_pos.pos_profile;
 				}
 			} catch (error) {
