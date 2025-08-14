@@ -41,7 +41,10 @@ def get_items(
 	customer=None,
 	limit=None,
 	offset=None,
+	start_after=None,
 	modified_after=None,
+	include_description=False,
+	include_image=False,
 ):
 	_pos_profile = json.loads(pos_profile)
 	use_price_list = _pos_profile.get("posa_use_server_cache")
@@ -60,8 +63,11 @@ def get_items(
 		search_value,
 		limit,
 		offset,
+		start_after,
 		modified_after,
 		item_group,
+		include_description,
+		include_image,
 	):
 		return _get_items(
 			pos_profile,
@@ -71,7 +77,10 @@ def get_items(
 			customer,
 			limit,
 			offset,
+			start_after,
 			modified_after,
+			include_description,
+			include_image,
 		)
 
 	def _get_items(
@@ -82,7 +91,10 @@ def get_items(
 		customer=None,
 		limit=None,
 		offset=None,
+		start_after=None,
 		modified_after=None,
+		include_description=False,
+		include_image=False,
 	):
 		pos_profile = json.loads(pos_profile)
 
@@ -113,6 +125,8 @@ def get_items(
 
 		# Build ORM filters
 		filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
+		if start_after:
+			filters["name"] = [">", start_after]
 		if modified_after:
 			try:
 				parsed_modified_after = get_datetime(modified_after)
@@ -161,6 +175,9 @@ def get_items(
 		# Determine limit
 		limit_page_length = None
 		limit_start = None
+		order_by = "item_name asc"
+		if start_after:
+			order_by = "name asc"
 
 		# When a specific search term is provided, fetch all matching
 		# items. Applying a limit in this scenario can truncate results
@@ -168,7 +185,7 @@ def get_items(
 		if not search_value:
 			if limit is not None:
 				limit_page_length = limit
-				if offset:
+				if offset and not start_after:
 					limit_start = offset
 			elif use_limit_search:
 				limit_page_length = search_limit
@@ -182,9 +199,7 @@ def get_items(
 			fields=[
 				"name as item_code",
 				"item_name",
-				"description",
 				"stock_uom",
-				"image",
 				"is_stock_item",
 				"has_variants",
 				"variant_of",
@@ -194,10 +209,12 @@ def get_items(
 				"has_serial_no",
 				"max_discount",
 				"brand",
-			],
+			]
+			+ (["description"] if include_description else [])
+			+ (["image"] if include_image else []),
 			limit_start=limit_start,
 			limit_page_length=limit_page_length,
-			order_by="item_name asc",
+			order_by=order_by,
 		)
 		if not items_data and item_code_for_search:
 			items_data = frappe.get_all(
@@ -210,9 +227,7 @@ def get_items(
 				fields=[
 					"name as item_code",
 					"item_name",
-					"description",
 					"stock_uom",
-					"image",
 					"is_stock_item",
 					"has_variants",
 					"variant_of",
@@ -222,10 +237,12 @@ def get_items(
 					"has_serial_no",
 					"max_discount",
 					"brand",
-				],
+				]
+				+ (["description"] if include_description else [])
+				+ (["image"] if include_image else []),
 				limit_start=limit_start,
 				limit_page_length=limit_page_length,
-				order_by="item_name asc",
+				order_by=order_by,
 			)
 
 		if items_data:
@@ -279,8 +296,11 @@ def get_items(
 			search_value,
 			limit,
 			offset,
+			start_after,
 			modified_after,
 			item_group,
+			include_description,
+			include_image,
 		)
 	else:
 		return _get_items(
@@ -291,27 +311,30 @@ def get_items(
 			customer,
 			limit,
 			offset,
+			start_after,
 			modified_after,
+			include_description,
+			include_image,
 		)
 
 
 @frappe.whitelist()
 def get_items_groups():
-        return frappe.db.sql(
-                """select name from `tabItem Group`
-                where is_group = 0 order by name limit 500""",
-                as_dict=1,
-        )
+	return frappe.db.sql(
+		"""select name from `tabItem Group`
+		where is_group = 0 order by name limit 500""",
+		as_dict=1,
+	)
 
 
 @frappe.whitelist()
 def get_items_count(pos_profile):
-        pos_profile = json.loads(pos_profile)
-        item_groups = get_item_groups(pos_profile.get("name"))
-        filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
-        if item_groups:
-                filters["item_group"] = ["in", item_groups]
-        return frappe.db.count("Item", filters)
+	pos_profile = json.loads(pos_profile)
+	item_groups = get_item_groups(pos_profile.get("name"))
+	filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
+	if item_groups:
+		filters["item_group"] = ["in", item_groups]
+	return frappe.db.count("Item", filters)
 
 
 @frappe.whitelist()
@@ -421,24 +444,60 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 		if not item_codes:
 			return []
 		today = nowdate()
-		# Fetch both generic and customer-specific prices, ensuring that
-		# customer prices override generic ones when present.
-		return frappe.get_all(
-			"Item Price",
-			fields=["item_code", "price_list_rate", "currency", "uom", "customer"],
-			filters={
-				"price_list": price_list,
-				"item_code": ["in", item_codes],
-				"currency": currency,
-				"selling": 1,
-				"valid_from": ["<=", today],
-				"customer": ["in", ["", None, customer]],
-			},
-			or_filters=[["valid_upto", ">=", today], ["valid_upto", "in", ["", None]]],
-			# Order so that generic prices come first and
-			# customer-specific prices (if any) override them.
-			order_by="ifnull(customer, '') ASC, valid_from ASC, valid_upto DESC",
-		)
+		params = {
+			"price_list": price_list,
+			"currency": currency,
+			"item_codes": tuple(item_codes),
+			"today": today,
+			"customer": customer or "",
+		}
+		query = """
+			SELECT
+				item_code,
+				price_list_rate,
+				currency,
+				uom,
+				customer
+			FROM (
+				SELECT
+					item_code,
+					price_list_rate,
+					currency,
+					uom,
+					customer,
+					valid_from,
+					valid_upto
+				FROM `tabItem Price`
+				WHERE
+					price_list = %(price_list)s
+					AND item_code IN %(item_codes)s
+					AND currency = %(currency)s
+					AND selling = 1
+					AND valid_from <= %(today)s
+					AND IFNULL(customer, '') IN ('', %(customer)s)
+					AND valid_upto >= %(today)s
+				UNION ALL
+				SELECT
+					item_code,
+					price_list_rate,
+					currency,
+					uom,
+					customer,
+					valid_from,
+					valid_upto
+				FROM `tabItem Price`
+				WHERE
+					price_list = %(price_list)s
+					AND item_code IN %(item_codes)s
+					AND currency = %(currency)s
+					AND selling = 1
+					AND valid_from <= %(today)s
+					AND IFNULL(customer, '') IN ('', %(customer)s)
+					AND (valid_upto IS NULL OR valid_upto = '')
+			) ip
+			ORDER BY IFNULL(customer, '') ASC, valid_from ASC, valid_upto DESC
+		"""
+		return frappe.db.sql(query, params, as_dict=True)
 
 	@redis_cache(ttl=ttl or 300)
 	def _get_bin_qty(warehouse, item_codes):
@@ -492,9 +551,9 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 				sle.item_code,
 				sle.batch_no,
 				SUM(sle.actual_qty) AS batch_qty,
-				b.expiry_date,
-				b.manufacturing_date,
-				b.posa_batch_price
+				MAX(b.expiry_date) AS expiry_date,
+				MAX(b.manufacturing_date) AS manufacturing_date,
+				MAX(b.posa_batch_price) AS posa_batch_price
 			FROM `tabStock Ledger Entry` sle
 			JOIN `tabBatch` b ON b.name = sle.batch_no AND b.item = sle.item_code
 			WHERE
@@ -506,10 +565,7 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 				AND (b.expiry_date IS NULL OR b.expiry_date > %s)
 			GROUP BY
 				sle.item_code,
-				sle.batch_no,
-				b.expiry_date,
-				b.manufacturing_date,
-				b.posa_batch_price
+				sle.batch_no
 			HAVING SUM(sle.actual_qty) > 0
 			""",
 			(warehouse, item_codes, today),
