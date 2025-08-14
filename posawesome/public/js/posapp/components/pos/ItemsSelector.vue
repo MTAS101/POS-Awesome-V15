@@ -2784,8 +2784,8 @@ export default {
                }
 
                // Load items if we have a profile
-               if (this.pos_profile && this.pos_profile.name) {
-                       await this.get_items(this.items.length === 0);
+               if (this.pos_profile?.name && !this.items_loaded) {
+                       await this.forceReloadItems();
                }
 
                // Setup barcode scanner if enabled
