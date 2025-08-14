@@ -1177,15 +1177,35 @@ export default {
 				console.error("❌ Error in forceLoadItems:", error.message);
 			}
 		},
-		async forceReloadItems() {
-			// Clear cached price list items so the reload always
-			// fetches the latest data from the server
-			await clearPriceListCache();
-			await this.ensureStorageHealth();
-			this.items_loaded = false;
-			await this.get_items(true);
-		},
-		async verifyServerItemCount() {
+                async forceReloadItems() {
+                        // Clear cached price list items so the reload always
+                        // fetches the latest data from the server
+                        await clearPriceListCache();
+                        await this.ensureStorageHealth();
+                        this.items_loaded = false;
+                        await this.get_items(true);
+                },
+               async retryLoadItemsFromServer() {
+                       if (this.items_loaded) {
+                               return;
+                       }
+                       try {
+                               await this.get_items(true);
+                               if (!this.items_loaded) {
+                                       this.eventBus.emit("show_message", {
+                                               title: __("Failed to load items from server"),
+                                               color: "error",
+                                       });
+                               }
+                       } catch (err) {
+                               console.error("Failed to reload items from server after reconnect", err);
+                               this.eventBus.emit("show_message", {
+                                       title: __("Failed to load items from server"),
+                                       color: "error",
+                               });
+                       }
+               },
+                async verifyServerItemCount() {
 			if (isOffline()) {
 				return;
 			}
@@ -2693,12 +2713,18 @@ export default {
 			}
 		});
 
-		// Refresh item quantities when connection to server is restored
-		this.eventBus.on("server-online", async () => {
-			if (this.items && this.items.length > 0) {
-				await this.update_items_details(this.items);
-			}
-		});
+                // Retry loading items when connection is restored
+                this.eventBus.on("network-online", async () => {
+                        await this.retryLoadItemsFromServer();
+                });
+
+                // Refresh item quantities when connection to server is restored
+                this.eventBus.on("server-online", async () => {
+                        await this.retryLoadItemsFromServer();
+                        if (this.items && this.items.length > 0) {
+                                await this.update_items_details(this.items);
+                        }
+                });
 
 		if (typeof Worker !== "undefined") {
 			try {
@@ -2823,11 +2849,12 @@ export default {
 			this.itemWorker.terminate();
 		}
 
-		this.eventBus.off("update_currency");
-		this.eventBus.off("server-online");
-		this.eventBus.off("register_pos_profile");
-		this.eventBus.off("update_cur_items_details");
-		this.eventBus.off("update_offers_counters");
+               this.eventBus.off("update_currency");
+               this.eventBus.off("server-online");
+               this.eventBus.off("network-online");
+               this.eventBus.off("register_pos_profile");
+               this.eventBus.off("update_cur_items_details");
+               this.eventBus.off("update_offers_counters");
 		this.eventBus.off("update_coupons_counters");
 		this.eventBus.off("update_customer_price_list");
 		this.eventBus.off("update_customer");
