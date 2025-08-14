@@ -2635,40 +2635,51 @@ export default {
 		// Load settings
 		this.loadItemSettings();
 
-		// Initialize after memory is ready
-		memoryInitPromise.then(async () => {
-			try {
-				// Ensure POS profile is available
-				if (!this.pos_profile || !this.pos_profile.name) {
-					// Try to get POS profile from boot or current route
-					if (frappe.boot && frappe.boot.pos_profile) {
-						this.pos_profile = frappe.boot.pos_profile;
-					} else if (frappe.router && frappe.router.current_route) {
-						// Get from current route context
-						const route_context = frappe.router.current_route;
-						if (route_context.pos_profile) {
-							this.pos_profile = route_context.pos_profile;
-						}
-					}
+               // Initialize after memory is ready
+               memoryInitPromise
+                       .then(async () => {
+                               try {
+                                       // Ensure POS profile is available
+                                       if (!this.pos_profile || !this.pos_profile.name) {
+                                               // Try to get POS profile from boot or current route
+                                               if (frappe.boot && frappe.boot.pos_profile) {
+                                                       this.pos_profile = frappe.boot.pos_profile;
+                                               } else if (frappe.router && frappe.router.current_route) {
+                                                       // Get from current route context
+                                                       const route_context = frappe.router.current_route;
+                                                       if (route_context.pos_profile) {
+                                                               this.pos_profile = route_context.pos_profile;
+                                                       }
+                                               }
 
-					// Final fallback to server/cache
-					if (!this.pos_profile || !this.pos_profile.name) {
-						this.pos_profile = await ensurePosProfile();
-					}
-				}
+                                               // Final fallback to server/cache
+                                               if (!this.pos_profile || !this.pos_profile.name) {
+                                                       this.pos_profile = await ensurePosProfile();
+                                               }
+                                       }
 
-				// Load initial items if we have a profile
-				if (this.pos_profile && this.pos_profile.name) {
-					console.log("Loading items with POS Profile:", this.pos_profile.name);
-					await this.get_items();
-					this.verifyServerItemCount();
-				} else {
-					console.warn("No POS Profile available during initialization");
-				}
-			} catch (error) {
-				console.error("Error during initialization:", error);
-			}
-		});
+                                       // Load initial items if we have a profile
+                                       if (this.pos_profile && this.pos_profile.name) {
+                                               console.log("Loading items with POS Profile:", this.pos_profile.name);
+                                               await this.get_items();
+                                               this.verifyServerItemCount();
+                                       } else {
+                                               console.warn("No POS Profile available during initialization");
+                                       }
+                               } catch (error) {
+                                       console.error("Error during initialization:", error);
+                               }
+                       })
+                       .catch(async (error) => {
+                               console.error("Memory initialization failed:", error);
+                               try {
+                                       this.pos_profile = this.pos_profile || (await ensurePosProfile());
+                                       await this.get_items(true);
+                                       this.verifyServerItemCount();
+                               } catch (err) {
+                                       console.error("Fallback initialization failed:", err);
+                               }
+                       });
 
 		// Event listeners
 		this.eventBus.on("register_pos_profile", (data) => {
