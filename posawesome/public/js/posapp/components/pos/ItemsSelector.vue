@@ -1127,15 +1127,16 @@ export default {
 
 				// Go directly to API call for simplicity
 				console.log("🌐 Making direct API call to load items");
-				const requestBody = {
-					pos_profile: JSON.stringify(this.pos_profile),
-					price_list: this.customer_price_list || this.pos_profile.selling_price_list,
-					item_group: "",
-					search_value: "",
-					customer: this.customer,
-					limit: 50,
-					offset: 0,
-				};
+                                const requestBody = {
+                                        pos_profile: JSON.stringify(this.pos_profile),
+                                        price_list: this.customer_price_list || this.pos_profile.selling_price_list,
+                                        item_group: "",
+                                        search_value: "",
+                                        customer: this.customer,
+                                        limit: 50,
+                                        start_after: null,
+                                        include_image: 1,
+                                };
 				frappe.dom.freeze();
 				frappe.call({
 					method: "posawesome.posawesome.api.items.get_items",
@@ -1243,16 +1244,17 @@ export default {
 				// Simple API call to get items
 				const response = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_items",
-					args: {
-						pos_profile: JSON.stringify(vm.pos_profile),
-						price_list: vm.customer_price_list,
-						item_group: gr,
-						search_value: sr,
-						customer: vm.customer,
-						limit: vm.itemsPageLimit,
-						offset: 0,
-					},
-				});
+                                        args: {
+                                                pos_profile: JSON.stringify(vm.pos_profile),
+                                                price_list: vm.customer_price_list,
+                                                item_group: gr,
+                                                search_value: sr,
+                                                customer: vm.customer,
+                                                limit: vm.itemsPageLimit,
+                                                start_after: null,
+                                                include_image: 1,
+                                        },
+                                });
 
 				const items = response.message || [];
 
@@ -1298,9 +1300,10 @@ export default {
 					}
 				}
 
-				if (hasMore) {
-					this.backgroundLoadItems(vm.itemsPageLimit, null, false, requestToken, vm.itemsPageLimit);
-				}
+                                if (hasMore) {
+                                        const last = items[items.length - 1]?.item_code || null;
+                                        this.backgroundLoadItems(last, null, false, requestToken, items.length);
+                                }
 			} catch (error) {
 				console.error("Failed to load items:", error);
 				frappe.msgprint(__("Failed to load items. Please try again."));
@@ -1308,8 +1311,8 @@ export default {
 				vm.loading = false;
 			}
 		},
-		async backgroundLoadItems(offset, syncSince, clearBefore = false, requestToken, loaded = offset) {
-			const limit = this.itemsPageLimit;
+                async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
+                        const limit = this.itemsPageLimit;
 			// When the limit is extremely high, treat it as
 			// "no incremental loading" and exit early.
 			if (!limit || limit >= 10000) {
@@ -1319,84 +1322,87 @@ export default {
 				return;
 			}
 			const lastSync = syncSince;
-			if (this.itemWorker && this.storageAvailable) {
-				try {
-					const res = await frappe.call({
-						method: "posawesome.posawesome.api.items.get_items",
-						args: {
-							pos_profile: JSON.stringify(this.pos_profile),
-							price_list: this.customer_price_list,
-							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
-							search_value: this.search || "",
-							customer: this.customer,
-							modified_after: lastSync,
-							limit,
-							offset,
-						},
-						freeze: false,
-					});
+                        if (this.itemWorker && this.storageAvailable) {
+                                try {
+                                        const res = await frappe.call({
+                                                method: "posawesome.posawesome.api.items.get_items",
+                                                args: {
+                                                        pos_profile: JSON.stringify(this.pos_profile),
+                                                        price_list: this.customer_price_list,
+                                                        item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+                                                        search_value: this.search || "",
+                                                        customer: this.customer,
+                                                        modified_after: lastSync,
+                                                        limit,
+                                                        start_after: startAfter,
+                                                        include_image: 1,
+                                                },
+                                                freeze: false,
+                                        });
 					const text = JSON.stringify(res);
 					if (this.items_request_token !== requestToken) {
 						return;
 					}
-					const count = await new Promise((resolve) => {
-						this.itemWorker.onmessage = async (ev) => {
-							if (this.items_request_token !== requestToken) {
-								resolve(0);
-								return;
-							}
-							if (ev.data.type === "parsed") {
-								const newItems = ev.data.items || [];
-								newItems.forEach((it) => {
-									const existing = this.items.find((i) => i.item_code === it.item_code);
-									if (existing) Object.assign(existing, it);
-									else this.items.push(it);
-								});
-								this.eventBus.emit("set_all_items", this.items);
-								if (
-									this.pos_profile &&
-									this.pos_profile.posa_local_storage &&
-									this.storageAvailable &&
-									!this.pos_profile.pose_use_limit_search
-								) {
-									try {
-										if (clearBefore) {
-											await clearStoredItems();
-											clearBefore = false;
-										}
-										await saveItemsBulk(newItems);
-									} catch (e) {
-										console.error(e);
-										this.markStorageUnavailable();
-									}
-								}
-								resolve(newItems.length);
-							} else if (ev.data.type === "error") {
-								console.error("Item worker parse error:", ev.data.error);
-								resolve(0);
-							}
-						};
-						this.itemWorker.postMessage({
-							type: "parse_and_cache",
-							json: text,
-							priceList: this.customer_price_list || "",
-						});
-					});
+                                        let lastItemCode = null;
+                                        const count = await new Promise((resolve) => {
+                                                this.itemWorker.onmessage = async (ev) => {
+                                                        if (this.items_request_token !== requestToken) {
+                                                                resolve(0);
+                                                                return;
+                                                        }
+                                                        if (ev.data.type === "parsed") {
+                                                                const newItems = ev.data.items || [];
+                                                                newItems.forEach((it) => {
+                                                                        const existing = this.items.find((i) => i.item_code === it.item_code);
+                                                                        if (existing) Object.assign(existing, it);
+                                                                        else this.items.push(it);
+                                                                });
+                                                                lastItemCode = newItems[newItems.length - 1]?.item_code || null;
+                                                                this.eventBus.emit("set_all_items", this.items);
+                                                                if (
+                                                                        this.pos_profile &&
+                                                                        this.pos_profile.posa_local_storage &&
+                                                                        this.storageAvailable &&
+                                                                        !this.pos_profile.pose_use_limit_search
+                                                                ) {
+                                                                        try {
+                                                                                if (clearBefore) {
+                                                                                        await clearStoredItems();
+                                                                                        clearBefore = false;
+                                                                                }
+                                                                                await saveItemsBulk(newItems);
+                                                                        } catch (e) {
+                                                                                console.error(e);
+                                                                                this.markStorageUnavailable();
+                                                                        }
+                                                                }
+                                                                resolve(newItems.length);
+                                                        } else if (ev.data.type === "error") {
+                                                                console.error("Item worker parse error:", ev.data.error);
+                                                                resolve(0);
+                                                        }
+                                                };
+                                                this.itemWorker.postMessage({
+                                                        type: "parse_and_cache",
+                                                        json: text,
+                                                        priceList: this.customer_price_list || "",
+                                                });
+                                        });
 					if (this.items_request_token !== requestToken) {
 						return;
 					}
-					const newLoaded = loaded + count;
-					const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
-					this.eventBus.emit("data-load-progress", { name: "items", progress });
-					if (count === limit) {
-						await this.backgroundLoadItems(
-							offset + limit,
-							syncSince,
-							clearBefore,
-							requestToken,
-							newLoaded,
-						);
-					} else {
+                                        const newLoaded = loaded + count;
+                                        const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+                                        this.eventBus.emit("data-load-progress", { name: "items", progress });
+                                        if (count === limit) {
+                                                await this.backgroundLoadItems(
+                                                        lastItemCode,
+                                                        syncSince,
+                                                        clearBefore,
+                                                        requestToken,
+                                                        newLoaded,
+                                                );
+                                        } else {
 						if (this.storageAvailable && this.localStorageAvailable) {
 							setItemsLastSync(new Date().toISOString());
 						}
@@ -1410,25 +1416,26 @@ export default {
 						this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 						this.items_loaded = true;
 					}
-				} catch (err) {
-					console.error("Failed to background load items", err);
-					this.markStorageUnavailable();
-					return this.backgroundLoadItems(offset, syncSince, clearBefore, requestToken, loaded);
-				}
-			} else {
-				frappe.call({
-					method: "posawesome.posawesome.api.items.get_items",
-					args: {
-						pos_profile: JSON.stringify(this.pos_profile),
-						price_list: this.customer_price_list,
-						item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
-						search_value: this.search || "",
-						customer: this.customer,
-						modified_after: lastSync,
-						limit,
-						offset,
-					},
-					callback: async (r) => {
+                                } catch (err) {
+                                        console.error("Failed to background load items", err);
+                                        this.markStorageUnavailable();
+                                        return this.backgroundLoadItems(startAfter, syncSince, clearBefore, requestToken, loaded);
+                                }
+                        } else {
+                                frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_items",
+                                        args: {
+                                                pos_profile: JSON.stringify(this.pos_profile),
+                                                price_list: this.customer_price_list,
+                                                item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
+                                                search_value: this.search || "",
+                                                customer: this.customer,
+                                                modified_after: lastSync,
+                                                limit,
+                                                start_after: startAfter,
+                                                include_image: 1,
+                                        },
+                                        callback: async (r) => {
 						if (this.items_request_token !== requestToken) {
 							return;
 						}
@@ -1459,15 +1466,16 @@ export default {
 						const newLoaded = loaded + rows.length;
 						const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
 						this.eventBus.emit("data-load-progress", { name: "items", progress });
-						if (rows.length === limit) {
-							await this.backgroundLoadItems(
-								offset + limit,
-								syncSince,
-								clearBefore,
-								requestToken,
-								newLoaded,
-							);
-						} else {
+                                                if (rows.length === limit) {
+                                                        const nextStart = rows[rows.length - 1]?.item_code || null;
+                                                        await this.backgroundLoadItems(
+                                                                nextStart,
+                                                                syncSince,
+                                                                clearBefore,
+                                                                requestToken,
+                                                                newLoaded,
+                                                        );
+                                                } else {
 							if (this.storageAvailable && this.localStorageAvailable) {
 								setItemsLastSync(new Date().toISOString());
 							}

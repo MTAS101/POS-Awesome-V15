@@ -48,17 +48,17 @@ def get_customer_group_condition(pos_profile):
 
 
 @frappe.whitelist()
-def get_customer_names(pos_profile, limit=None, offset=None, modified_after=None):
+def get_customer_names(pos_profile, limit=None, offset=None, start_after=None, modified_after=None):
 	_pos_profile = json.loads(pos_profile)
 	ttl = _pos_profile.get("posa_server_cache_duration")
 	if ttl:
 		ttl = int(ttl) * 60
 
 	@redis_cache(ttl=ttl or 1800)
-	def __get_customer_names(pos_profile, limit=None, offset=None, modified_after=None):
-		return _get_customer_names(pos_profile, limit, offset, modified_after)
+	def __get_customer_names(pos_profile, limit=None, offset=None, start_after=None, modified_after=None):
+		return _get_customer_names(pos_profile, limit, offset, start_after, modified_after)
 
-	def _get_customer_names(pos_profile, limit=None, offset=None, modified_after=None):
+	def _get_customer_names(pos_profile, limit=None, offset=None, start_after=None, modified_after=None):
 		pos_profile = json.loads(pos_profile)
 		filters = {"disabled": 0}
 
@@ -73,10 +73,13 @@ def get_customer_names(pos_profile, limit=None, offset=None, modified_after=None
 				frappe.throw(_("modified_after must be a valid ISO datetime"))
 			filters["modified"] = [">", parsed_modified_after.isoformat()]
 
+		if start_after:
+			filters["name"] = [">", start_after]
+
 		customers = frappe.get_all(
-		        "Customer",
-		        filters=filters,
-		        fields=[
+			"Customer",
+			filters=filters,
+			fields=[
 				"name",
 				"mobile_no",
 				"email_id",
@@ -84,16 +87,16 @@ def get_customer_names(pos_profile, limit=None, offset=None, modified_after=None
 				"customer_name",
 				"primary_address",
 			],
-		        order_by="name",
-		        limit_start=offset,
-		        limit_page_length=limit,
+			order_by="name",
+			limit_start=None if start_after else offset,
+			limit_page_length=limit,
 		)
 		return customers
 
-	if _pos_profile.get("posa_use_server_cache") and not (limit or offset or modified_after):
-		return __get_customer_names(pos_profile, limit, offset, modified_after)
+	if _pos_profile.get("posa_use_server_cache") and not (limit or offset or start_after or modified_after):
+		return __get_customer_names(pos_profile, limit, offset, start_after, modified_after)
 	else:
-		return _get_customer_names(pos_profile, limit, offset, modified_after)
+		return _get_customer_names(pos_profile, limit, offset, start_after, modified_after)
 
 
 @frappe.whitelist()

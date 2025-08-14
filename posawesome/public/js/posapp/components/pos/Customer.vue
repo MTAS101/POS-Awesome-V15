@@ -291,20 +291,20 @@ export default {
 			}
 		},
 
-               backgroundLoadCustomers(offset, syncSince, loaded = offset) {
-                       const limit = this.customersPageLimit;
-                       const lastSync = syncSince;
-                       frappe.call({
-                               method: "posawesome.posawesome.api.customers.get_customer_names",
-                               args: {
-                                       pos_profile: this.pos_profile.pos_profile,
-                                       modified_after: lastSync,
-                                       limit,
-                                       offset,
-                               },
-                               callback: (r) => {
-                                       const rows = r.message || [];
-                                       const newLoaded = loaded + rows.length;
+              backgroundLoadCustomers(startAfter, syncSince, loaded = 0) {
+                      const limit = this.customersPageLimit;
+                      const lastSync = syncSince;
+                      frappe.call({
+                              method: "posawesome.posawesome.api.customers.get_customer_names",
+                              args: {
+                                      pos_profile: this.pos_profile.pos_profile,
+                                      modified_after: lastSync,
+                                      limit,
+                                      start_after: startAfter,
+                              },
+                              callback: (r) => {
+                                      const rows = r.message || [];
+                                      const newLoaded = loaded + rows.length;
                                        rows.forEach((c) => {
                                                const idx = this.customers.findIndex((x) => x.name === c.name);
                                                if (idx !== -1) {
@@ -316,9 +316,10 @@ export default {
                                        setCustomerStorage(this.customers);
                                        const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
                                        this.eventBus.emit("data-load-progress", { name: "customers", progress });
-                                       if (rows.length === limit) {
-                                               this.backgroundLoadCustomers(offset + limit, syncSince, newLoaded);
-                                       } else {
+                                      if (rows.length === limit) {
+                                              const nextStart = rows[rows.length - 1]?.name || null;
+                                              this.backgroundLoadCustomers(nextStart, syncSince, newLoaded);
+                                      } else {
                                                setCustomersLastSync(new Date().toISOString());
                                                this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
                                                this.eventBus.emit("data-loaded", "customers");
@@ -357,7 +358,7 @@ export default {
                                        pos_profile: this.pos_profile.pos_profile,
                                        modified_after: syncSince,
                                        limit: this.customersPageLimit,
-                                       offset: 0,
+                                       start_after: null,
                                },
                                callback: function (r) {
                                        if (r.message) {
@@ -394,7 +395,8 @@ export default {
                                                );
                                                if (newCust.length === vm.customersPageLimit) {
                                                        vm.eventBus.emit("data-load-progress", { name: "customers", progress });
-                                                       vm.backgroundLoadCustomers(vm.customersPageLimit, syncSince, vm.customers.length);
+                                                       const last = newCust[newCust.length - 1]?.name || null;
+                                                       vm.backgroundLoadCustomers(last, syncSince, vm.customers.length);
                                                } else {
                                                        setCustomersLastSync(new Date().toISOString());
                                                        vm.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
