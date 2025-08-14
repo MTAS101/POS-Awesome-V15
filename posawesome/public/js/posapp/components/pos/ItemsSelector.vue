@@ -2760,40 +2760,36 @@ export default {
 		});
 	},
 
-       async mounted() {
-               // Ensure POS profile is available
-               if (!this.pos_profile || !this.pos_profile.name) {
-                       try {
-                               // Try to get from global frappe context
-                               if (frappe.boot && frappe.boot.pos_profile) {
-                                       this.pos_profile = frappe.boot.pos_profile;
-                               } else if (window.cur_pos && window.cur_pos.pos_profile) {
-                                       this.pos_profile = window.cur_pos.pos_profile;
-                               }
-                       } catch (error) {
-                               console.warn("Could not get POS profile in mounted:", error);
-                       }
+	async mounted() {
+		// Ensure POS profile is available
+		if (!this.pos_profile || !this.pos_profile.name) {
+			try {
+				// Try to get from global frappe context
+				if (frappe.boot && frappe.boot.pos_profile) {
+					this.pos_profile = frappe.boot.pos_profile;
+				} else if (window.cur_pos && window.cur_pos.pos_profile) {
+					this.pos_profile = window.cur_pos.pos_profile;
+				}
+			} catch (error) {
+				console.warn("Could not get POS profile in mounted:", error);
+			}
+		}
 
-                       if (!this.pos_profile || !this.pos_profile.name) {
-                               this.pos_profile = await ensurePosProfile();
-                       }
-               }
+		// Load items if we have a profile and haven't loaded yet
+		if (this.pos_profile && this.pos_profile.name && !this.items_loaded) {
+			await this.get_items();
+		}
 
-               // Load items if we have a profile
-               if (this.pos_profile?.name && !this.items_loaded) {
-                       await this.forceReloadItems();
-               }
+		// Setup barcode scanner if enabled
+		if (this.pos_profile?.posa_enable_barcode_scanning) {
+			this.scan_barcoud();
+		}
 
-               // Setup barcode scanner if enabled
-               if (this.pos_profile?.posa_enable_barcode_scanning) {
-                       this.scan_barcoud();
-               }
-
-               // Apply the configured items per page on mount
-               this.itemsPerPage = this.items_per_page;
-               window.addEventListener("resize", this.checkItemContainerOverflow);
-               this.$nextTick(this.checkItemContainerOverflow);
-       },
+		// Apply the configured items per page on mount
+		this.itemsPerPage = this.items_per_page;
+		window.addEventListener("resize", this.checkItemContainerOverflow);
+		this.$nextTick(this.checkItemContainerOverflow);
+	},
 
 	beforeUnmount() {
 		// Clear interval when component is destroyed
