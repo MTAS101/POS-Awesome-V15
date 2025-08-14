@@ -1205,25 +1205,27 @@ export default {
 				console.error("Error checking item count:", err);
 			}
 		},
-		async get_items(force_server = false) {
-			// Ensure POS profile is available
-			if (!this.pos_profile || !this.pos_profile.name) {
-				console.warn("No POS Profile available, attempting to get it...");
-				// Try to get the current POS profile
-				try {
-					if (frappe.boot && frappe.boot.pos_profile) {
-						this.pos_profile = frappe.boot.pos_profile;
-					} else {
-						// If still no profile, show error and return
-						console.error("No POS Profile configured");
-						frappe.msgprint(__("Please configure a POS Profile first"));
-						return;
-					}
-				} catch (error) {
-					console.error("Failed to get POS Profile:", error);
-					return;
-				}
-			}
+               async get_items(force_server = false) {
+                       // Ensure POS profile is available
+                       if (!this.pos_profile || !this.pos_profile.name) {
+                               console.warn("No POS Profile available, attempting to fetch...");
+                               try {
+                                       const profile = await ensurePosProfile();
+                                       if (profile && profile.name) {
+                                               this.pos_profile = profile;
+                                               // Retry fetching items now that we have the profile
+                                               return await this.get_items(force_server);
+                                       }
+                                       // No profile found after attempt
+                                       console.error("No POS Profile configured");
+                                       frappe.msgprint(__("Please configure a POS Profile first"));
+                                       return;
+                               } catch (error) {
+                                       console.error("Failed to fetch POS Profile:", error);
+                                       frappe.msgprint(__("Please configure a POS Profile first"));
+                                       return;
+                               }
+                       }
 
 			const vm = this;
 			const search = this.get_search(this.first_search);
