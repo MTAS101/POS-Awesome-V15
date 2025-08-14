@@ -2682,11 +2682,13 @@ export default {
                        });
 
 		// Event listeners
-		this.eventBus.on("register_pos_profile", (data) => {
-			this.pos_profile = data.pos_profile;
-			this.get_items();
-			this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
-		});
+               this.eventBus.on("register_pos_profile", (data) => {
+                       this.pos_profile = data.pos_profile;
+                       this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
+                       if (!this.items_loaded) {
+                               this.get_items();
+                       }
+               });
 		this.eventBus.on("update_cur_items_details", () => {
 			this.update_cur_items_details();
 		});
