@@ -127,6 +127,7 @@ def get_items(
 
 		# Add search conditions
 		or_filters = []
+		item_code_for_search = None
 		if use_limit_search and search_value:
 			data = search_serial_or_batch_or_barcode_number(search_value, search_serial_no)
 			item_code = data.get("item_code") if data.get("item_code") else search_value
@@ -134,14 +135,16 @@ def get_items(
 
 			if len(search_value) >= min_search_len:
 				or_filters = [
-					["name", "like", f"%{item_code}%"],
-					["item_name", "like", f"%{item_code}%"],
+					["name", "like", f"{item_code}%"],
+					["item_name", "like", f"{item_code}%"],
 				]
+				item_code_for_search = item_code
 
 				# Prefer exact match when barcode/serial/batch resolves to item_code
 				if data.get("item_code"):
 					filters["name"] = data.get("item_code")
 					or_filters = []
+				item_code_for_search = None
 			else:
 				# For short inputs, only attempt exact matches
 				if data.get("item_code"):
@@ -196,6 +199,34 @@ def get_items(
 			limit_page_length=limit_page_length,
 			order_by="item_name asc",
 		)
+		if not items_data and item_code_for_search:
+			items_data = frappe.get_all(
+				"Item",
+				filters=filters,
+				or_filters=[
+					["name", "like", f"%{item_code_for_search}%"],
+					["item_name", "like", f"%{item_code_for_search}%"],
+				],
+				fields=[
+					"name as item_code",
+					"item_name",
+					"description",
+					"stock_uom",
+					"image",
+					"is_stock_item",
+					"has_variants",
+					"variant_of",
+					"item_group",
+					"idx",
+					"has_batch_no",
+					"has_serial_no",
+					"max_discount",
+					"brand",
+				],
+				limit_start=limit_start,
+				limit_page_length=limit_page_length,
+				order_by="item_name asc",
+			)
 
 		if items_data:
 			details = get_items_details(
@@ -459,7 +490,7 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 			WHERE
 				sle.warehouse = %s
 				AND sle.item_code IN %s
-				AND IFNULL(sle.batch_no, '') != ''
+				AND sle.batch_no IS NOT NULL AND sle.batch_no <> ''
 				AND sle.is_cancelled = 0
 				AND b.disabled = 0
 				AND (b.expiry_date IS NULL OR b.expiry_date > %s)
