@@ -4,10 +4,9 @@
 import json
 
 import frappe
-from erpnext.accounts.doctype.pos_profile.pos_profile import get_item_groups
 from erpnext.stock.doctype.batch.batch import (
-	get_batch_no,
-	get_batch_qty,
+get_batch_no,
+get_batch_qty,
 )
 from erpnext.stock.get_item_details import get_item_details
 from frappe import _
@@ -15,7 +14,7 @@ from frappe.utils import cstr, flt, get_datetime, nowdate
 from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
 
-from .utils import HAS_VARIANTS_EXCLUSION
+from .utils import HAS_VARIANTS_EXCLUSION, get_item_groups
 
 
 def get_stock_availability(item_code, warehouse):
@@ -123,7 +122,6 @@ def get_items(
 
 		# Add item group filter
 		item_groups = get_item_groups(pos_profile.get("name"))
-		item_groups = [g.strip("'") for g in item_groups]
 		if item_groups:
 			filters["item_group"] = ["in", item_groups]
 
