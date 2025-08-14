@@ -175,6 +175,9 @@ def get_items(
         if not posa_show_template_items:
             filters.update(HAS_VARIANTS_EXCLUSION)
 
+        if pos_profile.get("posa_hide_variants_items"):
+            filters["variant_of"] = ["is", "not set"]
+
         # Determine limit
         limit_page_length = None
         limit_start = None
