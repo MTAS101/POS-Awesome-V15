@@ -2552,7 +2552,7 @@ export default {
 			}
 
 			// Apply template/variant filter
-			if (this.pos_profile?.posa_hide_variants_items) {
+			if (this.pos_profile?.posa_show_template_items && this.pos_profile?.posa_hide_variants_items) {
 				filteredItems = filteredItems.filter((item) => !item.variant_of);
 			}
 
