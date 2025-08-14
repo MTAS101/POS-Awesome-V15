@@ -427,14 +427,15 @@ import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
 import {
-	saveItemUOMs,
-	getItemUOMs,
-	getLocalStock,
-	isOffline,
-	initializeStockCache,
-	searchStoredItems,
-	saveItemsBulk,
-	saveItems,
+        saveItemUOMs,
+        getItemUOMs,
+        getLocalStock,
+        isOffline,
+        getStoredItemsCount,
+        initializeStockCache,
+        searchStoredItems,
+        saveItemsBulk,
+        saveItems,
 	clearStoredItems,
 	getLocalStockCache,
 	setLocalStockCache,
@@ -1175,15 +1176,35 @@ export default {
 				console.error("❌ Error in forceLoadItems:", error.message);
 			}
 		},
-		async forceReloadItems() {
-			// Clear cached price list items so the reload always
-			// fetches the latest data from the server
-			await clearPriceListCache();
-			await this.ensureStorageHealth();
-			this.items_loaded = false;
-			await this.get_items(true);
-		},
-		async get_items(force_server = false) {
+                async forceReloadItems() {
+                        // Clear cached price list items so the reload always
+                        // fetches the latest data from the server
+                        await clearPriceListCache();
+                        await this.ensureStorageHealth();
+                        this.items_loaded = false;
+                        await this.get_items(true);
+                },
+                async verifyServerItemCount() {
+                        if (isOffline()) {
+                                return;
+                        }
+                        try {
+                                const localCount = await getStoredItemsCount();
+                                const res = await frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_items_count",
+                                        args: {
+                                                pos_profile: JSON.stringify(this.pos_profile),
+                                        },
+                                });
+                                const serverCount = res.message || 0;
+                                if (typeof serverCount === "number" && serverCount !== localCount) {
+                                        await this.forceReloadItems();
+                                }
+                        } catch (err) {
+                                console.error("Error checking item count:", err);
+                        }
+                },
+                async get_items(force_server = false) {
 			// Ensure POS profile is available
 			if (!this.pos_profile || !this.pos_profile.name) {
 				console.warn("No POS Profile available, attempting to get it...");
@@ -2602,12 +2623,13 @@ export default {
 				}
 
 				// Load initial items if we have a profile
-				if (this.pos_profile && this.pos_profile.name) {
-					console.log("Loading items with POS Profile:", this.pos_profile.name);
-					await this.get_items();
-				} else {
-					console.warn("No POS Profile available during initialization");
-				}
+                                if (this.pos_profile && this.pos_profile.name) {
+                                        console.log("Loading items with POS Profile:", this.pos_profile.name);
+                                        await this.get_items();
+                                        this.verifyServerItemCount();
+                                } else {
+                                        console.warn("No POS Profile available during initialization");
+                                }
 			} catch (error) {
 				console.error("Error during initialization:", error);
 			}

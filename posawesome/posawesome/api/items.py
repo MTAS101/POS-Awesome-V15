@@ -297,11 +297,21 @@ def get_items(
 
 @frappe.whitelist()
 def get_items_groups():
-	return frappe.db.sql(
-		"""select name from `tabItem Group`
-		where is_group = 0 order by name limit 500""",
-		as_dict=1,
-	)
+        return frappe.db.sql(
+                """select name from `tabItem Group`
+                where is_group = 0 order by name limit 500""",
+                as_dict=1,
+        )
+
+
+@frappe.whitelist()
+def get_items_count(pos_profile):
+        pos_profile = json.loads(pos_profile)
+        item_groups = get_item_groups(pos_profile.get("name"))
+        filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
+        if item_groups:
+                filters["item_group"] = ["in", item_groups]
+        return frappe.db.count("Item", filters)
 
 
 @frappe.whitelist()
