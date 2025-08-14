@@ -12,6 +12,9 @@ import os
 import psutil
 import functools
 
+from .utils import get_item_groups
+
+
 def get_version():
 	branch_name = get_app_branch("erpnext")
 	if "12" in branch_name:
@@ -58,13 +61,14 @@ def get_child_nodes(group_type, root):
 	)
 
 
-def get_item_group_condition(pos_profile):
-	cond = " and 1=1"
-	item_groups = get_item_groups(pos_profile)
-	if item_groups:
-		cond = " and item_group in (%s)" % (", ".join(["%s"] * len(item_groups)))
+def get_item_group_condition(pos_profile, item_groups=None):
+        cond = " and 1=1"
+        item_groups = item_groups or get_item_groups(pos_profile)
+        if item_groups:
+                cond = " and item_group in (%s)" % (", ".join(["%s"] * len(item_groups)))
+                return cond % tuple(item_groups)
 
-	return cond % tuple(item_groups)
+        return cond
 
 
 def add_taxes_from_tax_template(item, parent_doc):
