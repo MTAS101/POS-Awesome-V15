@@ -1111,62 +1111,105 @@ export default {
 		show_coupons() {
 			this.eventBus.emit("show_coupons", "true");
 		},
-               async forceReloadItems() {
-                       console.log("[ItemsSelector] forceReloadItems called");
-                       // Clear cached price list items so the reload always
-                       // fetches the latest data from the server
-                       await clearPriceListCache();
-                       console.log("[ItemsSelector] price list cache cleared");
-                       await this.ensureStorageHealth();
-                       console.log("[ItemsSelector] storage health ensured");
-                       this.items_loaded = false;
+		async forceLoadItems() {
+			console.log("🚀 forceLoadItems called");
+			try {
+				// Ensure POS profile is available
+				if (!this.pos_profile) {
+					const profile = await ensurePosProfile();
+					if (profile) {
+						this.pos_profile = profile;
+					} else {
+						console.error("❌ Failed to get POS profile");
+						return;
+					}
+				}
 
-                       // When no search term is entered, reset the search so
-                       // we fetch the entire item list from the server.
-                       if (!this.first_search || !this.first_search.trim()) {
-                               console.log("[ItemsSelector] resetting empty search before reload");
-                               this.first_search = "";
-                               this.search = "";
-                       }
+				// Go directly to API call for simplicity
+				console.log("🌐 Making direct API call to load items");
+				const requestBody = {
+					pos_profile: JSON.stringify(this.pos_profile),
+					price_list: this.customer_price_list || this.pos_profile.selling_price_list,
+					item_group: "",
+					search_value: "",
+					customer: this.customer,
+					limit: 50,
+					start_after: null,
+					include_image: 1,
+				};
+				frappe.dom.freeze();
+				frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: requestBody,
+					callback: (res) => {
+						frappe.dom.unfreeze();
+						if (!res.exc && Array.isArray(res.message)) {
+							this.items = res.message;
+							console.log("✅ Items loaded successfully:", this.items.length, "items");
 
-                       console.log("[ItemsSelector] loading items from server");
-                       await this.get_items(true);
-                       console.log("[ItemsSelector] forceReloadItems finished");
-               },
-               async verifyServerItemCount() {
-                        if (isOffline()) {
-                                console.log("[ItemsSelector] offline, skipping server item count check");
-                                return;
-                        }
-                        try {
-                                const localCount = await getStoredItemsCount();
-                                console.log("[ItemsSelector] verifying server item count", { localCount });
-                                const res = await frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_items_count",
-                                        args: {
-                                                pos_profile: JSON.stringify(this.pos_profile),
-                                        },
-                                });
-                                const serverCount = res.message || 0;
-                                console.log("[ItemsSelector] server item count result", { serverCount });
-                                if (typeof serverCount === "number" && serverCount !== localCount) {
-                                        console.log("[ItemsSelector] count mismatch, forcing reload");
-                                        await this.forceReloadItems();
-                                }
-                        } catch (err) {
-                                console.error("Error checking item count:", err);
-                        }
-                },
-               async get_items(force_server = false) {
-                       console.log("[ItemsSelector] get_items called", {
-                               force_server,
-                               first_search: this.first_search,
-                               item_group: this.item_group,
-                       });
-                       // Ensure POS profile is available
-                       if (!this.pos_profile || !this.pos_profile.name) {
-                               console.warn("No POS Profile available, attempting to get it...");
-                               // Try to get the current POS profile
+							// Set default quantities immediately for instant display
+							this.items.forEach((item) => {
+								item.actual_qty = 0; // Set default quantity
+							});
+
+							// Clear search cache when new items are loaded
+							if (this.searchCache) {
+								this.searchCache.clear();
+							}
+
+							this.eventBus.emit("set_all_items", this.items);
+
+							// Force a reactive update immediately
+							this.$nextTick(() => {
+								this.$forceUpdate();
+							});
+
+							// Load quantities in background (non-blocking)
+							setTimeout(() => {
+								this.update_items_details(this.items);
+							}, 100);
+						} else {
+							console.error("❌ Invalid response format");
+						}
+					},
+				});
+			} catch (error) {
+				console.error("❌ Error in forceLoadItems:", error.message);
+			}
+		},
+		async forceReloadItems() {
+			// Clear cached price list items so the reload always
+			// fetches the latest data from the server
+			await clearPriceListCache();
+			await this.ensureStorageHealth();
+			this.items_loaded = false;
+			await this.get_items(true);
+		},
+		async verifyServerItemCount() {
+			if (isOffline()) {
+				return;
+			}
+			try {
+				const localCount = await getStoredItemsCount();
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_items_count",
+					args: {
+						pos_profile: JSON.stringify(this.pos_profile),
+					},
+				});
+				const serverCount = res.message || 0;
+				if (typeof serverCount === "number" && serverCount !== localCount) {
+					await this.forceReloadItems();
+				}
+			} catch (err) {
+				console.error("Error checking item count:", err);
+			}
+		},
+		async get_items(force_server = false) {
+			// Ensure POS profile is available
+			if (!this.pos_profile || !this.pos_profile.name) {
+				console.warn("No POS Profile available, attempting to get it...");
+				// Try to get the current POS profile
 				try {
 					if (frappe.boot && frappe.boot.pos_profile) {
 						this.pos_profile = frappe.boot.pos_profile;
@@ -1182,46 +1225,41 @@ export default {
 				}
 			}
 
-                       const vm = this;
-                       const search = this.get_search(this.first_search);
-                       const gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
-                       const sr = search || "";
-                       console.log("[ItemsSelector] prepared fetch params", { search: sr, item_group: gr });
+			const vm = this;
+			const search = this.get_search(this.first_search);
+			const gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
+			const sr = search || "";
 
-                       // Skip if already loading the same data
-                       if (!force_server && this.items_loaded && this.items.length > 0) {
-                               console.log("[ItemsSelector] items already loaded, skipping fetch");
-                               this.loading = false;
-                               return;
-                       }
+			// Skip if already loading the same data
+			if (!force_server && this.items_loaded && this.items.length > 0) {
+				this.loading = false;
+				return;
+			}
 
-                       this.loading = true;
-                       const requestToken = ++this.items_request_token;
-                       console.log("[ItemsSelector] sending request", { requestToken });
-                       this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
-                       console.log("[ItemsSelector] data-load-progress emitted", { progress: 0 });
+			this.loading = true;
+			const requestToken = ++this.items_request_token;
+			this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
 
-                       try {
-                               // Simple API call to get items
-                               const response = await frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_items",
-                                        args: {
-                                                pos_profile: JSON.stringify(vm.pos_profile),
-                                                price_list: vm.customer_price_list,
-                                                item_group: gr,
-                                                search_value: sr,
-                                                customer: vm.customer,
-                                                limit: vm.itemsPageLimit,
-                                                start_after: null,
-                                                include_image: 1,
-                                        },
-                               });
-                               console.log("[ItemsSelector] server responded", { count: response.message?.length });
+			try {
+				// Simple API call to get items
+				const response = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: {
+						pos_profile: JSON.stringify(vm.pos_profile),
+						price_list: vm.customer_price_list,
+						item_group: gr,
+						search_value: sr,
+						customer: vm.customer,
+						limit: vm.itemsPageLimit,
+						start_after: null,
+						include_image: 1,
+					},
+				});
 
-                               const items = response.message || [];
+				const items = response.message || [];
 
-                               // Process items
-                               items.forEach((item) => {
+				// Process items
+				items.forEach((item) => {
 					// Ensure UOMs
 					if (!item.item_uoms || item.item_uoms.length === 0) {
 						item.item_uoms = item.stock_uom
@@ -1235,79 +1273,61 @@ export default {
 					}
 				});
 
-                               vm.items = items;
-                               vm.items_loaded = true;
-                               vm.eventBus.emit("set_all_items", vm.items);
-                               console.log("[ItemsSelector] set_all_items emitted", { itemsLength: vm.items.length });
+				vm.items = items;
+				vm.items_loaded = true;
+				vm.eventBus.emit("set_all_items", vm.items);
 
-                               const hasMore = items.length === vm.itemsPageLimit;
-                               const progress = hasMore
-                                        ? Math.min(99, Math.round((items.length / (items.length + vm.itemsPageLimit)) * 100))
-                                        : 100;
-                               vm.eventBus.emit("data-load-progress", { name: "items", progress });
-                               console.log("[ItemsSelector] data-load-progress emitted", { progress });
+				const hasMore = items.length === vm.itemsPageLimit;
+				const progress = hasMore
+					? Math.min(99, Math.round((items.length / (items.length + vm.itemsPageLimit)) * 100))
+					: 100;
+				vm.eventBus.emit("data-load-progress", { name: "items", progress });
 
-                               if (
-                                        vm.pos_profile &&
-                                        vm.pos_profile.posa_local_storage &&
-                                        vm.storageAvailable &&
-                                        !vm.pos_profile.pose_use_limit_search
-                               ) {
-                                       try {
-                                               if (force_server) {
-                                                       console.log("[ItemsSelector] clearing local items before save");
-                                                       await clearStoredItems();
-                                               }
-                                               await saveItemsBulk(vm.items);
-                                               console.log("[ItemsSelector] items persisted locally", { length: vm.items.length });
-                                       } catch (e) {
-                                               console.error("Failed to persist items locally", e);
-                                               vm.markStorageUnavailable();
-                                       }
-                               }
+				if (
+					vm.pos_profile &&
+					vm.pos_profile.posa_local_storage &&
+					vm.storageAvailable &&
+					!vm.pos_profile.pose_use_limit_search
+				) {
+					try {
+						if (force_server) {
+							await clearStoredItems();
+						}
+						await saveItemsBulk(vm.items);
+					} catch (e) {
+						console.error("Failed to persist items locally", e);
+						vm.markStorageUnavailable();
+					}
+				}
 
-                               if (hasMore) {
-                                       const last = items[items.length - 1]?.item_name || null;
-                                       console.log("[ItemsSelector] more items available, starting background load", {
-                                               last,
-                                               requestToken,
-                                       });
-                                       this.backgroundLoadItems(last, null, false, requestToken, items.length);
-                               }
-                       } catch (error) {
-                               console.error("Failed to load items:", error);
-                               frappe.msgprint(__("Failed to load items. Please try again."));
-                       } finally {
-                               vm.loading = false;
-                               console.log("[ItemsSelector] get_items finished");
-                       }
-               },
-               async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
-                        console.log("[ItemsSelector] backgroundLoadItems called", {
-                                startAfter,
-                                syncSince,
-                                clearBefore,
-                                requestToken,
-                                loaded,
-                        });
-                        const limit = this.itemsPageLimit;
-                        // When the limit is extremely high, treat it as
-                        // "no incremental loading" and exit early.
-                        if (!limit || limit >= 10000) {
-                                console.log("[ItemsSelector] background load skipped due to high limit", { limit });
-                                return;
-                        }
-                        if (this.items_request_token !== requestToken) {
-                                console.log("[ItemsSelector] background load token mismatch, aborting");
-                                return;
-                        }
-                        const lastSync = syncSince;
-                        if (this.itemWorker && this.storageAvailable) {
-                                try {
-                                        const res = await frappe.call({
-                                                method: "posawesome.posawesome.api.items.get_items",
-                                                args: {
-                                                        pos_profile: JSON.stringify(this.pos_profile),
+				if (hasMore) {
+					const last = items[items.length - 1]?.item_name || null;
+					this.backgroundLoadItems(last, null, false, requestToken, items.length);
+				}
+			} catch (error) {
+				console.error("Failed to load items:", error);
+				frappe.msgprint(__("Failed to load items. Please try again."));
+			} finally {
+				vm.loading = false;
+			}
+		},
+		async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
+			const limit = this.itemsPageLimit;
+			// When the limit is extremely high, treat it as
+			// "no incremental loading" and exit early.
+			if (!limit || limit >= 10000) {
+				return;
+			}
+			if (this.items_request_token !== requestToken) {
+				return;
+			}
+			const lastSync = syncSince;
+			if (this.itemWorker && this.storageAvailable) {
+				try {
+					const res = await frappe.call({
+						method: "posawesome.posawesome.api.items.get_items",
+						args: {
+							pos_profile: JSON.stringify(this.pos_profile),
 							price_list: this.customer_price_list,
 							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
 							search_value: this.search || "",
@@ -1318,105 +1338,95 @@ export default {
 							include_image: 1,
 						},
 						freeze: false,
-                                        });
-                                        console.log("[ItemsSelector] background load server response", {
-                                                count: res.message?.length,
-                                        });
-                                        const text = JSON.stringify(res);
-                                        if (this.items_request_token !== requestToken) {
-                                                console.log("[ItemsSelector] background load token mismatch after response");
-                                                return;
-                                        }
-                                        let lastItemName = null;
-                                        const count = await new Promise((resolve) => {
-                                                this.itemWorker.onmessage = async (ev) => {
-                                                        if (this.items_request_token !== requestToken) {
-                                                                console.log("[ItemsSelector] background load token mismatch during worker message");
-                                                                resolve(0);
-                                                                return;
-                                                        }
-                                                        if (ev.data.type === "parsed") {
-                                                                const newItems = ev.data.items || [];
+					});
+					const text = JSON.stringify(res);
+					if (this.items_request_token !== requestToken) {
+						return;
+					}
+					let lastItemName = null;
+					const count = await new Promise((resolve) => {
+						this.itemWorker.onmessage = async (ev) => {
+							if (this.items_request_token !== requestToken) {
+								resolve(0);
+								return;
+							}
+							if (ev.data.type === "parsed") {
+								const newItems = ev.data.items || [];
 								newItems.forEach((it) => {
 									const existing = this.items.find((i) => i.item_code === it.item_code);
 									if (existing) Object.assign(existing, it);
 									else this.items.push(it);
 								});
 								lastItemName = newItems[newItems.length - 1]?.item_name || null;
-                                                                this.eventBus.emit("set_all_items", this.items);
-                                                                console.log("[ItemsSelector] background load set_all_items emitted", { length: this.items.length });
-                                                                if (
-                                                                        this.pos_profile &&
-                                                                        this.pos_profile.posa_local_storage &&
-                                                                        this.storageAvailable &&
-                                                                        !this.pos_profile.pose_use_limit_search
-                                                                ) {
-                                                                        try {
-                                                                                if (clearBefore) {
-                                                                                        await clearStoredItems();
-                                                                                        clearBefore = false;
-                                                                                }
-                                                                                await saveItemsBulk(newItems);
-                                                                                console.log("[ItemsSelector] background load items persisted", { length: newItems.length });
-                                                                        } catch (e) {
-                                                                                console.error(e);
-                                                                                this.markStorageUnavailable();
-                                                                        }
-                                                                }
-                                                                resolve(newItems.length);
-                                                        } else if (ev.data.type === "error") {
-                                                                console.error("Item worker parse error:", ev.data.error);
-                                                                resolve(0);
-                                                        }
-                                                };
-                                                this.itemWorker.postMessage({
-                                                        type: "parse_and_cache",
-                                                        json: text,
-                                                        priceList: this.customer_price_list || "",
-                                                });
-                                        });
-                                        if (this.items_request_token !== requestToken) {
-                                                console.log("[ItemsSelector] background load token mismatch after worker");
-                                                return;
-                                        }
-                                        const newLoaded = loaded + count;
-                                        const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
-                                        this.eventBus.emit("data-load-progress", { name: "items", progress });
-                                        console.log("[ItemsSelector] background load progress", { progress });
-                                        if (count === limit) {
-                                                await this.backgroundLoadItems(
-                                                        lastItemName,
-                                                        syncSince,
-                                                        clearBefore,
-                                                        requestToken,
-                                                        newLoaded,
-                                                );
-                                        } else {
-                                                if (this.storageAvailable && this.localStorageAvailable) {
-                                                        setItemsLastSync(new Date().toISOString());
-                                                }
-                                                if (this.itemWorker) {
-                                                        this.itemWorker.terminate();
-                                                        this.itemWorker = null;
-                                                }
-                                                if (this.items && this.items.length > 0) {
-                                                        await this.prePopulateStockCache(this.items);
-                                                }
-                                                this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-                                                console.log("[ItemsSelector] background load completed");
-                                                this.items_loaded = true;
-                                        }
-                                } catch (err) {
-                                        console.error("Failed to background load items", err);
-                                        this.markStorageUnavailable();
-                                        return this.backgroundLoadItems(startAfter, syncSince, clearBefore, requestToken, loaded);
-                                }
-                        } else {
-                                frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_items",
-                                        args: {
-                                                pos_profile: JSON.stringify(this.pos_profile),
-                                                price_list: this.customer_price_list,
+								this.eventBus.emit("set_all_items", this.items);
+								if (
+									this.pos_profile &&
+									this.pos_profile.posa_local_storage &&
+									this.storageAvailable &&
+									!this.pos_profile.pose_use_limit_search
+								) {
+									try {
+										if (clearBefore) {
+											await clearStoredItems();
+											clearBefore = false;
+										}
+										await saveItemsBulk(newItems);
+									} catch (e) {
+										console.error(e);
+										this.markStorageUnavailable();
+									}
+								}
+								resolve(newItems.length);
+							} else if (ev.data.type === "error") {
+								console.error("Item worker parse error:", ev.data.error);
+								resolve(0);
+							}
+						};
+						this.itemWorker.postMessage({
+							type: "parse_and_cache",
+							json: text,
+							priceList: this.customer_price_list || "",
+						});
+					});
+					if (this.items_request_token !== requestToken) {
+						return;
+					}
+					const newLoaded = loaded + count;
+					const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+					this.eventBus.emit("data-load-progress", { name: "items", progress });
+					if (count === limit) {
+						await this.backgroundLoadItems(
+							lastItemName,
+							syncSince,
+							clearBefore,
+							requestToken,
+							newLoaded,
+						);
+					} else {
+						if (this.storageAvailable && this.localStorageAvailable) {
+							setItemsLastSync(new Date().toISOString());
+						}
+						if (this.itemWorker) {
+							this.itemWorker.terminate();
+							this.itemWorker = null;
+						}
+						if (this.items && this.items.length > 0) {
+							await this.prePopulateStockCache(this.items);
+						}
+						this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+						this.items_loaded = true;
+					}
+				} catch (err) {
+					console.error("Failed to background load items", err);
+					this.markStorageUnavailable();
+					return this.backgroundLoadItems(startAfter, syncSince, clearBefore, requestToken, loaded);
+				}
+			} else {
+				frappe.call({
+					method: "posawesome.posawesome.api.items.get_items",
+					args: {
+						pos_profile: JSON.stringify(this.pos_profile),
+						price_list: this.customer_price_list,
 						item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
 						search_value: this.search || "",
 						customer: this.customer,
@@ -1425,69 +1435,63 @@ export default {
 						start_after: startAfter,
 						include_image: 1,
 					},
-                                        callback: async (r) => {
-                                                if (this.items_request_token !== requestToken) {
-                                                        console.log("[ItemsSelector] background load token mismatch in callback");
-                                                        return;
-                                                }
-                                                const rows = r.message || [];
-                                                console.log("[ItemsSelector] background load callback items", { count: rows.length });
-                                                rows.forEach((it) => {
-                                                        const existing = this.items.find((i) => i.item_code === it.item_code);
-                                                        if (existing) Object.assign(existing, it);
-                                                        else this.items.push(it);
-                                                });
-                                                this.eventBus.emit("set_all_items", this.items);
-                                                console.log("[ItemsSelector] background load set_all_items emitted", { length: this.items.length });
-                                                if (
-                                                        this.pos_profile &&
-                                                        this.pos_profile.posa_local_storage &&
-                                                        this.storageAvailable &&
-                                                        !this.pos_profile.pose_use_limit_search
-                                                ) {
-                                                        try {
-                                                                if (clearBefore) {
-                                                                        await clearStoredItems();
-                                                                        clearBefore = false;
-                                                                }
-                                                                await saveItemsBulk(rows);
-                                                                console.log("[ItemsSelector] background load items persisted", { length: rows.length });
-                                                        } catch (e) {
-                                                                console.error(e);
-                                                                this.markStorageUnavailable();
-                                                        }
-                                                }
-                                                const newLoaded = loaded + rows.length;
-                                                const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
-                                                this.eventBus.emit("data-load-progress", { name: "items", progress });
-                                                console.log("[ItemsSelector] background load progress", { progress });
-                                                if (rows.length === limit) {
-                                                        const nextStart = rows[rows.length - 1]?.item_name || null;
-                                                        await this.backgroundLoadItems(
-                                                                nextStart,
-                                                                syncSince,
-                                                                clearBefore,
-                                                                requestToken,
-                                                                newLoaded,
-                                                        );
-                                                } else {
-                                                        if (this.storageAvailable && this.localStorageAvailable) {
-                                                                setItemsLastSync(new Date().toISOString());
-                                                        }
-                                                        if (this.items && this.items.length > 0) {
-                                                                await this.prePopulateStockCache(this.items);
-                                                        }
-                                                        this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-                                                        console.log("[ItemsSelector] background load completed");
-                                                        this.items_loaded = true;
-                                                }
-                                        },
-                                        error: (err) => {
-                                                console.error("Failed to background load items", err);
-                                        },
-                                });
-                        }
-               },
+					callback: async (r) => {
+						if (this.items_request_token !== requestToken) {
+							return;
+						}
+						const rows = r.message || [];
+						rows.forEach((it) => {
+							const existing = this.items.find((i) => i.item_code === it.item_code);
+							if (existing) Object.assign(existing, it);
+							else this.items.push(it);
+						});
+						this.eventBus.emit("set_all_items", this.items);
+						if (
+							this.pos_profile &&
+							this.pos_profile.posa_local_storage &&
+							this.storageAvailable &&
+							!this.pos_profile.pose_use_limit_search
+						) {
+							try {
+								if (clearBefore) {
+									await clearStoredItems();
+									clearBefore = false;
+								}
+								await saveItemsBulk(rows);
+							} catch (e) {
+								console.error(e);
+								this.markStorageUnavailable();
+							}
+						}
+						const newLoaded = loaded + rows.length;
+						const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+						this.eventBus.emit("data-load-progress", { name: "items", progress });
+						if (rows.length === limit) {
+							const nextStart = rows[rows.length - 1]?.item_name || null;
+							await this.backgroundLoadItems(
+								nextStart,
+								syncSince,
+								clearBefore,
+								requestToken,
+								newLoaded,
+							);
+						} else {
+							if (this.storageAvailable && this.localStorageAvailable) {
+								setItemsLastSync(new Date().toISOString());
+							}
+							if (this.items && this.items.length > 0) {
+								await this.prePopulateStockCache(this.items);
+							}
+							this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+							this.items_loaded = true;
+						}
+					},
+					error: (err) => {
+						console.error("Failed to background load items", err);
+					},
+				});
+			}
+		},
 		get_items_groups() {
 			if (!this.pos_profile) {
 				console.log("No POS Profile");
