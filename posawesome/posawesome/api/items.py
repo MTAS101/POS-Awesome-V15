@@ -196,63 +196,56 @@ def get_items(
                 if pos_profile.get("posa_force_reload_items"):
                     limit_page_length = None
 
-        items_data = frappe.get_all(
-            "Item",
-            filters=filters,
-            or_filters=or_filters if or_filters else None,
-            fields=[
-                "name",
-                "item_code",
-                "item_name",
-                "stock_uom",
-                "is_stock_item",
-                "has_variants",
-                "variant_of",
-                "item_group",
-                "idx",
-                "has_batch_no",
-                "has_serial_no",
-                "max_discount",
-                "brand",
-            ]
-            + (["description"] if include_description else [])
-            + (["image"] if include_image else []),
-            limit_start=limit_start,
-            limit_page_length=limit_page_length,
-            order_by=order_by,
-        )
-        if not items_data and item_code_for_search:
+        fields = [
+            "name",
+            "item_code",
+            "item_name",
+            "stock_uom",
+            "is_stock_item",
+            "has_variants",
+            "variant_of",
+            "item_group",
+            "idx",
+            "has_batch_no",
+            "has_serial_no",
+            "max_discount",
+            "brand",
+        ]
+        fields += ["description"] if include_description else []
+        fields += ["image"] if include_image else []
+
+        page_start = limit_start or 0
+        page_size = limit_page_length or 100
+
+        while True:
             items_data = frappe.get_all(
                 "Item",
                 filters=filters,
-                or_filters=[
-                    ["name", "like", f"%{item_code_for_search}%"],
-                    ["item_name", "like", f"%{item_code_for_search}%"],
-                    ["item_code", "like", f"%{item_code_for_search}%"],
-                ],
-                fields=[
-                    "name",
-                    "item_code",
-                    "item_name",
-                    "stock_uom",
-                    "is_stock_item",
-                    "has_variants",
-                    "variant_of",
-                    "item_group",
-                    "idx",
-                    "has_batch_no",
-                    "has_serial_no",
-                    "max_discount",
-                    "brand",
-                ]
-                + (["description"] if include_description else [])
-                + (["image"] if include_image else []),
-                limit_start=limit_start,
-                limit_page_length=limit_page_length,
+                or_filters=or_filters if or_filters else None,
+                fields=fields,
+                limit_start=page_start,
+                limit_page_length=page_size,
                 order_by=order_by,
             )
 
-        if items_data:
+            if not items_data and item_code_for_search and page_start == (limit_start or 0):
+                items_data = frappe.get_all(
+                    "Item",
+                    filters=filters,
+                    or_filters=[
+                        ["name", "like", f"%{item_code_for_search}%"],
+                        ["item_name", "like", f"%{item_code_for_search}%"],
+                        ["item_code", "like", f"%{item_code_for_search}%"],
+                    ],
+                    fields=fields,
+                    limit_start=page_start,
+                    limit_page_length=page_size,
+                    order_by=order_by,
+                )
+
+            if not items_data:
+                break
+
             details = get_items_details(
                 json.dumps(pos_profile),
                 json.dumps(items_data),
@@ -293,8 +286,17 @@ def get_items(
                     }
                 )
                 result.append(row)
+                if limit_page_length and len(result) >= limit_page_length:
+                    break
 
-        return result
+            if limit_page_length and len(result) >= limit_page_length:
+                break
+
+            page_start += len(items_data)
+            if len(items_data) < page_size:
+                break
+
+        return result[:limit_page_length] if limit_page_length else result
 
     if use_price_list:
         return __get_items(
