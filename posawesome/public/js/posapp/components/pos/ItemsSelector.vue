@@ -1177,14 +1177,21 @@ export default {
 				console.error("❌ Error in forceLoadItems:", error.message);
 			}
 		},
-		async forceReloadItems() {
-			// Clear cached price list items so the reload always
-			// fetches the latest data from the server
-			await clearPriceListCache();
-			await this.ensureStorageHealth();
-			this.items_loaded = false;
-			await this.get_items(true);
-		},
+                async forceReloadItems() {
+                        // Clear cached price list items so the reload always
+                        // fetches the latest data from the server
+                        await clearPriceListCache();
+                        await this.ensureStorageHealth();
+                        this.items_loaded = false;
+                        // If the search box is empty, ensure we fetch a fresh
+                        // set of items from the server rather than relying on
+                        // any previously cached search term.
+                        if (!this.first_search || !this.first_search.trim()) {
+                                await this.forceLoadItems();
+                        } else {
+                                await this.get_items(true);
+                        }
+                },
 		async verifyServerItemCount() {
 			if (isOffline()) {
 				return;
