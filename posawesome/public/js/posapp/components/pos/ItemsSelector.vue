@@ -1111,80 +1111,42 @@ export default {
 		show_coupons() {
 			this.eventBus.emit("show_coupons", "true");
 		},
-		async forceLoadItems() {
-			console.log("🚀 forceLoadItems called");
-			try {
-				// Ensure POS profile is available
-				if (!this.pos_profile) {
-					const profile = await ensurePosProfile();
-					if (profile) {
-						this.pos_profile = profile;
-					} else {
-						console.error("❌ Failed to get POS profile");
-						return;
-					}
-				}
+               async forceLoadItems() {
+                       try {
+                               // Ensure POS profile is available
+                               if (!this.pos_profile) {
+                                       const profile = await ensurePosProfile();
+                                       if (profile) {
+                                               this.pos_profile = profile;
+                                       } else {
+                                               console.error("Failed to get POS profile");
+                                               return;
+                                       }
+                               }
 
-				// Go directly to API call for simplicity
-				console.log("🌐 Making direct API call to load items");
-				const requestBody = {
-					pos_profile: JSON.stringify(this.pos_profile),
-					price_list: this.customer_price_list || this.pos_profile.selling_price_list,
-					item_group: "",
-					search_value: "",
-					customer: this.customer,
-					limit: 50,
-					start_after: null,
-					include_image: 1,
-				};
-				frappe.dom.freeze();
-				frappe.call({
-					method: "posawesome.posawesome.api.items.get_items",
-					args: requestBody,
-					callback: (res) => {
-						frappe.dom.unfreeze();
-						if (!res.exc && Array.isArray(res.message)) {
-							this.items = res.message;
-							console.log("✅ Items loaded successfully:", this.items.length, "items");
-
-							// Set default quantities immediately for instant display
-							this.items.forEach((item) => {
-								item.actual_qty = 0; // Set default quantity
-							});
-
-							// Clear search cache when new items are loaded
-							if (this.searchCache) {
-								this.searchCache.clear();
-							}
-
-							this.eventBus.emit("set_all_items", this.items);
-
-							// Force a reactive update immediately
-							this.$nextTick(() => {
-								this.$forceUpdate();
-							});
-
-							// Load quantities in background (non-blocking)
-							setTimeout(() => {
-								this.update_items_details(this.items);
-							}, 100);
-						} else {
-							console.error("❌ Invalid response format");
-						}
-					},
-				});
-			} catch (error) {
-				console.error("❌ Error in forceLoadItems:", error.message);
-			}
-		},
-		async forceReloadItems() {
-			// Clear cached price list items so the reload always
-			// fetches the latest data from the server
-			await clearPriceListCache();
-			await this.ensureStorageHealth();
-			this.items_loaded = false;
-			await this.get_items(true);
-		},
+                               // Reset any existing search so we fetch the full
+                               // item list and force a fresh server load.
+                               this.first_search = "";
+                               await this.get_items(true);
+                       } catch (error) {
+                               console.error("Error in forceLoadItems:", error.message);
+                       }
+               },
+                async forceReloadItems() {
+                        // Clear cached price list items so the reload always
+                        // fetches the latest data from the server
+                        await clearPriceListCache();
+                        await this.ensureStorageHealth();
+                        this.items_loaded = false;
+                        // If the search box is empty, ensure we fetch a fresh
+                        // set of items from the server rather than relying on
+                        // any previously cached search term.
+                        if (!this.first_search || !this.first_search.trim()) {
+                                await this.forceLoadItems();
+                        } else {
+                                await this.get_items(true);
+                        }
+                },
 		async verifyServerItemCount() {
 			if (isOffline()) {
 				return;
