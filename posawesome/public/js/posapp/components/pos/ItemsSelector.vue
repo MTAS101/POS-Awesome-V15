@@ -2800,10 +2800,14 @@ export default {
 			}
 		}
 
-		// Load items if we have a profile and haven't loaded yet
-		if (this.pos_profile && this.pos_profile.name && !this.items_loaded) {
-			await this.get_items();
-		}
+               // Always load items on mount; prefer server when online
+               if (this.pos_profile && this.pos_profile.name) {
+                       if (isOffline()) {
+                               await this.get_items();
+                       } else {
+                               await this.get_items(true);
+                       }
+               }
 
 		// Setup barcode scanner if enabled
 		if (this.pos_profile?.posa_enable_barcode_scanning) {
