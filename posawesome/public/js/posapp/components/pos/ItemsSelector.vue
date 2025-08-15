@@ -435,25 +435,27 @@ import {
 	initializeStockCache,
 	searchStoredItems,
 	saveItemsBulk,
-	saveItems,
-	clearStoredItems,
-	getLocalStockCache,
-	setLocalStockCache,
-	initPromise,
-	memoryInitPromise,
-	checkDbHealth,
-	getCachedPriceListItems,
-	savePriceListItems,
-	clearPriceListCache,
-	updateLocalStockCache,
-	isStockCacheReady,
-	getCachedItemDetails,
-	saveItemDetailsCache,
-	saveItemGroups,
-	getCachedItemGroups,
-	getItemsLastSync,
-	setItemsLastSync,
-	forceClearAllCache,
+        saveItems,
+        clearStoredItems,
+        getLocalStockCache,
+        setLocalStockCache,
+        initPromise,
+        memoryInitPromise,
+        checkDbHealth,
+        getCachedPriceListItems,
+        savePriceListItems,
+        clearPriceListCache,
+        updateLocalStockCache,
+        clearLocalStockCache,
+        isStockCacheReady,
+        getCachedItemDetails,
+        saveItemDetailsCache,
+        saveItemGroups,
+        getCachedItemGroups,
+        clearItemGroups,
+        getItemsLastSync,
+        setItemsLastSync,
+        forceClearAllCache,
 } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
@@ -1179,10 +1181,21 @@ export default {
 			}
 		},
                 async forceReloadItems() {
-                        // Clear cached price list items so the reload always
-                        // fetches the latest data from the server
+                        // Reset search-related state
+                        this.first_search = "";
+                        this.search = "";
+                        if (this.searchCache) {
+                                this.searchCache.clear();
+                        }
+
+                        // Clear cached data so the reload always fetches
+                        // the latest information from the server
                         await clearPriceListCache();
+                        await clearStoredItems();
+                        clearLocalStockCache();
+                        clearItemGroups();
                         await this.ensureStorageHealth();
+
                         this.items_loaded = false;
                         await this.get_items(true);
                 },
