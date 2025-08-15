@@ -1205,26 +1205,29 @@ export default {
                                });
                        }
                },
-                async verifyServerItemCount() {
-			if (isOffline()) {
-				return;
-			}
-			try {
-				const localCount = await getStoredItemsCount();
-				const res = await frappe.call({
-					method: "posawesome.posawesome.api.items.get_items_count",
-					args: {
-						pos_profile: JSON.stringify(this.pos_profile),
-					},
-				});
-				const serverCount = res.message || 0;
-				if (typeof serverCount === "number" && serverCount !== localCount) {
-					await this.forceReloadItems();
-				}
-			} catch (err) {
-				console.error("Error checking item count:", err);
-			}
-		},
+               async verifyServerItemCount() {
+                       if (isOffline()) {
+                               return true;
+                       }
+                       try {
+                               const localCount = await getStoredItemsCount();
+                               const res = await frappe.call({
+                                       method: "posawesome.posawesome.api.items.get_items_count",
+                                       args: {
+                                               pos_profile: JSON.stringify(this.pos_profile),
+                                       },
+                               });
+                               const serverCount = res.message || 0;
+                               if (typeof serverCount === "number" && serverCount !== localCount) {
+                                       await this.forceReloadItems();
+                                       return false;
+                               }
+                               return true;
+                       } catch (err) {
+                               console.error("Error checking item count:", err);
+                               return false;
+                       }
+               },
                async get_items(force_server = false) {
                        // Ensure POS profile is available
                        if (!this.pos_profile || !this.pos_profile.name) {
@@ -1295,15 +1298,24 @@ export default {
 					}
 				});
 
-				vm.items = items;
-				vm.items_loaded = true;
-				vm.eventBus.emit("set_all_items", vm.items);
+                                vm.items = items;
+                                vm.eventBus.emit("set_all_items", vm.items);
 
-				const hasMore = items.length === vm.itemsPageLimit;
-				const progress = hasMore
-					? Math.min(99, Math.round((items.length / (items.length + vm.itemsPageLimit)) * 100))
-					: 100;
-				vm.eventBus.emit("data-load-progress", { name: "items", progress });
+                               if (items.length < vm.itemsPageLimit && !force_server) {
+                                       const complete = await vm.verifyServerItemCount();
+                                       if (!complete) {
+                                               vm.items_loaded = false;
+                                               return;
+                                       }
+                               }
+
+                               vm.items_loaded = true;
+
+                                const hasMore = items.length === vm.itemsPageLimit;
+                                const progress = hasMore
+                                        ? Math.min(99, Math.round((items.length / (items.length + vm.itemsPageLimit)) * 100))
+                                        : 100;
+                                vm.eventBus.emit("data-load-progress", { name: "items", progress });
 
 				if (
 					vm.pos_profile &&
