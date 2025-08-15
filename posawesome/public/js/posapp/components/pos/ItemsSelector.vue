@@ -1295,15 +1295,22 @@ export default {
 					}
 				});
 
-				vm.items = items;
-				vm.items_loaded = true;
-				vm.eventBus.emit("set_all_items", vm.items);
+                                vm.items = items;
+                                vm.eventBus.emit("set_all_items", vm.items);
 
-				const hasMore = items.length === vm.itemsPageLimit;
-				const progress = hasMore
-					? Math.min(99, Math.round((items.length / (items.length + vm.itemsPageLimit)) * 100))
-					: 100;
-				vm.eventBus.emit("data-load-progress", { name: "items", progress });
+                                if (items.length < vm.itemsPageLimit && !force_server) {
+                                        vm.items_loaded = false;
+                                        await vm.verifyServerItemCount();
+                                        return;
+                                }
+
+                                vm.items_loaded = true;
+
+                                const hasMore = items.length === vm.itemsPageLimit;
+                                const progress = hasMore
+                                        ? Math.min(99, Math.round((items.length / (items.length + vm.itemsPageLimit)) * 100))
+                                        : 100;
+                                vm.eventBus.emit("data-load-progress", { name: "items", progress });
 
 				if (
 					vm.pos_profile &&
