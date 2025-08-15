@@ -457,6 +457,7 @@ import {
 } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
+import { initializeWorker } from "./workerUtils.js";
 
 export default {
 	mixins: [format],
@@ -2749,47 +2750,7 @@ export default {
                         }
                 });
 
-		if (typeof Worker !== "undefined") {
-			try {
-				// Use the plain URL so the service worker can match the cached file
-				// even when offline. Using a query string causes cache lookups to fail
-				// which results in "Failed to fetch a worker script" errors.
-				const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-				this.itemWorker = new Worker(workerUrl, { type: "classic" });
-
-				this.itemWorker.onerror = function (event) {
-					console.error("Worker error:", event);
-					console.error("Message:", event.message);
-					console.error("Filename:", event.filename);
-					console.error("Line number:", event.lineno);
-				};
-				console.log("Created worker");
-			} catch (e) {
-				console.error("Failed to start item worker", e);
-				this.itemWorker = null;
-			}
-		}
-
-		if (typeof Worker !== "undefined") {
-			try {
-				// Use the plain URL so the service worker can match the cached file
-				// even when offline. Using a query string causes cache lookups to fail
-				// which results in "Failed to fetch a worker script" errors.
-				const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
-				this.itemWorker = new Worker(workerUrl, { type: "classic" });
-
-				this.itemWorker.onerror = function (event) {
-					console.error("Worker error:", event);
-					console.error("Message:", event.message);
-					console.error("Filename:", event.filename);
-					console.error("Line number:", event.lineno);
-				};
-				console.log("Created worker");
-			} catch (e) {
-				console.error("Failed to start item worker", e);
-				this.itemWorker = null;
-			}
-		}
+               this.itemWorker = initializeWorker(this.itemWorker);
 
 		// Setup auto-refresh for item quantities
 		// Trigger an immediate refresh once items are available
