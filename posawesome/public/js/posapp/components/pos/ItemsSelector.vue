@@ -1190,6 +1190,12 @@ export default {
 			}
 
 			const vm = this;
+
+			// Respect POS profile search limit when limit search is enabled
+			if (vm.pos_profile?.pose_use_limit_search) {
+				vm.itemsPageLimit = parseInt(vm.pos_profile.posa_search_limit) || vm.itemsPageLimit;
+			}
+
 			const search = this.get_search(this.first_search);
 			const gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
 			const sr = search || "";
@@ -1247,7 +1253,7 @@ export default {
 				vm.eventBus.emit("set_all_items", vm.items);
 				console.log("[ItemsSelector] set_all_items emitted", { itemsLength: vm.items.length });
 
-				const hasMore = items.length === vm.itemsPageLimit;
+				const hasMore = !vm.pos_profile.pose_use_limit_search && items.length === vm.itemsPageLimit;
 				const progress = hasMore
 					? Math.min(99, Math.round((items.length / (items.length + vm.itemsPageLimit)) * 100))
 					: 100;
