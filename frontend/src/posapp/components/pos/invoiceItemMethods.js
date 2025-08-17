@@ -1303,14 +1303,14 @@ export default {
 		//   this.$forceUpdate();
 		// }
 
-		frappe.call({
-			method: "posawesome.posawesome.api.items.get_item_detail",
-			args: {
-				warehouse: this.pos_profile.warehouse,
-				doc: this.get_invoice_doc(),
-				price_list: this.selected_price_list || this.pos_profile.selling_price_list,
-				item: {
-					item_code: item.item_code,
+                frappe.call({
+                        method: "posawesome.posawesome.api.items.get_item_detail",
+                        args: {
+                                warehouse: item.warehouse || this.pos_profile.warehouse,
+                                doc: this.get_invoice_doc(),
+                                price_list: this.selected_price_list || this.pos_profile.selling_price_list,
+                                item: {
+                                        item_code: item.item_code,
 					customer: this.customer,
 					doctype: "Sales Invoice",
 					name: "New Sales Invoice 1",
