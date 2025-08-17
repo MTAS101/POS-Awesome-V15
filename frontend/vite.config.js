@@ -3,6 +3,8 @@ import vue from "@vitejs/plugin-vue";
 import { resolve } from "path";
 import frappeVueStyle from "../frappe-vue-style";
 import { viteStaticCopy } from "vite-plugin-static-copy";
+import tailwindcss from "tailwindcss";
+import autoprefixer from "autoprefixer";
 
 export default defineConfig({
   plugins: [
@@ -25,6 +27,11 @@ export default defineConfig({
       ],
     }),
   ],
+  css: {
+    postcss: {
+      plugins: [tailwindcss(), autoprefixer()],
+    },
+  },
   build: {
     target: "esnext",
     lib: {
