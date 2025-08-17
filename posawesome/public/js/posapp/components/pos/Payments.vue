@@ -749,11 +749,14 @@ export default {
 		},
                 // Reset scroll position when opening payments
                 resetPaymentScroll() {
+                        const scrollOptions = { top: 0, behavior: "smooth" };
+                        // Always scroll the window to ensure the payment section is visible
+                        window.scrollTo(scrollOptions);
+
+                        // Additionally reset the scroll position of the internal container
                         const container = this.$refs.paymentContainer;
                         if (container) {
-                                container.scrollTo({ top: 0, behavior: "smooth" });
-                        } else {
-                                window.scrollTo({ top: 0, behavior: "smooth" });
+                                container.scrollTo(scrollOptions);
                         }
                 },
                 // Handle show_payment event to ensure user sees payment methods
@@ -763,7 +766,7 @@ export default {
                                         // small delay ensures container is rendered on mobile
                                         setTimeout(() => {
                                                 this.resetPaymentScroll();
-                                        }, 50);
+                                        }, 100);
                                 });
                         }
                 },
