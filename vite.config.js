@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { resolve } from "path";
+import frappeVueStyle from "./frappe-vue-style";
 
 export default defineConfig({
-	plugins: [vue()],
+        plugins: [frappeVueStyle(), vue()],
 	build: {
 		target: "esnext",
 		lib: {
@@ -22,9 +23,13 @@ export default defineConfig({
 			},
 		},
 	},
-	resolve: {
-		alias: {
-			"@": resolve(__dirname, "posawesome/public/js"),
-		},
-	},
+        resolve: {
+                alias: {
+                        "@": resolve(__dirname, "posawesome/public/js"),
+                },
+        },
+        define: {
+                "process.env.NODE_ENV": '"production"',
+                process: '{"env":{}}',
+        },
 });

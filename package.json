@@ -2,6 +2,7 @@
   "name": "posawesome",
   "scripts": {
     "dev": "vite",
+    "build": "vite build",
     "prebuild": "npm install",
     "format": "prettier --write \"**/*.{js,vue,css,scss,html}\""
   },
