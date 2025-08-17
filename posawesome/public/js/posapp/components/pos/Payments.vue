@@ -1721,7 +1721,7 @@ export default {
 }
 
 .submit-highlight {
-       box-shadow: 0 0 0 4px var(--v-theme-primary);
+       box-shadow: 0 0 0 4px rgb(var(--v-theme-primary));
        transition: box-shadow 0.3s ease-in-out;
 }
 
