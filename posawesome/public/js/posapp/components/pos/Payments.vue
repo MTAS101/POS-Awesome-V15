@@ -347,12 +347,21 @@
 		<!-- Action Buttons -->
 		<v-card flat class="cards mb-0 mt-3 pa-0">
 			<v-row align="start" no-gutters>
-				<v-col cols="6">
-					<v-btn block size="large" color="primary" theme="dark" @click="submit" :loading="loading"
-						:disabled="loading || vaildatPayment">
-						{{ __("Submit") }}
-					</v-btn>
-				</v-col>
+                               <v-col cols="6">
+                                       <v-btn
+                                               ref="submitButton"
+                                               block
+                                               size="large"
+                                               color="primary"
+                                               theme="dark"
+                                               @click="submit"
+                                               :loading="loading"
+                                               :disabled="loading || vaildatPayment"
+                                               :class="{ 'submit-highlight': highlightSubmit }"
+                                       >
+                                               {{ __("Submit") }}
+                                       </v-btn>
+                               </v-col>
 				<v-col cols="6" class="pl-1">
 					<v-btn block size="large" color="success" theme="dark" @click="submit(undefined, false, true)"
 						:loading="loading" :disabled="loading || vaildatPayment">
@@ -458,22 +467,23 @@ export default {
 			redeem_customer_credit: false, // Redeem customer credit?
 			customer_credit_dict: [], // List of available customer credits
 			paid_change_rules: [], // Validation rules for paid change
-			phone_dialog: false, // Show phone payment dialog
-			custom_days_dialog: false, // Show custom days dialog
-			custom_days_value: null, // Custom days entry
-			new_delivery_date: null, // New delivery date value
-			new_po_date: null, // New PO date value
-			new_credit_due_date: null, // New credit due date value
-			credit_due_days: null, // Number of days until due
-			credit_due_presets: [7, 14, 30], // Preset options for due days
-			customer_info: "", // Customer info
-			mpesa_modes: [], // List of available M-Pesa modes
-			sales_persons: [], // List of sales persons
-			sales_person: "", // Selected sales person
-			addresses: [], // List of customer addresses
-			is_user_editing_paid_change: false, // User interaction flag
-		};
-	},
+                        phone_dialog: false, // Show phone payment dialog
+                        custom_days_dialog: false, // Show custom days dialog
+                        custom_days_value: null, // Custom days entry
+                        new_delivery_date: null, // New delivery date value
+                        new_po_date: null, // New PO date value
+                        new_credit_due_date: null, // New credit due date value
+                        credit_due_days: null, // Number of days until due
+                        credit_due_presets: [7, 14, 30], // Preset options for due days
+                        customer_info: "", // Customer info
+                        mpesa_modes: [], // List of available M-Pesa modes
+                        sales_persons: [], // List of sales persons
+                        sales_person: "", // Selected sales person
+                        addresses: [], // List of customer addresses
+                        is_user_editing_paid_change: false, // User interaction flag
+                       highlightSubmit: false, // Highlight state for submit button
+                };
+        },
 	computed: {
 		// Get currency symbol for given or current currency
 		currencySymbol() {
@@ -747,34 +757,30 @@ export default {
 			this.eventBus.emit("show_payment", "false");
 			this.eventBus.emit("set_customer_readonly", false);
 		},
-                // Reset scroll position when opening payments
-                resetPaymentScroll() {
-                        const scrollOptions = { top: 0, behavior: "smooth" };
-                        // Always scroll the window to ensure the payment section is visible
-                        window.scrollTo(scrollOptions);
-
-                        // Additionally reset the scroll position of the internal container
-                        const container = this.$refs.paymentContainer;
-                        if (container) {
-                                container.scrollTo(scrollOptions);
-                        }
-                },
-                // Handle show_payment event to ensure user sees payment methods
-                handleShowPayment(data) {
-                        if (data === "true") {
-                                this.$nextTick(() => {
-                                        // small delay ensures container is rendered on mobile
-                                        setTimeout(() => {
-                                                this.resetPaymentScroll();
-                                        }, 100);
-                                });
-                        }
-                },
-                // Reset all cash payments to zero
-                reset_cash_payments() {
-                        this.invoice_doc.payments.forEach((payment) => {
-                                if (payment.mode_of_payment.toLowerCase() === "cash") {
-                                        payment.amount = 0;
+               // Highlight and focus the submit button when payment screen opens
+               handleShowPayment(data) {
+                       if (data === "true") {
+                               this.$nextTick(() => {
+                                       setTimeout(() => {
+                                               const btn = this.$refs.submitButton;
+                                               const el = btn && btn.$el ? btn.$el : btn;
+                                               if (el) {
+                                                       el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                                       el.focus();
+                                                       this.highlightSubmit = true;
+                                                       setTimeout(() => {
+                                                               this.highlightSubmit = false;
+                                                       }, 1500);
+                                               }
+                                       }, 100);
+                               });
+                       }
+               },
+               // Reset all cash payments to zero
+               reset_cash_payments() {
+                       this.invoice_doc.payments.forEach((payment) => {
+                               if (payment.mode_of_payment.toLowerCase() === "cash") {
+                                       payment.amount = 0;
                                 }
                         });
                 },
@@ -1712,7 +1718,12 @@ export default {
 }
 
 .cards {
-	background-color: var(--surface-secondary) !important;
+        background-color: var(--surface-secondary) !important;
+}
+
+.submit-highlight {
+       box-shadow: 0 0 0 4px var(--v-theme-primary);
+       transition: box-shadow 0.3s ease-in-out;
 }
 
 /* Dark mode styling for input fields */
