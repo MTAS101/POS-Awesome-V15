@@ -1303,14 +1303,14 @@ export default {
 		//   this.$forceUpdate();
 		// }
 
-		frappe.call({
-			method: "posawesome.posawesome.api.items.get_item_detail",
-			args: {
-				warehouse: this.pos_profile.warehouse,
-				doc: this.get_invoice_doc(),
-				price_list: this.selected_price_list || this.pos_profile.selling_price_list,
-				item: {
-					item_code: item.item_code,
+                frappe.call({
+                        method: "posawesome.posawesome.api.items.get_item_detail",
+                        args: {
+                                warehouse: item.warehouse || this.pos_profile.warehouse,
+                                doc: this.get_invoice_doc(),
+                                price_list: this.selected_price_list || this.pos_profile.selling_price_list,
+                                item: {
+                                        item_code: item.item_code,
 					customer: this.customer,
 					doctype: "Sales Invoice",
 					name: "New Sales Invoice 1",
@@ -1327,14 +1327,15 @@ export default {
 					transaction_type: "selling",
 					update_stock: this.pos_profile.update_stock,
 					price_list: this.get_price_list(),
-					has_batch_no: item.has_batch_no,
-					serial_no: item.serial_no,
-					batch_no: item.batch_no,
-					is_stock_item: item.is_stock_item,
-				},
-			},
-			callback: function (r) {
-				if (r.message) {
+                                        has_batch_no: item.has_batch_no,
+                                        has_serial_no: item.has_serial_no,
+                                        serial_no: item.serial_no,
+                                        batch_no: item.batch_no,
+                                        is_stock_item: item.is_stock_item,
+                                },
+                        },
+                        callback: function (r) {
+                                if (r.message) {
 					const data = r.message;
 					if (!item.warehouse) {
 						item.warehouse = vm.pos_profile.warehouse;
