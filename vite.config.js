@@ -23,9 +23,13 @@ export default defineConfig({
 			},
 		},
 	},
-	resolve: {
-		alias: {
-			"@": resolve(__dirname, "posawesome/public/js"),
-		},
-	},
+        resolve: {
+                alias: {
+                        "@": resolve(__dirname, "posawesome/public/js"),
+                },
+        },
+        define: {
+                "process.env.NODE_ENV": '"production"',
+                process: '{"env":{}}',
+        },
 });
