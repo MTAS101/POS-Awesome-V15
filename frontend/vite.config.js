@@ -12,15 +12,24 @@ export default defineConfig({
       name: "PosAwesome",
       fileName: "posawesome",
     },
-    outDir: "../posawesome/public/dist",
+    outDir: "../posawesome/public/dist/js",
     emptyOutDir: true,
     rollupOptions: {
       external: ["socket.io-client"],
-      output: {
-        globals: {
-          "socket.io-client": "io",
+      output: [
+        {
+          format: "es",
+          entryFileNames: "posawesome.js",
         },
-      },
+        {
+          format: "umd",
+          name: "PosAwesome",
+          entryFileNames: "posawesome.umd.js",
+          globals: {
+            "socket.io-client": "io",
+          },
+        },
+      ],
     },
   },
   resolve: {
