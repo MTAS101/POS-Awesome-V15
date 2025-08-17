@@ -5,7 +5,7 @@
 			:style="isDarkTheme ? 'background-color:#1E1E1E' : ''" style="max-height: 68vh; height: 68vh">
 			<v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
 				color="info"></v-progress-linear>
-			<div class="overflow-y-auto pa-2" style="max-height: 67vh">
+                        <div ref="paymentContainer" class="overflow-y-auto pa-2" style="max-height: 67vh">
 				<!-- Payment Summary (Paid, To Be Paid, Change) -->
 				<v-row v-if="invoice_doc" class="pa-1" dense>
 					<v-col cols="7">
@@ -749,16 +749,21 @@ export default {
 		},
                 // Reset scroll position when opening payments
                 resetPaymentScroll() {
-                        const container = this.$el.querySelector(".overflow-y-auto");
+                        const container = this.$refs.paymentContainer;
                         if (container) {
-                                container.scrollTop = 0;
+                                container.scrollTo({ top: 0, behavior: "smooth" });
+                        } else {
+                                window.scrollTo({ top: 0, behavior: "smooth" });
                         }
                 },
                 // Handle show_payment event to ensure user sees payment methods
                 handleShowPayment(data) {
                         if (data === "true") {
                                 this.$nextTick(() => {
-                                        this.resetPaymentScroll();
+                                        // small delay ensures container is rendered on mobile
+                                        setTimeout(() => {
+                                                this.resetPaymentScroll();
+                                        }, 50);
                                 });
                         }
                 },
