@@ -3,7 +3,7 @@ import { createApp } from "vue";
 import Dexie from "dexie/dist/dexie.mjs";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
-import "../../css/rtl.css";
+import "../../../posawesome/public/css/rtl.css";
 import eventBus from "./bus";
 import themePlugin from "./plugins/theme.js";
 import * as components from "vuetify/components";
