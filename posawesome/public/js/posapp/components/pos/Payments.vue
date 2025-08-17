@@ -747,16 +747,31 @@ export default {
 			this.eventBus.emit("show_payment", "false");
 			this.eventBus.emit("set_customer_readonly", false);
 		},
-		// Reset all cash payments to zero
-		reset_cash_payments() {
-			this.invoice_doc.payments.forEach((payment) => {
-				if (payment.mode_of_payment.toLowerCase() === "cash") {
-					payment.amount = 0;
-				}
-			});
-		},
-		// Ensure all payments are negative for return invoices
-		ensureReturnPaymentsAreNegative() {
+                // Reset scroll position when opening payments
+                resetPaymentScroll() {
+                        const container = this.$el.querySelector(".overflow-y-auto");
+                        if (container) {
+                                container.scrollTop = 0;
+                        }
+                },
+                // Handle show_payment event to ensure user sees payment methods
+                handleShowPayment(data) {
+                        if (data === "true") {
+                                this.$nextTick(() => {
+                                        this.resetPaymentScroll();
+                                });
+                        }
+                },
+                // Reset all cash payments to zero
+                reset_cash_payments() {
+                        this.invoice_doc.payments.forEach((payment) => {
+                                if (payment.mode_of_payment.toLowerCase() === "cash") {
+                                        payment.amount = 0;
+                                }
+                        });
+                },
+                // Ensure all payments are negative for return invoices
+                ensureReturnPaymentsAreNegative() {
 			if (!this.invoice_doc || !this.invoice_doc.is_return || !this.is_cashback) {
 				return;
 			}
@@ -1640,14 +1655,16 @@ export default {
 			this.eventBus.on("set_mpesa_payment", (data) => {
 				this.set_mpesa_payment(data);
 			});
-			// Clear any stored invoice when parent emits clear_invoice
-			this.eventBus.on("clear_invoice", () => {
-				this.invoice_doc = "";
-				this.is_return = false;
-				this.is_credit_return = false;
-			});
-		});
-	},
+                        // Clear any stored invoice when parent emits clear_invoice
+                        this.eventBus.on("clear_invoice", () => {
+                                this.invoice_doc = "";
+                                this.is_return = false;
+                                this.is_credit_return = false;
+                        });
+                        // Scroll to top when payment view is shown
+                        this.eventBus.on("show_payment", this.handleShowPayment);
+                });
+        },
 	// Lifecycle hook: beforeUnmount
 	beforeUnmount() {
 		// Remove all event listeners
@@ -1659,10 +1676,11 @@ export default {
 		this.eventBus.off("set_pos_settings");
 		this.eventBus.off("set_customer_info_to_edit");
 		this.eventBus.off("set_mpesa_payment");
-		this.eventBus.off("clear_invoice");
-		this.eventBus.off("network-online", this.syncPendingInvoices);
-		this.eventBus.off("server-online", this.syncPendingInvoices);
-	},
+                this.eventBus.off("clear_invoice");
+                this.eventBus.off("network-online", this.syncPendingInvoices);
+                this.eventBus.off("server-online", this.syncPendingInvoices);
+                this.eventBus.off("show_payment", this.handleShowPayment);
+        },
 	// Lifecycle hook: unmounted
 	unmounted() {
 		// Remove keyboard shortcut listener
