@@ -7,8 +7,8 @@
 			<v-app-bar-nav-icon ref="navIcon" @click="$emit('nav-click')"
 				:class="['text-secondary nav-icon', isRtl ? 'rtl-nav-icon' : 'ltr-nav-icon']" />
 
-			<v-img src="/assets/posawesome/js/posapp/components/pos/pos.png" alt="POS Awesome" max-width="32"
-				:class="['navbar-logo', isRtl ? 'rtl-logo' : 'ltr-logo']" />
+                        <v-img :src="posLogo" alt="POS Awesome" max-width="32"
+                                :class="['navbar-logo', isRtl ? 'rtl-logo' : 'ltr-logo']" />
 
 			<v-toolbar-title @click="$emit('go-desk')"
 				:class="['text-h6 font-weight-bold text-primary navbar-title', isRtl ? 'rtl-title' : 'ltr-title']"
@@ -78,17 +78,19 @@
 
 <script>
 import { useRtl } from "../../composables/useRtl.js";
+import posLogo from "../pos/pos.png";
 
 export default {
 	name: "NavbarAppBar",
-	setup() {
-		const { isRtl, rtlStyles, rtlClasses } = useRtl();
-		return {
-			isRtl,
-			rtlStyles,
-			rtlClasses
-		};
-	},
+        setup() {
+                const { isRtl, rtlStyles, rtlClasses } = useRtl();
+                return {
+                        isRtl,
+                        rtlStyles,
+                        rtlClasses,
+                        posLogo,
+                };
+        },
 	props: {
 		posProfile: {
 			type: Object,

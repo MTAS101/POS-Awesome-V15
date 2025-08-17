@@ -5,11 +5,11 @@ let db;
 (async () => {
 	let DexieLib;
 	try {
-		importScripts("/assets/posawesome/js/libs/dexie.min.js?v=1");
+                importScripts("/assets/posawesome/dist/js/libs/dexie.min.js?v=1");
 		DexieLib = { default: Dexie };
 	} catch {
 		// Fallback to dynamic import when importScripts fails
-		DexieLib = await import("/assets/posawesome/js/libs/dexie.min.js?v=1");
+                DexieLib = await import("/assets/posawesome/dist/js/libs/dexie.min.js?v=1");
 	}
 	db = new DexieLib.default("posawesome_offline");
 	db.version(5)

@@ -52,8 +52,8 @@
 									<v-card hover="hover" @click="add_item(item)">
 										<v-img
 											:src="
-												item.image ||
-												'/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
+                                                                                                item.image ||
+                                                                                                placeholderImage
 											"
 											class="text-white align-end"
 											gradient="to bottom, rgba(0,0,0,.2), rgba(0,0,0,.7)"
@@ -88,6 +88,7 @@
 /* global frappe */
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
 import _ from "lodash";
+import placeholderImage from "./placeholder-image.png";
 export default {
 	data: () => ({
 		varaintsDialog: false,
