@@ -5,7 +5,7 @@
 			:style="isDarkTheme ? 'background-color:#1E1E1E' : ''" style="max-height: 68vh; height: 68vh">
 			<v-progress-linear :active="loading" :indeterminate="loading" absolute location="top"
 				color="info"></v-progress-linear>
-			<div class="overflow-y-auto pa-2" style="max-height: 67vh">
+                        <div ref="paymentContainer" class="overflow-y-auto pa-2" style="max-height: 67vh">
 				<!-- Payment Summary (Paid, To Be Paid, Change) -->
 				<v-row v-if="invoice_doc" class="pa-1" dense>
 					<v-col cols="7">
@@ -347,12 +347,21 @@
 		<!-- Action Buttons -->
 		<v-card flat class="cards mb-0 mt-3 pa-0">
 			<v-row align="start" no-gutters>
-				<v-col cols="6">
-					<v-btn block size="large" color="primary" theme="dark" @click="submit" :loading="loading"
-						:disabled="loading || vaildatPayment">
-						{{ __("Submit") }}
-					</v-btn>
-				</v-col>
+                               <v-col cols="6">
+                                       <v-btn
+                                               ref="submitButton"
+                                               block
+                                               size="large"
+                                               color="primary"
+                                               theme="dark"
+                                               @click="submit"
+                                               :loading="loading"
+                                               :disabled="loading || vaildatPayment"
+                                               :class="{ 'submit-highlight': highlightSubmit }"
+                                       >
+                                               {{ __("Submit") }}
+                                       </v-btn>
+                               </v-col>
 				<v-col cols="6" class="pl-1">
 					<v-btn block size="large" color="success" theme="dark" @click="submit(undefined, false, true)"
 						:loading="loading" :disabled="loading || vaildatPayment">
@@ -458,22 +467,23 @@ export default {
 			redeem_customer_credit: false, // Redeem customer credit?
 			customer_credit_dict: [], // List of available customer credits
 			paid_change_rules: [], // Validation rules for paid change
-			phone_dialog: false, // Show phone payment dialog
-			custom_days_dialog: false, // Show custom days dialog
-			custom_days_value: null, // Custom days entry
-			new_delivery_date: null, // New delivery date value
-			new_po_date: null, // New PO date value
-			new_credit_due_date: null, // New credit due date value
-			credit_due_days: null, // Number of days until due
-			credit_due_presets: [7, 14, 30], // Preset options for due days
-			customer_info: "", // Customer info
-			mpesa_modes: [], // List of available M-Pesa modes
-			sales_persons: [], // List of sales persons
-			sales_person: "", // Selected sales person
-			addresses: [], // List of customer addresses
-			is_user_editing_paid_change: false, // User interaction flag
-		};
-	},
+                        phone_dialog: false, // Show phone payment dialog
+                        custom_days_dialog: false, // Show custom days dialog
+                        custom_days_value: null, // Custom days entry
+                        new_delivery_date: null, // New delivery date value
+                        new_po_date: null, // New PO date value
+                        new_credit_due_date: null, // New credit due date value
+                        credit_due_days: null, // Number of days until due
+                        credit_due_presets: [7, 14, 30], // Preset options for due days
+                        customer_info: "", // Customer info
+                        mpesa_modes: [], // List of available M-Pesa modes
+                        sales_persons: [], // List of sales persons
+                        sales_person: "", // Selected sales person
+                        addresses: [], // List of customer addresses
+                        is_user_editing_paid_change: false, // User interaction flag
+                       highlightSubmit: false, // Highlight state for submit button
+                };
+        },
 	computed: {
 		// Get currency symbol for given or current currency
 		currencySymbol() {
@@ -747,16 +757,34 @@ export default {
 			this.eventBus.emit("show_payment", "false");
 			this.eventBus.emit("set_customer_readonly", false);
 		},
-		// Reset all cash payments to zero
-		reset_cash_payments() {
-			this.invoice_doc.payments.forEach((payment) => {
-				if (payment.mode_of_payment.toLowerCase() === "cash") {
-					payment.amount = 0;
-				}
-			});
-		},
-		// Ensure all payments are negative for return invoices
-		ensureReturnPaymentsAreNegative() {
+               // Highlight and focus the submit button when payment screen opens
+              handleShowPayment(data) {
+                       if (data === "true") {
+                               this.$nextTick(() => {
+                                       setTimeout(() => {
+                                               const btn = this.$refs.submitButton;
+                                               const el = btn && btn.$el ? btn.$el : btn;
+                                               if (el) {
+                                                       el.scrollIntoView({ behavior: "smooth", block: "center" });
+                                                       el.focus();
+                                                       this.highlightSubmit = true;
+                                               }
+                                       }, 100);
+                               });
+                       } else {
+                               this.highlightSubmit = false;
+                       }
+               },
+               // Reset all cash payments to zero
+               reset_cash_payments() {
+                       this.invoice_doc.payments.forEach((payment) => {
+                               if (payment.mode_of_payment.toLowerCase() === "cash") {
+                                       payment.amount = 0;
+                                }
+                        });
+                },
+                // Ensure all payments are negative for return invoices
+                ensureReturnPaymentsAreNegative() {
 			if (!this.invoice_doc || !this.invoice_doc.is_return || !this.is_cashback) {
 				return;
 			}
@@ -1640,14 +1668,16 @@ export default {
 			this.eventBus.on("set_mpesa_payment", (data) => {
 				this.set_mpesa_payment(data);
 			});
-			// Clear any stored invoice when parent emits clear_invoice
-			this.eventBus.on("clear_invoice", () => {
-				this.invoice_doc = "";
-				this.is_return = false;
-				this.is_credit_return = false;
-			});
-		});
-	},
+                        // Clear any stored invoice when parent emits clear_invoice
+                        this.eventBus.on("clear_invoice", () => {
+                                this.invoice_doc = "";
+                                this.is_return = false;
+                                this.is_credit_return = false;
+                        });
+                        // Scroll to top when payment view is shown
+                        this.eventBus.on("show_payment", this.handleShowPayment);
+                });
+        },
 	// Lifecycle hook: beforeUnmount
 	beforeUnmount() {
 		// Remove all event listeners
@@ -1659,10 +1689,11 @@ export default {
 		this.eventBus.off("set_pos_settings");
 		this.eventBus.off("set_customer_info_to_edit");
 		this.eventBus.off("set_mpesa_payment");
-		this.eventBus.off("clear_invoice");
-		this.eventBus.off("network-online", this.syncPendingInvoices);
-		this.eventBus.off("server-online", this.syncPendingInvoices);
-	},
+                this.eventBus.off("clear_invoice");
+                this.eventBus.off("network-online", this.syncPendingInvoices);
+                this.eventBus.off("server-online", this.syncPendingInvoices);
+                this.eventBus.off("show_payment", this.handleShowPayment);
+        },
 	// Lifecycle hook: unmounted
 	unmounted() {
 		// Remove keyboard shortcut listener
@@ -1686,7 +1717,12 @@ export default {
 }
 
 .cards {
-	background-color: var(--surface-secondary) !important;
+        background-color: var(--surface-secondary) !important;
+}
+
+.submit-highlight {
+       box-shadow: 0 0 0 4px rgb(var(--v-theme-primary));
+       transition: box-shadow 0.3s ease-in-out;
 }
 
 /* Dark mode styling for input fields */
