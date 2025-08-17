@@ -139,23 +139,11 @@ export default {
 					this.get_offers(data.pos_profile.name, data.pos_profile);
 				}
 			});
-                        this.eventBus.on("show_payment", (data) => {
-                                this.payment = data === "true";
-                                this.showOffers = false;
-                                this.coupons = false;
-
-                                // On mobile, the pay button sits at the bottom of the invoice
-                                // summary. When the payment screen opens the viewport remains
-                                // anchored near the old button position, leaving the payment
-                                // methods (at the top) out of view. Auto-scroll to the top so
-                                // users immediately see the available payment options without
-                                // manual scrolling.
-                                if (this.payment) {
-                                        this.$nextTick(() => {
-                                                window.scrollTo({ top: 0, behavior: "smooth" });
-                                        });
-                                }
-                        });
+			this.eventBus.on("show_payment", (data) => {
+				this.payment = data === "true";
+				this.showOffers = false;
+				this.coupons = false;
+			});
 			this.eventBus.on("show_offers", (data) => {
 				this.showOffers = data === "true";
 				this.payment = false;
