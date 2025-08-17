@@ -758,7 +758,7 @@ export default {
 			this.eventBus.emit("set_customer_readonly", false);
 		},
                // Highlight and focus the submit button when payment screen opens
-               handleShowPayment(data) {
+              handleShowPayment(data) {
                        if (data === "true") {
                                this.$nextTick(() => {
                                        setTimeout(() => {
@@ -768,12 +768,11 @@ export default {
                                                        el.scrollIntoView({ behavior: "smooth", block: "center" });
                                                        el.focus();
                                                        this.highlightSubmit = true;
-                                                       setTimeout(() => {
-                                                               this.highlightSubmit = false;
-                                                       }, 1500);
                                                }
                                        }, 100);
                                });
+                       } else {
+                               this.highlightSubmit = false;
                        }
                },
                // Reset all cash payments to zero
