@@ -2,9 +2,29 @@ import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import { resolve } from "path";
 import frappeVueStyle from "../frappe-vue-style";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 
 export default defineConfig({
-  plugins: [frappeVueStyle(), vue()],
+  plugins: [
+    frappeVueStyle(),
+    vue(),
+    viteStaticCopy({
+      targets: [
+        {
+          src: "src/posapp/workers",
+          dest: "posapp",
+        },
+        {
+          src: "src/libs/*",
+          dest: "libs",
+        },
+        {
+          src: "src/offline/*",
+          dest: "offline",
+        },
+      ],
+    }),
+  ],
   build: {
     target: "esnext",
     lib: {

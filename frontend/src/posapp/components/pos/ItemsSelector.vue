@@ -205,8 +205,8 @@
 									<div class="card-item-image-container">
 										<v-img
 											:src="
-												item.image ||
-												'/assets/posawesome/js/posapp/components/pos/placeholder-image.png'
+                                                                                                item.image ||
+                                                                                                placeholderImage
 											"
 											class="card-item-image"
 											aspect-ratio="1"
@@ -457,6 +457,7 @@ import {
 } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
+import placeholderImage from "./placeholder-image.png";
 
 export default {
 	mixins: [format],
@@ -873,7 +874,7 @@ export default {
 					!this.itemWorker
 				) {
 					try {
-						const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+                                                const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 						this.itemWorker = new Worker(workerUrl, { type: "classic" });
 						this.itemWorker.onerror = function (event) {
 							console.error("Worker error:", event);
@@ -2327,7 +2328,7 @@ export default {
 				html += `
           <div class="item-option p-3 mb-2 border rounded cursor-pointer" data-item-index="${index}" style="border: 1px solid #ddd; cursor: pointer;">
             <div class="d-flex align-items-center">
-              <img src="${item.image || "/assets/posawesome/js/posapp/components/pos/placeholder-image.png"}"
+              <img src="${item.image || placeholderImage}"
                    style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;" />
               <div>
                 <div class="font-weight-bold">${item.item_name}</div>
@@ -2716,7 +2717,7 @@ export default {
 				// Use the plain URL so the service worker can match the cached file
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
-				const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+                           const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {
@@ -2737,7 +2738,7 @@ export default {
 				// Use the plain URL so the service worker can match the cached file
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
-				const workerUrl = "/assets/posawesome/js/posapp/workers/itemWorker.js";
+                           const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {

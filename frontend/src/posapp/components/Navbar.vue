@@ -119,6 +119,7 @@ import AboutDialog from "./navbar/AboutDialog.vue";
 import OfflineInvoices from "./OfflineInvoices.vue";
 import ServerUsageGadget from "./navbar/ServerUsageGadget.vue";
 import DatabaseUsageGadget from "./navbar/DatabaseUsageGadget.vue";
+import posLogo from "./pos/pos.png";
 import { forceClearAllCache } from "../../offline/cache.js";
 import { clearAllCaches } from "../../utils/clearAllCaches.js";
 import { isOffline } from "../../offline/index.js";
@@ -200,8 +201,8 @@ export default {
 				{ text: "POS", icon: "mdi-network-pos" },
 				{ text: "Payments", icon: "mdi-credit-card" },
 			],
-			company: "POS Awesome",
-			companyImg: "/assets/posawesome/js/posapp/components/pos/pos.png",
+                        company: "POS Awesome",
+                        companyImg: posLogo,
 			showAboutDialog: false,
 			showOfflineInvoices: false,
 			freeze: false,
