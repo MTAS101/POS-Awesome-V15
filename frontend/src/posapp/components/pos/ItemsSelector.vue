@@ -2527,7 +2527,8 @@ export default {
                                return [];
                        }
 
-                       const searchTerm = this.get_search(this.first_search).trim().toLowerCase();
+                       const rawSearchTerm = this.get_search(this.first_search).trim();
+                       const searchTerm = rawSearchTerm.toLowerCase();
                        let filteredItems = [...this.items];
 
                        // Reset flags for each new search evaluation
@@ -2549,10 +2550,22 @@ export default {
                                        }
 
                                        const serialList = Array.isArray(item.serial_no_data)
-                                               ? item.serial_no_data.map((s) => String(s))
+                                               ? item.serial_no_data
+                                                       .map((s) =>
+                                                               typeof s === "object" && s !== null
+                                                                       ? String(s.serial_no || "")
+                                                                       : String(s),
+                                                       )
+                                                       .filter(Boolean)
                                                : [];
                                        const batchList = Array.isArray(item.batch_no_data)
-                                               ? item.batch_no_data.map((b) => String(b))
+                                               ? item.batch_no_data
+                                                       .map((b) =>
+                                                               typeof b === "object" && b !== null
+                                                                       ? String(b.batch_no || "")
+                                                                       : String(b),
+                                                       )
+                                                       .filter(Boolean)
                                                : [];
 
                                        const searchFields = [
@@ -2570,18 +2583,18 @@ export default {
                                        const isMatch = searchFields.some((field) => field.includes(searchTerm));
 
                                        if (isMatch) {
-                                               if (
-                                                       serialList.some(
-                                                               (s) => s.toLowerCase() === searchTerm,
-                                                       )
-                                               ) {
-                                                       vm.flags.serial_no = searchTerm;
-                                               } else if (
-                                                       batchList.some(
+                                               const matchedSerial = serialList.find(
+                                                       (s) => s.toLowerCase() === searchTerm,
+                                               );
+                                               if (matchedSerial) {
+                                                       vm.flags.serial_no = matchedSerial;
+                                               } else {
+                                                       const matchedBatch = batchList.find(
                                                                (b) => b.toLowerCase() === searchTerm,
-                                                       )
-                                               ) {
-                                                       vm.flags.batch_no = searchTerm;
+                                                       );
+                                                       if (matchedBatch) {
+                                                               vm.flags.batch_no = matchedBatch;
+                                                       }
                                                }
                                        }
 
