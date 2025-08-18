@@ -254,6 +254,19 @@ def submit_invoice(invoice, data):
         invoice_doc.update(invoice)
     if invoice.get("posa_delivery_date"):
         invoice_doc.update_stock = 0
+    total_change = flt(data.get("total_change") or 0)
+    paid_change = flt(data.get("paid_change") or 0)
+    if total_change:
+        invoice_doc.change_amount = paid_change
+        for pay in invoice_doc.payments:
+            if "cash" in pay.mode_of_payment.lower():
+                pay.amount = flt(pay.amount) - total_change
+                pay.base_amount = flt(
+                    pay.amount * (invoice_doc.conversion_rate or 1),
+                    pay.precision("base_amount"),
+                )
+                break
+        invoice_doc.paid_amount = sum(p.amount for p in invoice_doc.payments)
     mop_cash_list = [
         i.mode_of_payment
         for i in invoice_doc.payments
@@ -293,8 +306,8 @@ def submit_invoice(invoice, data):
                 "payment_type": "Receive",
                 "party_type": "Customer",
                 "party": invoice_doc.get("customer"),
-                "paid_amount": invoice_doc.get("credit_change"),
-                "received_amount": invoice_doc.get("credit_change"),
+                "paid_amount": flt(data.get("credit_change")),
+                "received_amount": flt(data.get("credit_change")),
                 "company": invoice_doc.get("company"),
             }
         )
