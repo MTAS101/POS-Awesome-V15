@@ -100,6 +100,7 @@ def get_items(
 
         use_limit_search = pos_profile.get("posa_use_limit_search")
         search_serial_no = pos_profile.get("posa_search_serial_no")
+        search_batch_no = pos_profile.get("posa_search_batch_no")
         posa_show_template_items = pos_profile.get("posa_show_template_items")
         posa_display_items_in_stock = pos_profile.get("posa_display_items_in_stock")
 
@@ -142,32 +143,33 @@ def get_items(
         # Add search conditions
         or_filters = []
         item_code_for_search = None
-        if use_limit_search and search_value:
+        data = {}
+        if search_value:
             data = search_serial_or_batch_or_barcode_number(
-                search_value, search_serial_no
+                search_value, search_serial_no, search_batch_no
             )
             item_code = data.get("item_code") if data.get("item_code") else search_value
             min_search_len = 2
 
-            if len(search_value) >= min_search_len:
-                or_filters = [
-                    ["name", "like", f"{item_code}%"],
-                    ["item_name", "like", f"{item_code}%"],
-                    ["item_code", "like", f"%{item_code}%"],
-                ]
-                item_code_for_search = item_code
+            if use_limit_search:
+                if len(search_value) >= min_search_len:
+                    or_filters = [
+                        ["name", "like", f"{item_code}%"],
+                        ["item_name", "like", f"{item_code}%"],
+                        ["item_code", "like", f"%{item_code}%"],
+                    ]
+                    item_code_for_search = item_code
 
                 # Prefer exact match when barcode/serial/batch resolves to item_code
                 if data.get("item_code"):
                     filters["item_code"] = data.get("item_code")
                     or_filters = []
-                item_code_for_search = None
-            else:
-                # For short inputs, only attempt exact matches
-                if data.get("item_code"):
-                    filters["item_code"] = data.get("item_code")
-                else:
+                    item_code_for_search = None
+                elif len(search_value) < min_search_len:
+                    # For short inputs, only attempt exact matches
                     filters["item_code"] = item_code
+            elif data.get("item_code"):
+                filters["item_code"] = data.get("item_code")
 
         if item_group and item_group.upper() != "ALL":
             filters["item_group"] = ["like", f"%{item_group}%"]
@@ -927,7 +929,9 @@ def get_item_attributes(item_code):
 
 
 @frappe.whitelist()
-def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
+def search_serial_or_batch_or_barcode_number(
+    search_value, search_serial_no=None, search_batch_no=None
+):
     """Search for items by serial number, batch number, or barcode."""
     # Search by barcode
     barcode_data = frappe.db.get_value(
@@ -939,15 +943,19 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
     if barcode_data:
         return {"item_code": barcode_data.item_code, "barcode": barcode_data.barcode}
 
-    # Search by batch number
-    batch_data = frappe.db.get_value(
-        "Batch",
-        {"name": search_value},
-        ["item as item_code", "name as batch_no"],
-        as_dict=True,
-    )
-    if batch_data:
-        return {"item_code": batch_data.item_code, "batch_no": batch_data.batch_no}
+    # Search by batch number if enabled
+    if search_batch_no:
+        batch_data = frappe.db.get_value(
+            "Batch",
+            {"name": search_value},
+            ["item as item_code", "name as batch_no"],
+            as_dict=True,
+        )
+        if batch_data:
+            return {
+                "item_code": batch_data.item_code,
+                "batch_no": batch_data.batch_no,
+            }
 
     # Search by serial number if enabled
     if search_serial_no:
