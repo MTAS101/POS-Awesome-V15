@@ -1255,27 +1255,45 @@ export default {
 			if (this.invoice_doc.is_return) {
 				this.ensureReturnPaymentsAreNegative();
 			}
-			let totalPayedAmount = 0;
-			this.invoice_doc.payments.forEach((payment) => {
-				payment.amount = this.flt(payment.amount);
-				totalPayedAmount += payment.amount;
-			});
-			if (this.invoice_doc.is_return && totalPayedAmount === 0) {
-				this.invoice_doc.is_pos = 0;
-			}
-			if (this.customer_credit_dict.length) {
-				this.customer_credit_dict.forEach((row) => {
-					row.credit_to_redeem = this.flt(row.credit_to_redeem);
-				});
-			}
-			let data = {
-				total_change: !this.invoice_doc.is_return ? -this.diff_payment : 0,
-				paid_change: !this.invoice_doc.is_return ? this.paid_change : 0,
-				credit_change: -this.credit_change,
-				redeemed_customer_credit: this.redeemed_customer_credit,
-				customer_credit_dict: this.customer_credit_dict,
-				is_cashback: this.is_cashback,
-			};
+                       let total_change = 0;
+                       let paid_change = 0;
+                       let credit_change = 0;
+                       if (!this.invoice_doc.is_return && this.diff_payment < 0) {
+                               total_change = -this.diff_payment;
+                               paid_change = this.paid_change;
+                               credit_change = -this.credit_change;
+
+                               let remaining_change = total_change;
+                               for (const payment of this.invoice_doc.payments) {
+                                       if (remaining_change <= 0) break;
+                                       if (payment.amount > 0) {
+                                               const deduction = Math.min(payment.amount, remaining_change);
+                                               payment.amount = this.flt(payment.amount - deduction);
+                                               remaining_change = this.flt(remaining_change - deduction);
+                                       }
+                               }
+                       }
+                       let totalPayedAmount = 0;
+                       this.invoice_doc.payments.forEach((payment) => {
+                               payment.amount = this.flt(payment.amount);
+                               totalPayedAmount += payment.amount;
+                       });
+                       if (this.invoice_doc.is_return && totalPayedAmount === 0) {
+                               this.invoice_doc.is_pos = 0;
+                       }
+                       if (this.customer_credit_dict.length) {
+                               this.customer_credit_dict.forEach((row) => {
+                                       row.credit_to_redeem = this.flt(row.credit_to_redeem);
+                               });
+                       }
+                       let data = {
+                               total_change: total_change,
+                               paid_change: paid_change,
+                               credit_change: credit_change,
+                               redeemed_customer_credit: this.redeemed_customer_credit,
+                               customer_credit_dict: this.customer_credit_dict,
+                               is_cashback: this.is_cashback,
+                       };
 			const vm = this;
 
 			if (isOffline()) {

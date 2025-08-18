@@ -268,6 +268,24 @@ def submit_invoice(invoice, data):
             )
         }
 
+    # Adjust payment amounts to account for change returned
+    total_change = flt(data.get("total_change")) if data.get("total_change") else 0
+    if total_change:
+        remaining_change = total_change
+        for pay in invoice_doc.payments:
+            if remaining_change <= 0:
+                break
+            if flt(pay.amount) <= 0:
+                continue
+            deduction = min(flt(pay.amount), remaining_change)
+            pay.amount = flt(flt(pay.amount) - deduction, pay.precision("amount"))
+            if pay.get("base_amount") is not None:
+                pay.base_amount = flt(
+                    pay.amount * invoice_doc.conversion_rate,
+                    pay.precision("base_amount"),
+                )
+            remaining_change -= deduction
+
     # Update remarks with items details
     items = []
     for item in invoice_doc.items:
@@ -285,6 +303,7 @@ def submit_invoice(invoice, data):
 
     # creating advance payment
     if data.get("credit_change"):
+        credit_change = flt(data.get("credit_change"))
         advance_payment_entry = frappe.get_doc(
             {
                 "doctype": "Payment Entry",
@@ -293,8 +312,8 @@ def submit_invoice(invoice, data):
                 "payment_type": "Receive",
                 "party_type": "Customer",
                 "party": invoice_doc.get("customer"),
-                "paid_amount": invoice_doc.get("credit_change"),
-                "received_amount": invoice_doc.get("credit_change"),
+                "paid_amount": credit_change,
+                "received_amount": credit_change,
                 "company": invoice_doc.get("company"),
             }
         )
