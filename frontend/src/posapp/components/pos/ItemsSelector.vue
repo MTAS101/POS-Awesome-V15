@@ -722,9 +722,20 @@ export default {
 		},
 	},
 
-	methods: {
-		// Performance optimization: Memoized search function
-		memoizedSearch(searchTerm, itemGroup) {
+        methods: {
+                normalizeItemMessage(message) {
+                        const raw = Array.isArray(message) ? message : message?.items;
+                        let items = [];
+                        if (Array.isArray(raw)) {
+                                items = raw;
+                        } else if (raw && typeof raw === "object") {
+                                items = Object.values(raw);
+                        }
+                        return { items, flags: message?.flags || {} };
+                },
+
+                // Performance optimization: Memoized search function
+                memoizedSearch(searchTerm, itemGroup) {
 			const cacheKey = `${searchTerm || ""}_${itemGroup || "ALL"}`;
 
 			// Check if we have a cached result
@@ -1227,25 +1238,17 @@ export default {
 						include_image: 1,
 					},
 				});
-                                const message = response.message || {};
-                                let items = [];
-                                if (Array.isArray(message)) {
-                                        items = message;
-                                } else if (Array.isArray(message.items)) {
-                                        items = message.items;
-                                } else if (message.items && typeof message.items === "object") {
-                                        items = Object.values(message.items);
-                                }
-                                vm.flags = message.flags || {};
+                                const { items, flags } = this.normalizeItemMessage(response.message || {});
+                                vm.flags = flags;
                                 console.log("[ItemsSelector] server responded", { count: items.length });
 
-				// Process items
-				items.forEach((item) => {
-					// Ensure UOMs
-					if (!item.item_uoms || item.item_uoms.length === 0) {
-						item.item_uoms = item.stock_uom
-							? [{ uom: item.stock_uom, conversion_factor: 1.0 }]
-							: [];
+                                // Process items
+                                items.forEach((item) => {
+                                        // Ensure UOMs
+                                        if (!item.item_uoms || item.item_uoms.length === 0) {
+                                                item.item_uoms = item.stock_uom
+                                                        ? [{ uom: item.stock_uom, conversion_factor: 1.0 }]
+                                                        : [];
 					}
 
 					// Set default quantity
@@ -1338,16 +1341,8 @@ export default {
 						},
 						freeze: false,
 					});
-                                        const message = res.message || {};
-                                        let itemsRes = [];
-                                        if (Array.isArray(message)) {
-                                                itemsRes = message;
-                                        } else if (Array.isArray(message.items)) {
-                                                itemsRes = message.items;
-                                        } else if (message.items && typeof message.items === "object") {
-                                                itemsRes = Object.values(message.items);
-                                        }
-                                        this.flags = message.flags || {};
+                                        const { items: itemsRes, flags } = this.normalizeItemMessage(res.message || {});
+                                        this.flags = flags;
                                         console.log("[ItemsSelector] background load server response", {
                                                 count: itemsRes.length,
                                         });
@@ -1460,21 +1455,13 @@ export default {
 						start_after: startAfter,
 						include_image: 1,
 					},
-					callback: async (r) => {
-						if (this.items_request_token !== requestToken) {
-							console.log("[ItemsSelector] background load token mismatch in callback");
-							return;
-						}
-                                                const message = r.message || {};
-                                                let rows = [];
-                                                if (Array.isArray(message)) {
-                                                        rows = message;
-                                                } else if (Array.isArray(message.items)) {
-                                                        rows = message.items;
-                                                } else if (message.items && typeof message.items === "object") {
-                                                        rows = Object.values(message.items);
+                                        callback: async (r) => {
+                                                if (this.items_request_token !== requestToken) {
+                                                        console.log("[ItemsSelector] background load token mismatch in callback");
+                                                        return;
                                                 }
-                                                this.flags = message.flags || {};
+                                                const { items: rows, flags } = this.normalizeItemMessage(r.message || {});
+                                                this.flags = flags;
                                                 console.log("[ItemsSelector] background load callback items", { count: rows.length });
                                                 rows.forEach((it) => {
                                                         const existing = this.items.find((i) => i.item_code === it.item_code);
