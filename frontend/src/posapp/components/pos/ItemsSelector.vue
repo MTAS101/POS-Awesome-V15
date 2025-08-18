@@ -1726,14 +1726,18 @@ export default {
 				} else {
 					vm.get_items();
 				}
-			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
-				if (vm.storageAvailable) {
-					await vm.loadVisibleItems(true);
-					vm.enter_event();
-				} else {
-					vm.get_items(true);
-				}
-			} else {
+                       } else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
+                               if (vm.storageAvailable) {
+                                       await vm.loadVisibleItems(true);
+                                       if (!vm.filtered_items.length) {
+                                               await vm.get_items(true);
+                                       }
+                                       vm.enter_event();
+                               } else {
+                                       await vm.get_items(true);
+                                       vm.enter_event();
+                               }
+                       } else {
 				// Save the current filtered items before search to maintain quantity data
 				const current_items = [...vm.filtered_items];
 				vm.enter_event();
