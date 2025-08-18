@@ -142,7 +142,7 @@ export default {
 						const res = r.message;
 						if (res.msg != "Apply" || !res.coupon) {
 							vm.eventBus.emit("show_message", {
-								text: res.msg,
+								title: res.msg,
 								color: "error",
 							});
 						} else {
