@@ -557,44 +557,22 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
         """Fetch batch data and quantities for multiple items."""
         if not item_codes or not warehouse:
             return []
-        today = nowdate()
-        rows = frappe.db.sql(
-            """
-			SELECT
-				sle.item_code,
-				sle.batch_no,
-				SUM(sle.actual_qty) AS batch_qty,
-				MAX(b.expiry_date) AS expiry_date,
-				MAX(b.manufacturing_date) AS manufacturing_date,
-				MAX(b.posa_batch_price) AS posa_batch_price
-			FROM `tabStock Ledger Entry` sle
-			JOIN `tabBatch` b ON b.name = sle.batch_no AND b.item = sle.item_code
-			WHERE
-				sle.warehouse = %s
-				AND sle.item_code IN %s
-				AND sle.batch_no IS NOT NULL AND sle.batch_no <> ''
-				AND sle.is_cancelled = 0
-				AND b.disabled = 0
-				AND (b.expiry_date IS NULL OR b.expiry_date > %s)
-			GROUP BY
-				sle.item_code,
-				sle.batch_no
-			HAVING SUM(sle.actual_qty) > 0
-			""",
-            (warehouse, item_codes, today),
-            as_dict=True,
-        )
-        return [
-            {
-                "item_code": d.item_code,
-                "batch_no": d.batch_no,
-                "batch_qty": d.batch_qty,
-                "expiry_date": d.expiry_date,
-                "batch_price": d.posa_batch_price,
-                "manufacturing_date": d.manufacturing_date,
-            }
-            for d in rows
-        ]
+        rows = []
+        for item_code in item_codes:
+            batch_list = get_batch_qty(item_code=item_code, warehouse=warehouse) or []
+            for batch in batch_list:
+                if batch.get("batch_no") and flt(batch.get("qty")) > 0:
+                    rows.append(
+                        {
+                            "item_code": item_code,
+                            "batch_no": batch.get("batch_no"),
+                            "batch_qty": batch.get("qty"),
+                            "expiry_date": batch.get("expiry_date"),
+                            "batch_price": batch.get("posa_batch_price"),
+                            "manufacturing_date": batch.get("manufacturing_date"),
+                        }
+                    )
+        return rows
 
     @redis_cache(ttl=ttl or 300)
     def _get_serials(warehouse, item_codes):
