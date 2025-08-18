@@ -256,14 +256,25 @@ export default {
 		},
 
 		// Called when a customer is selected
-		onCustomerChange(val) {
-			this.tempSelectedCustomer = val;
+               onCustomerChange(val) {
+                        // if user selects the same customer again, show a meaningful error
+                        if (val && val === this.customer) {
+                                // keep the current selection and notify the user
+                                this.internalCustomer = this.customer;
+                                this.eventBus.emit("show_message", {
+                                        title: __("Customer already selected"),
+                                        color: "error",
+                                });
+                                return;
+                        }
 
-			if (!this.isMenuOpen && val) {
-				this.customer = val;
-				this.eventBus.emit("update_customer", val);
-			}
-		},
+                        this.tempSelectedCustomer = val;
+
+                        if (!this.isMenuOpen && val) {
+                                this.customer = val;
+                                this.eventBus.emit("update_customer", val);
+                        }
+               },
 
 		onCustomerSearch(val) {
 			this.customerSearch = val || "";
