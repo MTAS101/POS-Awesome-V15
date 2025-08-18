@@ -1227,10 +1227,17 @@ export default {
 						include_image: 1,
 					},
 				});
-				const message = response.message || {};
-				const items = Array.isArray(message) ? message : message.items || [];
-				vm.flags = message.flags || {};
-				console.log("[ItemsSelector] server responded", { count: items.length });
+                                const message = response.message || {};
+                                let items = [];
+                                if (Array.isArray(message)) {
+                                        items = message;
+                                } else if (Array.isArray(message.items)) {
+                                        items = message.items;
+                                } else if (message.items && typeof message.items === "object") {
+                                        items = Object.values(message.items);
+                                }
+                                vm.flags = message.flags || {};
+                                console.log("[ItemsSelector] server responded", { count: items.length });
 
 				// Process items
 				items.forEach((item) => {
@@ -1331,9 +1338,16 @@ export default {
 						},
 						freeze: false,
 					});
-					const message = res.message || {};
-					const itemsRes = Array.isArray(message) ? message : message.items || [];
-					this.flags = message.flags || {};
+                                        const message = res.message || {};
+                                        let itemsRes = [];
+                                        if (Array.isArray(message)) {
+                                                itemsRes = message;
+                                        } else if (Array.isArray(message.items)) {
+                                                itemsRes = message.items;
+                                        } else if (message.items && typeof message.items === "object") {
+                                                itemsRes = Object.values(message.items);
+                                        }
+                                        this.flags = message.flags || {};
 					console.log("[ItemsSelector] background load server response", {
 						count: itemsRes.length,
 					});
@@ -1451,9 +1465,16 @@ export default {
 							console.log("[ItemsSelector] background load token mismatch in callback");
 							return;
 						}
-						const message = r.message || {};
-						const rows = Array.isArray(message) ? message : message.items || [];
-						this.flags = message.flags || {};
+                                                const message = r.message || {};
+                                                let rows = [];
+                                                if (Array.isArray(message)) {
+                                                        rows = message;
+                                                } else if (Array.isArray(message.items)) {
+                                                        rows = message.items;
+                                                } else if (message.items && typeof message.items === "object") {
+                                                        rows = Object.values(message.items);
+                                                }
+                                                this.flags = message.flags || {};
 						console.log("[ItemsSelector] background load callback items", { count: rows.length });
 						rows.forEach((it) => {
 							const existing = this.items.find((i) => i.item_code === it.item_code);
