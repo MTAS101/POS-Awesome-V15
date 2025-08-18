@@ -563,14 +563,16 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
             for batch in batch_list:
                 if batch.get("batch_no") and flt(batch.get("qty")) > 0:
                     rows.append(
-                        {
-                            "item_code": item_code,
-                            "batch_no": batch.get("batch_no"),
-                            "batch_qty": batch.get("qty"),
-                            "expiry_date": batch.get("expiry_date"),
-                            "batch_price": batch.get("posa_batch_price"),
-                            "manufacturing_date": batch.get("manufacturing_date"),
-                        }
+                        frappe._dict(
+                            {
+                                "item_code": item_code,
+                                "batch_no": batch.get("batch_no"),
+                                "batch_qty": batch.get("qty"),
+                                "expiry_date": batch.get("expiry_date"),
+                                "batch_price": batch.get("posa_batch_price"),
+                                "manufacturing_date": batch.get("manufacturing_date"),
+                            }
+                        )
                     )
         return rows
 
