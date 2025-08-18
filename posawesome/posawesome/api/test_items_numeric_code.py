@@ -40,8 +40,8 @@ class TestNumericItemCodes(FrappeTestCase):
         with patch(
             "posawesome.posawesome.api.items.get_items_details", return_value=[]
         ):
-            first_page = get_items(pos_profile, limit=2)
+            first_page = get_items(pos_profile, limit=2)["items"]
             last_name = first_page[-1]["item_name"]
-            second_page = get_items(pos_profile, limit=2, start_after=last_name)
+            second_page = get_items(pos_profile, limit=2, start_after=last_name)["items"]
         codes = [i["item_code"] for i in second_page]
         self.assertIn("002", codes)

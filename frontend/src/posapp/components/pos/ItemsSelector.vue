@@ -204,10 +204,7 @@
 								>
 									<div class="card-item-image-container">
 										<v-img
-											:src="
-                                                                                                item.image ||
-                                                                                                placeholderImage
-											"
+											:src="item.image || placeholderImage"
 											class="card-item-image"
 											aspect-ratio="1"
 											:alt="item.item_name"
@@ -874,7 +871,7 @@ export default {
 					!this.itemWorker
 				) {
 					try {
-                                                const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+						const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 						this.itemWorker = new Worker(workerUrl, { type: "classic" });
 						this.itemWorker.onerror = function (event) {
 							console.error("Worker error:", event);
@@ -1230,9 +1227,10 @@ export default {
 						include_image: 1,
 					},
 				});
-				console.log("[ItemsSelector] server responded", { count: response.message?.length });
-
-				const items = response.message || [];
+				const message = response.message || {};
+				const items = Array.isArray(message) ? message : message.items || [];
+				vm.flags = message.flags || {};
+				console.log("[ItemsSelector] server responded", { count: items.length });
 
 				// Process items
 				items.forEach((item) => {
@@ -1333,10 +1331,13 @@ export default {
 						},
 						freeze: false,
 					});
+					const message = res.message || {};
+					const itemsRes = Array.isArray(message) ? message : message.items || [];
+					this.flags = message.flags || {};
 					console.log("[ItemsSelector] background load server response", {
-						count: res.message?.length,
+						count: itemsRes.length,
 					});
-					const text = JSON.stringify(res);
+					const text = JSON.stringify({ message: itemsRes });
 					if (this.items_request_token !== requestToken) {
 						console.log("[ItemsSelector] background load token mismatch after response");
 						return;
@@ -1450,7 +1451,9 @@ export default {
 							console.log("[ItemsSelector] background load token mismatch in callback");
 							return;
 						}
-						const rows = r.message || [];
+						const message = r.message || {};
+						const rows = Array.isArray(message) ? message : message.items || [];
+						this.flags = message.flags || {};
 						console.log("[ItemsSelector] background load callback items", { count: rows.length });
 						rows.forEach((it) => {
 							const existing = this.items.find((i) => i.item_code === it.item_code);
@@ -1691,6 +1694,7 @@ export default {
 		search_onchange: _.debounce(async function (newSearchTerm) {
 			const vm = this;
 
+			vm.flags = {};
 			vm.cancelItemDetailsRequest();
 
 			// Determine the actual query string and trim whitespace
@@ -2097,6 +2101,7 @@ export default {
 			return combinations;
 		},
 		clearSearch() {
+			this.flags = {};
 			this.search_backup = this.first_search;
 			this.first_search = "";
 			this.search = "";
@@ -2524,9 +2529,11 @@ export default {
 
 			const searchTerm = this.get_search(this.first_search).trim().toLowerCase();
 			let filteredItems = [...this.items];
+			const flags = this.flags || {};
+			const hasFlag = flags.batch_no || flags.serial_no || flags.barcode || flags.item_code;
 
-			// Apply search filter only for queries with at least three characters
-			if (searchTerm.length >= 3) {
+			// Apply search filter only when no flags are set and query has at least three characters
+			if (searchTerm.length >= 3 && !hasFlag) {
 				filteredItems = filteredItems.filter((item) => {
 					const barcodeList = [];
 					if (Array.isArray(item.item_barcode)) {
@@ -2717,7 +2724,7 @@ export default {
 				// Use the plain URL so the service worker can match the cached file
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
-                           const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+				const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {
@@ -2738,7 +2745,7 @@ export default {
 				// Use the plain URL so the service worker can match the cached file
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
-                           const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+				const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {
