@@ -908,10 +908,13 @@ export default {
 		total_payments_display() {
 			return this.formatCurrency(this.total_payments, this.displayCurrency);
 		},
-		// Display formatted difference payment
-		diff_payment_display() {
-			return this.formatCurrency(this.diff_payment, this.displayCurrency);
-		},
+                // Display formatted difference payment (clamped to zero)
+                diff_payment_display() {
+                        return this.formatCurrency(
+                                this.diff_payment > 0 ? this.diff_payment : 0,
+                                this.displayCurrency,
+                        );
+                },
 		// Calculate available loyalty points amount in selected currency
 		available_points_amount() {
 			let amount = 0;
@@ -955,25 +958,34 @@ export default {
 			return this.$theme.current === "dark";
 		},
 	},
-	watch: {
-		// Watch diff_payment to update paid_change
-		diff_payment(newVal) {
-			if (!this.is_user_editing_paid_change) {
-				this.paid_change = -newVal;
-			}
-		},
-		// Watch paid_change to validate and update credit_change
-		paid_change(newVal) {
-			const changeLimit = -this.diff_payment;
-			if (newVal > changeLimit) {
-				this.paid_change = changeLimit;
-				this.credit_change = 0;
-				this.paid_change_rules = ["Paid change can not be greater than total change!"];
-			} else {
-				this.paid_change_rules = [];
-				this.credit_change = this.flt(newVal - changeLimit, this.currency_precision);
-			}
-		},
+        watch: {
+                // Watch diff_payment to update change displays
+                diff_payment(newVal) {
+                        if (newVal < 0) {
+                                this.paid_change = -newVal;
+                                this.credit_change = 0;
+                        } else {
+                                this.paid_change = 0;
+                                this.credit_change = 0;
+                        }
+                },
+                // Watch paid_change to validate and update credit_change
+                paid_change(newVal) {
+                        const changeLimit = Math.max(0, -this.diff_payment);
+                        if (newVal > changeLimit) {
+                                this.paid_change = changeLimit;
+                                this.credit_change = 0;
+                                this.paid_change_rules = [
+                                        "Paid change can not be greater than total change!",
+                                ];
+                        } else {
+                                this.paid_change_rules = [];
+                                this.credit_change = this.flt(
+                                        changeLimit - newVal,
+                                        this.currency_precision,
+                                );
+                        }
+                },
 		// Watch loyalty_amount to handle loyalty points redemption
 		loyalty_amount(value) {
 			if (value > this.available_points_amount) {
@@ -1202,25 +1214,26 @@ export default {
 					return;
 				}
 			}
-			// Validate paid_change
-			if (this.paid_change > -this.diff_payment) {
-				this.eventBus.emit("show_message", {
-					title: `Paid change cannot be greater than total change!`,
-					color: "error",
-				});
-				frappe.utils.play_sound("error");
-				return;
-			}
-			// Validate cashback
-			let total_change = this.flt(this.flt(this.paid_change) + this.flt(-this.credit_change));
-			if (this.is_cashback && total_change !== -this.diff_payment) {
-				this.eventBus.emit("show_message", {
-					title: `Error in change calculations!`,
-					color: "error",
-				});
-				frappe.utils.play_sound("error");
-				return;
-			}
+                        // Validate paid_change
+                        const changeLimit = Math.max(0, -this.diff_payment);
+                        if (this.paid_change > changeLimit) {
+                                this.eventBus.emit("show_message", {
+                                        title: `Paid change cannot be greater than total change!`,
+                                        color: "error",
+                                });
+                                frappe.utils.play_sound("error");
+                                return;
+                        }
+                        // Validate cashback
+                        let total_change = this.flt(this.paid_change + this.credit_change);
+                        if (this.is_cashback && total_change !== changeLimit) {
+                                this.eventBus.emit("show_message", {
+                                        title: `Error in change calculations!`,
+                                        color: "error",
+                                });
+                                frappe.utils.play_sound("error");
+                                return;
+                        }
 			// Validate customer credit redemption
 			let credit_calc_check = this.customer_credit_dict.filter((row) => {
 				return this.flt(row.credit_to_redeem) > this.flt(row.total_credit);
@@ -1259,9 +1272,10 @@ export default {
                        let paid_change = 0;
                        let credit_change = 0;
                        if (!this.invoice_doc.is_return && this.diff_payment < 0) {
-                               total_change = -this.diff_payment;
+                               const changeLimit = -this.diff_payment;
+                               total_change = changeLimit;
                                paid_change = this.paid_change;
-                               credit_change = -this.credit_change;
+                               credit_change = this.credit_change;
 
                                let remaining_change = total_change;
                                for (const payment of this.invoice_doc.payments) {
@@ -1639,10 +1653,19 @@ export default {
 			this.invoice_doc.payments.forEach((payment) => {
 				payment.amount = this.flt(payment.amount);
 			});
-			let formData = { ...this.invoice_doc };
-			formData["total_change"] = !this.invoice_doc.is_return ? -this.diff_payment : 0;
-			formData["paid_change"] = !this.invoice_doc.is_return ? this.paid_change : 0;
-			formData["credit_change"] = -this.credit_change;
+                        let formData = { ...this.invoice_doc };
+                        formData["total_change"] =
+                                !this.invoice_doc.is_return && this.diff_payment < 0
+                                        ? -this.diff_payment
+                                        : 0;
+                        formData["paid_change"] =
+                                !this.invoice_doc.is_return && this.diff_payment < 0
+                                        ? this.paid_change
+                                        : 0;
+                        formData["credit_change"] =
+                                !this.invoice_doc.is_return && this.diff_payment < 0
+                                        ? this.credit_change
+                                        : 0;
 			formData["redeemed_customer_credit"] = this.redeemed_customer_credit;
 			formData["customer_credit_dict"] = this.customer_credit_dict;
 			formData["is_cashback"] = this.is_cashback;
@@ -1839,13 +1862,15 @@ export default {
 			});
 		},
 		// Show diff payment info message
-		showDiffPayment() {
-			if (!this.invoice_doc) return;
-			this.eventBus.emit("show_message", {
-				title: `To Be Paid: ${this.formatCurrency(this.diff_payment)}`,
-				color: "info",
-			});
-		},
+                showDiffPayment() {
+                        if (!this.invoice_doc) return;
+                        this.eventBus.emit("show_message", {
+                                title: `To Be Paid: ${this.formatCurrency(
+                                        this.diff_payment > 0 ? this.diff_payment : 0,
+                                )}`,
+                                color: "info",
+                        });
+                },
 		// Show paid change info message
 		showPaidChange() {
 			this.eventBus.emit("show_message", {
@@ -1853,15 +1878,13 @@ export default {
 				color: "info",
 			});
 		},
-		// Show credit change info message
-		showCreditChange(value) {
-			if (value > 0) {
-				this.credit_change = value;
-				this.paid_change = -this.diff_payment;
-			} else {
-				this.credit_change = 0;
-			}
-		},
+                // Update credit change based on user input
+                updateCreditChange(value) {
+                        const changeLimit = Math.max(0, -this.diff_payment);
+                        const credit = Math.min(changeLimit, this.flt(value, this.currency_precision));
+                        this.credit_change = credit;
+                        this.paid_change = changeLimit - credit;
+                },
 		// Format currency value
 		formatCurrency(value) {
 			return this.$options.mixins[0].methods.formatCurrency.call(this, value, this.currency_precision);
