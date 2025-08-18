@@ -724,14 +724,22 @@ export default {
 
         methods: {
                 normalizeItemMessage(message) {
-                        const raw = Array.isArray(message) ? message : message?.items;
-                        let items = [];
-                        if (Array.isArray(raw)) {
-                                items = raw;
-                        } else if (raw && typeof raw === "object") {
-                                items = Object.values(raw);
+                        if (Array.isArray(message)) {
+                                return { items: message, flags: {} };
                         }
-                        return { items, flags: message?.flags || {} };
+
+                        if (message && typeof message === "object") {
+                                const raw = message.items;
+                                let items = [];
+                                if (Array.isArray(raw)) {
+                                        items = raw;
+                                } else if (raw && typeof raw === "object") {
+                                        items = Object.values(raw);
+                                }
+                                return { items, flags: message.flags || {} };
+                        }
+
+                        return { items: [], flags: {} };
                 },
 
                 // Performance optimization: Memoized search function
@@ -1225,12 +1233,12 @@ export default {
 
 			try {
 				// Simple API call to get items
-				const response = await frappe.call({
-					method: "posawesome.posawesome.api.items.get_items",
-					args: {
-						pos_profile: JSON.stringify(vm.pos_profile),
-						price_list: vm.customer_price_list,
-						item_group: gr,
+                                const response = await frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_items",
+                                        args: {
+                                                pos_profile: JSON.stringify(vm.pos_profile),
+                                                price_list: vm.customer_price_list,
+                                                item_group: gr,
 						search_value: sr,
 						customer: vm.customer,
 						limit: vm.itemsPageLimit,
@@ -1238,8 +1246,13 @@ export default {
 						include_image: 1,
 					},
 				});
-                                const { items, flags } = this.normalizeItemMessage(response.message || {});
-                                vm.flags = flags;
+                                const normalized = this.normalizeItemMessage(response?.message ?? response ?? {});
+                                vm.flags = normalized.flags || {};
+                                const items = Array.isArray(normalized.items)
+                                        ? normalized.items
+                                        : normalized.items
+                                        ? Object.values(normalized.items)
+                                        : [];
                                 console.log("[ItemsSelector] server responded", { count: items.length });
 
                                 // Process items
