@@ -100,6 +100,7 @@ def get_items(
 
         use_limit_search = pos_profile.get("posa_use_limit_search")
         search_serial_no = pos_profile.get("posa_search_serial_no")
+        search_batch_no = pos_profile.get("posa_search_batch_no")
         posa_show_template_items = pos_profile.get("posa_show_template_items")
         posa_display_items_in_stock = pos_profile.get("posa_display_items_in_stock")
 
@@ -142,11 +143,17 @@ def get_items(
         # Add search conditions
         or_filters = []
         item_code_for_search = None
+        searched_item_code = None
+        searched_serial_no = None
+        searched_batch_no = None
         if use_limit_search and search_value:
             data = search_serial_or_batch_or_barcode_number(
-                search_value, search_serial_no
+                search_value, search_serial_no, search_batch_no
             )
-            item_code = data.get("item_code") if data.get("item_code") else search_value
+            searched_item_code = data.get("item_code")
+            searched_serial_no = data.get("serial_no")
+            searched_batch_no = data.get("batch_no")
+            item_code = searched_item_code if searched_item_code else search_value
             min_search_len = 2
 
             if len(search_value) >= min_search_len:
@@ -158,14 +165,14 @@ def get_items(
                 item_code_for_search = item_code
 
                 # Prefer exact match when barcode/serial/batch resolves to item_code
-                if data.get("item_code"):
-                    filters["item_code"] = data.get("item_code")
+                if searched_item_code:
+                    filters["item_code"] = searched_item_code
                     or_filters = []
                 item_code_for_search = None
             else:
                 # For short inputs, only attempt exact matches
-                if data.get("item_code"):
-                    filters["item_code"] = data.get("item_code")
+                if searched_item_code:
+                    filters["item_code"] = searched_item_code
                 else:
                     filters["item_code"] = item_code
 
@@ -285,6 +292,11 @@ def get_items(
                         "item_attributes": item_attributes or "",
                     }
                 )
+                if item_code == searched_item_code:
+                    if searched_batch_no:
+                        row["batch_no"] = searched_batch_no
+                    if searched_serial_no:
+                        row["serial_no"] = searched_serial_no
                 result.append(row)
                 if limit_page_length and len(result) >= limit_page_length:
                     break
@@ -557,44 +569,24 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
         """Fetch batch data and quantities for multiple items."""
         if not item_codes or not warehouse:
             return []
-        today = nowdate()
-        rows = frappe.db.sql(
-            """
-			SELECT
-				sle.item_code,
-				sle.batch_no,
-				SUM(sle.actual_qty) AS batch_qty,
-				MAX(b.expiry_date) AS expiry_date,
-				MAX(b.manufacturing_date) AS manufacturing_date,
-				MAX(b.posa_batch_price) AS posa_batch_price
-			FROM `tabStock Ledger Entry` sle
-			JOIN `tabBatch` b ON b.name = sle.batch_no AND b.item = sle.item_code
-			WHERE
-				sle.warehouse = %s
-				AND sle.item_code IN %s
-				AND sle.batch_no IS NOT NULL AND sle.batch_no <> ''
-				AND sle.is_cancelled = 0
-				AND b.disabled = 0
-				AND (b.expiry_date IS NULL OR b.expiry_date > %s)
-			GROUP BY
-				sle.item_code,
-				sle.batch_no
-			HAVING SUM(sle.actual_qty) > 0
-			""",
-            (warehouse, item_codes, today),
-            as_dict=True,
-        )
-        return [
-            {
-                "item_code": d.item_code,
-                "batch_no": d.batch_no,
-                "batch_qty": d.batch_qty,
-                "expiry_date": d.expiry_date,
-                "batch_price": d.posa_batch_price,
-                "manufacturing_date": d.manufacturing_date,
-            }
-            for d in rows
-        ]
+        rows = []
+        for item_code in item_codes:
+            batch_list = get_batch_qty(item_code=item_code, warehouse=warehouse) or []
+            for batch in batch_list:
+                if batch.get("batch_no") and flt(batch.get("qty")) > 0:
+                    rows.append(
+                        frappe._dict(
+                            {
+                                "item_code": item_code,
+                                "batch_no": batch.get("batch_no"),
+                                "batch_qty": batch.get("qty"),
+                                "expiry_date": batch.get("expiry_date"),
+                                "batch_price": batch.get("posa_batch_price"),
+                                "manufacturing_date": batch.get("manufacturing_date"),
+                            }
+                        )
+                    )
+        return rows
 
     @redis_cache(ttl=ttl or 300)
     def _get_serials(warehouse, item_codes):
@@ -947,7 +939,9 @@ def get_item_attributes(item_code):
 
 
 @frappe.whitelist()
-def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
+def search_serial_or_batch_or_barcode_number(
+    search_value, search_serial_no, search_batch_no
+):
     """Search for items by serial number, batch number, or barcode."""
     # Search by barcode
     barcode_data = frappe.db.get_value(
@@ -959,15 +953,16 @@ def search_serial_or_batch_or_barcode_number(search_value, search_serial_no):
     if barcode_data:
         return {"item_code": barcode_data.item_code, "barcode": barcode_data.barcode}
 
-    # Search by batch number
-    batch_data = frappe.db.get_value(
-        "Batch",
-        {"name": search_value},
-        ["item as item_code", "name as batch_no"],
-        as_dict=True,
-    )
-    if batch_data:
-        return {"item_code": batch_data.item_code, "batch_no": batch_data.batch_no}
+    # Search by batch number if enabled
+    if search_batch_no:
+        batch_data = frappe.db.get_value(
+            "Batch",
+            {"name": search_value},
+            ["item as item_code", "name as batch_no"],
+            as_dict=True,
+        )
+        if batch_data:
+            return {"item_code": batch_data.item_code, "batch_no": batch_data.batch_no}
 
     # Search by serial number if enabled
     if search_serial_no:

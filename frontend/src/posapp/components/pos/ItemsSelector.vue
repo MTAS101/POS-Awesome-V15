@@ -892,33 +892,37 @@ export default {
 			}
 			return dbHealthy;
 		},
-		async loadVisibleItems(reset = false) {
-			this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
-			await initPromise;
-			await this.ensureStorageHealth();
-			if (reset) {
-				this.currentPage = 0;
-				this.items = [];
-			}
-			const search = this.get_search(this.first_search);
-			const itemGroup = this.item_group !== "ALL" ? this.item_group.toLowerCase() : "";
-			const pageItems = await searchStoredItems({
-				search,
-				itemGroup,
-				limit: this.itemsPerPage,
-				offset: this.currentPage * this.itemsPerPage,
-			});
-			const total = pageItems.length || 1;
-			pageItems.forEach((it, idx) => {
-				this.items.push(it);
-				this.eventBus.emit("data-load-progress", {
-					name: "items",
-					progress: Math.round(((idx + 1) / total) * 100),
-				});
-			});
-			this.eventBus.emit("set_all_items", this.items);
-			if (pageItems.length) this.update_items_details(pageItems);
-		},
+                async loadVisibleItems(reset = false) {
+                        this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
+                        await initPromise;
+                        await this.ensureStorageHealth();
+                        if (reset) {
+                                this.currentPage = 0;
+                                this.items = [];
+                        }
+                        this.flags.serial_no = null;
+                        this.flags.batch_no = null;
+                        const search = this.get_search(this.first_search);
+                        const itemGroup = this.item_group !== "ALL" ? this.item_group.toLowerCase() : "";
+                        const pageItems = await searchStoredItems({
+                                search,
+                                itemGroup,
+                                limit: this.itemsPerPage,
+                                offset: this.currentPage * this.itemsPerPage,
+                        });
+                        const total = pageItems.length || 1;
+                        pageItems.forEach((it, idx) => {
+                                this.items.push(it);
+                                if (it.serial_no) this.flags.serial_no = it.serial_no;
+                                if (it.batch_no) this.flags.batch_no = it.batch_no;
+                                this.eventBus.emit("data-load-progress", {
+                                        name: "items",
+                                        progress: Math.round(((idx + 1) / total) * 100),
+                                });
+                        });
+                        this.eventBus.emit("set_all_items", this.items);
+                        if (pageItems.length) this.update_items_details(pageItems);
+                },
 		onListScroll(event) {
 			if (this.scrollThrottle) return;
 
@@ -1230,24 +1234,34 @@ export default {
 						include_image: 1,
 					},
 				});
-				console.log("[ItemsSelector] server responded", { count: response.message?.length });
+                                console.log("[ItemsSelector] server responded", { count: response.message?.length });
 
-				const items = response.message || [];
+                                const items = response.message || [];
 
-				// Process items
-				items.forEach((item) => {
-					// Ensure UOMs
-					if (!item.item_uoms || item.item_uoms.length === 0) {
-						item.item_uoms = item.stock_uom
-							? [{ uom: item.stock_uom, conversion_factor: 1.0 }]
-							: [];
-					}
+                                vm.flags.serial_no = null;
+                                vm.flags.batch_no = null;
 
-					// Set default quantity
-					if (item.actual_qty === undefined) {
-						item.actual_qty = 0;
-					}
-				});
+                                // Process items
+                                items.forEach((item) => {
+                                        // Ensure UOMs
+                                        if (!item.item_uoms || item.item_uoms.length === 0) {
+                                                item.item_uoms = item.stock_uom
+                                                        ? [{ uom: item.stock_uom, conversion_factor: 1.0 }]
+                                                        : [];
+                                        }
+
+                                        // Set default quantity
+                                        if (item.actual_qty === undefined) {
+                                                item.actual_qty = 0;
+                                        }
+
+                                        if (item.serial_no) {
+                                                vm.flags.serial_no = item.serial_no;
+                                        }
+                                        if (item.batch_no) {
+                                                vm.flags.batch_no = item.batch_no;
+                                        }
+                                });
 
 				vm.items = items;
 				vm.items_loaded = true;
