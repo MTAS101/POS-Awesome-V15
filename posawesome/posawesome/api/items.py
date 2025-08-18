@@ -298,7 +298,10 @@ def get_items(
             if len(items_data) < page_size:
                 break
 
-        return result[:limit_page_length] if limit_page_length else result
+        return {
+            "items": result[:limit_page_length] if limit_page_length else result,
+            "flags": data,
+        }
 
     if use_price_list:
         return __get_items(

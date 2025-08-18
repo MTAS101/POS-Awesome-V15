@@ -204,10 +204,7 @@
 								>
 									<div class="card-item-image-container">
 										<v-img
-											:src="
-                                                                                                item.image ||
-                                                                                                placeholderImage
-											"
+											:src="item.image || placeholderImage"
 											class="card-item-image"
 											aspect-ratio="1"
 											:alt="item.item_name"
@@ -874,7 +871,7 @@ export default {
 					!this.itemWorker
 				) {
 					try {
-                                                const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+						const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 						this.itemWorker = new Worker(workerUrl, { type: "classic" });
 						this.itemWorker.onerror = function (event) {
 							console.error("Worker error:", event);
@@ -1230,9 +1227,17 @@ export default {
 						include_image: 1,
 					},
 				});
-				console.log("[ItemsSelector] server responded", { count: response.message?.length });
-
-				const items = response.message || [];
+                                const message = response.message || {};
+                                let items = [];
+                                if (Array.isArray(message)) {
+                                        items = message;
+                                } else if (Array.isArray(message.items)) {
+                                        items = message.items;
+                                } else if (message.items && typeof message.items === "object") {
+                                        items = Object.values(message.items);
+                                }
+                                vm.flags = message.flags || {};
+                                console.log("[ItemsSelector] server responded", { count: items.length });
 
 				// Process items
 				items.forEach((item) => {
@@ -1333,10 +1338,20 @@ export default {
 						},
 						freeze: false,
 					});
-					console.log("[ItemsSelector] background load server response", {
-						count: res.message?.length,
-					});
-					const text = JSON.stringify(res);
+                                        const message = res.message || {};
+                                        let itemsRes = [];
+                                        if (Array.isArray(message)) {
+                                                itemsRes = message;
+                                        } else if (Array.isArray(message.items)) {
+                                                itemsRes = message.items;
+                                        } else if (message.items && typeof message.items === "object") {
+                                                itemsRes = Object.values(message.items);
+                                        }
+                                        this.flags = message.flags || {};
+                                        console.log("[ItemsSelector] background load server response", {
+                                                count: itemsRes.length,
+                                        });
+                                        const text = JSON.stringify({ message: itemsRes });
 					if (this.items_request_token !== requestToken) {
 						console.log("[ItemsSelector] background load token mismatch after response");
 						return;
@@ -1450,13 +1465,22 @@ export default {
 							console.log("[ItemsSelector] background load token mismatch in callback");
 							return;
 						}
-						const rows = r.message || [];
-						console.log("[ItemsSelector] background load callback items", { count: rows.length });
-						rows.forEach((it) => {
-							const existing = this.items.find((i) => i.item_code === it.item_code);
-							if (existing) Object.assign(existing, it);
-							else this.items.push(it);
-						});
+                                                const message = r.message || {};
+                                                let rows = [];
+                                                if (Array.isArray(message)) {
+                                                        rows = message;
+                                                } else if (Array.isArray(message.items)) {
+                                                        rows = message.items;
+                                                } else if (message.items && typeof message.items === "object") {
+                                                        rows = Object.values(message.items);
+                                                }
+                                                this.flags = message.flags || {};
+                                                console.log("[ItemsSelector] background load callback items", { count: rows.length });
+                                                rows.forEach((it) => {
+                                                        const existing = this.items.find((i) => i.item_code === it.item_code);
+                                                        if (existing) Object.assign(existing, it);
+                                                        else this.items.push(it);
+                                                });
 						this.eventBus.emit("set_all_items", this.items);
 						console.log("[ItemsSelector] background load set_all_items emitted", {
 							length: this.items.length,
@@ -1691,6 +1715,7 @@ export default {
 		search_onchange: _.debounce(async function (newSearchTerm) {
 			const vm = this;
 
+			vm.flags = {};
 			vm.cancelItemDetailsRequest();
 
 			// Determine the actual query string and trim whitespace
@@ -2097,6 +2122,7 @@ export default {
 			return combinations;
 		},
 		clearSearch() {
+			this.flags = {};
 			this.search_backup = this.first_search;
 			this.first_search = "";
 			this.search = "";
@@ -2524,9 +2550,11 @@ export default {
 
 			const searchTerm = this.get_search(this.first_search).trim().toLowerCase();
 			let filteredItems = [...this.items];
+			const flags = this.flags || {};
+			const hasFlag = flags.batch_no || flags.serial_no || flags.barcode || flags.item_code;
 
-			// Apply search filter only for queries with at least three characters
-			if (searchTerm.length >= 3) {
+			// Apply search filter only when no flags are set and query has at least three characters
+			if (searchTerm.length >= 3 && !hasFlag) {
 				filteredItems = filteredItems.filter((item) => {
 					const barcodeList = [];
 					if (Array.isArray(item.item_barcode)) {
@@ -2717,7 +2745,7 @@ export default {
 				// Use the plain URL so the service worker can match the cached file
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
-                           const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+				const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {
@@ -2738,7 +2766,7 @@ export default {
 				// Use the plain URL so the service worker can match the cached file
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
-                           const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+				const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {
