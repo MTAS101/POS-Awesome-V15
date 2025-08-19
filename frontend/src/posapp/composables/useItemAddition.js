@@ -131,6 +131,10 @@ export function useItemAddition() {
 				// Skip recalculation to preserve the manually set rate
 				if (context.update_item_detail) context.update_item_detail(new_item, false);
 
+				if (context.fetch_available_qty) {
+					context.fetch_available_qty(new_item);
+				}
+
 				// Expand new item if it has batch or serial number
 				if (
 					(!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) ||
@@ -166,6 +170,10 @@ export function useItemAddition() {
 
 				if (context.calc_uom && cur_item.uom) {
 					await context.calc_uom(cur_item, cur_item.uom);
+				}
+
+				if (context.fetch_available_qty) {
+					context.fetch_available_qty(cur_item);
 				}
 			}
 		} else {
@@ -203,6 +211,10 @@ export function useItemAddition() {
 			// Recalculate rates if UOM differs from stock UOM
 			if (context.calc_uom && cur_item.uom) {
 				await context.calc_uom(cur_item, cur_item.uom);
+			}
+
+			if (context.fetch_available_qty) {
+				context.fetch_available_qty(cur_item);
 			}
 		}
 		if (context.forceUpdate) context.forceUpdate();

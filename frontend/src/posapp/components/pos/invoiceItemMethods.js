@@ -1,13 +1,13 @@
 /* global __, frappe, flt */
 import {
-        isOffline,
-        saveCustomerBalance,
-        getCachedCustomerBalance,
-        getCachedPriceListItems,
-        getCustomerStorage,
-        getOfflineCustomers,
-        getTaxTemplate,
-        getTaxInclusiveSetting,
+	isOffline,
+	saveCustomerBalance,
+	getCachedCustomerBalance,
+	getCachedPriceListItems,
+	getCustomerStorage,
+	getOfflineCustomers,
+	getTaxTemplate,
+	getTaxInclusiveSetting,
 } from "../../../offline/index.js";
 
 // Import composables
@@ -27,7 +27,17 @@ export default {
 	},
 
 	async add_item(item) {
-		return await addItem(item, this);
+		const res = await addItem(item, this);
+		const target = this.items.find(
+			(it) =>
+				it.item_code === item.item_code &&
+				it.uom === (item.uom || it.uom) &&
+				(!it.batch_no || it.batch_no === item.batch_no),
+		);
+		if (target && this.fetch_available_qty) {
+			this.fetch_available_qty(target);
+		}
+		return res;
 	},
 
 	// Create a new item object with default and calculated fields
@@ -208,31 +218,31 @@ export default {
 	},
 
 	// Save and clear the current invoice (draft logic)
-       save_and_clear_invoice() {
-                let old_invoice = null;
-                const doc = this.get_invoice_doc();
-                if (doc.name) {
-                        old_invoice = this.update_invoice(doc);
-                } else {
-                        if (doc.items.length) {
-                                old_invoice = this.update_invoice(doc);
-                        } else {
-                                this.eventBus.emit("show_message", {
-                                        title: `Nothing to save`,
-                                        color: "error",
-                                });
-                        }
-                }
-                if (!old_invoice) {
-                        this.eventBus.emit("show_message", {
-                                title: `Error saving the current invoice`,
-                                color: "error",
-                        });
-                } else {
-                        this.clear_invoice();
-                        return old_invoice;
-                }
-       },
+	save_and_clear_invoice() {
+		let old_invoice = null;
+		const doc = this.get_invoice_doc();
+		if (doc.name) {
+			old_invoice = this.update_invoice(doc);
+		} else {
+			if (doc.items.length) {
+				old_invoice = this.update_invoice(doc);
+			} else {
+				this.eventBus.emit("show_message", {
+					title: `Nothing to save`,
+					color: "error",
+				});
+			}
+		}
+		if (!old_invoice) {
+			this.eventBus.emit("show_message", {
+				title: `Error saving the current invoice`,
+				color: "error",
+			});
+		} else {
+			this.clear_invoice();
+			return old_invoice;
+		}
+	},
 
 	// Start a new order (or return order) with provided data
 	async new_order(data = {}) {
@@ -1237,38 +1247,38 @@ export default {
 		if (!items?.length) return;
 		if (!this.pos_profile) return;
 
-                try {
-                        const response = await frappe.call({
-                                method: "posawesome.posawesome.api.items.get_items_details",
-                                args: {
-                                        pos_profile: JSON.stringify(this.pos_profile),
-                                        items_data: JSON.stringify(items),
-                                        price_list: this.selected_price_list || this.pos_profile.selling_price_list,
-                                },
-                        });
+		try {
+			const response = await frappe.call({
+				method: "posawesome.posawesome.api.items.get_items_details",
+				args: {
+					pos_profile: JSON.stringify(this.pos_profile),
+					items_data: JSON.stringify(items),
+					price_list: this.selected_price_list || this.pos_profile.selling_price_list,
+				},
+			});
 
 			if (response?.message) {
 				items.forEach((item) => {
 					const updated_item = response.message.find(
 						(element) => element.posa_row_id == item.posa_row_id,
 					);
-                                        if (updated_item) {
-                                                item.actual_qty = updated_item.actual_qty;
-                                                item.item_uoms = updated_item.item_uoms;
-                                                item.has_batch_no = updated_item.has_batch_no;
-                                                item.has_serial_no = updated_item.has_serial_no;
-                                                item.batch_no_data = updated_item.batch_no_data;
-                                                item.serial_no_data = updated_item.serial_no_data;
-                                                if (updated_item.rate !== undefined) {
-                                                        if (updated_item.rate !== 0 || !item.rate) {
-                                                                item.rate = updated_item.rate;
-                                                                item.price_list_rate = updated_item.price_list_rate || updated_item.rate;
-                                                        }
-                                                }
-                                                if (updated_item.currency) {
-                                                        item.currency = updated_item.currency;
-                                                }
-                                        }
+					if (updated_item) {
+						item.actual_qty = updated_item.actual_qty;
+						item.item_uoms = updated_item.item_uoms;
+						item.has_batch_no = updated_item.has_batch_no;
+						item.has_serial_no = updated_item.has_serial_no;
+						item.batch_no_data = updated_item.batch_no_data;
+						item.serial_no_data = updated_item.serial_no_data;
+						if (updated_item.rate !== undefined) {
+							if (updated_item.rate !== 0 || !item.rate) {
+								item.rate = updated_item.rate;
+								item.price_list_rate = updated_item.price_list_rate || updated_item.rate;
+							}
+						}
+						if (updated_item.currency) {
+							item.currency = updated_item.currency;
+						}
+					}
 				});
 			}
 		} catch (error) {
@@ -1303,14 +1313,14 @@ export default {
 		//   this.$forceUpdate();
 		// }
 
-                frappe.call({
-                        method: "posawesome.posawesome.api.items.get_item_detail",
-                        args: {
-                                warehouse: item.warehouse || this.pos_profile.warehouse,
-                                doc: this.get_invoice_doc(),
-                                price_list: this.selected_price_list || this.pos_profile.selling_price_list,
-                                item: {
-                                        item_code: item.item_code,
+		frappe.call({
+			method: "posawesome.posawesome.api.items.get_item_detail",
+			args: {
+				warehouse: item.warehouse || this.pos_profile.warehouse,
+				doc: this.get_invoice_doc(),
+				price_list: this.selected_price_list || this.pos_profile.selling_price_list,
+				item: {
+					item_code: item.item_code,
 					customer: this.customer,
 					doctype: "Sales Invoice",
 					name: "New Sales Invoice 1",
@@ -1327,15 +1337,15 @@ export default {
 					transaction_type: "selling",
 					update_stock: this.pos_profile.update_stock,
 					price_list: this.get_price_list(),
-                                        has_batch_no: item.has_batch_no,
-                                        has_serial_no: item.has_serial_no,
-                                        serial_no: item.serial_no,
-                                        batch_no: item.batch_no,
-                                        is_stock_item: item.is_stock_item,
-                                },
-                        },
-                        callback: function (r) {
-                                if (r.message) {
+					has_batch_no: item.has_batch_no,
+					has_serial_no: item.has_serial_no,
+					serial_no: item.serial_no,
+					batch_no: item.batch_no,
+					is_stock_item: item.is_stock_item,
+				},
+			},
+			callback: function (r) {
+				if (r.message) {
 					const data = r.message;
 					if (!item.warehouse) {
 						item.warehouse = vm.pos_profile.warehouse;
@@ -1352,12 +1362,12 @@ export default {
 					if (!item.original_rate) {
 						item.original_rate = data.price_list_rate;
 					}
-                                        if (data.serial_no_data) {
-                                                item.serial_no_data = data.serial_no_data;
-                                        }
-                                        if (data.batch_no_data) {
-                                                item.batch_no_data = data.batch_no_data;
-                                        }
+					if (data.serial_no_data) {
+						item.serial_no_data = data.serial_no_data;
+					}
+					if (data.batch_no_data) {
+						item.batch_no_data = data.batch_no_data;
+					}
 					if (
 						item.has_batch_no &&
 						vm.pos_profile.posa_auto_set_batch &&
@@ -1693,9 +1703,102 @@ export default {
 		return calcUom(item, value, this);
 	},
 
-	// Calculate stock quantity for an item
+	// Calculate stock quantity for an item with stock validation
 	calc_stock_qty(item, value) {
-		return calcStockQty(item, value, this);
+		calcStockQty(item, value, this);
+               if (this.update_qty_limits) {
+                       this.update_qty_limits(item);
+               }
+               if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
+                       const blockSale =
+                               !this.stock_settings.allow_negative_stock ||
+                               this.pos_profile.posa_block_sale_beyond_available_qty;
+                       if (blockSale) {
+                               item.qty = item.max_qty;
+                               calcStockQty(item, item.qty, this);
+                               this.$forceUpdate();
+                               this.eventBus.emit("show_message", {
+                                       title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
+                                               this.formatFloat(item.max_qty),
+                                       ]),
+                                       color: "error",
+                               });
+                       } else {
+                               this.eventBus.emit("show_message", {
+                                       title: __("Stock is lower than requested. Proceeding may create negative stock."),
+                                       color: "warning",
+                               });
+                       }
+               }
+       },
+
+	// Update quantity limits based on available stock
+        update_qty_limits(item) {
+               if (item && item.available_qty !== undefined) {
+                       item.max_qty = flt(item.available_qty / (item.conversion_factor || 1));
+
+                       if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
+                               const blockSale =
+                                       !this.stock_settings.allow_negative_stock ||
+                                       this.pos_profile.posa_block_sale_beyond_available_qty;
+                               if (blockSale) {
+                                       item.qty = item.max_qty;
+                                       calcStockQty(item, item.qty, this);
+                                       this.$forceUpdate();
+                                       this.eventBus.emit("show_message", {
+                                               title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
+                                                       this.formatFloat(item.max_qty),
+                                               ]),
+                                               color: "error",
+                                       });
+                               } else {
+                                       this.eventBus.emit("show_message", {
+                                               title: __(
+                                                       "Stock is lower than requested. Proceeding may create negative stock.",
+                                               ),
+                                               color: "warning",
+                                       });
+                               }
+                       }
+
+                       item.disable_increment =
+                               (!this.stock_settings.allow_negative_stock ||
+                                       this.pos_profile.posa_block_sale_beyond_available_qty) &&
+                               item.qty >= item.max_qty;
+               }
+        },
+
+	// Fetch available stock for an item and cache it
+	async fetch_available_qty(item) {
+		if (!item || !item.item_code || !item.warehouse) return;
+		const key = `${item.item_code}:${item.warehouse}:${item.batch_no || ""}:${item.uom}`;
+		const cached = this.available_stock_cache[key];
+		const now = Date.now();
+		if (cached && now - cached.ts < 60000) {
+			item.available_qty = cached.qty;
+			this.update_qty_limits(item);
+			return;
+		}
+		try {
+			const r = await frappe.call({
+				method: "posawesome.posawesome.api.items.get_available_qty",
+				args: {
+					items: JSON.stringify([
+						{
+							item_code: item.item_code,
+							warehouse: item.warehouse,
+							batch_no: item.batch_no,
+						},
+					]),
+				},
+			});
+			const qty = r.message && r.message.length ? flt(r.message[0].available_qty) : 0;
+			this.available_stock_cache[key] = { qty, ts: now };
+			item.available_qty = qty;
+			this.update_qty_limits(item);
+		} catch (e) {
+			console.error("Failed to fetch available qty", e);
+		}
 	},
 
 	// Set serial numbers for an item (and update qty)

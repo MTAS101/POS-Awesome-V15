@@ -5,17 +5,23 @@
 		<CancelSaleDialog v-model="cancel_dialog" @confirm="cancel_invoice" />
 
 		<!-- Main Invoice Card (contains all invoice content) -->
-		<v-card ref="invoiceCard" :style="{
-			height: invoiceHeight || 'var(--container-height)',
-			maxHeight: invoiceHeight || 'var(--container-height)',
-			backgroundColor: isDarkTheme ? '#121212' : '',
-			resize: 'vertical',
-			overflow: 'auto',
-		}" :class="[
-			'cards my-0 py-0 mt-3 resizable',
-			isDarkTheme ? '' : 'bg-grey-lighten-5',
-			{ 'return-mode': isReturnInvoice },
-		]" @mouseup="saveInvoiceHeight" @touchend="saveInvoiceHeight">
+		<v-card
+			ref="invoiceCard"
+			:style="{
+				height: invoiceHeight || 'var(--container-height)',
+				maxHeight: invoiceHeight || 'var(--container-height)',
+				backgroundColor: isDarkTheme ? '#121212' : '',
+				resize: 'vertical',
+				overflow: 'auto',
+			}"
+			:class="[
+				'cards my-0 py-0 mt-3 resizable',
+				isDarkTheme ? '' : 'bg-grey-lighten-5',
+				{ 'return-mode': isReturnInvoice },
+			]"
+			@mouseup="saveInvoiceHeight"
+			@touchend="saveInvoiceHeight"
+		>
 			<!-- Dynamic padding wrapper -->
 			<div class="dynamic-padding">
 				<!-- Top Row: Customer Selection and Invoice Type -->
@@ -26,64 +32,100 @@
 					</v-col>
 					<!-- Invoice Type Selection (Only shown if sales orders are allowed) -->
 					<v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-4">
-						<v-select density="compact" hide-details variant="solo" color="primary"
-							:bg-color="isDarkTheme ? '#1E1E1E' : 'white'" class="dark-field sleek-field"
-							:items="invoiceTypes" :label="frappe._('Type')" v-model="invoiceType"
-							:disabled="invoiceType == 'Return'"></v-select>
+						<v-select
+							density="compact"
+							hide-details
+							variant="solo"
+							color="primary"
+							:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+							class="dark-field sleek-field"
+							:items="invoiceTypes"
+							:label="frappe._('Type')"
+							v-model="invoiceType"
+							:disabled="invoiceType == 'Return'"
+						></v-select>
 					</v-col>
 				</v-row>
 
 				<!-- Delivery Charges Section (Only if enabled in POS profile) -->
-				<DeliveryCharges :pos_profile="pos_profile" :delivery_charges="delivery_charges"
-					:selected_delivery_charge="selected_delivery_charge" :delivery_charges_rate="delivery_charges_rate"
-					:deliveryChargesFilter="deliveryChargesFilter" :formatCurrency="formatCurrency"
-					:currencySymbol="currencySymbol" :readonly="readonly" @update:selected_delivery_charge="
+				<DeliveryCharges
+					:pos_profile="pos_profile"
+					:delivery_charges="delivery_charges"
+					:selected_delivery_charge="selected_delivery_charge"
+					:delivery_charges_rate="delivery_charges_rate"
+					:deliveryChargesFilter="deliveryChargesFilter"
+					:formatCurrency="formatCurrency"
+					:currencySymbol="currencySymbol"
+					:readonly="readonly"
+					@update:selected_delivery_charge="
 						(val) => {
 							selected_delivery_charge = val;
 							update_delivery_charges();
 						}
-					" />
+					"
+				/>
 
 				<!-- Posting Date and Customer Balance Section -->
-				<PostingDateRow :pos_profile="pos_profile" :posting_date_display="posting_date_display"
-					:customer_balance="customer_balance" :price-list="selected_price_list" :price-lists="price_lists"
-					:formatCurrency="formatCurrency" @update:posting_date_display="
+				<PostingDateRow
+					:pos_profile="pos_profile"
+					:posting_date_display="posting_date_display"
+					:customer_balance="customer_balance"
+					:price-list="selected_price_list"
+					:price-lists="price_lists"
+					:formatCurrency="formatCurrency"
+					@update:posting_date_display="
 						(val) => {
 							posting_date_display = val;
 						}
-					" @update:priceList="
+					"
+					@update:priceList="
 						(val) => {
 							selected_price_list = val;
 						}
-					" />
+					"
+				/>
 
 				<!-- Multi-Currency Section (Only if enabled in POS profile) -->
-				<MultiCurrencyRow :pos_profile="pos_profile" :selected_currency="selected_currency"
-					:plc_conversion_rate="exchange_rate" :conversion_rate="conversion_rate"
-					:available_currencies="available_currencies" :isNumber="isNumber"
-					:price_list_currency="price_list_currency" @update:selected_currency="
+				<MultiCurrencyRow
+					:pos_profile="pos_profile"
+					:selected_currency="selected_currency"
+					:plc_conversion_rate="exchange_rate"
+					:conversion_rate="conversion_rate"
+					:available_currencies="available_currencies"
+					:isNumber="isNumber"
+					:price_list_currency="price_list_currency"
+					@update:selected_currency="
 						(val) => {
 							selected_currency = val;
 							update_currency(val);
 						}
-					" @update:plc_conversion_rate="
+					"
+					@update:plc_conversion_rate="
 						(val) => {
 							exchange_rate = val;
 							update_exchange_rate();
 						}
-					" @update:conversion_rate="
+					"
+					@update:conversion_rate="
 						(val) => {
 							conversion_rate = val;
 							update_conversion_rate();
 						}
-					" />
+					"
+				/>
 
 				<!-- Items Table Section (Main items list for invoice) -->
 				<div class="items-table-wrapper">
 					<!-- Column selector button moved outside the table -->
 					<div class="column-selector-container">
-						<v-btn density="compact" variant="text" color="primary" prepend-icon="mdi-cog-outline"
-							@click="toggleColumnSelection" class="column-selector-btn">
+						<v-btn
+							density="compact"
+							variant="text"
+							color="primary"
+							prepend-icon="mdi-cog-outline"
+							@click="toggleColumnSelection"
+							class="column-selector-btn"
+						>
 							{{ __("Columns") }}
 						</v-btn>
 
@@ -92,18 +134,31 @@
 								<v-card-title class="text-h6 pa-4 d-flex align-center">
 									<span>{{ __("Select Columns to Display") }}</span>
 									<v-spacer></v-spacer>
-									<v-btn icon="mdi-close" variant="text" density="compact"
-										@click="show_column_selector = false"></v-btn>
+									<v-btn
+										icon="mdi-close"
+										variant="text"
+										density="compact"
+										@click="show_column_selector = false"
+									></v-btn>
 								</v-card-title>
 								<v-divider></v-divider>
 								<v-card-text class="pa-4">
 									<v-row dense>
-										<v-col cols="12"
+										<v-col
+											cols="12"
 											v-for="column in available_columns.filter((col) => !col.required)"
-											:key="column.key">
-											<v-switch v-model="temp_selected_columns" :label="column.title"
-												:value="column.key" hide-details density="compact" color="primary"
-												class="column-switch mb-1" :disabled="column.required"></v-switch>
+											:key="column.key"
+										>
+											<v-switch
+												v-model="temp_selected_columns"
+												:label="column.title"
+												:value="column.key"
+												hide-details
+												density="compact"
+												color="primary"
+												class="column-switch mb-1"
+												:disabled="column.required"
+											></v-switch>
 										</v-col>
 									</v-row>
 									<div class="text-caption mt-2">
@@ -124,36 +179,73 @@
 					</div>
 
 					<!-- ItemsTable component with reorder event handler -->
-					<ItemsTable ref="itemsTable" :headers="items_headers" :items="items" v-model:expanded="expanded"
-						:itemsPerPage="itemsPerPage" :itemSearch="itemSearch" :pos_profile="pos_profile"
-						:invoice_doc="invoice_doc" :invoiceType="invoiceType" :displayCurrency="displayCurrency"
-						:formatFloat="formatFloat" :formatCurrency="formatCurrency" :currencySymbol="currencySymbol"
-						:isNumber="isNumber" :setFormatedQty="setFormatedQty" :calcStockQty="calc_stock_qty"
-						:setFormatedCurrency="setFormatedCurrency" :calcPrices="calc_prices" :calcUom="calc_uom"
-						:setSerialNo="set_serial_no" :setBatchQty="set_batch_qty" :validateDueDate="validate_due_date"
-						:removeItem="remove_item" :subtractOne="subtract_one" :addOne="add_one"
-						:toggleOffer="toggleOffer" :changePriceListRate="change_price_list_rate"
-						:isNegative="isNegative" @update:expanded="handleExpandedUpdate"
-						@reorder-items="handleItemReorder" @add-item-from-drag="handleItemDrop"
-						@show-drop-feedback="showDropFeedback" @item-dropped="showDropFeedback(false)" />
+					<ItemsTable
+						ref="itemsTable"
+						:headers="items_headers"
+						:items="items"
+						v-model:expanded="expanded"
+						:itemsPerPage="itemsPerPage"
+						:itemSearch="itemSearch"
+						:pos_profile="pos_profile"
+						:invoice_doc="invoice_doc"
+						:invoiceType="invoiceType"
+						:displayCurrency="displayCurrency"
+						:formatFloat="formatFloat"
+						:formatCurrency="formatCurrency"
+						:currencySymbol="currencySymbol"
+						:isNumber="isNumber"
+						:setFormatedQty="setFormatedQty"
+						:setFormatedCurrency="setFormatedCurrency"
+						:calcPrices="calc_prices"
+						:calcUom="calc_uom"
+						:setSerialNo="set_serial_no"
+						:setBatchQty="set_batch_qty"
+						:validateDueDate="validate_due_date"
+						:removeItem="remove_item"
+						:subtractOne="subtract_one"
+						:addOne="add_one"
+						:toggleOffer="toggleOffer"
+						:changePriceListRate="change_price_list_rate"
+						:isNegative="isNegative"
+						@update:expanded="handleExpandedUpdate"
+						@reorder-items="handleItemReorder"
+						@add-item-from-drag="handleItemDrop"
+						@show-drop-feedback="showDropFeedback"
+						@item-dropped="showDropFeedback(false)"
+					/>
 				</div>
 			</div>
 		</v-card>
 		<!-- Payment Section -->
-		<InvoiceSummary :pos_profile="pos_profile" :total_qty="total_qty" :additional_discount="additional_discount"
+		<InvoiceSummary
+			:pos_profile="pos_profile"
+			:total_qty="total_qty"
+			:additional_discount="additional_discount"
 			:additional_discount_percentage="additional_discount_percentage"
-			:total_items_discount_amount="total_items_discount_amount" :subtotal="subtotal"
-			:displayCurrency="displayCurrency" :formatFloat="formatFloat" :formatCurrency="formatCurrency"
-			:currencySymbol="currencySymbol" :discount_percentage_offer_name="discount_percentage_offer_name"
-			:isNumber="isNumber" @update:additional_discount="(val) => (additional_discount = val)"
+			:total_items_discount_amount="total_items_discount_amount"
+			:subtotal="subtotal"
+			:displayCurrency="displayCurrency"
+			:formatFloat="formatFloat"
+			:formatCurrency="formatCurrency"
+			:currencySymbol="currencySymbol"
+			:discount_percentage_offer_name="discount_percentage_offer_name"
+			:isNumber="isNumber"
+			@update:additional_discount="(val) => (additional_discount = val)"
 			@update:additional_discount_percentage="(val) => (additional_discount_percentage = val)"
-			@update_discount_umount="update_discount_umount" @save-and-clear="save_and_clear_invoice"
-			@load-drafts="get_draft_invoices" @select-order="get_draft_orders" @cancel-sale="cancel_dialog = true"
-			@open-returns="open_returns" @print-draft="print_draft_invoice" @show-payment="show_payment" />
+			@update_discount_umount="update_discount_umount"
+			@save-and-clear="save_and_clear_invoice"
+			@load-drafts="get_draft_invoices"
+			@select-order="get_draft_orders"
+			@cancel-sale="cancel_dialog = true"
+			@open-returns="open_returns"
+			@print-draft="print_draft_invoice"
+			@show-payment="show_payment"
+		/>
 	</div>
 </template>
 
 <script>
+/* global frappe, __ */
 import format from "../../format";
 import Customer from "./Customer.vue";
 import DeliveryCharges from "./DeliveryCharges.vue";
@@ -167,7 +259,6 @@ import invoiceComputed from "./invoiceComputed";
 import invoiceWatchers from "./invoiceWatchers";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
-import { isOffline, saveCustomerBalance, getCachedCustomerBalance } from "../../../offline";
 
 export default {
 	name: "POSInvoice",
@@ -202,6 +293,7 @@ export default {
 			float_precision: 6, // Float precision for calculations
 			currency_precision: 6, // Currency precision for display
 			new_line: false, // Add new line for item
+			available_stock_cache: {},
 			delivery_charges: [], // List of delivery charges
 			delivery_charges_rate: 0, // Selected delivery charge rate
 			selected_delivery_charge: "", // Selected delivery charge object
@@ -470,19 +562,52 @@ export default {
 			this.posting_date = date;
 			this.$forceUpdate();
 		},
-		// Override setFormatedFloat for qty field to handle return mode
-		setFormatedQty(item, field_name, precision, no_negative, value) {
-			// Use the regular formatter method from the mixin
-			let parsedValue = this.setFormatedFloat(item, field_name, precision, no_negative, value);
+                // Override setFormatedFloat for qty field to handle stock limits and return mode
+                setFormatedQty(item, field_name, precision, no_negative, value) {
+                        // Parse and set the value using the mixin's formatter
+                        let parsedValue = this.setFormatedFloat(
+                                item,
+                                field_name,
+                                precision,
+                                no_negative,
+                                value,
+                        );
 
-			// Ensure negative value for return invoices
-			if (this.isReturnInvoice && parsedValue > 0) {
-				parsedValue = -Math.abs(parsedValue);
-				item[field_name] = parsedValue;
-			}
+                        // Enforce available stock limits
+                        if (
+                                item.max_qty !== undefined &&
+                                this.flt(item[field_name]) > this.flt(item.max_qty)
+                        ) {
+                               const blockSale =
+                                       !this.stock_settings.allow_negative_stock ||
+                                       this.pos_profile.posa_block_sale_beyond_available_qty;
+                               if (blockSale) {
+                                       item[field_name] = item.max_qty;
+                                       parsedValue = item.max_qty;
+                                       this.eventBus.emit("show_message", {
+                                               title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
+                                                       this.formatFloat(item.max_qty),
+                                               ]),
+                                               color: "error",
+                                       });
+                               } else {
+                                       this.eventBus.emit("show_message", {
+                                               title: __("Stock is lower than requested. Proceeding may create negative stock."),
+                                               color: "warning",
+                                       });
+                               }
+                       }
 
-			return parsedValue;
-		},
+                        // Ensure negative value for return invoices
+                        if (this.isReturnInvoice && parsedValue > 0) {
+                                parsedValue = -Math.abs(parsedValue);
+                                item[field_name] = parsedValue;
+                        }
+
+                        // Recalculate stock quantity with the adjusted value
+                        this.calc_stock_qty(item, item[field_name]);
+                        return parsedValue;
+                },
 		async fetch_available_currencies() {
 			try {
 				console.log("Fetching available currencies...");
@@ -538,9 +663,9 @@ export default {
 		async fetch_price_lists() {
 			if (this.pos_profile.posa_enable_price_list_dropdown) {
 				try {
-                                const r = await frappe.call({
-                                        method: "posawesome.posawesome.api.utilities.get_selling_price_lists",
-                                });
+					const r = await frappe.call({
+						method: "posawesome.posawesome.api.utilities.get_selling_price_lists",
+					});
 					if (r && r.message) {
 						this.price_lists = r.message.map((pl) => pl.name);
 					}
@@ -756,9 +881,9 @@ export default {
 							this.eventBus.emit("show_message", {
 								title: __(
 									"Exchange rate date " +
-									this.exchange_rate_date +
-									" differs from posting date " +
-									posting_backend,
+										this.exchange_rate_date +
+										" differs from posting date " +
+										posting_backend,
 								),
 								color: "warning",
 							});
@@ -814,9 +939,9 @@ export default {
 							this.eventBus.emit("show_message", {
 								title: __(
 									"Exchange rate date " +
-									this.exchange_rate_date +
-									" differs from posting date " +
-									posting_backend,
+										this.exchange_rate_date +
+										" differs from posting date " +
+										posting_backend,
 								),
 								color: "warning",
 							});
@@ -870,8 +995,26 @@ export default {
 
 		// Increase quantity of an item (handles return logic)
 		add_one(item) {
-			// Increase quantity, return items remain negative
-			item.qty++;
+			const proposed = item.qty + 1;
+                       const blockSale =
+                               !this.stock_settings.allow_negative_stock ||
+                               this.pos_profile.posa_block_sale_beyond_available_qty;
+                       if (
+                               blockSale &&
+                               item.max_qty !== undefined &&
+                               proposed > item.max_qty
+                       ) {
+                               item.qty = item.max_qty;
+                               this.calc_stock_qty(item, item.qty);
+                               this.eventBus.emit("show_message", {
+                                       title: __("Maximum available quantity is {0}. Quantity adjusted to match stock.", [
+                                               this.formatFloat(item.max_qty),
+                                        ]),
+                                        color: "error",
+                                });
+                                return;
+                        }
+                        item.qty = proposed;
 			if (item.qty == 0) {
 				this.remove_item(item);
 			}
@@ -926,9 +1069,9 @@ export default {
 		this.loadColumnPreferences();
 		// Restore saved invoice height
 		this.loadInvoiceHeight();
-		this.eventBus.on("item-drag-start", (item) => {
-			this.showDropFeedback(true);
-		});
+                this.eventBus.on("item-drag-start", () => {
+                        this.showDropFeedback(true);
+                });
 		this.eventBus.on("item-drag-end", () => {
 			this.showDropFeedback(false);
 		});
@@ -1058,9 +1201,9 @@ export default {
 			this.posting_date = frappe.datetime.nowdate();
 		});
 		this.eventBus.on("calc_uom", this.calc_uom);
-		this.eventBus.on("item-drag-start", (item) => {
-			this.showDropFeedback(true);
-		});
+                this.eventBus.on("item-drag-start", () => {
+                        this.showDropFeedback(true);
+                });
 		this.eventBus.on("item-drag-end", () => {
 			this.showDropFeedback(false);
 		});
