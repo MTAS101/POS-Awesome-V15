@@ -4,6 +4,7 @@ import {
         getTermsAndConditions,
         memoryInitPromise,
 } from "./offline/index.js";
+import nunjucks from "nunjucks";
 
 function defaultOfflineHTML(invoice, terms = "") {
         if (!invoice) return "";
@@ -115,11 +116,18 @@ export default async function renderOfflineInvoiceHTML(invoice) {
         }
 
         try {
-                return frappe.render_template(template, {
+                nunjucks.configure({ autoescape: false });
+                const context = {
                         doc,
                         terms: doc.terms,
                         terms_and_conditions: doc.terms_and_conditions,
-                });
+                        _: frappe?._ ? frappe._ : (t) => t,
+                        frappe: {
+                                db: { get_value: () => "" },
+                                get_list: () => [],
+                        },
+                };
+                return nunjucks.renderString(template, context);
         } catch (e) {
                 console.error("Failed to render offline invoice", e);
                 return defaultOfflineHTML(doc, doc.terms_and_conditions);
