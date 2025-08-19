@@ -1709,27 +1709,28 @@ export default {
 		if (this.update_qty_limits) {
 			this.update_qty_limits(item);
 		}
-                if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
-                        if (
-                                this.pos_profile.posa_block_sale_beyond_available_qty &&
-                                !this.stock_settings.allow_negative_stock
-                        ) {
-                                item.qty = item.max_qty;
-                                calcStockQty(item, item.qty, this);
-                                this.eventBus.emit("show_message", {
-                                        title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
-                                                this.formatFloat(item.max_qty),
-                                        ]),
-                                        color: "error",
-                                });
-                        } else {
-                                this.eventBus.emit("show_message", {
-                                        title: __("Stock is lower than requested. Proceeding may create negative stock."),
-                                        color: "warning",
-                                });
-                        }
-                }
-        },
+		if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
+			if (
+				this.pos_profile.posa_block_sale_beyond_available_qty &&
+				!this.stock_settings.allow_negative_stock
+			) {
+				item.qty = item.max_qty;
+				calcStockQty(item, item.qty, this);
+				this.eventBus.emit("show_message", {
+					title: __(`Only {0} in stock at {1}. Further quantity is blocked.`, [
+						this.formatFloat(item.max_qty),
+						item.warehouse,
+					]),
+					color: "warning",
+				});
+			} else {
+				this.eventBus.emit("show_message", {
+					title: __("Stock is lower than requested. Proceeding may create negative stock."),
+					color: "warning",
+				});
+			}
+		}
+	},
 
 	// Update quantity limits based on available stock
 	update_qty_limits(item) {
