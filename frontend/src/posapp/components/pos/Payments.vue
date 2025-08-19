@@ -1260,9 +1260,9 @@ export default {
 									`${e.item_code} (${e.warehouse}) - ${this.formatFloat(e.available_qty)}`,
 							)
 							.join("\n");
-						const blocking =
-							this.pos_profile.posa_block_sale_beyond_available_qty &&
-							!this.stock_settings.allow_negative_stock;
+                                               const blocking =
+                                                       !this.stock_settings.allow_negative_stock ||
+                                                       this.pos_profile.posa_block_sale_beyond_available_qty;
 						this.eventBus.emit("show_message", {
 							title: blocking
 								? __("Insufficient stock:\n{0}", [msg])
