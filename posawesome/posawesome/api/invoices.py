@@ -85,6 +85,9 @@ def validate_return_items(original_invoice_name, return_items):
 @frappe.whitelist()
 def update_invoice(data):
     data = json.loads(data)
+    # Ensure the document type is set for new invoices to prevent validation errors
+    data.setdefault("doctype", "Sales Invoice")
+
     if data.get("name"):
         invoice_doc = frappe.get_doc("Sales Invoice", data.get("name"))
         invoice_doc.update(data)
@@ -226,6 +229,12 @@ def update_invoice(data):
                 tax.included_in_print_rate = 0
             else:
                 tax.included_in_print_rate = 1 if inclusive else 0
+
+    # For return invoices, payments should be negative amounts
+    if invoice_doc.is_return:
+        for payment in invoice_doc.payments:
+            payment.amount = -abs(payment.amount)
+            payment.base_amount = -abs(payment.base_amount)
 
     invoice_doc.flags.ignore_permissions = True
     frappe.flags.ignore_account_permission = True
