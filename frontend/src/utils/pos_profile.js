@@ -27,7 +27,7 @@ async function cachePrintTemplateAndTerms(profile) {
         }
 
         try {
-                const termsName = profile.terms_and_conditions;
+                const termsName = profile.tc_name || profile.terms_and_conditions;
                 if (termsName) {
                         const tc = await frappe.call({
                                 method: "frappe.client.get_value",
