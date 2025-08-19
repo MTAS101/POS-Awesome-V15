@@ -40,8 +40,10 @@ export const memory = {
 	// Track the current cache schema version
 	cache_version: CACHE_VERSION,
 	cache_ready: false,
-	tax_inclusive: false,
-	manual_offline: false,
+        tax_inclusive: false,
+        manual_offline: false,
+        print_template: "",
+        terms_and_conditions: "",
 };
 
 // Initialize memory from IndexedDB and expose a promise for consumers
@@ -311,6 +313,42 @@ export function setTaxTemplate(name, doc) {
 	} catch (e) {
 		console.error("Failed to cache tax template", e);
 	}
+}
+
+export function getPrintTemplate() {
+        try {
+                return memory.print_template || "";
+        } catch (e) {
+                console.error("Failed to get print template", e);
+                return "";
+        }
+}
+
+export function setPrintTemplate(template) {
+        try {
+                memory.print_template = template || "";
+                persist("print_template", memory.print_template);
+        } catch (e) {
+                console.error("Failed to set print template", e);
+        }
+}
+
+export function getTermsAndConditions() {
+        try {
+                return memory.terms_and_conditions || "";
+        } catch (e) {
+                console.error("Failed to get terms and conditions", e);
+                return "";
+        }
+}
+
+export function setTermsAndConditions(terms) {
+        try {
+                memory.terms_and_conditions = terms || "";
+                persist("terms_and_conditions", memory.terms_and_conditions);
+        } catch (e) {
+                console.error("Failed to set terms and conditions", e);
+        }
 }
 
 export function getTranslationsCache(lang) {

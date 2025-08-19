@@ -442,7 +442,7 @@ import {
 	updateLocalStock,
 } from "../../../offline/index.js";
 
-import generateOfflineInvoiceHTML from "../../../offline_print_template";
+import renderOfflineInvoiceHTML from "../../../offline_print_template";
 import { silentPrint } from "../../plugins/print.js";
 
 export default {
@@ -1160,15 +1160,15 @@ export default {
 				);
 			}
 		},
-		// Print invoice using a more detailed offline template
-		print_offline_invoice(invoice) {
-			if (!invoice) return;
-			const html = generateOfflineInvoiceHTML(invoice);
-			const win = window.open("", "_blank");
-			win.document.write(html);
-			win.document.close();
-			win.focus();
-			win.print();
+                // Print invoice using a more detailed offline template
+                print_offline_invoice(invoice) {
+                        if (!invoice) return;
+                        const html = renderOfflineInvoiceHTML(invoice);
+                        const win = window.open("", "_blank");
+                        win.document.write(html);
+                        win.document.close();
+                        win.focus();
+                        win.print();
 		},
 		// Validate due date (should not be in the past)
 		validate_due_date() {
