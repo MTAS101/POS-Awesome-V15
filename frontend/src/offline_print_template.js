@@ -5,7 +5,7 @@ import {
         memoryInitPromise,
 } from "./offline/index.js";
 
-function defaultOfflineHTML(invoice) {
+function defaultOfflineHTML(invoice, terms = "") {
         if (!invoice) return "";
 
         const itemsRows = (invoice.items || [])
@@ -48,6 +48,10 @@ function defaultOfflineHTML(invoice) {
     </tr>`
                 : "";
 
+        const termsSection = terms
+                ? `<div style="margin-top:5px;">${terms}</div>`
+                : "";
+
         return `<!DOCTYPE html>
   <html>
   <head>
@@ -86,6 +90,7 @@ function defaultOfflineHTML(invoice) {
         ${changeRow}
       </tbody>
     </table>
+    ${termsSection}
     <p class="text-center" style="margin-top:3px;">Thank you, please visit again.</p>
   </body>
   </html>`;
@@ -98,19 +103,25 @@ export default async function renderOfflineInvoiceHTML(invoice) {
 
         const template = getPrintTemplate();
         const terms = getTermsAndConditions();
+        const doc = {
+                ...invoice,
+                terms: invoice.terms || terms,
+                terms_and_conditions: invoice.terms_and_conditions || terms,
+        };
+
         if (!template) {
                 console.warn("No offline print template cached; using fallback template");
-                return defaultOfflineHTML(invoice);
+                return defaultOfflineHTML(doc, doc.terms_and_conditions);
         }
 
         try {
                 return frappe.render_template(template, {
-                        doc: invoice,
-                        terms,
-                        terms_and_conditions: terms,
+                        doc,
+                        terms: doc.terms,
+                        terms_and_conditions: doc.terms_and_conditions,
                 });
         } catch (e) {
                 console.error("Failed to render offline invoice", e);
-                return defaultOfflineHTML(invoice);
+                return defaultOfflineHTML(doc, doc.terms_and_conditions);
         }
 }
