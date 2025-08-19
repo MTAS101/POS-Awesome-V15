@@ -5,7 +5,8 @@
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
     ["@semantic-release/changelog", { "changelogFile": "CHANGELOG.md" }],
-    ["@semantic-release/git", { "assets": ["CHANGELOG.md", "package.json", "yarn.lock"] }],
+    ["@semantic-release/exec", { "prepareCmd": "python scripts/update_version.py ${nextRelease.version}" }],
+    ["@semantic-release/git", { "assets": ["CHANGELOG.md", "package.json", "yarn.lock", "posawesome/__init__.py"] }],
     "@semantic-release/github"
   ]
 }
