@@ -118,11 +118,29 @@ export default async function renderOfflineInvoiceHTML(invoice) {
 
         const template = normaliseTemplate(getPrintTemplate());
         const terms = getTermsAndConditions();
+
+        const makeGetFormatted = (obj) =>
+                (field) => (obj?.[field] != null ? obj[field] : "");
+
         const doc = {
                 ...invoice,
                 terms: invoice.terms || terms,
                 terms_and_conditions: invoice.terms_and_conditions || terms,
         };
+
+        doc.get_formatted = makeGetFormatted(doc);
+        if (Array.isArray(doc.items)) {
+                doc.items = doc.items.map((it) => ({
+                        ...it,
+                        get_formatted: makeGetFormatted(it),
+                }));
+        }
+        if (Array.isArray(doc.taxes)) {
+                doc.taxes = doc.taxes.map((tx) => ({
+                        ...tx,
+                        get_formatted: makeGetFormatted(tx),
+                }));
+        }
 
         if (!template) {
                 console.warn("No offline print template cached; using fallback template");
