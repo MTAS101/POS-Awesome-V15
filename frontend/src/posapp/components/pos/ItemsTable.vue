@@ -197,10 +197,15 @@
 											:model-value="
 												formatFloat(item.qty, hide_qty_decimals ? 0 : undefined)
 											"
-											@change="[
-												setFormatedQty(item, 'qty', null, false, $event.target.value),
-												calcStockQty(item, item.qty),
-											]"
+                                                                                        @change="
+                                                                                                setFormatedQty(
+                                                                                                        item,
+                                                                                                        'qty',
+                                                                                                        null,
+                                                                                                        false,
+                                                                                                        $event.target.value,
+                                                                                                )
+                                                                                        "
 											:rules="[isNumber]"
 											:disabled="!!item.posa_is_replace"
 											prepend-inner-icon="mdi-numeric"
@@ -634,7 +639,6 @@ export default {
 		currencySymbol: Function,
 		isNumber: Function,
 		setFormatedQty: Function,
-		calcStockQty: Function,
 		setFormatedCurrency: Function,
 		calcPrices: Function,
 		calcUom: Function,
