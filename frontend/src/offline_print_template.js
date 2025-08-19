@@ -6,6 +6,20 @@ import {
 } from "./offline/index.js";
 import nunjucks from "nunjucks";
 
+function normaliseTemplate(template) {
+        // Nunjucks doesn't understand Python-style triple quotes.
+        // Convert any """multiline""" strings to standard JS strings so the
+        // renderer can parse templates that include SQL or other blocks.
+        if (!template) return template;
+        return template.replace(/"""([\s\S]*?)"""/g, (_, str) => {
+                const escaped = str
+                        .replace(/\\/g, "\\\\")
+                        .replace(/"/g, '\\"')
+                        .replace(/\r?\n/g, "\\n");
+                return `"${escaped}"`;
+        });
+}
+
 function defaultOfflineHTML(invoice, terms = "") {
         if (!invoice) return "";
 
@@ -102,7 +116,7 @@ export default async function renderOfflineInvoiceHTML(invoice) {
 
         await memoryInitPromise;
 
-        const template = getPrintTemplate();
+        const template = normaliseTemplate(getPrintTemplate());
         const terms = getTermsAndConditions();
         const doc = {
                 ...invoice,
