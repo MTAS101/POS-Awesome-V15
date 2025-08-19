@@ -429,7 +429,7 @@
 </template>
 
 <script>
-/* eslint-disable vue/no-dupe-keys */
+/* global frappe, __, get_currency_symbol */
 // Importing format mixin for currency and utility functions
 import format from "../../format";
 import {
@@ -442,7 +442,7 @@ import {
 	updateLocalStock,
 } from "../../../offline/index.js";
 
-import generateOfflineInvoiceHTML from "../../../offline_print_template";
+import renderOfflineInvoiceHTML from "../../../offline_print_template";
 import { silentPrint } from "../../plugins/print.js";
 
 export default {
@@ -1160,16 +1160,16 @@ export default {
 				);
 			}
 		},
-		// Print invoice using a more detailed offline template
-		print_offline_invoice(invoice) {
-			if (!invoice) return;
-			const html = generateOfflineInvoiceHTML(invoice);
-			const win = window.open("", "_blank");
-			win.document.write(html);
-			win.document.close();
-			win.focus();
-			win.print();
-		},
+                // Print invoice using a more detailed offline template
+                async print_offline_invoice(invoice) {
+                        if (!invoice) return;
+                        const html = await renderOfflineInvoiceHTML(invoice);
+                        const win = window.open("", "_blank");
+                        win.document.write(html);
+                        win.document.close();
+                        win.focus();
+                        win.print();
+                },
 		// Validate due date (should not be in the past)
 		validate_due_date() {
 			const today = frappe.datetime.now_date();
@@ -1246,11 +1246,11 @@ export default {
 			});
 		},
 		// Filter addresses for autocomplete
-		addressFilter(item, queryText, itemText) {
-			const searchText = queryText.toLowerCase();
-			return (
-				(item.address_title && item.address_title.toLowerCase().includes(searchText)) ||
-				(item.address_line1 && item.address_line1.toLowerCase().includes(searchText)) ||
+                addressFilter(item, queryText) {
+                        const searchText = queryText.toLowerCase();
+                        return (
+                                (item.address_title && item.address_title.toLowerCase().includes(searchText)) ||
+                                (item.address_line1 && item.address_line1.toLowerCase().includes(searchText)) ||
 				(item.address_line2 && item.address_line2.toLowerCase().includes(searchText)) ||
 				(item.city && item.city.toLowerCase().includes(searchText)) ||
 				(item.name && item.name.toLowerCase().includes(searchText))
@@ -1269,12 +1269,14 @@ export default {
 		},
 		// Get sales person names from API/localStorage
 		get_sales_person_names() {
-			const vm = this;
-			if (vm.pos_profile.posa_local_storage && getSalesPersonsStorage().length) {
-				try {
-					vm.sales_persons = getSalesPersonsStorage();
-				} catch (e) { }
-			}
+                        const vm = this;
+                        if (vm.pos_profile.posa_local_storage && getSalesPersonsStorage().length) {
+                                try {
+                                        vm.sales_persons = getSalesPersonsStorage();
+                                } catch (e) {
+                                        console.error(e);
+                                }
+                        }
 			frappe.call({
 				method: "posawesome.posawesome.api.utilities.get_sales_person_names",
 				callback: function (r) {
@@ -1295,12 +1297,12 @@ export default {
 			});
 		},
 		// Request payment for phone type
-		request_payment(payment) {
-			this.phone_dialog = false;
-			const vm = this;
-			if (!this.invoice_doc.contact_mobile) {
-				this.eventBus.emit("show_message", {
-					title: __("Please set the customer's mobile number"),
+                request_payment() {
+                        this.phone_dialog = false;
+                        const vm = this;
+                        if (!this.invoice_doc.contact_mobile) {
+                                this.eventBus.emit("show_message", {
+                                        title: __("Please set the customer's mobile number"),
 					color: "error",
 				});
 				this.eventBus.emit("open_edit_customer");
