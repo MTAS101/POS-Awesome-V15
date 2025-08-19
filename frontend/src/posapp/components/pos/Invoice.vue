@@ -964,23 +964,24 @@ export default {
 		// Increase quantity of an item (handles return logic)
 		add_one(item) {
 			const proposed = item.qty + 1;
-                        if (
-                                this.pos_profile.posa_block_sale_beyond_available_qty &&
-                                !this.stock_settings.allow_negative_stock &&
-                                item.max_qty !== undefined &&
-                                proposed > item.max_qty
-                        ) {
-                                item.qty = item.max_qty;
-                                this.calc_stock_qty(item, item.qty);
-                                this.eventBus.emit("show_message", {
-                                        title: __("Maximum available quantity is {0}. Quantity adjusted to match stock.", [
-                                                this.formatFloat(item.max_qty),
-                                        ]),
-                                        color: "error",
-                                });
-                                return;
-                        }
-                        item.qty = proposed;
+			if (
+				this.pos_profile.posa_block_sale_beyond_available_qty &&
+				!this.stock_settings.allow_negative_stock &&
+				item.max_qty !== undefined &&
+				proposed > item.max_qty
+			) {
+				item.qty = item.max_qty;
+				this.calc_stock_qty(item, item.qty);
+				this.eventBus.emit("show_message", {
+					title: __("Only {0} in stock at {1}. Further quantity is blocked.", [
+						this.formatFloat(item.max_qty),
+						item.warehouse,
+					]),
+					color: "warning",
+				});
+				return;
+			}
+			item.qty = proposed;
 			if (item.qty == 0) {
 				this.remove_item(item);
 			}
