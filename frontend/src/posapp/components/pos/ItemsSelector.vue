@@ -683,13 +683,13 @@ export default {
 			const newLen = (val || "").trim().length;
 			const oldLen = (oldVal || "").trim().length;
 			if (newLen >= 3) {
-				// Call without arguments so search_onchange treats it like an Enter key
-				this.search_onchange();
-			} else if (oldLen >= 3 && newLen < 3) {
-				// Reset items when falling below the threshold
-				this.clearSearch();
-			}
-		}, 300),
+                       // Call without arguments so search_onchange treats it like an Enter key
+                       this.search_onchange();
+               } else if (oldLen >= 3 && newLen === 0) {
+                       // Reset items only when search is fully cleared
+                       this.clearSearch();
+               }
+               }, 300),
 
 		// Refresh item prices whenever the user changes currency
 		selected_currency() {
