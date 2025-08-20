@@ -1,5 +1,7 @@
-import { ref, nextTick } from "vue";
+import { nextTick } from "vue";
 import _ from "lodash";
+
+/* global frappe, __ */
 
 export function useItemAddition() {
 	// Remove item from invoice
@@ -229,11 +231,13 @@ export function useItemAddition() {
 	};
 
 	// Create a new item object with default and calculated fields
-	const getNewItem = (item, context) => {
-		const new_item = { ...item };
-		if (!new_item.warehouse) {
-			new_item.warehouse = context.pos_profile.warehouse;
-		}
+        const getNewItem = (item, context) => {
+                const new_item = { ...item };
+                new_item.original_item_name = new_item.item_name;
+                new_item.name_overridden = 0;
+                if (!new_item.warehouse) {
+                        new_item.warehouse = context.pos_profile.warehouse;
+                }
 		if (!item.qty) {
 			item.qty = 1;
 		}

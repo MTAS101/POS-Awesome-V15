@@ -13,7 +13,7 @@ from erpnext.stock.doctype.batch.batch import (
 	get_batch_qty,
 )  # This should be from erpnext directly
 from frappe import _
-from frappe.utils import cint, cstr, flt, getdate, money_in_words, nowdate
+from frappe.utils import cint, cstr, flt, getdate, money_in_words, nowdate, strip_html_tags
 from frappe.utils.background_jobs import enqueue
 
 from posawesome.posawesome.api.payments import (
@@ -25,6 +25,30 @@ from posawesome.posawesome.api.utilities import (
 )  # Updated imports
 
 from .items import get_stock_availability
+
+
+def _sanitize_item_name(name: str) -> str:
+	"""Strip HTML and limit length for item names."""
+	if not name:
+		return ""
+	cleaned = strip_html_tags(name)
+	return cleaned.strip()[:140]
+
+
+def _apply_item_name_overrides(invoice_doc, overrides=None):
+	"""Apply custom item names to invoice items."""
+	overrides = overrides or {}
+	for item in invoice_doc.items:
+		source = overrides.get(item.idx) or {}
+		provided = source.get("item_name") if isinstance(source, dict) else None
+		default_name = frappe.get_cached_value("Item", item.item_code, "item_name")
+		clean = _sanitize_item_name(provided or item.item_name)
+		if clean and clean != default_name:
+		        item.item_name = clean
+		        item.name_overridden = 1
+		else:
+		        item.item_name = default_name
+		        item.name_overridden = 0
 
 
 def _get_available_stock(item):
@@ -187,8 +211,14 @@ def update_invoice(data):
 		except Exception as e:
 			frappe.log_error(f"Failed to create customer {customer_name}: {e}")
 
+	# Preserve provided item names for manual overrides
+	overrides = {d.idx: {"item_name": d.item_name} for d in invoice_doc.items}
+
 	# Set missing values first
 	invoice_doc.set_missing_values()
+
+	# Reapply any custom item names after defaults are set
+	_apply_item_name_overrides(invoice_doc, overrides)
 
 	# Ensure selected currency is preserved after set_missing_values
 	if selected_currency:
@@ -303,6 +333,9 @@ def submit_invoice(invoice, data):
 	else:
 		invoice_doc = frappe.get_doc("Sales Invoice", invoice_name)
 		invoice_doc.update(invoice)
+
+	# Ensure item name overrides are respected on submit
+	_apply_item_name_overrides(invoice_doc)
 	if invoice.get("posa_delivery_date"):
 		invoice_doc.update_stock = 0
 	mop_cash_list = [
@@ -519,8 +552,8 @@ def search_invoices_for_return(
 
 	Returns:
 	    Dictionary with:
-	        - invoices: List of invoice documents
-	        - has_more: Boolean indicating if there are more invoices to load
+		- invoices: List of invoice documents
+		- has_more: Boolean indicating if there are more invoices to load
 	"""
 	# Start with base filters
 	filters = {
@@ -589,11 +622,11 @@ def search_invoices_for_return(
 		# Build the WHERE clause for the query
 		where_clause = " OR ".join(conditions)
 		customer_query = f"""
-            SELECT name 
-            FROM `tabCustomer`
-            WHERE {where_clause}
-            LIMIT 100
-        """
+	    SELECT name 
+	    FROM `tabCustomer`
+	    WHERE {where_clause}
+	    LIMIT 100
+	"""
 
 		customers = frappe.db.sql(customer_query, params, as_dict=True)
 		customer_ids = [c.name for c in customers]
