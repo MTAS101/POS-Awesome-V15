@@ -167,15 +167,18 @@ export default {
 
 		if (this.items.length > 0) {
 			this.update_items_details(this.items);
-			this.posa_offers = data.posa_offers || [];
-			this.items.forEach((item) => {
-				if (!item.posa_row_id) {
-					item.posa_row_id = this.makeid(20);
-				}
-				if (item.batch_no) {
-					this.set_batch_qty(item, item.batch_no);
-				}
-			});
+                        this.posa_offers = data.posa_offers || [];
+                        this.items.forEach((item) => {
+                                if (!item.posa_row_id) {
+                                        item.posa_row_id = this.makeid(20);
+                                }
+                                if (item.batch_no) {
+                                        this.set_batch_qty(item, item.batch_no);
+                                }
+                                if (!item.original_item_name) {
+                                        item.original_item_name = item.item_name;
+                                }
+                        });
 		} else {
 			console.log("Warning: No items in return invoice");
 		}
@@ -321,8 +324,10 @@ export default {
 		}
 		doc.is_pos = 1;
 		doc.ignore_pricing_rule = 1;
-		doc.company = doc.company || this.pos_profile.company;
-		doc.pos_profile = doc.pos_profile || this.pos_profile.name;
+                doc.company = doc.company || this.pos_profile.company;
+                doc.pos_profile = doc.pos_profile || this.pos_profile.name;
+                doc.posa_show_custom_name_marker_on_print =
+                        this.pos_profile.posa_show_custom_name_marker_on_print;
 
 		// Currency related fields
 		doc.currency = this.selected_currency || this.pos_profile.currency;
@@ -617,8 +622,9 @@ export default {
 			const new_item = {
 				item_code: item.item_code,
 				// Retain the item name for offline invoices
-				// Fallback to item_code if item_name is not available
-				item_name: item.item_name || item.item_code,
+                                // Fallback to item_code if item_name is not available
+                                item_name: item.item_name || item.item_code,
+                                name_overridden: item.name_overridden ? 1 : 0,
 				posa_row_id: item.posa_row_id,
 				posa_offers: item.posa_offers,
 				posa_offer_applied: item.posa_offer_applied,
@@ -699,8 +705,9 @@ export default {
 			const new_item = {
 				item_code: item.item_code,
 				// Retain item name to show on offline order documents
-				// Use item_code if item_name is missing
-				item_name: item.item_name || item.item_code,
+                                // Use item_code if item_name is missing
+                                item_name: item.item_name || item.item_code,
+                                name_overridden: item.name_overridden ? 1 : 0,
 				posa_row_id: item.posa_row_id,
 				posa_offers: item.posa_offers,
 				posa_offer_applied: item.posa_offer_applied,

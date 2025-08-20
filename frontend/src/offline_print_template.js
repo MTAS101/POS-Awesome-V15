@@ -36,10 +36,14 @@ function defaultOfflineHTML(invoice, terms = "") {
                         const sn = it.serial_no
                                 ? `<br><b>SR.No:</b><br>${it.serial_no.replace(/\n/g, ", ")}`
                                 : "";
+                        const marker =
+                                invoice.posa_show_custom_name_marker_on_print && it.name_overridden
+                                        ? " (custom)"
+                                        : "";
                         return `<tr>
         <td>${it.item_code}${
                                 it.item_name && it.item_name !== it.item_code
-                                        ? `<br>${it.item_name}`
+                                        ? `<br>${it.item_name}${marker}`
                                         : ""
                         }${sn}</td>
         <td style="text-align:right">${it.qty} ${it.uom || ""}<br>@ ${it.rate}</td>

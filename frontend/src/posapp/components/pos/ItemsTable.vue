@@ -29,9 +29,34 @@
 						val.map((v) => (typeof v === 'object' ? v.posa_row_id : v)),
 					)
 			"
-			:search="itemSearch"
-		>
-			<!-- Quantity column -->
+                        :search="itemSearch"
+                >
+                        <!-- Item name column -->
+                        <template v-slot:item.item_name="{ item }">
+                                <div class="d-flex align-center">
+                                        <span>{{ item.item_name }}</span>
+                                        <v-chip
+                                                v-if="item.name_overridden"
+                                                color="primary"
+                                                size="x-small"
+                                                class="ml-1"
+                                        >{{ __('Edited') }}</v-chip>
+                                        <v-icon
+                                                v-if="pos_profile.posa_allow_line_item_name_override && !item.posa_is_replace"
+                                                size="x-small"
+                                                class="ml-1"
+                                                @click.stop="openNameDialog(item)"
+                                        >mdi-pencil</v-icon>
+                                        <v-icon
+                                                v-if="item.name_overridden"
+                                                size="x-small"
+                                                class="ml-1"
+                                                @click.stop="resetItemName(item)"
+                                        >mdi-undo</v-icon>
+                                </div>
+                        </template>
+
+                        <!-- Quantity column -->
 			<template v-slot:item.qty="{ item }">
 				<div class="amount-value" :class="{ 'negative-number': isNegative(item.qty) }">
 					{{ formatFloat(item.qty, hide_qty_decimals ? 0 : undefined) }}
@@ -616,8 +641,26 @@
 					</div>
 				</td>
 			</template>
-		</v-data-table-virtual>
-	</div>
+                </v-data-table-virtual>
+                <v-dialog v-model="editNameDialog" max-width="400">
+                        <v-card>
+                                <v-card-title>{{ __('Item Name') }}</v-card-title>
+                                <v-card-text>
+                                        <v-text-field v-model="editedName" :maxlength="140" />
+                                </v-card-text>
+                                <v-card-actions>
+                                        <v-btn
+                                                v-if="editNameTarget && editNameTarget.name_overridden"
+                                                variant="text"
+                                                @click="resetItemName(editNameTarget)"
+                                        >{{ __('Reset') }}</v-btn>
+                                        <v-spacer></v-spacer>
+                                        <v-btn variant="text" @click="editNameDialog = false">{{ __('Cancel') }}</v-btn>
+                                        <v-btn color="primary" variant="text" @click="saveItemName">{{ __('Save') }}</v-btn>
+                                </v-card-actions>
+                        </v-card>
+                </v-dialog>
+        </div>
 </template>
 
 <script>
@@ -654,13 +697,16 @@ export default {
 		isNegative: Function,
 	},
 	data() {
-		return {
-			draggedItem: null,
-			draggedIndex: null,
-			dragOverIndex: null,
-			isDragging: false,
-			pendingAdd: null,
-		};
+                return {
+                        draggedItem: null,
+                        draggedIndex: null,
+                        dragOverIndex: null,
+                        isDragging: false,
+                        pendingAdd: null,
+                        editNameDialog: false,
+                        editNameTarget: null,
+                        editedName: "",
+                };
 	},
 	computed: {
 		headerProps() {
@@ -717,27 +763,57 @@ export default {
 				console.error("Error parsing drag data:", error);
 			}
 		},
-		addItem(newItem) {
-			// Find a matching item (by item_code, uom, and rate)
-			const match = this.items.find(
-				(item) =>
-					item.item_code === newItem.item_code &&
-					item.uom === newItem.uom &&
-					item.rate === newItem.rate,
-			);
-			if (match) {
-				// If found, increment quantity
-				match.qty += newItem.qty || 1;
-				match.amount = match.qty * match.rate;
-				this.$forceUpdate();
-			} else {
-				this.items.push({ ...newItem });
-			}
-		},
-		addItemDebounced: _.debounce(function (item) {
-			this.addItem(item);
-		}, 50),
-	},
+                addItem(newItem) {
+                        // Find a matching item (by item_code, uom, and rate)
+                        const match = this.items.find(
+                                (item) =>
+                                        item.item_code === newItem.item_code &&
+                                        item.uom === newItem.uom &&
+                                        item.rate === newItem.rate,
+                        );
+                        if (match) {
+                                // If found, increment quantity
+                                match.qty += newItem.qty || 1;
+                                match.amount = match.qty * match.rate;
+                                this.$forceUpdate();
+                        } else {
+                                this.items.push({ ...newItem });
+                        }
+                },
+                addItemDebounced: _.debounce(function (item) {
+                        this.addItem(item);
+                }, 50),
+                openNameDialog(item) {
+                        this.editNameTarget = item;
+                        this.editedName = item.item_name;
+                        this.editNameDialog = true;
+                },
+                sanitizeName(name) {
+                        const div = document.createElement('div');
+                        div.innerHTML = name;
+                        return (div.textContent || div.innerText || '').trim().slice(0, 140);
+                },
+                saveItemName() {
+                        if (!this.editNameTarget) return;
+                        const clean = this.sanitizeName(this.editedName);
+                        if (!this.editNameTarget.original_item_name) {
+                                this.editNameTarget.original_item_name = this.editNameTarget.item_name;
+                        }
+                        this.editNameTarget.item_name = clean;
+                        this.editNameTarget.name_overridden =
+                                clean !== this.editNameTarget.original_item_name ? 1 : 0;
+                        this.editNameDialog = false;
+                },
+                resetItemName(item) {
+                        if (item && item.original_item_name) {
+                                item.item_name = item.original_item_name;
+                                item.name_overridden = 0;
+                        }
+                        if (this.editNameTarget === item) {
+                                this.editedName = item.item_name;
+                        }
+                },
+        },
 };
 </script>
 
