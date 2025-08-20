@@ -189,6 +189,7 @@
 						:pos_profile="pos_profile"
 						:invoice_doc="invoice_doc"
 						:invoiceType="invoiceType"
+						:stock_settings="stock_settings"
 						:displayCurrency="displayCurrency"
 						:formatFloat="formatFloat"
 						:formatCurrency="formatCurrency"
@@ -562,52 +563,43 @@ export default {
 			this.posting_date = date;
 			this.$forceUpdate();
 		},
-                // Override setFormatedFloat for qty field to handle stock limits and return mode
-                setFormatedQty(item, field_name, precision, no_negative, value) {
-                        // Parse and set the value using the mixin's formatter
-                        let parsedValue = this.setFormatedFloat(
-                                item,
-                                field_name,
-                                precision,
-                                no_negative,
-                                value,
-                        );
+		// Override setFormatedFloat for qty field to handle stock limits and return mode
+		setFormatedQty(item, field_name, precision, no_negative, value) {
+			// Parse and set the value using the mixin's formatter
+			let parsedValue = this.setFormatedFloat(item, field_name, precision, no_negative, value);
 
-                        // Enforce available stock limits
-                        if (
-                                item.max_qty !== undefined &&
-                                this.flt(item[field_name]) > this.flt(item.max_qty)
-                        ) {
-                               const blockSale =
-                                       !this.stock_settings.allow_negative_stock ||
-                                       this.pos_profile.posa_block_sale_beyond_available_qty;
-                               if (blockSale) {
-                                       item[field_name] = item.max_qty;
-                                       parsedValue = item.max_qty;
-                                       this.eventBus.emit("show_message", {
-                                               title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
-                                                       this.formatFloat(item.max_qty),
-                                               ]),
-                                               color: "error",
-                                       });
-                               } else {
-                                       this.eventBus.emit("show_message", {
-                                               title: __("Stock is lower than requested. Proceeding may create negative stock."),
-                                               color: "warning",
-                                       });
-                               }
-                       }
+			// Enforce available stock limits
+			if (item.max_qty !== undefined && this.flt(item[field_name]) > this.flt(item.max_qty)) {
+				const blockSale =
+					!this.stock_settings.allow_negative_stock ||
+					this.pos_profile.posa_block_sale_beyond_available_qty;
+				if (blockSale) {
+					item[field_name] = item.max_qty;
+					parsedValue = item.max_qty;
+					this.eventBus.emit("show_message", {
+						title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
+							this.formatFloat(item.max_qty),
+						]),
+						color: "error",
+					});
+				} else {
+					this.eventBus.emit("show_message", {
+						title: __("Stock is lower than requested. Proceeding may create negative stock."),
+						color: "warning",
+					});
+				}
+			}
 
-                        // Ensure negative value for return invoices
-                        if (this.isReturnInvoice && parsedValue > 0) {
-                                parsedValue = -Math.abs(parsedValue);
-                                item[field_name] = parsedValue;
-                        }
+			// Ensure negative value for return invoices
+			if (this.isReturnInvoice && parsedValue > 0) {
+				parsedValue = -Math.abs(parsedValue);
+				item[field_name] = parsedValue;
+			}
 
-                        // Recalculate stock quantity with the adjusted value
-                        this.calc_stock_qty(item, item[field_name]);
-                        return parsedValue;
-                },
+			// Recalculate stock quantity with the adjusted value
+			this.calc_stock_qty(item, item[field_name]);
+			return parsedValue;
+		},
 		async fetch_available_currencies() {
 			try {
 				console.log("Fetching available currencies...");
@@ -996,25 +988,21 @@ export default {
 		// Increase quantity of an item (handles return logic)
 		add_one(item) {
 			const proposed = item.qty + 1;
-                       const blockSale =
-                               !this.stock_settings.allow_negative_stock ||
-                               this.pos_profile.posa_block_sale_beyond_available_qty;
-                       if (
-                               blockSale &&
-                               item.max_qty !== undefined &&
-                               proposed > item.max_qty
-                       ) {
-                               item.qty = item.max_qty;
-                               this.calc_stock_qty(item, item.qty);
-                               this.eventBus.emit("show_message", {
-                                       title: __("Maximum available quantity is {0}. Quantity adjusted to match stock.", [
-                                               this.formatFloat(item.max_qty),
-                                        ]),
-                                        color: "error",
-                                });
-                                return;
-                        }
-                        item.qty = proposed;
+			const blockSale =
+				!this.stock_settings.allow_negative_stock ||
+				this.pos_profile.posa_block_sale_beyond_available_qty;
+			if (blockSale && item.max_qty !== undefined && proposed > item.max_qty) {
+				item.qty = item.max_qty;
+				this.calc_stock_qty(item, item.qty);
+				this.eventBus.emit("show_message", {
+					title: __("Maximum available quantity is {0}. Quantity adjusted to match stock.", [
+						this.formatFloat(item.max_qty),
+					]),
+					color: "error",
+				});
+				return;
+			}
+			item.qty = proposed;
 			if (item.qty == 0) {
 				this.remove_item(item);
 			}
@@ -1069,9 +1057,9 @@ export default {
 		this.loadColumnPreferences();
 		// Restore saved invoice height
 		this.loadInvoiceHeight();
-                this.eventBus.on("item-drag-start", () => {
-                        this.showDropFeedback(true);
-                });
+		this.eventBus.on("item-drag-start", () => {
+			this.showDropFeedback(true);
+		});
 		this.eventBus.on("item-drag-end", () => {
 			this.showDropFeedback(false);
 		});
@@ -1201,9 +1189,9 @@ export default {
 			this.posting_date = frappe.datetime.nowdate();
 		});
 		this.eventBus.on("calc_uom", this.calc_uom);
-                this.eventBus.on("item-drag-start", () => {
-                        this.showDropFeedback(true);
-                });
+		this.eventBus.on("item-drag-start", () => {
+			this.showDropFeedback(true);
+		});
 		this.eventBus.on("item-drag-end", () => {
 			this.showDropFeedback(false);
 		});
