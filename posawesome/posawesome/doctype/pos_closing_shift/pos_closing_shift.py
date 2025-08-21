@@ -102,7 +102,7 @@ class POSClosingShift(Document):
 				frappe.db.set_value(doctype, invoice, "pos_closing_entry", self.name)
 
 	def _clear_closing_entry_invoices(self):
-		"""Clear `pos_closing_entry` from linked invoices and cancel consolidated sales invoices."""
+		"""Clear closing shift links, cancel merge logs and cancel consolidated sales invoices."""
 		sales_invoices = set()
 		for d in self.pos_transactions:
 			pos_invoice = d.get("pos_invoice")
@@ -110,15 +110,31 @@ class POSClosingShift(Document):
 			if pos_invoice:
 				if frappe.db.has_column("POS Invoice", "pos_closing_entry"):
 					frappe.db.set_value("POS Invoice", pos_invoice, "pos_closing_entry", None)
+
+				merge_logs = frappe.get_all(
+					"POS Invoice Merge Log",
+					filters={"pos_invoice": pos_invoice},
+					pluck="name",
+				)
+				for log in merge_logs:
+					log_doc = frappe.get_doc("POS Invoice Merge Log", log)
+					if log_doc.sales_invoice:
+						sales_invoices.add(log_doc.sales_invoice)
+					if log_doc.docstatus == 1:
+						log_doc.cancel()
+
 				if frappe.db.has_column("POS Invoice", "consolidated_invoice"):
-					si = frappe.db.get_value("POS Invoice", pos_invoice, "consolidated_invoice")
-					if si:
-						sales_invoices.add(si)
-						frappe.db.set_value("POS Invoice", pos_invoice, "consolidated_invoice", None)
+					frappe.db.set_value("POS Invoice", pos_invoice, "consolidated_invoice", None)
+
+				if frappe.db.has_column("POS Invoice", "status"):
+					pos_doc = frappe.get_doc("POS Invoice", pos_invoice)
+					pos_doc.set_status(update=True)
+
 			if sales_invoice:
 				if frappe.db.has_column("Sales Invoice", "pos_closing_entry"):
 					frappe.db.set_value("Sales Invoice", sales_invoice, "pos_closing_entry", None)
 				sales_invoices.add(sales_invoice)
+
 		for si in sales_invoices:
 			if frappe.db.exists("Sales Invoice", si):
 				si_doc = frappe.get_doc("Sales Invoice", si)
