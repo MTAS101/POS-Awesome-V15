@@ -11,30 +11,36 @@ let db;
 		// Fallback to dynamic import when importScripts fails
                 DexieLib = await import("/assets/posawesome/dist/js/libs/dexie.min.js?v=1");
 	}
-	db = new DexieLib.default("posawesome_offline");
-	db.version(5)
-		.stores({
-			keyval: "&key",
-			queue: "&key",
-			cache: "&key",
-			items: "&item_code,item_name,item_group,*barcodes,*name_keywords",
-			item_prices: "&[price_list+item_code],price_list,item_code",
-		})
-		.upgrade((tx) =>
-			tx
-				.table("items")
-				.toCollection()
-				.modify((item) => {
-					item.barcodes = Array.isArray(item.item_barcode)
-						? item.item_barcode.map((b) => b.barcode).filter(Boolean)
-						: item.item_barcode
-							? [String(item.item_barcode)]
-							: [];
-					item.name_keywords = item.item_name
-						? item.item_name.toLowerCase().split(/\s+/).filter(Boolean)
-						: [];
-				}),
-		);
+       db = new DexieLib.default("posawesome_offline");
+       db.version(6)
+                .stores({
+                        keyval: "&key",
+                        queue: "&key",
+                        cache: "&key",
+                       items: "&item_code,item_name,item_group,*barcodes,*name_keywords,*serials,*batches",
+                        item_prices: "&[price_list+item_code],price_list,item_code",
+                })
+                .upgrade((tx) =>
+                        tx
+                                .table("items")
+                                .toCollection()
+                                .modify((item) => {
+                                        item.barcodes = Array.isArray(item.item_barcode)
+                                                ? item.item_barcode.map((b) => b.barcode).filter(Boolean)
+                                                : item.item_barcode
+                                                        ? [String(item.item_barcode)]
+                                                        : [];
+                                        item.name_keywords = item.item_name
+                                                ? item.item_name.toLowerCase().split(/\s+/).filter(Boolean)
+                                                : [];
+                                       item.serials = Array.isArray(item.serial_no_data)
+                                               ? item.serial_no_data.map((s) => s.serial_no).filter(Boolean)
+                                               : [];
+                                       item.batches = Array.isArray(item.batch_no_data)
+                                               ? item.batch_no_data.map((b) => b.batch_no).filter(Boolean)
+                                               : [];
+                                }),
+                );
 	try {
 		await db.open();
 	} catch (err) {
@@ -144,15 +150,21 @@ self.onmessage = async (event) => {
 				item_uoms: it.item_uoms,
 				actual_qty: it.actual_qty,
 				has_batch_no: it.has_batch_no,
-				has_serial_no: it.has_serial_no,
-				has_variants: !!it.has_variants,
-				barcodes: Array.isArray(it.item_barcode)
-					? it.item_barcode.map((b) => b.barcode).filter(Boolean)
-					: it.item_barcode
-						? [String(it.item_barcode)]
-						: [],
-				name_keywords: it.item_name ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean) : [],
-			}));
+                                has_serial_no: it.has_serial_no,
+                                has_variants: !!it.has_variants,
+                                barcodes: Array.isArray(it.item_barcode)
+                                        ? it.item_barcode.map((b) => b.barcode).filter(Boolean)
+                                        : it.item_barcode
+                                                ? [String(it.item_barcode)]
+                                                : [],
+                                name_keywords: it.item_name ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean) : [],
+                               serials: Array.isArray(it.serial_no_data)
+                                       ? it.serial_no_data.map((s) => s.serial_no).filter(Boolean)
+                                       : [],
+                               batches: Array.isArray(it.batch_no_data)
+                                       ? it.batch_no_data.map((b) => b.batch_no).filter(Boolean)
+                                       : [],
+                        }));
 			await bulkPutItems(trimmed);
 			await bulkPutPrices(data.priceList, trimmed);
 			// Clear references to release memory before posting back
