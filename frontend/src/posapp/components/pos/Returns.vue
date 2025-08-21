@@ -579,11 +579,15 @@ export default {
 
 				console.log("Original return doc:", return_doc);
 
-				return_doc.items.forEach((item) => {
-					const new_item = { ...item };
-					// reference original invoice row for backend validation
-					new_item.sales_invoice_item = item.name;
-					delete new_item.name;
+                                return_doc.items.forEach((item) => {
+                                        const new_item = { ...item };
+                                        // reference original invoice row for backend validation
+                                        if (return_doc.doctype === "POS Invoice") {
+                                                new_item.pos_invoice_item = item.name;
+                                        } else {
+                                                new_item.sales_invoice_item = item.name;
+                                        }
+                                        delete new_item.name;
 
 					// Make sure quantities are negative for returns
 					new_item.qty = item.qty > 0 ? item.qty * -1 : item.qty;

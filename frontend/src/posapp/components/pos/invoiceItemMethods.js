@@ -349,7 +349,8 @@ export default {
 		doc.customer = this.customer;
 
 		// Determine if this is a return invoice
-		const isReturn = this.isReturnInvoice;
+                const isReturn = this.isReturnInvoice;
+                const usesPosInvoice = this.pos_profile.create_pos_invoice_instead_of_sales_invoice;
 		doc.is_return = isReturn ? 1 : 0;
 
 		// Calculate amounts in selected currency
@@ -616,10 +617,11 @@ export default {
 
 	// Prepare items array for invoice doc
 	get_invoice_items() {
-		const items_list = [];
-		const isReturn = this.isReturnInvoice;
+                const items_list = [];
+                const isReturn = this.isReturnInvoice;
+                const usesPosInvoice = this.pos_profile.create_pos_invoice_instead_of_sales_invoice;
 
-		this.items.forEach((item) => {
+                this.items.forEach((item) => {
 			const new_item = {
 				item_code: item.item_code,
 				// Retain the item name for offline invoices
@@ -636,18 +638,22 @@ export default {
 				uom: item.uom,
 				conversion_factor: item.conversion_factor,
 				serial_no: item.serial_no,
-				// Link to original Sales Invoice Item when doing returns
-				// Needed for backend validation that the item exists in
-				// the referenced Sales Invoice
-				...(item.sales_invoice_item && { sales_invoice_item: item.sales_invoice_item }),
+                                // Link to original invoice item when doing returns
+                                // Needed for backend validation that the item exists in
+                                // the referenced Sales or POS Invoice
+                                ...(item.sales_invoice_item && { sales_invoice_item: item.sales_invoice_item }),
+                                ...(item.pos_invoice_item && { pos_invoice_item: item.pos_invoice_item }),
 				discount_percentage: flt(item.discount_percentage),
 				batch_no: item.batch_no,
 				posa_notes: item.posa_notes,
 				posa_delivery_date: this.formatDateForBackend(item.posa_delivery_date),
 			};
-			if (isReturn && !new_item.sales_invoice_item && item.name) {
-				new_item.sales_invoice_item = item.name;
-			}
+                        if (isReturn) {
+                                const refField = usesPosInvoice ? "pos_invoice_item" : "sales_invoice_item";
+                                if (!new_item[refField] && item.name) {
+                                        new_item[refField] = item.name;
+                                }
+                        }
 
 			// Handle currency conversion for rates and amounts
 			const baseCurrency = this.price_list_currency || this.pos_profile.currency;
