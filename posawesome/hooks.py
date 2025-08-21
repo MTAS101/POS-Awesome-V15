@@ -165,6 +165,7 @@ fixtures = [
                 "in",
                 (
                     "Sales Invoice-posa_pos_opening_shift",
+                    "POS Invoice-posa_pos_opening_shift",
                     "Item Barcode-posa_uom",
                     "POS Profile-posa_pos_awesome_settings",
                     "POS Profile-posa_allow_delete",
@@ -182,6 +183,8 @@ fixtures = [
                     "POS Profile-posa_allow_return_without_invoice",
                     "POS Profile-posa_col_1",
                     "POS Profile-posa_scale_barcode_start",
+                    "POS Profile-create_pos_invoice_instead_of_sales_invoice",
+                    "POS Invoice-posa_is_printed",
                     "Sales Invoice-posa_is_printed",
                     "POS Profile-posa_local_storage",
                     "POS Profile-posa_force_server_items",
@@ -273,7 +276,7 @@ fixtures = [
     },
     {
         "doctype": "Property Setter",
-        "filters": [["name", "in", ("Sales Invoice-posa_pos_opening_shift-no_copy")]],
+        "filters": [["name", "in", ("Sales Invoice-posa_pos_opening_shift-no_copy", "POS Invoice-posa_pos_opening_shift-no_copy")]],
     },
     {
         "doctype": "Custom Field",

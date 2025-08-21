@@ -100,6 +100,7 @@ DocType: POS Opening Shift Detail,POS Opening Shift Detail,POS Detalhes de Abert
 DocType: POS Closing Shift,POS Profile,POS Perfil
 apps/posawesome/posawesome/posawesome/doctype/pos_opening_shift/pos_opening_shift.py,POS Profile {} does not belongs to company {},POS Perfil {} não pertence a empresa {}
 Custom Field - label: Sales Invoice-posa_pos_opening_shift,POS Shift,POS Turno
+Custom Field - label: POS Invoice-posa_pos_opening_shift,POS Shift,POS Turno
 DocType: POS Closing Shift,POS Transactions,POS Transções
 DocType: POS Closing Shift,POSAwesome,POSAwesome
 DocType: POS Closing Shift,Payment Reconciliation,Reconciliação de Pagamento
@@ -109,6 +110,7 @@ DocType: POS Closing Shift,Posting Date,Data de Postagem
 Custom Field - label: Batch-posa_batch_price,Price,Preço
 DocType: POS Offer,Price Discount Scheme ,Esquema de Desconto de Preço
 Custom Field - label: Sales Invoice-posa_is_printed,Printed,Imprimido
+Custom Field - label: POS Invoice-posa_is_printed,Printed,Imprimido
 DocType: POS Offer,Product Discount Scheme,Esquema de Desconto de Produto
 DocType: POS Offer,Promo Type,Tipo de Promo
 DocType: POS Offer,Qualifying Transaction / Item,Qualificando Transação / Item
