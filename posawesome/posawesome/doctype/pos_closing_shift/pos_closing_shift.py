@@ -71,7 +71,7 @@ class POSClosingShift(Document):
                 frappe._dict(
                     frappe.db.get_value(
                         "POS Invoice",
-                        d.sales_invoice,
+                        d.pos_invoice,
                         [
                             "name as pos_invoice",
                             "customer",
@@ -232,11 +232,13 @@ def make_closing_shift_from_opening(opening_shift):
             )
         )
 
+    invoice_field = "pos_invoice" if doctype == "POS Invoice" else "sales_invoice"
+
     for d in invoices:
         pos_transactions.append(
             frappe._dict(
                 {
-                    "sales_invoice": d.name,
+                    invoice_field: d.name,
                     "posting_date": d.posting_date,
                     "grand_total": d.grand_total,
                     "customer": d.customer,

@@ -186,6 +186,7 @@ fixtures = [
                     "POS Profile-create_pos_invoice_instead_of_sales_invoice",
                     "POS Invoice-posa_is_printed",
                     "Sales Invoice-posa_is_printed",
+                    "Sales Invoice Reference-pos_invoice",
                     "POS Profile-posa_local_storage",
                     "POS Profile-posa_force_server_items",
                     "POS Profile-posa_cash_mode_of_payment",
@@ -276,7 +277,7 @@ fixtures = [
     },
     {
         "doctype": "Property Setter",
-        "filters": [["name", "in", ("Sales Invoice-posa_pos_opening_shift-no_copy", "POS Invoice-posa_pos_opening_shift-no_copy")]],
+        "filters": [["name", "in", ("Sales Invoice-posa_pos_opening_shift-no_copy", "POS Invoice-posa_pos_opening_shift-no_copy", "Sales Invoice Reference-sales_invoice-reqd")]],
     },
     {
         "doctype": "Custom Field",
