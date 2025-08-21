@@ -62,6 +62,8 @@ class POSClosingShift(Document):
         opening_entry.set_status()
         self.delete_draft_invoices()
         opening_entry.save()
+        # link invoices with this closing shift so ERPNext can block edits
+        self._set_closing_entry_invoices()
         if frappe.db.get_value(
             "POS Profile",
             self.pos_profile,
@@ -93,6 +95,26 @@ class POSClosingShift(Document):
                 opening_entry.pos_closing_shift = ""
                 opening_entry.set_status()
                 opening_entry.save()
+        # remove links from invoices so they can be cancelled
+        self._clear_closing_entry_invoices()
+
+    def _set_closing_entry_invoices(self):
+        """Set `pos_closing_entry` on linked invoices."""
+        for d in self.pos_transactions:
+            invoice = d.get("sales_invoice") or d.get("pos_invoice")
+            if not invoice:
+                continue
+            doctype = "Sales Invoice" if d.get("sales_invoice") else "POS Invoice"
+            frappe.db.set_value(doctype, invoice, "pos_closing_entry", self.name)
+
+    def _clear_closing_entry_invoices(self):
+        """Clear `pos_closing_entry` from linked invoices."""
+        for d in self.pos_transactions:
+            invoice = d.get("sales_invoice") or d.get("pos_invoice")
+            if not invoice:
+                continue
+            doctype = "Sales Invoice" if d.get("sales_invoice") else "POS Invoice"
+            frappe.db.set_value(doctype, invoice, "pos_closing_entry", None)
 
     def delete_draft_invoices(self):
         if frappe.get_value("POS Profile", self.pos_profile, "posa_allow_delete"):
