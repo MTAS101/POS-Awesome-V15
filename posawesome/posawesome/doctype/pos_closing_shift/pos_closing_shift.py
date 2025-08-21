@@ -102,14 +102,28 @@ class POSClosingShift(Document):
 				frappe.db.set_value(doctype, invoice, "pos_closing_entry", self.name)
 
 	def _clear_closing_entry_invoices(self):
-		"""Clear `pos_closing_entry` from linked invoices."""
+		"""Clear `pos_closing_entry` from linked invoices and cancel consolidated sales invoices."""
+		sales_invoices = set()
 		for d in self.pos_transactions:
-			invoice = d.get("sales_invoice") or d.get("pos_invoice")
-			if not invoice:
-				continue
-			doctype = "Sales Invoice" if d.get("sales_invoice") else "POS Invoice"
-			if frappe.db.has_column(doctype, "pos_closing_entry"):
-				frappe.db.set_value(doctype, invoice, "pos_closing_entry", None)
+			pos_invoice = d.get("pos_invoice")
+			sales_invoice = d.get("sales_invoice")
+			if pos_invoice:
+				if frappe.db.has_column("POS Invoice", "pos_closing_entry"):
+					frappe.db.set_value("POS Invoice", pos_invoice, "pos_closing_entry", None)
+				if frappe.db.has_column("POS Invoice", "consolidated_invoice"):
+					si = frappe.db.get_value("POS Invoice", pos_invoice, "consolidated_invoice")
+					if si:
+						sales_invoices.add(si)
+						frappe.db.set_value("POS Invoice", pos_invoice, "consolidated_invoice", None)
+			if sales_invoice:
+				if frappe.db.has_column("Sales Invoice", "pos_closing_entry"):
+					frappe.db.set_value("Sales Invoice", sales_invoice, "pos_closing_entry", None)
+				sales_invoices.add(sales_invoice)
+		for si in sales_invoices:
+			if frappe.db.exists("Sales Invoice", si):
+				si_doc = frappe.get_doc("Sales Invoice", si)
+				if si_doc.docstatus == 1:
+					si_doc.cancel()
 
 	def delete_draft_invoices(self):
 		if frappe.get_value("POS Profile", self.pos_profile, "posa_allow_delete"):
@@ -124,13 +138,13 @@ class POSClosingShift(Document):
 			)
 			data = frappe.db.sql(
 				f"""
-                select
-                    name
-                from
-                    `tab{doctype}`
-                where
-                    docstatus = 0 and posa_is_printed = 0 and posa_pos_opening_shift = %s
-                """,
+		select
+		    name
+		from
+		    `tab{doctype}`
+		where
+		    docstatus = 0 and posa_is_printed = 0 and posa_pos_opening_shift = %s
+		""",
 				(self.pos_opening_shift),
 				as_dict=1,
 			)
@@ -173,13 +187,13 @@ def get_pos_invoices(pos_opening_shift, doctype=None):
 	cond = " and ifnull(consolidated_invoice,'') = ''" if doctype == "POS Invoice" else ""
 	data = frappe.db.sql(
 		f"""
-        select
-                name
-        from
-                `tab{doctype}`
-        where
-                docstatus = 1 and posa_pos_opening_shift = %s{cond}
-        """,
+	select
+		name
+	from
+		`tab{doctype}`
+	where
+		docstatus = 1 and posa_pos_opening_shift = %s{cond}
+	""",
 		(pos_opening_shift),
 		as_dict=1,
 	)
