@@ -318,6 +318,13 @@ def update_invoice(data):
 			payment.amount = -abs(payment.amount)
 			payment.base_amount = -abs(payment.base_amount)
 
+		invoice_doc.paid_amount = flt(
+				sum(p.amount for p in invoice_doc.payments)
+		)
+		invoice_doc.base_paid_amount = flt(
+				sum(p.base_amount for p in invoice_doc.payments)
+		)
+
 	invoice_doc.flags.ignore_permissions = True
 	frappe.flags.ignore_account_permission = True
 	invoice_doc.docstatus = 0
