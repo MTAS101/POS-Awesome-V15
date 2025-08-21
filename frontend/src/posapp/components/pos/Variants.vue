@@ -51,10 +51,7 @@
 								>
 									<v-card hover="hover" @click="add_item(item)">
 										<v-img
-											:src="
-                                                                                                item.image ||
-                                                                                                placeholderImage
-											"
+											:src="item.image || placeholderImage"
 											class="text-white align-end"
 											gradient="to bottom, rgba(0,0,0,.2), rgba(0,0,0,.7)"
 											height="100px"
@@ -90,17 +87,17 @@ import { ensurePosProfile } from "../../../utils/pos_profile.js";
 import _ from "lodash";
 import placeholderImage from "./placeholder-image.png";
 export default {
-        data: () => ({
-                varaintsDialog: false,
-                parentItem: null,
-                items: null,
-                filters: {},
-                filterdItems: [],
-                pos_profile: null,
-                attributes_meta: {},
-                displayCount: 100,
-                placeholderImage,
-        }),
+	data: () => ({
+		varaintsDialog: false,
+		parentItem: null,
+		items: null,
+		filters: {},
+		filterdItems: [],
+		pos_profile: null,
+		attributes_meta: {},
+		displayCount: 100,
+		placeholderImage,
+	}),
 
 	computed: {
 		variantsItems() {
@@ -237,11 +234,11 @@ export default {
 							typeof item.item_attributes === "string" &&
 							item.item_attributes.trim().startsWith("[")
 						) {
-                                                        try {
-                                                                attrs = JSON.parse(item.item_attributes);
-                                                        } catch {
-                                                                attrs = [];
-                                                        }
+							try {
+								attrs = JSON.parse(item.item_attributes);
+							} catch {
+								attrs = [];
+							}
 						}
 						for (const [attrName, val] of Object.entries(this.filters)) {
 							if (!val) continue;
@@ -300,7 +297,7 @@ export default {
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_item_detail",
 					args: {
-                                                warehouse: item.warehouse || this.pos_profile.warehouse,
+						warehouse: item.warehouse || this.pos_profile.warehouse,
 						price_list: this.pos_profile.selling_price_list,
 						company: this.pos_profile.company,
 						item: JSON.stringify({
@@ -308,7 +305,9 @@ export default {
 							pos_profile: this.pos_profile.name,
 							qty: item.qty || 1,
 							uom: item.uom || item.stock_uom,
-							doctype: "Sales Invoice",
+							doctype: this.pos_profile.create_pos_invoice_instead_of_sales_invoice
+								? "POS Invoice"
+								: "Sales Invoice",
 						}),
 					},
 				});

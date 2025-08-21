@@ -514,6 +514,10 @@ export default {
 				max_amount: maxAmount,
 				company: vm.company,
 				page: vm.page,
+				doctype:
+					vm.pos_profile && vm.pos_profile.create_pos_invoice_instead_of_sales_invoice
+						? "POS Invoice"
+						: "Sales Invoice",
 			};
 
 			frappe.call({
