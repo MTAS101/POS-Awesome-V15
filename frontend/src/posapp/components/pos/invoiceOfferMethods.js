@@ -965,9 +965,14 @@ export default {
 	load_print_page(invoice_name) {
 		const print_format = this.pos_profile.print_format_for_online || this.pos_profile.print_format;
 		const letter_head = this.pos_profile.letter_head || 0;
+		const doctype = this.pos_profile.create_pos_invoice_instead_of_sales_invoice
+			? "POS Invoice"
+			: "Sales Invoice";
 		const url =
 			frappe.urllib.get_base_url() +
-			"/printview?doctype=Sales%20Invoice&name=" +
+			"/printview?doctype=" +
+			encodeURIComponent(doctype) +
+			"&name=" +
 			invoice_name +
 			"&trigger_print=1" +
 			"&format=" +

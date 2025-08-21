@@ -127,6 +127,7 @@ class POSClosingShift(Document):
 							sales_invoices.add(si)
 					if log_doc.docstatus == 1:
 						log_doc.cancel()
+					frappe.delete_doc("POS Invoice Merge Log", log_doc.name, force=1)
 
 				if frappe.db.has_column("POS Invoice", "consolidated_invoice"):
 					frappe.db.set_value("POS Invoice", pos_invoice, "consolidated_invoice", None)

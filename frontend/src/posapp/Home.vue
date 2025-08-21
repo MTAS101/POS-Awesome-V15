@@ -1,16 +1,35 @@
 <template>
 	<v-app class="container1" :class="rtlClasses">
 		<v-main class="main-content">
-			<Navbar :pos-profile="posProfile" :pending-invoices="pendingInvoices" :last-invoice-id="lastInvoiceId"
-				:network-online="networkOnline" :server-online="serverOnline" :server-connecting="serverConnecting"
-				:is-ip-host="isIpHost" :sync-totals="syncTotals" :manual-offline="manualOffline" :is-dark="isDark"
-				:cache-usage="cacheUsage" :cache-usage-loading="cacheUsageLoading"
-				:cache-usage-details="cacheUsageDetails" :cache-ready="cacheReady" :loading-progress="loadingProgress"
-				:loading-active="loadingActive" :loading-message="loadingMessage" @change-page="setPage($event)"
-				@nav-click="handleNavClick" @close-shift="handleCloseShift" @print-last-invoice="handlePrintLastInvoice"
-				@sync-invoices="handleSyncInvoices" @toggle-offline="handleToggleOffline"
-				@toggle-theme="handleToggleTheme" @logout="handleLogout" @refresh-cache-usage="handleRefreshCacheUsage"
-				@update-after-delete="handleUpdateAfterDelete" />
+			<Navbar
+				:pos-profile="posProfile"
+				:pending-invoices="pendingInvoices"
+				:last-invoice-id="lastInvoiceId"
+				:network-online="networkOnline"
+				:server-online="serverOnline"
+				:server-connecting="serverConnecting"
+				:is-ip-host="isIpHost"
+				:sync-totals="syncTotals"
+				:manual-offline="manualOffline"
+				:is-dark="isDark"
+				:cache-usage="cacheUsage"
+				:cache-usage-loading="cacheUsageLoading"
+				:cache-usage-details="cacheUsageDetails"
+				:cache-ready="cacheReady"
+				:loading-progress="loadingProgress"
+				:loading-active="loadingActive"
+				:loading-message="loadingMessage"
+				@change-page="setPage($event)"
+				@nav-click="handleNavClick"
+				@close-shift="handleCloseShift"
+				@print-last-invoice="handlePrintLastInvoice"
+				@sync-invoices="handleSyncInvoices"
+				@toggle-offline="handleToggleOffline"
+				@toggle-theme="handleToggleTheme"
+				@logout="handleLogout"
+				@refresh-cache-usage="handleRefreshCacheUsage"
+				@update-after-delete="handleUpdateAfterDelete"
+			/>
 			<div class="page-content">
 				<component v-bind:is="page" class="mx-4 md-4"></component>
 			</div>
@@ -66,7 +85,7 @@ export default {
 		return {
 			isRtl,
 			rtlStyles,
-			rtlClasses
+			rtlClasses,
 		};
 	},
 	data: function () {
@@ -149,16 +168,16 @@ export default {
 		checkFrappePing,
 		checkCurrentOrigin,
 		checkExternalConnectivity,
-                checkWebSocketConnectivity,
-        setPage(page) {
-                this.page = page;
-        },
+		checkWebSocketConnectivity,
+		setPage(page) {
+			this.page = page;
+		},
 
 		async initializeData() {
 			await initPromise;
 			await memoryInitPromise;
 			this.cacheReady = true;
-			checkDbHealth().catch(() => { });
+			checkDbHealth().catch(() => {});
 			// Load POS profile from cache or storage
 			const openingData = getOpeningStorage();
 			if (openingData && openingData.pos_profile) {
@@ -182,7 +201,7 @@ export default {
 						alert("Local cache nearing capacity. Consider going online to sync.");
 					}
 				})
-				.catch(() => { });
+				.catch(() => {});
 
 			// Check if running on IP host
 			this.isIpHost = /^\d+\.\d+\.\d+\.\d+/.test(window.location.hostname);
@@ -308,9 +327,14 @@ export default {
 
 			const print_format = this.posProfile.print_format_for_online || this.posProfile.print_format;
 			const letter_head = this.posProfile.letter_head || 0;
+			const doctype = this.posProfile.create_pos_invoice_instead_of_sales_invoice
+				? "POS Invoice"
+				: "Sales Invoice";
 			const url =
 				frappe.urllib.get_base_url() +
-				"/printview?doctype=Sales%20Invoice&name=" +
+				"/printview?doctype=" +
+				encodeURIComponent(doctype) +
+				"&name=" +
 				this.lastInvoiceId +
 				"&trigger_print=1" +
 				"&format=" +
@@ -374,21 +398,19 @@ export default {
 			}
 		},
 
-                handleToggleTheme() {
-                        // Use the global theme plugin instead of local state
-                        this.$theme.toggle();
-                },
+		handleToggleTheme() {
+			// Use the global theme plugin instead of local state
+			this.$theme.toggle();
+		},
 
-                handleLogout() {
-                        frappe
-                                .call("logout")
-                                .finally(() => {
-                                        window.location.href = "/app";
-                                });
-                },
+		handleLogout() {
+			frappe.call("logout").finally(() => {
+				window.location.href = "/app";
+			});
+		},
 
-                handleRefreshCacheUsage() {
-                        this.cacheUsageLoading = true;
+		handleRefreshCacheUsage() {
+			this.cacheUsageLoading = true;
 			getCacheUsageEstimate()
 				.then((usage) => {
 					this.cacheUsage = usage.percentage || 0;
@@ -430,7 +452,7 @@ export default {
 								m.setTaxInclusiveSetting(val);
 							}
 						})
-						.catch(() => { });
+						.catch(() => {});
 				}
 			} catch (e) {
 				console.warn("Failed to refresh tax inclusive setting", e);
@@ -447,8 +469,6 @@ export default {
 				$(".navbar.navbar-default.navbar-fixed-top").remove();
 			});
 		},
-
-
 	},
 	beforeUnmount() {
 		if (this.eventBus) {
@@ -494,6 +514,4 @@ export default {
 	min-height: 100%;
 	height: 100%;
 }
-
-
 </style>
