@@ -167,18 +167,18 @@ export default {
 
 		if (this.items.length > 0) {
 			this.update_items_details(this.items);
-                        this.posa_offers = data.posa_offers || [];
-                        this.items.forEach((item) => {
-                                if (!item.posa_row_id) {
-                                        item.posa_row_id = this.makeid(20);
-                                }
-                                if (item.batch_no) {
-                                        this.set_batch_qty(item, item.batch_no);
-                                }
-                                if (!item.original_item_name) {
-                                        item.original_item_name = item.item_name;
-                                }
-                        });
+			this.posa_offers = data.posa_offers || [];
+			this.items.forEach((item) => {
+				if (!item.posa_row_id) {
+					item.posa_row_id = this.makeid(20);
+				}
+				if (item.batch_no) {
+					this.set_batch_qty(item, item.batch_no);
+				}
+				if (!item.original_item_name) {
+					item.original_item_name = item.item_name;
+				}
+			});
 		} else {
 			console.log("Warning: No items in return invoice");
 		}
@@ -319,15 +319,16 @@ export default {
 		// Always set these fields first
 		if (this.invoiceType === "Order" && this.pos_profile.posa_create_only_sales_order) {
 			doc.doctype = "Sales Order";
+		} else if (this.pos_profile.create_pos_invoice_instead_of_sales_invoice) {
+			doc.doctype = "POS Invoice";
 		} else {
 			doc.doctype = "Sales Invoice";
 		}
 		doc.is_pos = 1;
 		doc.ignore_pricing_rule = 1;
-                doc.company = doc.company || this.pos_profile.company;
-                doc.pos_profile = doc.pos_profile || this.pos_profile.name;
-                doc.posa_show_custom_name_marker_on_print =
-                        this.pos_profile.posa_show_custom_name_marker_on_print;
+		doc.company = doc.company || this.pos_profile.company;
+		doc.pos_profile = doc.pos_profile || this.pos_profile.name;
+		doc.posa_show_custom_name_marker_on_print = this.pos_profile.posa_show_custom_name_marker_on_print;
 
 		// Currency related fields
 		doc.currency = this.selected_currency || this.pos_profile.currency;
@@ -622,9 +623,9 @@ export default {
 			const new_item = {
 				item_code: item.item_code,
 				// Retain the item name for offline invoices
-                                // Fallback to item_code if item_name is not available
-                                item_name: item.item_name || item.item_code,
-                                name_overridden: item.name_overridden ? 1 : 0,
+				// Fallback to item_code if item_name is not available
+				item_name: item.item_name || item.item_code,
+				name_overridden: item.name_overridden ? 1 : 0,
 				posa_row_id: item.posa_row_id,
 				posa_offers: item.posa_offers,
 				posa_offer_applied: item.posa_offer_applied,
@@ -705,9 +706,9 @@ export default {
 			const new_item = {
 				item_code: item.item_code,
 				// Retain item name to show on offline order documents
-                                // Use item_code if item_name is missing
-                                item_name: item.item_name || item.item_code,
-                                name_overridden: item.name_overridden ? 1 : 0,
+				// Use item_code if item_name is missing
+				item_name: item.item_name || item.item_code,
+				name_overridden: item.name_overridden ? 1 : 0,
 				posa_row_id: item.posa_row_id,
 				posa_offers: item.posa_offers,
 				posa_offer_applied: item.posa_offer_applied,
@@ -1105,7 +1106,9 @@ export default {
 					frappe.call({
 						method: "frappe.client.get",
 						args: {
-							doctype: "Sales Invoice",
+							doctype: this.pos_profile.create_pos_invoice_instead_of_sales_invoice
+								? "POS Invoice"
+								: "Sales Invoice",
 							name: this.invoice_doc.return_against,
 						},
 						callback: (r) => {
@@ -1211,6 +1214,9 @@ export default {
 			method: "posawesome.posawesome.api.invoices.get_draft_invoices",
 			args: {
 				pos_opening_shift: this.pos_opening_shift.name,
+				doctype: this.pos_profile.create_pos_invoice_instead_of_sales_invoice
+					? "POS Invoice"
+					: "Sales Invoice",
 			},
 			async: false,
 			callback: function (r) {
@@ -1320,23 +1326,24 @@ export default {
 		//   this.$forceUpdate();
 		// }
 
+		const currentDoc = this.get_invoice_doc();
 		frappe.call({
 			method: "posawesome.posawesome.api.items.get_item_detail",
 			args: {
 				warehouse: item.warehouse || this.pos_profile.warehouse,
-				doc: this.get_invoice_doc(),
+				doc: currentDoc,
 				price_list: this.selected_price_list || this.pos_profile.selling_price_list,
 				item: {
 					item_code: item.item_code,
 					customer: this.customer,
-					doctype: "Sales Invoice",
-					name: "New Sales Invoice 1",
+					doctype: currentDoc.doctype,
+					name: currentDoc.name || `New ${currentDoc.doctype} 1`,
 					company: this.pos_profile.company,
 					conversion_rate: 1,
 					currency: this.pos_profile.currency,
 					qty: item.qty,
 					price_list_rate: item.base_price_list_rate || item.price_list_rate,
-					child_docname: "New Sales Invoice Item 1",
+					child_docname: `New ${currentDoc.doctype} Item 1`,
 					cost_center: this.pos_profile.cost_center,
 					pos_profile: this.pos_profile.name,
 					uom: item.uom,
@@ -1713,67 +1720,65 @@ export default {
 	// Calculate stock quantity for an item with stock validation
 	calc_stock_qty(item, value) {
 		calcStockQty(item, value, this);
-               if (this.update_qty_limits) {
-                       this.update_qty_limits(item);
-               }
-               if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
-                       const blockSale =
-                               !this.stock_settings.allow_negative_stock ||
-                               this.pos_profile.posa_block_sale_beyond_available_qty;
-                       if (blockSale) {
-                               item.qty = item.max_qty;
-                               calcStockQty(item, item.qty, this);
-                               this.$forceUpdate();
-                               this.eventBus.emit("show_message", {
-                                       title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
-                                               this.formatFloat(item.max_qty),
-                                       ]),
-                                       color: "error",
-                               });
-                       } else {
-                               this.eventBus.emit("show_message", {
-                                       title: __("Stock is lower than requested. Proceeding may create negative stock."),
-                                       color: "warning",
-                               });
-                       }
-               }
-       },
+		if (this.update_qty_limits) {
+			this.update_qty_limits(item);
+		}
+		if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
+			const blockSale =
+				!this.stock_settings.allow_negative_stock ||
+				this.pos_profile.posa_block_sale_beyond_available_qty;
+			if (blockSale) {
+				item.qty = item.max_qty;
+				calcStockQty(item, item.qty, this);
+				this.$forceUpdate();
+				this.eventBus.emit("show_message", {
+					title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
+						this.formatFloat(item.max_qty),
+					]),
+					color: "error",
+				});
+			} else {
+				this.eventBus.emit("show_message", {
+					title: __("Stock is lower than requested. Proceeding may create negative stock."),
+					color: "warning",
+				});
+			}
+		}
+	},
 
 	// Update quantity limits based on available stock
-        update_qty_limits(item) {
-               if (item && item.available_qty !== undefined) {
-                       item.max_qty = flt(item.available_qty / (item.conversion_factor || 1));
+	update_qty_limits(item) {
+		if (item && item.available_qty !== undefined) {
+			item.max_qty = flt(item.available_qty / (item.conversion_factor || 1));
 
-                       if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
-                               const blockSale =
-                                       !this.stock_settings.allow_negative_stock ||
-                                       this.pos_profile.posa_block_sale_beyond_available_qty;
-                               if (blockSale) {
-                                       item.qty = item.max_qty;
-                                       calcStockQty(item, item.qty, this);
-                                       this.$forceUpdate();
-                                       this.eventBus.emit("show_message", {
-                                               title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
-                                                       this.formatFloat(item.max_qty),
-                                               ]),
-                                               color: "error",
-                                       });
-                               } else {
-                                       this.eventBus.emit("show_message", {
-                                               title: __(
-                                                       "Stock is lower than requested. Proceeding may create negative stock.",
-                                               ),
-                                               color: "warning",
-                                       });
-                               }
-                       }
+			if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
+				const blockSale =
+					!this.stock_settings.allow_negative_stock ||
+					this.pos_profile.posa_block_sale_beyond_available_qty;
+				if (blockSale) {
+					item.qty = item.max_qty;
+					calcStockQty(item, item.qty, this);
+					this.$forceUpdate();
+					this.eventBus.emit("show_message", {
+						title: __(`Maximum available quantity is {0}. Quantity adjusted to match stock.`, [
+							this.formatFloat(item.max_qty),
+						]),
+						color: "error",
+					});
+				} else {
+					this.eventBus.emit("show_message", {
+						title: __("Stock is lower than requested. Proceeding may create negative stock."),
+						color: "warning",
+					});
+				}
+			}
 
-                       item.disable_increment =
-                               (!this.stock_settings.allow_negative_stock ||
-                                       this.pos_profile.posa_block_sale_beyond_available_qty) &&
-                               item.qty >= item.max_qty;
-               }
-        },
+			item.disable_increment =
+				(!this.stock_settings.allow_negative_stock ||
+					this.pos_profile.posa_block_sale_beyond_available_qty) &&
+				item.qty >= item.max_qty;
+		}
+	},
 
 	// Fetch available stock for an item and cache it
 	async fetch_available_qty(item) {

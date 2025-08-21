@@ -1718,8 +1718,8 @@ export default {
 												]),
 												color: "success",
 											});
-											frappe.db
-												.get_doc("Sales Invoice", vm.invoice_doc.name)
+frappe.db
+.get_doc(vm.invoice_doc.doctype, vm.invoice_doc.name)
 												.then((doc) => {
 													vm.invoice_doc = doc;
 													vm.submit(null, true);

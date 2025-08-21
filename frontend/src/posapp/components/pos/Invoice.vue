@@ -24,6 +24,14 @@
 		>
 			<!-- Dynamic padding wrapper -->
 			<div class="dynamic-padding">
+				<v-alert
+					type="info"
+					dense
+					class="mb-2"
+					v-if="pos_profile.create_pos_invoice_instead_of_sales_invoice"
+				>
+					{{ __("Invoices saved as POS Invoices") }}
+				</v-alert>
 				<!-- Top Row: Customer Selection and Invoice Type -->
 				<v-row align="center" class="items px-3 py-2">
 					<v-col :cols="pos_profile.posa_allow_sales_order ? 9 : 12" class="pb-0 pr-0">

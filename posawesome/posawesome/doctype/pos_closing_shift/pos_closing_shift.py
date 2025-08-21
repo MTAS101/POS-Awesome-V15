@@ -8,6 +8,9 @@ import json
 from frappe import _
 from frappe.model.document import Document
 from frappe.utils import flt
+from erpnext.accounts.doctype.pos_invoice_merge_log.pos_invoice_merge_log import (
+    consolidate_pos_invoices,
+)
 
 
 class POSClosingShift(Document):
@@ -59,6 +62,29 @@ class POSClosingShift(Document):
         opening_entry.set_status()
         self.delete_draft_invoices()
         opening_entry.save()
+        if frappe.db.get_value(
+            "POS Profile",
+            self.pos_profile,
+            "create_pos_invoice_instead_of_sales_invoice",
+        ):
+            pos_invoices = [
+                frappe._dict(
+                    frappe.db.get_value(
+                        "POS Invoice",
+                        d.pos_invoice,
+                        [
+                            "name as pos_invoice",
+                            "customer",
+                            "is_return",
+                            "return_against",
+                        ],
+                        as_dict=True,
+                    )
+                )
+                for d in self.pos_transactions
+            ]
+            if pos_invoices:
+                consolidate_pos_invoices(pos_invoices=pos_invoices)
 
     def on_cancel(self):
         if frappe.db.exists("POS Opening Shift", self.pos_opening_shift):
@@ -70,12 +96,21 @@ class POSClosingShift(Document):
 
     def delete_draft_invoices(self):
         if frappe.get_value("POS Profile", self.pos_profile, "posa_allow_delete"):
+            doctype = (
+                "POS Invoice"
+                if frappe.db.get_value(
+                    "POS Profile",
+                    self.pos_profile,
+                    "create_pos_invoice_instead_of_sales_invoice",
+                )
+                else "Sales Invoice"
+            )
             data = frappe.db.sql(
-                """
+                f"""
                 select
                     name
                 from
-                    `tabSales Invoice`
+                    `tab{doctype}`
                 where
                     docstatus = 0 and posa_is_printed = 0 and posa_pos_opening_shift = %s
                 """,
@@ -84,7 +119,7 @@ class POSClosingShift(Document):
             )
 
             for invoice in data:
-                frappe.delete_doc("Sales Invoice", invoice.name, force=1)
+                frappe.delete_doc(doctype, invoice.name, force=1)
 
     @frappe.whitelist()
     def get_payment_reconciliation_details(self):
@@ -108,22 +143,33 @@ def get_cashiers(doctype, txt, searchfield, start, page_len, filters):
 
 
 @frappe.whitelist()
-def get_pos_invoices(pos_opening_shift):
-    submit_printed_invoices(pos_opening_shift)
+def get_pos_invoices(pos_opening_shift, doctype=None):
+    if not doctype:
+        pos_profile = frappe.db.get_value(
+            "POS Opening Shift", pos_opening_shift, "pos_profile"
+        )
+        use_pos_invoice = frappe.db.get_value(
+            "POS Profile",
+            pos_profile,
+            "create_pos_invoice_instead_of_sales_invoice",
+        )
+        doctype = "POS Invoice" if use_pos_invoice else "Sales Invoice"
+    submit_printed_invoices(pos_opening_shift, doctype)
+    cond = " and ifnull(consolidated_invoice,'') = ''" if doctype == "POS Invoice" else ""
     data = frappe.db.sql(
-        """
-	select
-		name
-	from
-		`tabSales Invoice`
-	where
-		docstatus = 1 and posa_pos_opening_shift = %s
-	""",
+        f"""
+        select
+                name
+        from
+                `tab{doctype}`
+        where
+                docstatus = 1 and posa_pos_opening_shift = %s{cond}
+        """,
         (pos_opening_shift),
         as_dict=1,
     )
 
-    data = [frappe.get_doc("Sales Invoice", d.name).as_dict() for d in data]
+    data = [frappe.get_doc(doctype, d.name).as_dict() for d in data]
 
     return data
 
@@ -151,7 +197,13 @@ def get_payments_entries(pos_opening_shift):
 @frappe.whitelist()
 def make_closing_shift_from_opening(opening_shift):
     opening_shift = json.loads(opening_shift)
-    submit_printed_invoices(opening_shift.get("name"))
+    use_pos_invoice = frappe.db.get_value(
+        "POS Profile",
+        opening_shift.get("pos_profile"),
+        "create_pos_invoice_instead_of_sales_invoice",
+    )
+    doctype = "POS Invoice" if use_pos_invoice else "Sales Invoice"
+    submit_printed_invoices(opening_shift.get("name"), doctype)
     closing_shift = frappe.new_doc("POS Closing Shift")
     closing_shift.pos_opening_shift = opening_shift.get("name")
     closing_shift.period_start_date = opening_shift.get("period_start_date")
@@ -163,7 +215,7 @@ def make_closing_shift_from_opening(opening_shift):
     closing_shift.net_total = 0
     closing_shift.total_quantity = 0
 
-    invoices = get_pos_invoices(opening_shift.get("name"))
+    invoices = get_pos_invoices(opening_shift.get("name"), doctype)
 
     pos_transactions = []
     taxes = []
@@ -180,11 +232,13 @@ def make_closing_shift_from_opening(opening_shift):
             )
         )
 
+    invoice_field = "pos_invoice" if doctype == "POS Invoice" else "sales_invoice"
+
     for d in invoices:
         pos_transactions.append(
             frappe._dict(
                 {
-                    "sales_invoice": d.name,
+                    invoice_field: d.name,
                     "posting_date": d.posting_date,
                     "grand_total": d.grand_total,
                     "customer": d.customer,
@@ -290,9 +344,9 @@ def submit_closing_shift(closing_shift):
     return closing_shift_doc.name
 
 
-def submit_printed_invoices(pos_opening_shift):
+def submit_printed_invoices(pos_opening_shift, doctype):
     invoices_list = frappe.get_all(
-        "Sales Invoice",
+        doctype,
         filters={
             "posa_pos_opening_shift": pos_opening_shift,
             "docstatus": 0,
@@ -300,5 +354,5 @@ def submit_printed_invoices(pos_opening_shift):
         },
     )
     for invoice in invoices_list:
-        invoice_doc = frappe.get_doc("Sales Invoice", invoice.name)
+        invoice_doc = frappe.get_doc(doctype, invoice.name)
         invoice_doc.submit()
