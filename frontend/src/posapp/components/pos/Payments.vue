@@ -1260,9 +1260,9 @@ export default {
 									`${e.item_code} (${e.warehouse}) - ${this.formatFloat(e.available_qty)}`,
 							)
 							.join("\n");
-                                               const blocking =
-                                                       !this.stock_settings.allow_negative_stock ||
-                                                       this.pos_profile.posa_block_sale_beyond_available_qty;
+						const blocking =
+							!this.stock_settings.allow_negative_stock ||
+							this.pos_profile.posa_block_sale_beyond_available_qty;
 						this.eventBus.emit("show_message", {
 							title: blocking
 								? __("Insufficient stock:\n{0}", [msg])
@@ -1483,9 +1483,14 @@ export default {
 		load_print_page() {
 			const print_format = this.pos_profile.print_format_for_online || this.pos_profile.print_format;
 			const letter_head = this.pos_profile.letter_head || 0;
+			const doctype = this.pos_profile.create_pos_invoice_instead_of_sales_invoice
+				? "POS Invoice"
+				: "Sales Invoice";
 			const url =
 				frappe.urllib.get_base_url() +
-				"/printview?doctype=Sales%20Invoice&name=" +
+				"/printview?doctype=" +
+				encodeURIComponent(doctype) +
+				"&name=" +
 				this.invoice_doc.name +
 				"&trigger_print=1" +
 				"&format=" +
@@ -1718,8 +1723,8 @@ export default {
 												]),
 												color: "success",
 											});
-frappe.db
-.get_doc(vm.invoice_doc.doctype, vm.invoice_doc.name)
+											frappe.db
+												.get_doc(vm.invoice_doc.doctype, vm.invoice_doc.name)
 												.then((doc) => {
 													vm.invoice_doc = doc;
 													vm.submit(null, true);
