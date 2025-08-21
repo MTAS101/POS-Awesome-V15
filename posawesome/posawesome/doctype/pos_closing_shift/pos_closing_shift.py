@@ -64,6 +64,7 @@ class POSClosingShift(Document):
         opening_entry.save()
         # link invoices with this closing shift so ERPNext can block edits
         self._set_closing_entry_invoices()
+        
         if frappe.db.get_value(
             "POS Profile",
             self.pos_profile,

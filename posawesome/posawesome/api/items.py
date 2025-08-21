@@ -18,18 +18,28 @@ from .utils import HAS_VARIANTS_EXCLUSION, get_item_groups
 
 
 def get_stock_availability(item_code, warehouse):
-	actual_qty = (
-		frappe.db.get_value(
-			"Bin",
-			filters={
-				"item_code": item_code,
-				"warehouse": warehouse,
-			},
-			fieldname="actual_qty",
-		)
-		or 0.0
+	"""Return total available quantity for an item in the given warehouse.
+
+	``warehouse`` can be either a single warehouse or a warehouse group.
+	In case of a group, quantities from all child warehouses are summed up
+	to provide an accurate availability figure.
+	"""
+
+	if not warehouse:
+		return 0.0
+
+	warehouses = [warehouse]
+	if frappe.db.get_value("Warehouse", warehouse, "is_group"):
+		# Include all child warehouses when a group warehouse is set
+		warehouses = frappe.db.get_descendants("Warehouse", warehouse) or []
+
+	rows = frappe.get_all(
+		"Bin",
+		fields=["sum(actual_qty) as actual_qty"],
+		filters={"item_code": item_code, "warehouse": ["in", warehouses]},
 	)
-	return actual_qty
+
+	return flt(rows[0].actual_qty) if rows else 0.0
 
 
 @frappe.whitelist()
@@ -38,11 +48,11 @@ def get_available_qty(items):
 
 	Args:
 	    items (str | list[dict]): JSON string or list of dicts with
-	        item_code, warehouse and optional batch_no.
+		item_code, warehouse and optional batch_no.
 
 	Returns:
 	    list: List of dicts with item_code, warehouse and available_qty
-	        in stock UOM.
+		in stock UOM.
 	"""
 
 	if isinstance(items, str):
@@ -553,8 +563,27 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 
 	@redis_cache(ttl=ttl or 300)
 	def _get_bin_qty(warehouse, item_codes):
+		"""Fetch stock quantities for multiple items.
+
+		Supports both single warehouses and warehouse groups. When a
+		group warehouse is provided, quantities from all its child
+		warehouses are aggregated.
+		"""
+
 		if not item_codes or not warehouse:
 			return []
+
+		if frappe.db.get_value("Warehouse", warehouse, "is_group"):
+			warehouses = frappe.db.get_descendants("Warehouse", warehouse) or []
+			if not warehouses:
+				return []
+			return frappe.get_all(
+				"Bin",
+				fields=["item_code", "sum(actual_qty) as actual_qty"],
+				filters={"warehouse": ["in", warehouses], "item_code": ["in", item_codes]},
+				group_by="item_code",
+			)
+
 		return frappe.get_all(
 			"Bin",
 			fields=["item_code", "actual_qty"],
