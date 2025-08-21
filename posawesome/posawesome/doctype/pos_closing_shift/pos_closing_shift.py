@@ -118,8 +118,13 @@ class POSClosingShift(Document):
 				)
 				for log in merge_logs:
 					log_doc = frappe.get_doc("POS Invoice Merge Log", log)
-					if log_doc.sales_invoice:
-						sales_invoices.add(log_doc.sales_invoice)
+					for field in (
+						"consolidated_invoice",
+						"consolidated_credit_note",
+					):
+						si = log_doc.get(field)
+						if si:
+							sales_invoices.add(si)
 					if log_doc.docstatus == 1:
 						log_doc.cancel()
 
