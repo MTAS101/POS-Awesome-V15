@@ -41,12 +41,14 @@ export const useProductsStore = defineStore("products", {
                                 });
                                 this.list = message || [];
                                 try {
-                                        const { message: groups } = await frappe.call({
-                                                method: "posawesome.posawesome.api.items.get_items_groups",
-                                                args,
-                                        });
-                                        this.itemGroups = groups || [];
-                                        saveItemGroups(this.itemGroups);
+                                const { message: groups } = await frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_items_groups",
+                                        args,
+                                });
+                                this.itemGroups = JSON.parse(
+                                        JSON.stringify(groups || [])
+                                );
+                                saveItemGroups(this.itemGroups);
                                 } catch (e) {
                                         console.error("Failed to fetch item groups", e);
                                 }
