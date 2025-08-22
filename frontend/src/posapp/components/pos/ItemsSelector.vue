@@ -458,14 +458,16 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import placeholderImage from "./placeholder-image.png";
+import { useProductsStore } from "../../stores/products.js";
 
 export default {
-	mixins: [format],
-	setup() {
-		const responsive = useResponsive();
-		const rtl = useRtl();
-		return { ...responsive, ...rtl };
-	},
+        mixins: [format],
+        setup() {
+                const responsive = useResponsive();
+                const rtl = useRtl();
+                const productsStore = useProductsStore();
+                return { ...responsive, ...rtl, productsStore };
+        },
 	components: {
 		CameraScanner,
 	},
@@ -474,10 +476,7 @@ export default {
 		flags: {},
 		items_view: "list",
 		item_group: "ALL",
-		loading: false,
-		items_group: ["ALL"],
-		items: [],
-		search: "",
+                search: "",
 		first_search: "",
 		search_backup: "",
 		// Limit the displayed items to avoid overly large lists
@@ -1525,44 +1524,42 @@ export default {
 				});
 			}
 		},
-		get_items_groups() {
-			if (!this.pos_profile) {
-				console.log("No POS Profile");
-				return;
-			}
-			this.items_group = ["ALL"];
-			if (this.pos_profile.item_groups.length > 0) {
-				const groups = [];
-				this.pos_profile.item_groups.forEach((element) => {
-					if (element.item_group !== "All Item Groups") {
-						this.items_group.push(element.item_group);
-						groups.push(element.item_group);
-					}
-				});
-				saveItemGroups(groups);
-			} else if (isOffline()) {
-				const cached = getCachedItemGroups();
-				cached.forEach((g) => {
-					this.items_group.push(g);
-				});
-			} else {
-				const vm = this;
-				frappe.call({
-					method: "posawesome.posawesome.api.items.get_items_groups",
-					args: {},
-					callback: function (r) {
-						if (r.message) {
-							const groups = [];
-							r.message.forEach((element) => {
-								vm.items_group.push(element.name);
-								groups.push(element.name);
-							});
-							saveItemGroups(groups);
-						}
-					},
-				});
-			}
-		},
+                get_items_groups() {
+                        if (!this.pos_profile) {
+                                console.log("No POS Profile");
+                                return;
+                        }
+                        this.productsStore.itemGroups = [];
+                        if (this.pos_profile.item_groups.length > 0) {
+                                const groups = [];
+                                this.pos_profile.item_groups.forEach((element) => {
+                                        if (element.item_group !== "All Item Groups") {
+                                                this.productsStore.itemGroups.push(element.item_group);
+                                                groups.push(element.item_group);
+                                        }
+                                });
+                                saveItemGroups(groups);
+                        } else if (isOffline()) {
+                                const cached = getCachedItemGroups();
+                                this.productsStore.itemGroups.push(...cached);
+                        } else {
+                                const vm = this;
+                                frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_items_groups",
+                                        args: {},
+                                        callback: function (r) {
+                                                if (r.message) {
+                                                        const groups = [];
+                                                        r.message.forEach((element) => {
+                                                                vm.productsStore.itemGroups.push(element.name);
+                                                                groups.push(element.name);
+                                                        });
+                                                        saveItemGroups(groups);
+                                                }
+                                        },
+                                });
+                        }
+                },
 		getItemsHeaders() {
 			const items_headers = [
 				{
@@ -2540,12 +2537,36 @@ export default {
 		},
 	},
 
-	computed: {
-		headers() {
-			return this.getItemsHeaders();
-		},
-		filtered_items() {
-			if (!this.items || this.items.length === 0) {
+        computed: {
+                items: {
+                        get() {
+                                return this.productsStore.list;
+                        },
+                        set(val) {
+                                this.productsStore.list = val;
+                        },
+                },
+                items_group: {
+                        get() {
+                                return ["ALL", ...this.productsStore.itemGroups];
+                        },
+                        set(val) {
+                                this.productsStore.itemGroups = val.filter((v) => v !== "ALL");
+                        },
+                },
+                loading: {
+                        get() {
+                                return this.productsStore.loading;
+                        },
+                        set(val) {
+                                this.productsStore.loading = val;
+                        },
+                },
+                headers() {
+                        return this.getItemsHeaders();
+                },
+                filtered_items() {
+                        if (!this.items || this.items.length === 0) {
 				return [];
 			}
 

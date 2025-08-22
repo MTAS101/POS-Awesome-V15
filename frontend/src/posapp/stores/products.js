@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { saveItemDetailsCache, saveItemGroups } from "../../offline";
+import { saveItemDetailsCache, saveItemGroups } from "../../offline/index.js";
 
 export const useProductsStore = defineStore("products", {
         state: () => ({

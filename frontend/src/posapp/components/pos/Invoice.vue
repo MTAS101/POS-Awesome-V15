@@ -268,31 +268,31 @@ import invoiceComputed from "./invoiceComputed";
 import invoiceWatchers from "./invoiceWatchers";
 import offerMethods from "./invoiceOfferMethods";
 import shortcutMethods from "./invoiceShortcuts";
+import { useCartStore } from "../../stores/cart.js";
 
 export default {
-	name: "POSInvoice",
-	mixins: [format],
-	data() {
-		return {
-			// POS profile settings
-			pos_profile: "",
-			pos_opening_shift: "",
-			stock_settings: "",
-			invoice_doc: "",
-			return_doc: "",
-			customer: "",
-			customer_info: "",
-			customer_balance: 0,
-			discount_amount: 0,
-			additional_discount: 0,
-			additional_discount_percentage: 0,
-			total_tax: 0,
-			items: [], // List of invoice items
-			posOffers: [], // All available offers
-			posa_offers: [], // Offers applied to this invoice
-			posa_coupons: [], // Coupons applied
-			allItems: [], // All items for offer logic
-			discount_percentage_offer_name: null, // Track which offer is applied
+        name: "POSInvoice",
+        mixins: [format],
+        setup() {
+                const cartStore = useCartStore();
+                return { cartStore };
+        },
+        data() {
+                return {
+                        // POS profile settings
+                        pos_profile: "",
+                        pos_opening_shift: "",
+                        stock_settings: "",
+                        invoice_doc: "",
+                        return_doc: "",
+                        customer_info: "",
+                        customer_balance: 0,
+                        additional_discount_percentage: 0,
+                        posOffers: [], // All available offers
+                        posa_offers: [], // Offers applied to this invoice
+                        posa_coupons: [], // Coupons applied
+                        allItems: [], // All items for offer logic
+                        discount_percentage_offer_name: null, // Track which offer is applied
 			invoiceTypes: ["Invoice", "Order"], // Types of invoices
 			invoiceType: "Invoice", // Current invoice type
 			itemsPerPage: 1000, // Items per page in table
@@ -322,10 +322,10 @@ export default {
 			selected_columns: [], // Selected columns for items table
 			temp_selected_columns: [], // Temporary array for column selection
 			available_columns: [], // All available columns
-			show_column_selector: false, // Column selector dialog visibility
-			invoiceHeight: null,
-		};
-	},
+                        show_column_selector: false, // Column selector dialog visibility
+                        invoiceHeight: null,
+                };
+        },
 
 	components: {
 		Customer,
@@ -336,12 +336,52 @@ export default {
 		CancelSaleDialog,
 		ItemsTable,
 	},
-	computed: {
-		...invoiceComputed,
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
-	},
+        computed: {
+                ...invoiceComputed,
+                items: {
+                        get() {
+                                return this.cartStore.items;
+                        },
+                        set(val) {
+                                this.cartStore.items = val;
+                        },
+                },
+                customer: {
+                        get() {
+                                return this.cartStore.customer;
+                        },
+                        set(val) {
+                                this.cartStore.customer = val;
+                        },
+                },
+                discount_amount: {
+                        get() {
+                                return this.cartStore.discountAmount;
+                        },
+                        set(val) {
+                                this.cartStore.discountAmount = val;
+                        },
+                },
+                additional_discount: {
+                        get() {
+                                return this.cartStore.additionalDiscount;
+                        },
+                        set(val) {
+                                this.cartStore.additionalDiscount = val;
+                        },
+                },
+                total_tax: {
+                        get() {
+                                return this.cartStore.taxTotal;
+                        },
+                        set(val) {
+                                this.cartStore.taxTotal = val;
+                        },
+                },
+                isDarkTheme() {
+                        return this.$theme.current === "dark";
+                },
+        },
 
 	methods: {
 		...shortcutMethods,
