@@ -1,4 +1,6 @@
 import { ref, getCurrentInstance } from "vue";
+import { useUserStore } from "../stores/useUserStore.js";
+import { usePosProfileStore } from "../stores/usePosProfileStore.js";
 import {
     initPromise,
     checkDbHealth,
@@ -11,6 +13,8 @@ import {
 export function usePosShift(openDialog) {
     const { proxy } = getCurrentInstance();
     const eventBus = proxy?.eventBus;
+    const userStore = useUserStore();
+    const posProfileStore = usePosProfileStore();
 
     const pos_profile = ref(null);
     const pos_opening_shift = ref(null);
@@ -18,33 +22,22 @@ export function usePosShift(openDialog) {
     async function check_opening_entry() {
         await initPromise;
         await checkDbHealth();
-        return frappe
-            .call("posawesome.posawesome.api.shifts.check_opening_shift", {
-                user: frappe.session.user,
-            })
-            .then((r) => {
-                if (r.message) {
-                    pos_profile.value = r.message.pos_profile;
-                    pos_opening_shift.value = r.message.pos_opening_shift;
+        return posProfileStore
+            .fetchOpeningShift()
+            .then(async (r) => {
+                if (r) {
+                    pos_profile.value = r.pos_profile;
+                    pos_opening_shift.value = r.pos_opening_shift;
                     if (pos_profile.value.taxes_and_charges) {
-                        frappe.call({
-                            method: "frappe.client.get",
-                            args: {
-                                doctype: "Sales Taxes and Charges Template",
-                                name: pos_profile.value.taxes_and_charges,
-                            },
-                            callback: (res) => {
-                                if (res.message) {
-                                    setTaxTemplate(
-                                        pos_profile.value.taxes_and_charges,
-                                        res.message,
-                                    );
-                                }
-                            },
-                        });
+                        const tpl = await posProfileStore.fetchTaxTemplate(
+                            pos_profile.value.taxes_and_charges,
+                        );
+                        if (tpl) {
+                            setTaxTemplate(pos_profile.value.taxes_and_charges, tpl);
+                        }
                     }
-                    eventBus?.emit("register_pos_profile", r.message);
-                    eventBus?.emit("set_company", r.message.company);
+                    eventBus?.emit("register_pos_profile", r);
+                    eventBus?.emit("set_company", r.company);
                     try {
                         frappe.realtime.emit("pos_profile_registered");
                     } catch (e) {
@@ -52,7 +45,7 @@ export function usePosShift(openDialog) {
                     }
                     console.info("LoadPosProfile");
                     try {
-                        setOpeningStorage(r.message);
+                        setOpeningStorage(r);
                     } catch (e) {
                         console.error("Failed to cache opening data", e);
                     }

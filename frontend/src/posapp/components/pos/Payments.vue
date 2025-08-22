@@ -743,24 +743,31 @@
 // Importing format mixin for currency and utility functions
 import format from "../../format";
 import {
-	saveOfflineInvoice,
-	syncOfflineInvoices,
-	getPendingOfflineInvoiceCount,
-	isOffline,
-	getSalesPersonsStorage,
-	setSalesPersonsStorage,
-	updateLocalStock,
+        saveOfflineInvoice,
+        syncOfflineInvoices,
+        getPendingOfflineInvoiceCount,
+        isOffline,
+        getSalesPersonsStorage,
+        setSalesPersonsStorage,
+        updateLocalStock,
 } from "../../../offline/index.js";
 
 import renderOfflineInvoiceHTML from "../../../offline_print_template";
 import { silentPrint } from "../../plugins/print.js";
+import { usePaymentStore } from "../../stores/usePaymentStore.js";
+import { useProductsStore } from "../../stores/useProductsStore.js";
 
 export default {
-	// Using format mixin for shared formatting methods
-	mixins: [format],
-	data() {
-		return {
-			loading: false, // UI loading state
+        // Using format mixin for shared formatting methods
+        mixins: [format],
+        setup() {
+                const paymentStore = usePaymentStore();
+                const products = useProductsStore();
+                return { paymentStore, products };
+        },
+        data() {
+                return {
+                        loading: false, // UI loading state
 			pos_profile: "", // POS profile settings
 			pos_settings: "", // POS settings
 			invoice_doc: "", // Current invoice document
@@ -807,45 +814,9 @@ export default {
 			return this.invoice_doc ? this.invoice_doc.currency : "";
 		},
 		// Calculate total payments (all methods, loyalty, credit)
-		total_payments() {
-			let total = 0;
-			if (this.invoice_doc && this.invoice_doc.payments) {
-				this.invoice_doc.payments.forEach((payment) => {
-					// Payment amount is already in selected currency
-					total += parseFloat(payment.amount) || 0;
-				});
-			}
-
-			// Add loyalty amount (convert if needed)
-			if (this.loyalty_amount) {
-				// Loyalty points are stored in base currency (PKR)
-				if (this.invoice_doc.currency !== this.pos_profile.currency) {
-					// Convert to selected currency (e.g. USD) by dividing
-					total += this.flt(
-						this.loyalty_amount / (this.invoice_doc.conversion_rate || 1),
-						this.currency_precision,
-					);
-				} else {
-					total += parseFloat(this.loyalty_amount) || 0;
-				}
-			}
-
-			// Add redeemed customer credit (convert if needed)
-			if (this.redeemed_customer_credit) {
-				// Customer credit is stored in base currency (PKR)
-				if (this.invoice_doc.currency !== this.pos_profile.currency) {
-					// Convert to selected currency (e.g. USD) by dividing
-					total += this.flt(
-						this.redeemed_customer_credit / (this.invoice_doc.conversion_rate || 1),
-						this.currency_precision,
-					);
-				} else {
-					total += parseFloat(this.redeemed_customer_credit) || 0;
-				}
-			}
-
-			return this.flt(total, this.currency_precision);
-		},
+                total_payments() {
+                        return this.paymentStore.totalPaid;
+                },
 
 		// Calculate difference between invoice total and payments
 		diff_payment() {
@@ -1234,51 +1205,50 @@ export default {
 				frappe.utils.play_sound("error");
 				return;
 			}
-			if (
-				!this.invoice_doc.is_return &&
-				this.redeemed_customer_credit >
-					(this.invoice_doc.rounded_total || this.invoice_doc.grand_total)
-			) {
-				this.eventBus.emit("show_message", {
-					title: `Cannot redeem customer credit more than invoice total`,
-					color: "error",
-				});
-				frappe.utils.play_sound("error");
-				return;
-			}
-			// Validate stock availability before submitting
-			if (!isOffline()) {
-				try {
-					const stockCheck = await frappe.call({
-						method: "posawesome.posawesome.api.invoices.validate_cart_items",
-						args: { items: JSON.stringify(this.invoice_doc.items) },
-					});
-					if (stockCheck.message && stockCheck.message.length) {
-						const msg = stockCheck.message
-							.map(
-								(e) =>
-									`${e.item_code} (${e.warehouse}) - ${this.formatFloat(e.available_qty)}`,
-							)
-							.join("\n");
-						const blocking =
-							!this.stock_settings.allow_negative_stock ||
-							this.pos_profile.posa_block_sale_beyond_available_qty;
-						this.eventBus.emit("show_message", {
-							title: blocking
-								? __("Insufficient stock:\n{0}", [msg])
-								: __("Stock is lower than requested:\n{0}", [msg]),
-							color: blocking ? "error" : "warning",
-						});
-						if (blocking) {
-							frappe.utils.play_sound("error");
-							this.loading = false;
-							return;
-						}
-					}
-				} catch (e) {
-					console.error("Stock validation failed", e);
-				}
-			}
+                        if (
+                                !this.invoice_doc.is_return &&
+                                this.redeemed_customer_credit >
+                                        (this.invoice_doc.rounded_total || this.invoice_doc.grand_total)
+                        ) {
+                                this.eventBus.emit("show_message", {
+                                        title: `Cannot redeem customer credit more than invoice total`,
+                                        color: "error",
+                                });
+                                frappe.utils.play_sound("error");
+                                return;
+                        }
+                        // Validate stock availability before submitting
+                        if (!isOffline()) {
+                                try {
+                                        const stockCheck = await this.products.validateCartItems(
+                                                this.invoice_doc.items,
+                                        );
+                                        if (stockCheck && stockCheck.length) {
+                                                const msg = stockCheck
+                                                        .map(
+                                                                (e) =>
+                                                                        `${e.item_code} (${e.warehouse}) - ${this.formatFloat(e.available_qty)}`,
+                                                        )
+                                                        .join("\n");
+                                                const blocking =
+                                                        !this.stock_settings.allow_negative_stock ||
+                                                        this.pos_profile.posa_block_sale_beyond_available_qty;
+                                                this.eventBus.emit("show_message", {
+                                                        title: blocking
+                                                                ? __("Insufficient stock:\n{0}", [msg])
+                                                                : __("Stock is lower than requested:\n{0}", [msg]),
+                                                        color: blocking ? "error" : "warning",
+                                                });
+                                                if (blocking) {
+                                                        frappe.utils.play_sound("error");
+                                                        this.loading = false;
+                                                        return;
+                                                }
+                                        }
+                                } catch (e) {
+                                        console.error("Stock validation failed", e);
+                                }
+                        }
 
 			// Proceed to submit the invoice
 			this.loading = true;

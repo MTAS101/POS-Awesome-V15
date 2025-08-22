@@ -187,13 +187,12 @@
 					</div>
 
 					<!-- ItemsTable component with reorder event handler -->
-					<ItemsTable
-						ref="itemsTable"
-						:headers="items_headers"
-						:items="items"
-						v-model:expanded="expanded"
-						:itemsPerPage="itemsPerPage"
-						:itemSearch="itemSearch"
+                                        <ItemsTable
+                                                ref="itemsTable"
+                                                :headers="items_headers"
+                                                v-model:expanded="expanded"
+                                                :itemsPerPage="itemsPerPage"
+                                                :itemSearch="itemSearch"
 						:pos_profile="pos_profile"
 						:invoice_doc="invoice_doc"
 						:invoiceType="invoiceType"
@@ -226,30 +225,26 @@
 			</div>
 		</v-card>
 		<!-- Payment Section -->
-		<InvoiceSummary
-			:pos_profile="pos_profile"
-			:total_qty="total_qty"
-			:additional_discount="additional_discount"
-			:additional_discount_percentage="additional_discount_percentage"
-			:total_items_discount_amount="total_items_discount_amount"
-			:subtotal="subtotal"
-			:displayCurrency="displayCurrency"
-			:formatFloat="formatFloat"
-			:formatCurrency="formatCurrency"
-			:currencySymbol="currencySymbol"
-			:discount_percentage_offer_name="discount_percentage_offer_name"
-			:isNumber="isNumber"
-			@update:additional_discount="(val) => (additional_discount = val)"
-			@update:additional_discount_percentage="(val) => (additional_discount_percentage = val)"
-			@update_discount_umount="update_discount_umount"
-			@save-and-clear="save_and_clear_invoice"
-			@load-drafts="get_draft_invoices"
-			@select-order="get_draft_orders"
-			@cancel-sale="cancel_dialog = true"
-			@open-returns="open_returns"
-			@print-draft="print_draft_invoice"
-			@show-payment="show_payment"
-		/>
+                <InvoiceSummary
+                        :pos_profile="pos_profile"
+                        :additional_discount_percentage="additional_discount_percentage"
+                        :displayCurrency="displayCurrency"
+                        :formatFloat="formatFloat"
+                        :formatCurrency="formatCurrency"
+                        :currencySymbol="currencySymbol"
+                        :discount_percentage_offer_name="discount_percentage_offer_name"
+                        :isNumber="isNumber"
+                        @update:additional_discount="(val) => (additional_discount = val)"
+                        @update:additional_discount_percentage="(val) => (additional_discount_percentage = val)"
+                        @update_discount_umount="update_discount_umount"
+                        @save-and-clear="save_and_clear_invoice"
+                        @load-drafts="get_draft_invoices"
+                        @select-order="get_draft_orders"
+                        @cancel-sale="cancel_dialog = true"
+                        @open-returns="open_returns"
+                        @print-draft="print_draft_invoice"
+                        @show-payment="show_payment"
+                />
 	</div>
 </template>
 
@@ -263,6 +258,8 @@ import MultiCurrencyRow from "./MultiCurrencyRow.vue";
 import CancelSaleDialog from "./CancelSaleDialog.vue";
 import InvoiceSummary from "./InvoiceSummary.vue";
 import ItemsTable from "./ItemsTable.vue";
+import { useCartStore } from "../../stores/useCartStore.js";
+import { useProductsStore } from "../../stores/useProductsStore.js";
 import invoiceItemMethods from "./invoiceItemMethods";
 import invoiceComputed from "./invoiceComputed";
 import invoiceWatchers from "./invoiceWatchers";
@@ -272,8 +269,13 @@ import shortcutMethods from "./invoiceShortcuts";
 export default {
 	name: "POSInvoice",
 	mixins: [format],
-	data() {
-		return {
+        setup() {
+                const cart = useCartStore();
+                const products = useProductsStore();
+                return { cart, products };
+        },
+        data() {
+                return {
 			// POS profile settings
 			pos_profile: "",
 			pos_opening_shift: "",
@@ -282,15 +284,14 @@ export default {
 			return_doc: "",
 			customer: "",
 			customer_info: "",
-			customer_balance: 0,
-			discount_amount: 0,
-			additional_discount: 0,
-			additional_discount_percentage: 0,
-			total_tax: 0,
-			items: [], // List of invoice items
-			posOffers: [], // All available offers
-			posa_offers: [], // Offers applied to this invoice
-			posa_coupons: [], // Coupons applied
+                        customer_balance: 0,
+                        discount_amount: 0,
+                        additional_discount_percentage: 0,
+                        total_tax: 0,
+                        // items handled by cart store
+                        posOffers: [], // All available offers
+                        posa_offers: [], // Offers applied to this invoice
+                        posa_coupons: [], // Coupons applied
 			allItems: [], // All items for offer logic
 			discount_percentage_offer_name: null, // Track which offer is applied
 			invoiceTypes: ["Invoice", "Order"], // Types of invoices
@@ -302,10 +303,9 @@ export default {
 			float_precision: 6, // Float precision for calculations
 			currency_precision: 6, // Currency precision for display
 			new_line: false, // Add new line for item
-			available_stock_cache: {},
-			delivery_charges: [], // List of delivery charges
-			delivery_charges_rate: 0, // Selected delivery charge rate
-			selected_delivery_charge: "", // Selected delivery charge object
+                        available_stock_cache: {},
+                        delivery_charges: [], // List of delivery charges
+                        selected_delivery_charge: "", // Selected delivery charge object
 			invoice_posting_date: false, // Posting date dialog
 			posting_date: frappe.datetime.nowdate(), // Invoice posting date
 			posting_date_display: "", // Display value for date picker
@@ -336,12 +336,36 @@ export default {
 		CancelSaleDialog,
 		ItemsTable,
 	},
-	computed: {
-		...invoiceComputed,
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
-	},
+        computed: {
+                ...invoiceComputed,
+                isDarkTheme() {
+                        return this.$theme.current === "dark";
+                },
+                items: {
+                        get() {
+                                return this.cart.items;
+                        },
+                        set(val) {
+                                this.cart.items = val;
+                        },
+                },
+                additional_discount: {
+                        get() {
+                                return this.cart.additionalDiscount;
+                        },
+                        set(val) {
+                                this.cart.additionalDiscount = val;
+                        },
+                },
+                delivery_charges_rate: {
+                        get() {
+                                return this.cart.deliveryCharges;
+                        },
+                        set(val) {
+                                this.cart.deliveryCharges = val;
+                        },
+                },
+        },
 
 	methods: {
 		...shortcutMethods,
@@ -682,18 +706,17 @@ export default {
 				this.selected_price_list = this.pos_profile.selling_price_list;
 			}
 
-			// Fetch and store currency for the applied price list
-			try {
-				const r = await frappe.call({
-					method: "posawesome.posawesome.api.invoices.get_price_list_currency",
-					args: { price_list: this.selected_price_list },
-				});
-				if (r && r.message) {
-					this.price_list_currency = r.message;
-				}
-			} catch (error) {
-				console.error("Failed fetching price list currency", error);
-			}
+                        // Fetch and store currency for the applied price list
+                        try {
+                                const cur = await this.products.fetchPriceListCurrency(
+                                        this.selected_price_list,
+                                );
+                                if (cur) {
+                                        this.price_list_currency = cur;
+                                }
+                        } catch (error) {
+                                console.error("Failed fetching price list currency", error);
+                        }
 
 			return this.price_lists;
 		},
@@ -1216,12 +1239,18 @@ export default {
 		this.eventBus.off("reset_posting_date");
 	},
 	// Register global keyboard shortcuts when component is created
-	created() {
-		document.addEventListener("keydown", this.shortOpenPayment.bind(this));
-		document.addEventListener("keydown", this.shortDeleteFirstItem.bind(this));
-		document.addEventListener("keydown", this.shortOpenFirstItem.bind(this));
-		document.addEventListener("keydown", this.shortSelectDiscount.bind(this));
-	},
+       created() {
+                document.addEventListener("keydown", this.shortOpenPayment.bind(this));
+                document.addEventListener("keydown", this.shortDeleteFirstItem.bind(this));
+                document.addEventListener("keydown", this.shortOpenFirstItem.bind(this));
+                document.addEventListener("keydown", this.shortSelectDiscount.bind(this));
+                this.items = this.cart.items;
+                this.cart.additionalDiscount = this.additional_discount;
+                this.$watch(
+                        () => this.cart.additionalDiscount,
+                        (val) => (this.additional_discount = val),
+                );
+       },
 	// Remove global keyboard shortcuts when component is unmounted
 	unmounted() {
 		document.removeEventListener("keydown", this.shortOpenPayment);

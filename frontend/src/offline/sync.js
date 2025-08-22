@@ -2,6 +2,8 @@
 import { memory, resetOfflineState, setLastSyncTotals, MAX_QUEUE_ITEMS, reduceCacheUsage } from "./cache.js";
 import { persist } from "./core.js";
 import { updateLocalStock } from "./stock.js";
+import { useSyncStore } from "../posapp/stores/useSyncStore.js";
+const syncStore = typeof window !== "undefined" ? useSyncStore() : null;
 
 // Flag to avoid concurrent invoice syncs which can cause duplicate submissions
 let invoiceSyncInProgress = false;
@@ -26,7 +28,8 @@ export function saveOfflineInvoice(entry) {
 		throw e;
 	}
 
-	entries.push(cleanEntry);
+        entries.push(cleanEntry);
+        syncStore && syncStore.enqueue('invoice', cleanEntry);
 	if (entries.length > MAX_QUEUE_ITEMS) {
 		entries.splice(0, entries.length - MAX_QUEUE_ITEMS);
 	}
@@ -71,8 +74,9 @@ export function getOfflineInvoices() {
 }
 
 export function clearOfflineInvoices() {
-	memory.offline_invoices = [];
-	persist("offline_invoices", memory.offline_invoices);
+        memory.offline_invoices = [];
+        persist("offline_invoices", memory.offline_invoices);
+        syncStore && syncStore.clearQueue('invoice');
 }
 
 export function deleteOfflineInvoice(index) {

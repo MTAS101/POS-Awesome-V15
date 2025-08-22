@@ -1,4 +1,5 @@
 import { clearPriceListCache } from "../../../offline/index.js";
+import { useProductsStore } from "../../stores/useProductsStore.js";
 
 export default {
 	// Watch for customer change and update related data
@@ -68,31 +69,25 @@ export default {
 		this.posting_date = this.formatDateForBackend(newVal);
 	},
 
-	selected_price_list(newVal) {
-		// Clear cached price list items to avoid mixing rates
-		clearPriceListCache();
+        selected_price_list(newVal) {
+                // Clear cached price list items to avoid mixing rates
+                clearPriceListCache();
 
-		const price_list = newVal === this.pos_profile.selling_price_list ? null : newVal;
-		this.eventBus.emit("update_customer_price_list", price_list);
-		const applied = newVal || this.pos_profile.selling_price_list;
-		this.apply_cached_price_list(applied);
+                const price_list = newVal === this.pos_profile.selling_price_list ? null : newVal;
+                this.eventBus.emit("update_customer_price_list", price_list);
+                const applied = newVal || this.pos_profile.selling_price_list;
+                this.apply_cached_price_list(applied);
 
-		// If multi-currency is enabled, sync currency with the price list currency
-		if (this.pos_profile.posa_allow_multi_currency && applied) {
-			frappe.call({
-				method: "posawesome.posawesome.api.invoices.get_price_list_currency",
-				args: { price_list: applied },
-				callback: (r) => {
-					if (r.message) {
-						// Store price list currency for later use
-						this.price_list_currency = r.message;
-						// Sync invoice currency with price list currency
-						this.update_currency(r.message);
-					}
-				},
-			});
-		}
-	},
+                if (this.pos_profile.posa_allow_multi_currency && applied) {
+                        const products = useProductsStore();
+                        products.fetchPriceListCurrency(applied).then((currency) => {
+                                if (currency) {
+                                        this.price_list_currency = currency;
+                                        this.update_currency(currency);
+                                }
+                        });
+                }
+        },
 
 	// Reactively update item prices when currency changes
 	selected_currency() {

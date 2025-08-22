@@ -403,17 +403,23 @@ import {
 } from "../../../offline/index.js";
 import { silentPrint } from "../../plugins/print.js";
 import { useRtl } from "../../composables/useRtl.js";
+import { usePaymentStore } from "../../stores/usePaymentStore.js";
+import { useSyncStore } from "../../stores/useSyncStore.js";
 
 export default {
 	mixins: [format],
-	setup() {
-		const { isRtl, rtlStyles, rtlClasses } = useRtl();
-		return {
-			isRtl,
-			rtlStyles,
-			rtlClasses
-		};
-	},
+        setup() {
+                const { isRtl, rtlStyles, rtlClasses } = useRtl();
+                const paymentStore = usePaymentStore();
+                const syncStore = useSyncStore();
+                return {
+                        isRtl,
+                        rtlStyles,
+                        rtlClasses,
+                        paymentStore,
+                        syncStore,
+                };
+        },
 	data: function () {
 		return {
 			dialog: false,
@@ -1113,9 +1119,9 @@ export default {
 			}
 		},
 
-		async syncPendingPayments() {
-			const pending = getPendingOfflinePaymentCount();
-			if (pending) {
+                async syncPendingPayments() {
+                        const pending = getPendingOfflinePaymentCount();
+                        if (pending) {
 				this.eventBus.emit("show_message", {
 					title: `${pending} payment${pending > 1 ? "s" : ""} pending for sync`,
 					color: "warning",
@@ -1124,7 +1130,9 @@ export default {
 			if (isOffline()) {
 				return;
 			}
-			const result = await syncOfflinePayments();
+                        const result = await syncOfflinePayments();
+                        await this.paymentStore.syncPending();
+                        await this.syncStore.syncAll();
 			if (result && result.synced) {
 				this.eventBus.emit("show_message", {
 					title: `${result.synced} offline payment${result.synced > 1 ? "s" : ""} synced`,

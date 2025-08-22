@@ -8,13 +8,13 @@
 			<v-col cols="12" md="7">
 				<v-row dense>
 					<!-- Total Qty -->
-					<v-col cols="6">
-						<v-text-field
-							:model-value="formatFloat(total_qty, hide_qty_decimals ? 0 : undefined)"
-							:label="frappe._('Total Qty')"
-							prepend-inner-icon="mdi-format-list-numbered"
-							variant="solo"
-							density="compact"
+                                        <v-col cols="6">
+                                                <v-text-field
+                                                        :model-value="formatFloat(cart.totalQty, hide_qty_decimals ? 0 : undefined)"
+                                                        :label="frappe._('Total Qty')"
+                                                        prepend-inner-icon="mdi-format-list-numbered"
+                                                        variant="solo"
+                                                        density="compact"
 							readonly
 							color="accent"
 						/>
@@ -22,9 +22,9 @@
 					<!-- Additional Discount (Amount or Percentage) -->
 					<v-col cols="6" v-if="!pos_profile.posa_use_percentage_discount">
 						<v-text-field
-							:model-value="additional_discount"
-							@update:model-value="handleAdditionalDiscountUpdate"
-							:label="frappe._('Additional Discount')"
+                                                        :model-value="cart.additionalDiscount"
+                                                        @update:model-value="handleAdditionalDiscountUpdate"
+                                                        :label="frappe._('Additional Discount')"
 							prepend-inner-icon="mdi-cash-minus"
 							variant="solo"
 							density="compact"
@@ -61,8 +61,8 @@
 					<!-- Items Discount -->
 					<v-col cols="6">
 						<v-text-field
-							:model-value="formatCurrency(total_items_discount_amount)"
-							:prefix="currencySymbol(displayCurrency)"
+                                                        :model-value="formatCurrency(cart.totalItemsDiscountAmount)"
+                                                        :prefix="currencySymbol(displayCurrency)"
 							:label="frappe._('Items Discounts')"
 							prepend-inner-icon="mdi-tag-minus"
 							variant="solo"
@@ -76,8 +76,8 @@
 					<!-- Total (moved to maintain row alignment) -->
 					<v-col cols="6">
 						<v-text-field
-							:model-value="formatCurrency(subtotal)"
-							:prefix="currencySymbol(displayCurrency)"
+                                                        :model-value="formatCurrency(cart.subtotal)"
+                                                        :prefix="currencySymbol(displayCurrency)"
 							:label="frappe._('Total')"
 							prepend-inner-icon="mdi-cash"
 							variant="solo"
@@ -192,21 +192,22 @@
 </template>
 
 <script>
+import { useCartStore } from "../../stores/useCartStore.js";
 export default {
-	props: {
-		pos_profile: Object,
-		total_qty: [Number, String],
-		additional_discount: Number,
-		additional_discount_percentage: Number,
-		total_items_discount_amount: Number,
-		subtotal: Number,
-		displayCurrency: String,
-		formatFloat: Function,
-		formatCurrency: Function,
-		currencySymbol: Function,
-		discount_percentage_offer_name: [String, Number],
-		isNumber: Function,
-	},
+        props: {
+                pos_profile: Object,
+                additional_discount_percentage: Number,
+                displayCurrency: String,
+                formatFloat: Function,
+                formatCurrency: Function,
+                currencySymbol: Function,
+                discount_percentage_offer_name: [String, Number],
+                isNumber: Function,
+        },
+        setup() {
+                const cart = useCartStore();
+                return { cart };
+        },
 	data() {
 		return {
 			// Loading states for better UX
@@ -249,10 +250,11 @@ export default {
 		},
 	},
 	methods: {
-		// Debounced handlers for better performance
-		handleAdditionalDiscountUpdate(value) {
-			this.$emit("update:additional_discount", value);
-		},
+                // Debounced handlers for better performance
+                handleAdditionalDiscountUpdate(value) {
+                        this.cart.additionalDiscount = Number(value) || 0;
+                        this.$emit("update:additional_discount", value);
+                },
 
 		handleAdditionalDiscountPercentageUpdate(value) {
 			this.$emit("update:additional_discount_percentage", value);

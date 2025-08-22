@@ -124,17 +124,20 @@ import { forceClearAllCache } from "../../offline/cache.js";
 import { clearAllCaches } from "../../utils/clearAllCaches.js";
 import { isOffline } from "../../offline/index.js";
 import { useRtl } from "../composables/useRtl.js";
+import { useUiStore } from "../stores/useUiStore.js";
 
 export default {
 	name: "NavBar",
-	setup() {
-		const { isRtl, rtlStyles, rtlClasses } = useRtl();
-		return {
-			isRtl,
-			rtlStyles,
-			rtlClasses
-		};
-	},
+        setup() {
+                const { isRtl, rtlStyles, rtlClasses } = useRtl();
+                const uiStore = useUiStore();
+                return {
+                        isRtl,
+                        rtlStyles,
+                        rtlClasses,
+                        uiStore,
+                };
+        },
 	components: {
 		NavbarAppBar,
 		NavbarDrawer,
@@ -194,8 +197,8 @@ export default {
 	},
 	data() {
 		return {
-			drawer: false,
-			mini: true,
+                        // drawer state now managed via uiStore
+                        mini: true,
 			item: 0,
 			items: [
 				{ text: "POS", icon: "mdi-network-pos" },
@@ -214,10 +217,18 @@ export default {
 			snackTimeout: 3000,
 		};
 	},
-	computed: {
-		appBarColor() {
-			return this.isDark ? this.$vuetify.theme.themes.dark.colors.surface : "white";
-		},
+        computed: {
+                drawer: {
+                        get() {
+                                return this.uiStore.drawer;
+                        },
+                        set(val) {
+                                this.uiStore.setDrawer(val);
+                        },
+                },
+                appBarColor() {
+                        return this.isDark ? this.$vuetify.theme.themes.dark.colors.surface : "white";
+                },
 	},
 	mounted() {
 		this.initializeNavbar();

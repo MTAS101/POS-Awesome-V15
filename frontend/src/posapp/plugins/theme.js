@@ -1,8 +1,10 @@
 import { ref } from "vue";
+import { useUiStore } from "../stores/useUiStore.js";
 
 export default {
 	install(app, { vuetify }) {
-		const root = document.documentElement;
+                const root = document.documentElement;
+                const uiStore = useUiStore();
 
 		const getEffectiveTheme = () => {
 			const mode = root.getAttribute("data-theme-mode") || "light";
@@ -12,12 +14,14 @@ export default {
 			return mode;
 		};
 
-		const current = ref(getEffectiveTheme());
-		vuetify.theme.global.name.value = current.value;
+                const current = ref(uiStore.theme || getEffectiveTheme());
+                vuetify.theme.global.name.value = current.value;
+                uiStore.theme = current.value;
 
 		const observer = new MutationObserver(() => {
-			current.value = getEffectiveTheme();
-			vuetify.theme.global.name.value = current.value;
+                        current.value = getEffectiveTheme();
+                        vuetify.theme.global.name.value = current.value;
+                        uiStore.theme = current.value;
 		});
 		observer.observe(root, { attributes: true, attributeFilter: ["data-theme-mode", "data-theme"] });
 
@@ -31,15 +35,16 @@ export default {
 				root.setAttribute("data-theme", newMode);
 			}
 
-			if (window.frappe?.xcall) {
-				window.frappe
-					.xcall("frappe.core.doctype.user.user.switch_theme", {
-						theme: newMode.charAt(0).toUpperCase() + newMode.slice(1),
-					})
-					.catch(() => {
-						/* ignore */
-					});
-			}
+                        uiStore.toggleTheme();
+                        if (window.frappe?.xcall) {
+                                window.frappe
+                                        .xcall("frappe.core.doctype.user.user.switch_theme", {
+                                                theme: newMode.charAt(0).toUpperCase() + newMode.slice(1),
+                                        })
+                                        .catch(() => {
+                                                /* ignore */
+                                        });
+                        }
 		};
 
 		app.config.globalProperties.$theme = {

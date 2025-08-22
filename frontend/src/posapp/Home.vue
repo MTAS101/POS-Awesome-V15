@@ -78,23 +78,30 @@ import {
 	checkWebSocketConnectivity,
 } from "./composables/useNetwork.js";
 import { useRtl } from "./composables/useRtl.js";
+import { useUiStore } from "./stores/useUiStore.js";
+import { useSyncStore } from "./stores/useSyncStore.js";
+import { usePosProfileStore } from "./stores/usePosProfileStore.js";
 
 export default {
-	setup() {
-		const { isRtl, rtlStyles, rtlClasses } = useRtl();
-		return {
-			isRtl,
-			rtlStyles,
-			rtlClasses,
-		};
-	},
-	data: function () {
-		return {
-			page: "POS",
-			// POS Profile data
-			posProfile: {},
-			pendingInvoices: 0,
-			lastInvoiceId: "",
+        setup() {
+                const { isRtl, rtlStyles, rtlClasses } = useRtl();
+                const uiStore = useUiStore();
+                const syncStore = useSyncStore();
+                const posProfileStore = usePosProfileStore();
+                return {
+                        isRtl,
+                        rtlStyles,
+                        rtlClasses,
+                        uiStore,
+                        syncStore,
+                        posProfileStore,
+                };
+        },
+        data: function () {
+                return {
+                        page: "POS",
+                        pendingInvoices: 0,
+                        lastInvoiceId: "",
 
 			// Network status
 			networkOnline: navigator.onLine || false,
@@ -116,10 +123,13 @@ export default {
 			// Loading progress handled via utility
 		};
 	},
-	computed: {
-		isDark() {
-			return this.$theme?.current === "dark";
-		},
+        computed: {
+                posProfile() {
+                        return this.posProfileStore.profile;
+                },
+                isDark() {
+                        return this.uiStore.isDark;
+                },
 		loadingProgress() {
 			return loadingState.progress;
 		},
@@ -131,19 +141,21 @@ export default {
 		},
 	},
 	watch: {
-		networkOnline(newVal, oldVal) {
-			if (newVal && !oldVal) {
-				this.refreshTaxInclusiveSetting();
-				this.eventBus.emit("network-online");
-				this.handleSyncInvoices();
-			}
-		},
-		serverOnline(newVal, oldVal) {
-			if (newVal && !oldVal) {
-				this.eventBus.emit("server-online");
-				this.handleSyncInvoices();
-			}
-		},
+                networkOnline(newVal, oldVal) {
+                        this.uiStore.updateNetwork({ network: newVal });
+                        if (newVal && !oldVal) {
+                                this.refreshTaxInclusiveSetting();
+                                this.eventBus.emit("network-online");
+                                this.handleSyncInvoices();
+                        }
+                },
+                serverOnline(newVal, oldVal) {
+                        this.uiStore.updateNetwork({ server: newVal });
+                        if (newVal && !oldVal) {
+                                this.eventBus.emit("server-online");
+                                this.handleSyncInvoices();
+                        }
+                },
 	},
 	components: {
 		Navbar,
@@ -179,13 +191,19 @@ export default {
 			this.cacheReady = true;
 			checkDbHealth().catch(() => {});
 			// Load POS profile from cache or storage
-			const openingData = getOpeningStorage();
-			if (openingData && openingData.pos_profile) {
-				this.posProfile = openingData.pos_profile;
-				if (navigator.onLine) {
-					await this.refreshTaxInclusiveSetting();
-				}
-			}
+                        const openingData = getOpeningStorage();
+                        if (openingData && openingData.pos_profile) {
+                                this.posProfileStore.setProfile(openingData.pos_profile);
+                                if (openingData.company) {
+                                        this.posProfileStore.company = openingData.company;
+                                }
+                                if (openingData.pos_opening_shift) {
+                                        this.posProfileStore.posOpeningShift = openingData.pos_opening_shift;
+                                }
+                                if (navigator.onLine) {
+                                        await this.refreshTaxInclusiveSetting();
+                                }
+                        }
 
 			if (queueHealthCheck()) {
 				alert("Offline queue is too large. Old entries will be purged.");
@@ -229,12 +247,18 @@ export default {
 		setupEventListeners() {
 			// Listen for POS profile registration
 			if (this.eventBus) {
-				this.eventBus.on("register_pos_profile", (data) => {
-					this.posProfile = data.pos_profile || {};
-					if (navigator.onLine) {
-						this.refreshTaxInclusiveSetting();
-					}
-				});
+                                this.eventBus.on("register_pos_profile", (data) => {
+                                        this.posProfileStore.setProfile(data.pos_profile || {});
+                                        if (data.company) {
+                                                this.posProfileStore.company = data.company;
+                                        }
+                                        if (data.pos_opening_shift) {
+                                                this.posProfileStore.posOpeningShift = data.pos_opening_shift;
+                                        }
+                                        if (navigator.onLine) {
+                                                this.refreshTaxInclusiveSetting();
+                                        }
+                                });
 
 				// Track last submitted invoice id
 				this.eventBus.on("set_last_invoice", (invoiceId) => {
@@ -356,8 +380,8 @@ export default {
 			}
 		},
 
-		async handleSyncInvoices() {
-			const pending = getPendingOfflineInvoiceCount();
+                async handleSyncInvoices() {
+                        const pending = getPendingOfflineInvoiceCount();
 			if (pending) {
 				this.eventBus.emit("show_message", {
 					title: `${pending} invoice${pending > 1 ? "s" : ""} pending for sync`,
@@ -367,7 +391,8 @@ export default {
 			if (isOffline()) {
 				return;
 			}
-			const result = await syncOfflineInvoices();
+                        const result = await syncOfflineInvoices();
+                        await this.syncStore.syncAll();
 			if (result && (result.synced || result.drafted)) {
 				if (result.synced) {
 					this.eventBus.emit("show_message", {

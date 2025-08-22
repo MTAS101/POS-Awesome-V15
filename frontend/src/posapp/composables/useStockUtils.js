@@ -1,9 +1,11 @@
 import { ref } from "vue";
 import { isOffline } from "../../offline/index.js";
+import { useProductsStore } from "../stores/useProductsStore.js";
 
 export function useStockUtils() {
-	// Calculate UOM conversion and update item rates
-	const calcUom = async (item, value, context) => {
+        const productsStore = useProductsStore();
+        // Calculate UOM conversion and update item rates
+        const calcUom = async (item, value, context) => {
 		let new_uom = item.item_uoms.find((element) => element.uom == value);
 
 		// try cached uoms when not found on item
@@ -42,8 +44,11 @@ export function useStockUtils() {
 		// Try to fetch rate for this UOM from price list
                 const priceList = context.get_price_list ? context.get_price_list() : null;
                 let uomRate = null;
-                if (priceList && context.getCachedPriceListItems) {
-                        const cached = context.getCachedPriceListItems(priceList) || [];
+                if (priceList) {
+                        const cached =
+                                (context.getCachedPriceListItems &&
+                                        context.getCachedPriceListItems(priceList)) ||
+                                productsStore.items;
                         const match = cached.find((p) => p.item_code === item.item_code && p.uom === new_uom.uom);
                         if (match) {
                                 uomRate = match.price_list_rate || match.rate;

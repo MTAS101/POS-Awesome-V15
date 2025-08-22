@@ -662,14 +662,14 @@
 
 <script>
 import _ from "lodash";
+import { useCartStore } from "../../stores/useCartStore.js";
 export default {
-	name: "ItemsTable",
-	props: {
-		headers: Array,
-		items: Array,
-		expanded: Array,
-		itemsPerPage: Number,
-		itemSearch: String,
+        name: "ItemsTable",
+        props: {
+                headers: Array,
+                expanded: Array,
+                itemsPerPage: Number,
+                itemSearch: String,
 		pos_profile: Object,
 		invoice_doc: Object,
 		invoiceType: String,
@@ -694,22 +694,29 @@ export default {
 		changePriceListRate: Function,
 		isNegative: Function,
 	},
-	data() {
-		return {
-			draggedItem: null,
-			draggedIndex: null,
-			dragOverIndex: null,
-			isDragging: false,
-			pendingAdd: null,
-			editNameDialog: false,
-			editNameTarget: null,
-			editedName: "",
-		};
-	},
-	computed: {
-		headerProps() {
-			return this.isDarkTheme ? { style: "background-color:#121212;color:#fff" } : {};
-		},
+        setup() {
+                const cart = useCartStore();
+                return { cart };
+        },
+        data() {
+                return {
+                        draggedItem: null,
+                        draggedIndex: null,
+                        dragOverIndex: null,
+                        isDragging: false,
+                        pendingAdd: null,
+                        editNameDialog: false,
+                        editNameTarget: null,
+                        editedName: "",
+                };
+        },
+        computed: {
+                items() {
+                        return this.cart.items;
+                },
+                headerProps() {
+                        return this.isDarkTheme ? { style: "background-color:#121212;color:#fff" } : {};
+                },
 		isDarkTheme() {
 			return this.$theme.current === "dark";
 		},
@@ -761,23 +768,9 @@ export default {
 				console.error("Error parsing drag data:", error);
 			}
 		},
-		addItem(newItem) {
-			// Find a matching item (by item_code, uom, and rate)
-			const match = this.items.find(
-				(item) =>
-					item.item_code === newItem.item_code &&
-					item.uom === newItem.uom &&
-					item.rate === newItem.rate,
-			);
-			if (match) {
-				// If found, increment quantity
-				match.qty += newItem.qty || 1;
-				match.amount = match.qty * match.rate;
-				this.$forceUpdate();
-			} else {
-				this.items.push({ ...newItem });
-			}
-		},
+                addItem(newItem) {
+                        this.cart.addItem({ ...newItem });
+                },
 		addItemDebounced: _.debounce(function (item) {
 			this.addItem(item);
 		}, 50),

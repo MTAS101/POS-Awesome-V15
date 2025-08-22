@@ -1,58 +1,29 @@
 export default {
 	// Calculate total quantity of all items
-	total_qty() {
-		this.close_payments();
-		let qty = 0;
-		this.items.forEach((item) => {
-			qty += flt(item.qty);
-		});
-		return this.flt(qty, this.float_precision);
-	},
+        total_qty() {
+                this.close_payments();
+                return this.flt(this.cart.totalQty, this.float_precision);
+        },
 	// Calculate total amount for all items (handles returns)
-	Total() {
-		let sum = 0;
-		this.items.forEach((item) => {
-			// For returns, use absolute value for correct calculation
-			const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
-			const rate = flt(item.rate);
-			sum += qty * rate;
-		});
-		return this.flt(sum, this.currency_precision);
-	},
+        Total() {
+                let sum = 0;
+                this.cart.items.forEach((item) => {
+                        const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
+                        const rate = flt(item.rate);
+                        sum += qty * rate;
+                });
+                return this.flt(sum, this.currency_precision);
+        },
 	// Calculate subtotal after discounts and delivery charges
-	subtotal() {
-		this.close_payments();
-		let sum = 0;
-		this.items.forEach((item) => {
-			// For returns, use absolute value for correct calculation
-			const qty = this.isReturnInvoice ? Math.abs(flt(item.qty)) : flt(item.qty);
-			const rate = flt(item.rate);
-			sum += qty * rate;
-		});
-
-		// Subtract additional discount
-		const additional_discount = this.flt(this.additional_discount);
-		sum -= additional_discount;
-
-		// Add delivery charges
-		const delivery_charges = this.flt(this.delivery_charges_rate);
-		sum += delivery_charges;
-
-		return this.flt(sum, this.currency_precision);
-	},
+        subtotal() {
+                this.close_payments();
+                return this.flt(this.cart.subtotal, this.currency_precision);
+        },
 	// Calculate total discount amount for all items
-	total_items_discount_amount() {
-		let sum = 0;
-		this.items.forEach((item) => {
-			// For returns, use absolute value for correct calculation
-			if (this.isReturnInvoice) {
-				sum += Math.abs(flt(item.qty)) * flt(item.discount_amount);
-			} else {
-				sum += flt(item.qty) * flt(item.discount_amount);
-			}
-		});
-		return this.flt(sum, this.float_precision);
-	},
+        total_items_discount_amount() {
+                const sum = this.cart.totalItemsDiscountAmount;
+                return this.flt(sum, this.float_precision);
+        },
 	// Format posting_date for display as DD-MM-YYYY
 	formatted_posting_date: {
 		get() {

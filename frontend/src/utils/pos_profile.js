@@ -4,6 +4,8 @@ import {
         setPrintTemplate,
         setTermsAndConditions,
 } from "../offline/index.js";
+import { usePosProfileStore } from "../posapp/stores/usePosProfileStore.js";
+const posProfileStore = typeof window !== "undefined" ? usePosProfileStore() : null;
 
 async function cachePrintTemplateAndTerms(profile) {
         if (!profile || typeof frappe === "undefined" || !navigator.onLine) return;
@@ -59,6 +61,7 @@ export async function ensurePosProfile() {
                 });
                 if (res.message) {
                         frappe.boot.pos_profile = res.message;
+                        posProfileStore && posProfileStore.setProfile(res.message);
                         await cachePrintTemplateAndTerms(res.message);
                         return res.message;
                 }
@@ -67,9 +70,11 @@ export async function ensurePosProfile() {
         }
         const cached = getOpeningStorage();
         if (cached && cached.pos_profile) {
+                posProfileStore && posProfileStore.setProfile(cached.pos_profile);
                 await cachePrintTemplateAndTerms(cached.pos_profile);
                 return cached.pos_profile;
         }
         await cachePrintTemplateAndTerms(bootProfile);
+        posProfileStore && posProfileStore.setProfile(bootProfile);
         return bootProfile || null;
 }

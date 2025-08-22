@@ -1,5 +1,7 @@
 import { memory } from "./cache.js";
 import { persist, db, checkDbHealth } from "./core.js";
+import { useProductsStore } from "../posapp/stores/useProductsStore.js";
+const productsStore = typeof window !== "undefined" ? useProductsStore() : null;
 
 export function saveItemUOMs(itemCode, uoms) {
 	try {
@@ -13,9 +15,10 @@ export function saveItemUOMs(itemCode, uoms) {
 			console.error("Failed to serialize UOMs", err);
 			cleanUoms = [];
 		}
-		cache[itemCode] = cleanUoms;
-		memory.uom_cache = cache;
-		persist("uom_cache", memory.uom_cache);
+                cache[itemCode] = cleanUoms;
+                memory.uom_cache = cache;
+                persist("uom_cache", memory.uom_cache);
+                productsStore && (productsStore.itemDetailCache[itemCode] = cleanUoms);
 	} catch (e) {
 		console.error("Failed to cache UOMs", e);
 	}

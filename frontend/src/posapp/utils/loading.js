@@ -1,4 +1,7 @@
 import { reactive } from 'vue';
+import { useUiStore } from '../stores/useUiStore.js';
+
+const uiStore = typeof window !== 'undefined' ? useUiStore() : null;
 
 // Loading state variables
 let sourceCount = 0;
@@ -36,6 +39,7 @@ export function initLoadingSources(list) {
 
   loadingState.progress = 0;
   loadingState.active = true;
+  uiStore && (uiStore.loading = true);
 
   // Start the fallback timeout
   startLoadingTimeout();
@@ -114,6 +118,7 @@ function completeLoading() {
     // Hide after showing ready message
     setTimeout(() => {
       loadingState.active = false;
+      uiStore && (uiStore.loading = false);
       loadingState.message = __('Loading app data...');
       // Reset for next use
       sourceCount = 0;

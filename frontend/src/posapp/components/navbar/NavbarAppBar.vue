@@ -79,16 +79,19 @@
 <script>
 import { useRtl } from "../../composables/useRtl.js";
 import posLogo from "../pos/pos.png";
+import { useUserStore } from "../../stores/useUserStore.js";
 
 export default {
 	name: "NavbarAppBar",
         setup() {
                 const { isRtl, rtlStyles, rtlClasses } = useRtl();
+                const userStore = useUserStore();
                 return {
                         isRtl,
                         rtlStyles,
                         rtlClasses,
                         posLogo,
+                        userStore,
                 };
         },
 	props: {
@@ -126,16 +129,17 @@ export default {
 			}
 
 			// Fallback to Frappe user
-			if (frappe.session && frappe.session.user_fullname) {
-				return frappe.session.user_fullname;
-			}
-
-			if (frappe.session && frappe.session.user) {
-				return frappe.session.user;
-			}
-
-			return "User";
-		},
+                        if (this.userStore.user) {
+                                return this.userStore.user.full_name || this.userStore.user.name;
+                        }
+                        if (frappe.session && frappe.session.user_fullname) {
+                                return frappe.session.user_fullname;
+                        }
+                        if (frappe.session && frappe.session.user) {
+                                return frappe.session.user;
+                        }
+                        return "User";
+                },
 	},
 
 	emits: ["nav-click", "go-desk", "show-offline-invoices"],

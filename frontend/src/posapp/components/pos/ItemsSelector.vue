@@ -458,14 +458,16 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import placeholderImage from "./placeholder-image.png";
+import { useProductsStore } from "../../stores/useProductsStore.js";
 
 export default {
 	mixins: [format],
-	setup() {
-		const responsive = useResponsive();
-		const rtl = useRtl();
-		return { ...responsive, ...rtl };
-	},
+        setup() {
+                const responsive = useResponsive();
+                const rtl = useRtl();
+                const productsStore = useProductsStore();
+                return { ...responsive, ...rtl, productsStore };
+        },
 	components: {
 		CameraScanner,
 	},
@@ -475,11 +477,10 @@ export default {
 		items_view: "list",
 		item_group: "ALL",
 		loading: false,
-		items_group: ["ALL"],
-		items: [],
-		search: "",
-		first_search: "",
-		search_backup: "",
+                items_group: ["ALL"],
+                search: "",
+                first_search: "",
+                search_backup: "",
 		// Limit the displayed items to avoid overly large lists
 		itemsPerPage: 50,
 		offersCount: 0,
@@ -590,7 +591,7 @@ export default {
 				}
 			}
 		}, 300),
-		customer_price_list: _.debounce(async function () {
+                customer_price_list: _.debounce(async function () {
 			if (this.pos_profile.posa_force_reload_items) {
 				if (this.pos_profile.posa_smart_reload_mode) {
 					// When limit search is enabled there may be no items yet.
@@ -648,10 +649,13 @@ export default {
 					this.get_items();
 				}
 			}
-		}, 300),
-		new_line() {
-			this.eventBus.emit("set_new_line", this.new_line);
-		},
+                }, 300),
+                search(val) {
+                        this.productsStore.filters.search = val;
+                },
+                new_line() {
+                        this.eventBus.emit("set_new_line", this.new_line);
+                },
 		item_group(newValue, oldValue) {
 			if (this.pos_profile && this.pos_profile.pose_use_limit_search && newValue !== oldValue) {
 				if (this.pos_profile && (!this.pos_profile.posa_local_storage || !this.storageAvailable)) {
@@ -2541,9 +2545,17 @@ export default {
 	},
 
 	computed: {
-		headers() {
-			return this.getItemsHeaders();
-		},
+                items: {
+                        get() {
+                                return this.productsStore.items;
+                        },
+                        set(val) {
+                                this.productsStore.items = val;
+                        },
+                },
+                headers() {
+                        return this.getItemsHeaders();
+                },
 		filtered_items() {
 			if (!this.items || this.items.length === 0) {
 				return [];
@@ -2683,11 +2695,12 @@ export default {
 				}
 
 				// Load initial items if we have a profile
-				if (this.pos_profile && this.pos_profile.name) {
-					console.log("Loading items with POS Profile:", this.pos_profile.name);
-					await this.get_items();
-					this.verifyServerItemCount();
-				} else {
+                                if (this.pos_profile && this.pos_profile.name) {
+                                        console.log("Loading items with POS Profile:", this.pos_profile.name);
+                                        await this.get_items();
+                                        this.productsStore.items = this.items;
+                                        this.verifyServerItemCount();
+                                } else {
 					console.warn("No POS Profile available during initialization");
 				}
 			} catch (error) {
@@ -2809,23 +2822,26 @@ export default {
 
 	async mounted() {
 		// Ensure POS profile is available
-		if (!this.pos_profile || !this.pos_profile.name) {
-			try {
-				// Try to get from global frappe context
-				if (frappe.boot && frappe.boot.pos_profile) {
-					this.pos_profile = frappe.boot.pos_profile;
-				} else if (window.cur_pos && window.cur_pos.pos_profile) {
-					this.pos_profile = window.cur_pos.pos_profile;
-				}
-			} catch (error) {
-				console.warn("Could not get POS profile in mounted:", error);
-			}
-		}
+                if (!this.pos_profile || !this.pos_profile.name) {
+                        try {
+                                // Try to get from global frappe context
+                                if (frappe.boot && frappe.boot.pos_profile) {
+                                        this.pos_profile = frappe.boot.pos_profile;
+                                } else if (window.cur_pos && window.cur_pos.pos_profile) {
+                                        this.pos_profile = window.cur_pos.pos_profile;
+                                }
+                        } catch (error) {
+                                console.warn("Could not get POS profile in mounted:", error);
+                        }
+                }
 
-		// Load items if we have a profile and haven't loaded yet
-		if (this.pos_profile && this.pos_profile.name && !this.items_loaded) {
-			await this.get_items();
-		}
+                // restore persisted search
+                this.search = this.productsStore.filters.search || "";
+
+                // Load items if we have a profile and haven't loaded yet
+                if (this.pos_profile && this.pos_profile.name && !this.items_loaded) {
+                        await this.get_items();
+                }
 
 		// Setup barcode scanner if enabled
 		if (this.pos_profile?.posa_enable_barcode_scanning) {
