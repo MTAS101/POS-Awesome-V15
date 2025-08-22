@@ -1652,31 +1652,124 @@ export default {
 				console.error("Failed to save POS Profile setting", e);
 			});
 		},
-		loadItemSettings() {
-			if (!this.localStorageAvailable) return;
-			try {
-				const saved = localStorage.getItem("posawesome_item_selector_settings");
-				if (saved) {
-					const opts = JSON.parse(saved);
-					if (typeof opts.hide_qty_decimals === "boolean") {
-						this.hide_qty_decimals = opts.hide_qty_decimals;
-					}
-					if (typeof opts.hide_zero_rate_items === "boolean") {
-						this.hide_zero_rate_items = opts.hide_zero_rate_items;
-					}
-					if (typeof opts.enable_custom_items_per_page === "boolean") {
-						this.enable_custom_items_per_page = opts.enable_custom_items_per_page;
-					}
-					if (typeof opts.items_per_page === "number") {
-						this.items_per_page = opts.items_per_page;
-						this.itemsPerPage = this.items_per_page;
-					}
-				}
-			} catch (e) {
-				console.error("Failed to load item selector settings:", e);
-			}
-		},
-	},
+                loadItemSettings() {
+                        if (!this.localStorageAvailable) return;
+                        try {
+                                const saved = localStorage.getItem("posawesome_item_selector_settings");
+                                if (saved) {
+                                        const opts = JSON.parse(saved);
+                                        if (typeof opts.hide_qty_decimals === "boolean") {
+                                                this.hide_qty_decimals = opts.hide_qty_decimals;
+                                        }
+                                        if (typeof opts.hide_zero_rate_items === "boolean") {
+                                                this.hide_zero_rate_items = opts.hide_zero_rate_items;
+                                        }
+                                        if (typeof opts.enable_custom_items_per_page === "boolean") {
+                                                this.enable_custom_items_per_page = opts.enable_custom_items_per_page;
+                                        }
+                                        if (typeof opts.items_per_page === "number") {
+                                                this.items_per_page = opts.items_per_page;
+                                                this.itemsPerPage = this.items_per_page;
+                                        }
+                                }
+                        } catch (e) {
+                                console.error("Failed to load item selector settings:", e);
+                        }
+                },
+                getItemsHeaders() {
+                        const items_headers = [
+                                {
+                                        title: __("Name"),
+                                        align: "start",
+                                        sortable: true,
+                                        key: "item_name",
+                                },
+                                {
+                                        title: __("Code"),
+                                        align: "start",
+                                        sortable: true,
+                                        key: "item_code",
+                                },
+                                { title: __("Rate"), key: "rate", align: "start" },
+                                { title: __("Available QTY"), key: "actual_qty", align: "start" },
+                                { title: __("UOM"), key: "stock_uom", align: "start" },
+                        ];
+                        if (this.pos_profile && !this.pos_profile.posa_display_item_code) {
+                                items_headers.splice(1, 1);
+                        }
+                        return items_headers;
+                },
+                async forceReloadItems() {
+                        await clearPriceListCache();
+                        await this.ensureStorageHealth();
+                        this.items_loaded = false;
+                        if (!this.first_search || !this.first_search.trim()) {
+                                this.first_search = "";
+                                this.search = "";
+                        }
+                        await this.get_items(true);
+                },
+                async verifyServerItemCount() {
+                        if (isOffline()) {
+                                return;
+                        }
+                        try {
+                                const localCount = await getStoredItemsCount();
+                                const res = await frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_items_count",
+                                        args: { pos_profile: JSON.stringify(this.pos_profile) },
+                                });
+                                const serverCount = res.message || 0;
+                                if (typeof serverCount === "number" && serverCount !== localCount) {
+                                        await this.forceReloadItems();
+                                }
+                        } catch (err) {
+                                console.error("Error checking item count:", err);
+                        }
+                },
+                async add_item(item) {
+                        this.eventBus.emit("add_item", item);
+                },
+                async enter_event() {
+                        let match = false;
+                        if (!this.filtered_items.length || !this.first_search) {
+                                return;
+                        }
+                        const qty = this.get_item_qty(this.first_search);
+                        const new_item = { ...this.filtered_items[0] };
+                        new_item.qty = flt(qty);
+                        if (Array.isArray(new_item.item_barcode)) {
+                                new_item.item_barcode.forEach((element) => {
+                                        if (this.search == element.barcode) {
+                                                new_item.uom = element.posa_uom;
+                                                match = true;
+                                        }
+                                });
+                        }
+                        if (this.flags.serial_no) {
+                                new_item.to_set_serial_no = this.flags.serial_no;
+                        }
+                        if (this.flags.batch_no) {
+                                new_item.to_set_batch_no = this.flags.batch_no;
+                        }
+                        if (match) {
+                                await this.add_item(new_item);
+                                this.flags.serial_no = null;
+                                this.flags.batch_no = null;
+                                this.qty = 1;
+                                this.clearSearch();
+                                if (this.$refs.debounce_search) {
+                                        this.$refs.debounce_search.focus();
+                                }
+                        }
+                },
+                show_offers() {
+                        this.eventBus.emit("show_offers", "true");
+                },
+                show_coupons() {
+                        this.eventBus.emit("show_coupons", "true");
+                },
+        },
 
         computed: {
                 items: {
@@ -1967,100 +2060,6 @@ export default {
                         this.applyCurrencyConversionToItems();
                         this.update_cur_items_details();
                 });
-        },
-
-        getItemsHeaders() {
-                const items_headers = [
-                        {
-                                title: __("Name"),
-                                align: "start",
-                                sortable: true,
-                                key: "item_name",
-                        },
-                        {
-                                title: __("Code"),
-                                align: "start",
-                                sortable: true,
-                                key: "item_code",
-                        },
-                        { title: __("Rate"), key: "rate", align: "start" },
-                        { title: __("Available QTY"), key: "actual_qty", align: "start" },
-                        { title: __("UOM"), key: "stock_uom", align: "start" },
-                ];
-                if (this.pos_profile && !this.pos_profile.posa_display_item_code) {
-                        items_headers.splice(1, 1);
-                }
-                return items_headers;
-        },
-        async forceReloadItems() {
-                await clearPriceListCache();
-                await this.ensureStorageHealth();
-                this.items_loaded = false;
-                if (!this.first_search || !this.first_search.trim()) {
-                        this.first_search = "";
-                        this.search = "";
-                }
-                await this.get_items(true);
-        },
-        async verifyServerItemCount() {
-                if (isOffline()) {
-                        return;
-                }
-                try {
-                        const localCount = await getStoredItemsCount();
-                        const res = await frappe.call({
-                                method: "posawesome.posawesome.api.items.get_items_count",
-                                args: { pos_profile: JSON.stringify(this.pos_profile) },
-                        });
-                        const serverCount = res.message || 0;
-                        if (typeof serverCount === "number" && serverCount !== localCount) {
-                                await this.forceReloadItems();
-                        }
-                } catch (err) {
-                        console.error("Error checking item count:", err);
-                }
-        },
-        async add_item(item) {
-                this.eventBus.emit("add_item", item);
-        },
-        async enter_event() {
-                let match = false;
-                if (!this.filtered_items.length || !this.first_search) {
-                        return;
-                }
-                const qty = this.get_item_qty(this.first_search);
-                const new_item = { ...this.filtered_items[0] };
-                new_item.qty = flt(qty);
-                if (Array.isArray(new_item.item_barcode)) {
-                        new_item.item_barcode.forEach((element) => {
-                                if (this.search == element.barcode) {
-                                        new_item.uom = element.posa_uom;
-                                        match = true;
-                                }
-                        });
-                }
-                if (this.flags.serial_no) {
-                        new_item.to_set_serial_no = this.flags.serial_no;
-                }
-                if (this.flags.batch_no) {
-                        new_item.to_set_batch_no = this.flags.batch_no;
-                }
-                if (match) {
-                        await this.add_item(new_item);
-                        this.flags.serial_no = null;
-                        this.flags.batch_no = null;
-                        this.qty = 1;
-                        this.clearSearch();
-                        if (this.$refs.debounce_search) {
-                                this.$refs.debounce_search.focus();
-                        }
-                }
-        },
-        show_offers() {
-                this.eventBus.emit("show_offers", "true");
-        },
-        show_coupons() {
-                this.eventBus.emit("show_coupons", "true");
         },
 
         async mounted() {
