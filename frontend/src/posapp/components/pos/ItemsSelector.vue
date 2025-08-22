@@ -446,6 +446,7 @@ import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import placeholderImage from "./placeholder-image.png";
 import { useProductsStore } from "../../stores/products.js";
+import { useCartStore } from "../../stores/cart.js";
 
 export default {
         mixins: [format],
@@ -453,7 +454,8 @@ export default {
                 const responsive = useResponsive();
                 const rtl = useRtl();
                 const productsStore = useProductsStore();
-                return { ...responsive, ...rtl, productsStore };
+                const cartStore = useCartStore();
+                return { ...responsive, ...rtl, productsStore, cartStore };
         },
 	components: {
 		CameraScanner,
@@ -1660,29 +1662,6 @@ export default {
                                 console.error("Failed to load item selector settings:", e);
                         }
                 },
-                getItemsHeaders() {
-                        const items_headers = [
-                                {
-                                        title: __("Name"),
-                                        align: "start",
-                                        sortable: true,
-                                        key: "item_name",
-                                },
-                                {
-                                        title: __("Code"),
-                                        align: "start",
-                                        sortable: true,
-                                        key: "item_code",
-                                },
-                                { title: __("Rate"), key: "rate", align: "start" },
-                                { title: __("Available QTY"), key: "actual_qty", align: "start" },
-                                { title: __("UOM"), key: "stock_uom", align: "start" },
-                        ];
-                        if (this.pos_profile && !this.pos_profile.posa_display_item_code) {
-                                items_headers.splice(1, 1);
-                        }
-                        return items_headers;
-                },
                 async forceReloadItems() {
                         await clearPriceListCache();
                         await this.ensureStorageHealth();
@@ -1714,6 +1693,7 @@ export default {
                 async add_item(item) {
                         // ensure quantity is applied before dispatching to the cart
                         item.qty = this.qty || 1;
+                        this.cartStore.addItem(item);
                         this.eventBus.emit("add_item", item);
                 },
                 async enter_event() {
@@ -1783,7 +1763,27 @@ export default {
                         },
                 },
                 headers() {
-                        return this.getItemsHeaders();
+                        const items_headers = [
+                                {
+                                        title: __("Name"),
+                                        align: "start",
+                                        sortable: true,
+                                        key: "item_name",
+                                },
+                                {
+                                        title: __("Code"),
+                                        align: "start",
+                                        sortable: true,
+                                        key: "item_code",
+                                },
+                                { title: __("Rate"), key: "rate", align: "start" },
+                                { title: __("Available QTY"), key: "actual_qty", align: "start" },
+                                { title: __("UOM"), key: "stock_uom", align: "start" },
+                        ];
+                        if (this.pos_profile && !this.pos_profile.posa_display_item_code) {
+                                items_headers.splice(1, 1);
+                        }
+                        return items_headers;
                 },
                 filtered_items() {
                         if (!this.items || this.items.length === 0) {

@@ -57,7 +57,8 @@ export const useProductsStore = defineStore("products", {
                                                 await clearStoredItems();
                                         }
                                         if (profile?.posa_local_storage && !profile?.pose_use_limit_search) {
-                                                await saveItemsBulk(batch);
+                                                const toPersist = append ? batch : this.list;
+                                                await saveItemsBulk(toPersist);
                                         }
                                 } catch (e) {
                                         console.error("Failed to persist items locally", e);
