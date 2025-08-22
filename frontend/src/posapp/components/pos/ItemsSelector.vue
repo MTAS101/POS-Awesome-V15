@@ -446,7 +446,6 @@ import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import placeholderImage from "./placeholder-image.png";
 import { useProductsStore } from "../../stores/products.js";
-import { useCartStore } from "../../stores/cart.js";
 
 export default {
         mixins: [format],
@@ -454,8 +453,7 @@ export default {
                 const responsive = useResponsive();
                 const rtl = useRtl();
                 const productsStore = useProductsStore();
-                const cartStore = useCartStore();
-                return { ...responsive, ...rtl, productsStore, cartStore };
+                return { ...responsive, ...rtl, productsStore };
         },
 	components: {
 		CameraScanner,
@@ -1691,9 +1689,8 @@ export default {
                         }
                 },
                 async add_item(item) {
-                        // ensure quantity is applied before dispatching to the cart
+                        // ensure quantity is applied before dispatching to the invoice
                         item.qty = this.qty || 1;
-                        this.cartStore.addItem(item);
                         this.eventBus.emit("add_item", item);
                 },
                 async enter_event() {

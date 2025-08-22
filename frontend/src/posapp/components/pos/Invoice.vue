@@ -189,12 +189,11 @@
 					<!-- ItemsTable component with reorder event handler -->
 					<ItemsTable
 						ref="itemsTable"
-						:headers="items_headers"
-						:items="items"
-						v-model:expanded="expanded"
-						:itemsPerPage="itemsPerPage"
-						:itemSearch="itemSearch"
-						:pos_profile="pos_profile"
+                                                :headers="items_headers"
+                                                v-model:expanded="expanded"
+                                                :itemsPerPage="itemsPerPage"
+                                                :itemSearch="itemSearch"
+                                                :pos_profile="pos_profile"
 						:invoice_doc="invoice_doc"
 						:invoiceType="invoiceType"
 						:stock_settings="stock_settings"

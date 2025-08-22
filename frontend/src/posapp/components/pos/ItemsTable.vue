@@ -662,15 +662,19 @@
 
 <script>
 import _ from "lodash";
+import { useCartStore } from "../../stores/cart.js";
 export default {
-	name: "ItemsTable",
-	props: {
-		headers: Array,
-		items: Array,
-		expanded: Array,
-		itemsPerPage: Number,
-		itemSearch: String,
-		pos_profile: Object,
+        name: "ItemsTable",
+        setup() {
+                const cartStore = useCartStore();
+                return { cartStore };
+        },
+        props: {
+                headers: Array,
+                expanded: Array,
+                itemsPerPage: Number,
+                itemSearch: String,
+                pos_profile: Object,
 		invoice_doc: Object,
 		invoiceType: String,
 		stock_settings: Object,
@@ -713,19 +717,22 @@ export default {
 		isDarkTheme() {
 			return this.$theme.current === "dark";
 		},
-		hide_qty_decimals() {
-			try {
-				const saved = localStorage.getItem("posawesome_item_selector_settings");
-				if (saved) {
-					const opts = JSON.parse(saved);
-					return !!opts.hide_qty_decimals;
-				}
-			} catch (e) {
-				console.error("Failed to load item selector settings:", e);
-			}
-			return false;
-		},
-	},
+                hide_qty_decimals() {
+                        try {
+                                const saved = localStorage.getItem("posawesome_item_selector_settings");
+                                if (saved) {
+                                        const opts = JSON.parse(saved);
+                                        return !!opts.hide_qty_decimals;
+                                }
+                        } catch (e) {
+                                console.error("Failed to load item selector settings:", e);
+                        }
+                        return false;
+                },
+                items() {
+                        return this.cartStore.items;
+                },
+        },
 	methods: {
 		onDragOverFromSelector(event) {
 			// Check if drag data is from item selector
