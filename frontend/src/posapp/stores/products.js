@@ -65,6 +65,9 @@ export const useProductsStore = defineStore("products", {
                                 item: JSON.stringify({ item_code: code }),
                                 ...options,
                         };
+                        if (args.pos_profile && typeof args.pos_profile !== "string") {
+                                args.pos_profile = JSON.stringify(args.pos_profile);
+                        }
                         const { message } = await frappe.call({
                                 method: "posawesome.posawesome.api.items.get_item_detail",
                                 args,

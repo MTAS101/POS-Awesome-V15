@@ -947,6 +947,7 @@ export default {
                                 const det = await this.productsStore.fetchItemDetails(it.item_code, {
                                         pos_profile: this.pos_profile,
                                         price_list: this.active_price_list,
+                                        company: this.pos_profile?.company,
                                 });
                                 if (det) details.push(det);
                         }
