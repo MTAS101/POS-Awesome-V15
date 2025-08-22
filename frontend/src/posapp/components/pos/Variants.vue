@@ -86,8 +86,13 @@
 import { ensurePosProfile } from "../../../utils/pos_profile.js";
 import _ from "lodash";
 import placeholderImage from "./placeholder-image.png";
+import { useProductsStore } from "../../stores/products.js";
 export default {
-	data: () => ({
+        setup() {
+                const productsStore = useProductsStore();
+                return { productsStore };
+        },
+        data: () => ({
 		varaintsDialog: false,
 		parentItem: null,
 		items: null,
@@ -187,30 +192,25 @@ export default {
 				currency: item.currency,
 			});
 		},
-		async fetchVariants(code, profile) {
-			console.log("fetchVariants called with", code, profile);
-			try {
-				const res = await frappe.call({
-					method: "posawesome.posawesome.api.items.get_item_variants",
-					args: {
-						pos_profile: JSON.stringify(profile || this.pos_profile || {}),
-						parent_item_code: code,
-					},
-				});
-				console.log("variants API result", res);
-				if (res.message) {
-					const variants = res.message.variants || res.message;
-					this.attributes_meta = res.message.attributes_meta || this.attributes_meta;
-					const existingCodes = new Set((this.items || []).map((it) => it.item_code));
-					const newItems = variants.filter((it) => !existingCodes.has(it.item_code));
-					console.log("new variant items", newItems);
-					await Promise.all(newItems.map((it) => this.fetchVariantRate(it)));
-					this.items = (this.items || []).concat(newItems);
-				}
-			} catch (e) {
-				console.error("Failed to fetch variants", e);
-			}
-		},
+                async fetchVariants(code, profile) {
+                        console.log("fetchVariants called with", code, profile);
+                        try {
+                                const res = await this.productsStore.fetchItemVariants(code, {
+                                        pos_profile: profile || this.pos_profile || {},
+                                });
+                                if (res) {
+                                        const variants = res.variants || [];
+                                        this.attributes_meta = res.attributes_meta || this.attributes_meta;
+                                        const existingCodes = new Set((this.items || []).map((it) => it.item_code));
+                                        const newItems = variants.filter((it) => !existingCodes.has(it.item_code));
+                                        console.log("new variant items", newItems);
+                                        await Promise.all(newItems.map((it) => this.fetchVariantRate(it)));
+                                        this.items = (this.items || []).concat(newItems);
+                                }
+                        } catch (e) {
+                                console.error("Failed to fetch variants", e);
+                        }
+                },
 		updateFiltredItems: _.debounce(function () {
 			this.$nextTick(() => {
 				const values = [];
@@ -275,60 +275,52 @@ export default {
 				this.displayCount += 100;
 			}
 		},
-		async fetchVariantRate(item) {
-			if (!this.pos_profile) {
-				this.pos_profile = await ensurePosProfile();
-			}
-			if (!this.pos_profile.warehouse) {
-				try {
-					const res = await frappe.call({
-						method: "posawesome.posawesome.api.utils.get_default_warehouse",
-						args: { company: this.pos_profile.company },
-					});
-					if (res.message) {
-						this.pos_profile.warehouse = res.message;
-					}
-				} catch (e) {
-					console.error("Failed to fetch default warehouse", e);
-				}
-			}
-			console.log("fetchVariantRate called for", item.item_code);
-			try {
-				const res = await frappe.call({
-					method: "posawesome.posawesome.api.items.get_item_detail",
-					args: {
-						warehouse: item.warehouse || this.pos_profile.warehouse,
-						price_list: this.pos_profile.selling_price_list,
-						company: this.pos_profile.company,
-						item: JSON.stringify({
-							item_code: item.item_code,
-							pos_profile: this.pos_profile.name,
-							qty: item.qty || 1,
-							uom: item.uom || item.stock_uom,
-							doctype: this.pos_profile.create_pos_invoice_instead_of_sales_invoice
-								? "POS Invoice"
-								: "Sales Invoice",
-						}),
-					},
-				});
-				console.log("variant rate result", res);
-				if (res.message) {
-					const data = res.message;
-					item.rate = data.price_list_rate;
-					item.price_list_rate = data.price_list_rate;
-					item.base_rate = data.price_list_rate;
-					item.base_price_list_rate = data.price_list_rate;
-					item.currency = data.currency || data.price_list_currency || this.pos_profile.currency;
-					this.applyCurrencyConversionToItem(item);
-					console.log("rate applied", {
-						code: item.item_code,
-						rate: item.rate,
-					});
-				}
-			} catch (e) {
-				console.error("Failed to fetch variant rate", e);
-			}
-		},
+                async fetchVariantRate(item) {
+                        if (!this.pos_profile) {
+                                this.pos_profile = await ensurePosProfile();
+                        }
+                        if (!this.pos_profile.warehouse) {
+                                try {
+                                        const res = await frappe.call({
+                                                method: "posawesome.posawesome.api.utils.get_default_warehouse",
+                                                args: { company: this.pos_profile.company },
+                                        });
+                                        if (res.message) {
+                                                this.pos_profile.warehouse = res.message;
+                                        }
+                                } catch (e) {
+                                        console.error("Failed to fetch default warehouse", e);
+                                }
+                        }
+                        console.log("fetchVariantRate called for", item.item_code);
+                        try {
+                                const data = await this.productsStore.fetchItemDetails(item.item_code, {
+                                        warehouse: item.warehouse || this.pos_profile.warehouse,
+                                        price_list: this.pos_profile.selling_price_list,
+                                        company: this.pos_profile.company,
+                                        pos_profile: this.pos_profile,
+                                        qty: item.qty || 1,
+                                        uom: item.uom || item.stock_uom,
+                                        doctype: this.pos_profile.create_pos_invoice_instead_of_sales_invoice
+                                                ? "POS Invoice"
+                                                : "Sales Invoice",
+                                });
+                                if (data) {
+                                        item.rate = data.price_list_rate;
+                                        item.price_list_rate = data.price_list_rate;
+                                        item.base_rate = data.price_list_rate;
+                                        item.base_price_list_rate = data.price_list_rate;
+                                        item.currency = data.currency || data.price_list_currency || this.pos_profile.currency;
+                                        this.applyCurrencyConversionToItem(item);
+                                        console.log("rate applied", {
+                                                code: item.item_code,
+                                                rate: item.rate,
+                                        });
+                                }
+                        } catch (e) {
+                                console.error("Failed to fetch variant rate", e);
+                        }
+                },
 		async add_item(item) {
 			console.log("add_item called", item.item_code);
 			await this.fetchVariantRate(item);

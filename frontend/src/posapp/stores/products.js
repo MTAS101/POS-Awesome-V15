@@ -65,6 +65,15 @@ export const useProductsStore = defineStore("products", {
                                 item: JSON.stringify({ item_code: code }),
                                 ...options,
                         };
+                        if (!args.company) {
+                                const profileCompany =
+                                        typeof options.pos_profile === "object"
+                                                ? options.pos_profile.company
+                                                : undefined;
+                                args.company =
+                                        profileCompany ||
+                                        (typeof frappe !== "undefined" && frappe.boot?.company);
+                        }
                         if (args.pos_profile && typeof args.pos_profile !== "string") {
                                 args.pos_profile = JSON.stringify(args.pos_profile);
                         }
