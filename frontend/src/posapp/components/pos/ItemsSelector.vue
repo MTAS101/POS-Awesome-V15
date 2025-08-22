@@ -431,9 +431,7 @@ import {
         getStoredItemsCount,
         initializeStockCache,
         searchStoredItems,
-        saveItemsBulk,
         saveItems,
-        clearStoredItems,
         getLocalStockCache,
         initPromise,
         memoryInitPromise,
@@ -1235,26 +1233,11 @@ export default {
                                         search_value: search || "",
                                         customer: this.customer,
                                         limit: this.itemsPageLimit,
+                                        force: force_server,
                                 });
                                 this.items_loaded = true;
                                 this.eventBus.emit("set_all_items", this.items);
                                 this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
-                                if (
-                                        this.pos_profile &&
-                                        this.pos_profile.posa_local_storage &&
-                                        this.storageAvailable &&
-                                        !this.pos_profile.pose_use_limit_search
-                                ) {
-                                        try {
-                                                if (force_server) {
-                                                        await clearStoredItems();
-                                                }
-                                                await saveItemsBulk(this.items);
-                                        } catch (e) {
-                                                console.error("Failed to persist items locally", e);
-                                                this.markStorageUnavailable();
-                                        }
-                                }
                         } catch (error) {
                                 console.error("Failed to load items:", error);
                                 frappe.msgprint(__("Failed to load items. Please try again."));

@@ -1,5 +1,10 @@
 import { defineStore } from "pinia";
-import { saveItemDetailsCache, saveItemGroups } from "../../offline/index.js";
+import {
+        saveItemDetailsCache,
+        saveItemGroups,
+        saveItemsBulk,
+        clearStoredItems,
+} from "../../offline/index.js";
 
 export const useProductsStore = defineStore("products", {
         state: () => ({
@@ -31,24 +36,53 @@ export const useProductsStore = defineStore("products", {
                         if (typeof frappe === "undefined") return;
                         this.loading = true;
                         try {
-                                const args = { ...params };
+                                const { force, ...rest } = params;
+                                const profile = rest.pos_profile;
+                                const args = { ...rest };
                                 if (args.pos_profile && typeof args.pos_profile !== "string") {
                                         args.pos_profile = JSON.stringify(args.pos_profile);
                                 }
-                                const { message } = await frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_items",
-                                        args,
-                                });
-                                this.list = message || [];
+
+                                const limit = typeof args.limit === "number" ? args.limit : 0;
+                                const baseArgs = { ...args, limit };
+                                let offset = 0;
+                                let all = [];
+
+                                while (true) {
+                                        const { message } = await frappe.call({
+                                                method: "posawesome.posawesome.api.items.get_items",
+                                                args: { ...baseArgs, offset },
+                                        });
+                                        const batch = message || [];
+                                        all = all.concat(batch);
+                                        if (!limit || batch.length < limit) {
+                                                break;
+                                        }
+                                        offset += batch.length;
+                                }
+
+                                this.list = all;
+
                                 try {
-                                const { message: groups } = await frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_items_groups",
-                                        args,
-                                });
-                                this.itemGroups = JSON.parse(
-                                        JSON.stringify(groups || [])
-                                );
-                                saveItemGroups(this.itemGroups);
+                                        if (force) {
+                                                await clearStoredItems();
+                                        }
+                                        if (profile?.posa_local_storage && !profile?.pose_use_limit_search) {
+                                                await saveItemsBulk(all);
+                                        }
+                                } catch (e) {
+                                        console.error("Failed to persist items locally", e);
+                                }
+
+                                try {
+                                        const { message: groups } = await frappe.call({
+                                                method: "posawesome.posawesome.api.items.get_items_groups",
+                                                args,
+                                        });
+                                        this.itemGroups = JSON.parse(
+                                                JSON.stringify(groups || [])
+                                        );
+                                        saveItemGroups(this.itemGroups);
                                 } catch (e) {
                                         console.error("Failed to fetch item groups", e);
                                 }
