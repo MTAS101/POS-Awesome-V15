@@ -1,12 +1,19 @@
 // Include onscan.js
 frappe.pages["posapp"].on_page_load = async function (wrapper) {
-	var page = frappe.ui.make_app_page({
-		parent: wrapper,
-		title: "POS Awesome",
-		single_column: true,
-	});
+        var page = frappe.ui.make_app_page({
+                parent: wrapper,
+                title: "POS Awesome",
+                single_column: true,
+        });
 
-	this.page.$PosApp = new frappe.PosApp.posapp(this.page);
+        await new Promise((resolve) => {
+                frappe.require(
+                        "/assets/posawesome/dist/js/posawesome.umd.js",
+                        resolve,
+                );
+        });
+
+        this.page.$PosApp = new frappe.PosApp.posapp(this.page);
 
 	$("div.navbar-fixed-top").find(".container").css("padding", "0");
 
