@@ -1,5 +1,7 @@
 import { createVuetify } from "vuetify";
 import { createApp } from "vue";
+import { createPinia } from "pinia";
+import piniaPluginPersistedstate from "pinia-plugin-persistedstate";
 import Dexie from "dexie/dist/dexie.mjs";
 import VueDatePicker from "@vuepic/vue-datepicker";
 import "@vuepic/vue-datepicker/dist/main.css";
@@ -76,12 +78,15 @@ frappe.PosApp.posapp = class {
 				},
 			},
 		});
-		const app = createApp(Home);
-		app.component("VueDatePicker", VueDatePicker);
-		app.use(eventBus);
-		app.use(vuetify);
-		app.use(themePlugin, { vuetify });
-		app.mount(this.$el[0]);
+                const app = createApp(Home);
+                const pinia = createPinia();
+                pinia.use(piniaPluginPersistedstate);
+                app.use(pinia);
+                app.component("VueDatePicker", VueDatePicker);
+                app.use(eventBus);
+                app.use(vuetify);
+                app.use(themePlugin, { vuetify });
+                app.mount(this.$el[0]);
 
 		if (!document.querySelector('link[rel="manifest"]')) {
 			const link = document.createElement("link");
