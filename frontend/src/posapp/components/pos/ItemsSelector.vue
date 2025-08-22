@@ -639,13 +639,13 @@ export default {
 				} else {
 					this.get_items();
 				}
-			} else if (this.pos_profile && this.pos_profile.posa_local_storage && newValue !== oldValue) {
-				if (this.storageAvailable) {
-					this.loadVisibleItems(true);
-				} else {
-					this.get_items(true);
-				}
-			}
+                        } else if (this.pos_profile && this.pos_profile.posa_local_storage && newValue !== oldValue) {
+                                if (this.storageAvailable) {
+                                        this.get_items();
+                                } else {
+                                        this.get_items(true);
+                                }
+                        }
 		},
 		filtered_items(new_value, old_value) {
 			// Update item details if items changed
@@ -872,33 +872,32 @@ export default {
 			}
 			return dbHealthy;
 		},
-		async loadVisibleItems(reset = false) {
-			this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
-			await initPromise;
-			await this.ensureStorageHealth();
-			if (reset) {
-				this.currentPage = 0;
-				this.items = [];
-			}
-			const search = this.get_search(this.first_search);
-			const itemGroup = this.item_group !== "ALL" ? this.item_group.toLowerCase() : "";
-			const pageItems = await searchStoredItems({
-				search,
-				itemGroup,
-				limit: this.itemsPerPage,
-				offset: this.currentPage * this.itemsPerPage,
-			});
-			const total = pageItems.length || 1;
-			pageItems.forEach((it, idx) => {
-				this.items.push(it);
-				this.eventBus.emit("data-load-progress", {
-					name: "items",
-					progress: Math.round(((idx + 1) / total) * 100),
-				});
-			});
-			this.eventBus.emit("set_all_items", this.items);
-			if (pageItems.length) this.update_items_details(pageItems);
-		},
+                async loadVisibleItems(reset = false) {
+                        this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
+                        if (reset) {
+                                this.currentPage = 0;
+                        }
+                        const search = this.get_search(this.first_search);
+                        const itemGroup = this.item_group !== "ALL" ? this.item_group.toLowerCase() : "";
+                        const offset = this.currentPage * this.itemsPageLimit;
+                        await this.productsStore.fetchItems({
+                                pos_profile: this.pos_profile,
+                                price_list: this.customer_price_list,
+                                item_group: itemGroup,
+                                search_value: search || "",
+                                customer: this.customer,
+                                limit: this.itemsPageLimit,
+                                offset,
+                                append: !reset,
+                        });
+                        this.items_loaded = true;
+                        this.eventBus.emit("set_all_items", this.items);
+                        this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
+                        if (this.productsStore.list.length) {
+                                const newItems = this.productsStore.list.slice(offset, offset + this.itemsPageLimit);
+                                this.update_items_details(newItems);
+                        }
+                },
 		onListScroll(event) {
 			if (this.scrollThrottle) return;
 
@@ -992,14 +991,14 @@ export default {
 				} else {
 					vm.get_items();
 				}
-			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
-				if (vm.storageAvailable) {
-					await vm.loadVisibleItems(true);
-					vm.enter_event();
-				} else {
-					vm.get_items(true);
-				}
-			} else {
+                        } else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
+                                if (vm.storageAvailable) {
+                                        await vm.get_items();
+                                        vm.enter_event();
+                                } else {
+                                        vm.get_items(true);
+                                }
+                        } else {
                                 vm.enter_event();
 
 				// After search, update quantities for newly filtered items
@@ -1224,6 +1223,7 @@ export default {
                         }
                         const search = this.get_search(this.first_search);
                         const item_group = this.item_group !== "ALL" ? this.item_group.toLowerCase() : "";
+                        this.currentPage = 0;
                         this.loading = true;
                         try {
                                 await this.productsStore.fetchItems({
@@ -1233,7 +1233,9 @@ export default {
                                         search_value: search || "",
                                         customer: this.customer,
                                         limit: this.itemsPageLimit,
+                                        offset: 0,
                                         force: force_server,
+                                        append: false,
                                 });
                                 this.items_loaded = true;
                                 this.eventBus.emit("set_all_items", this.items);
@@ -1247,13 +1249,11 @@ export default {
                 },
                 clearSearch() {
                         this.search_backup = this.first_search;
-			this.first_search = "";
-			this.search = "";
-			// Reset the visible items to the full list
-			this.loadVisibleItems(true);
-			// Refresh items from the server if needed
-			this.get_items();
-		},
+                        this.first_search = "";
+                        this.search = "";
+                        // Refresh items from the server
+                        this.get_items();
+                },
 
 		restoreSearch() {
 			if (this.first_search === "") {
@@ -1712,6 +1712,8 @@ export default {
                         }
                 },
                 async add_item(item) {
+                        // ensure quantity is applied before dispatching to the cart
+                        item.qty = this.qty || 1;
                         this.eventBus.emit("add_item", item);
                 },
                 async enter_event() {
@@ -1843,10 +1845,13 @@ export default {
 			}
 
 			// Apply pagination
-			const limit = this.enable_custom_items_per_page ? this.items_per_page : this.itemsPerPage;
-			filteredItems = filteredItems.slice(0, limit);
+                        const limit = this.enable_custom_items_per_page ? this.items_per_page : this.itemsPerPage;
+                        // When custom limit is enabled, slice the results; otherwise show all loaded items
+                        if (this.enable_custom_items_per_page) {
+                                filteredItems = filteredItems.slice(0, limit);
+                        }
 
-			// Ensure quantities are defined
+                        // Ensure quantities are defined
 			filteredItems.forEach((item) => {
 				if (item.actual_qty === undefined || item.actual_qty === null) {
 					item.actual_qty = 0;

@@ -36,55 +36,47 @@ export const useProductsStore = defineStore("products", {
                         if (typeof frappe === "undefined") return;
                         this.loading = true;
                         try {
-                                const { force, ...rest } = params;
+                                const { force, append = false, offset = 0, ...rest } = params;
                                 const profile = rest.pos_profile;
-                                const args = { ...rest };
+                                const args = { ...rest, offset };
                                 if (args.pos_profile && typeof args.pos_profile !== "string") {
                                         args.pos_profile = JSON.stringify(args.pos_profile);
                                 }
 
-                                const limit = typeof args.limit === "number" ? args.limit : 0;
-                                const baseArgs = { ...args, limit };
-                                let offset = 0;
-                                let all = [];
+                                const { message } = await frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_items",
+                                        args,
+                                });
+                                const batch = message || [];
 
-                                while (true) {
-                                        const { message } = await frappe.call({
-                                                method: "posawesome.posawesome.api.items.get_items",
-                                                args: { ...baseArgs, offset },
-                                        });
-                                        const batch = message || [];
-                                        all = all.concat(batch);
-                                        if (!limit || batch.length < limit) {
-                                                break;
-                                        }
-                                        offset += batch.length;
-                                }
-
-                                this.list = all;
+                                // replace or append depending on request
+                                this.list = append ? this.list.concat(batch) : batch;
 
                                 try {
                                         if (force) {
                                                 await clearStoredItems();
                                         }
                                         if (profile?.posa_local_storage && !profile?.pose_use_limit_search) {
-                                                await saveItemsBulk(all);
+                                                await saveItemsBulk(batch);
                                         }
                                 } catch (e) {
                                         console.error("Failed to persist items locally", e);
                                 }
 
-                                try {
-                                        const { message: groups } = await frappe.call({
-                                                method: "posawesome.posawesome.api.items.get_items_groups",
-                                                args,
-                                        });
-                                        this.itemGroups = JSON.parse(
-                                                JSON.stringify(groups || [])
-                                        );
-                                        saveItemGroups(this.itemGroups);
-                                } catch (e) {
-                                        console.error("Failed to fetch item groups", e);
+                                // fetch item groups only on initial load
+                                if (!append && offset === 0) {
+                                        try {
+                                                const { message: groups } = await frappe.call({
+                                                        method: "posawesome.posawesome.api.items.get_items_groups",
+                                                        args,
+                                                });
+                                                this.itemGroups = JSON.parse(
+                                                        JSON.stringify(groups || [])
+                                                );
+                                                saveItemGroups(this.itemGroups);
+                                        } catch (e) {
+                                                console.error("Failed to fetch item groups", e);
+                                        }
                                 }
                         } finally {
                                 this.loading = false;
