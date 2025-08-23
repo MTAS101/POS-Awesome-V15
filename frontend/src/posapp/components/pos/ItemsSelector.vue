@@ -204,10 +204,7 @@
 								>
 									<div class="card-item-image-container">
 										<v-img
-											:src="
-                                                                                                item.image ||
-                                                                                                placeholderImage
-											"
+											:src="item.image || placeholderImage"
 											class="card-item-image"
 											aspect-ratio="1"
 											:alt="item.item_name"
@@ -683,13 +680,13 @@ export default {
 			const newLen = (val || "").trim().length;
 			const oldLen = (oldVal || "").trim().length;
 			if (newLen >= 3) {
-                       // Call without arguments so search_onchange treats it like an Enter key
-                       this.search_onchange();
-               } else if (oldLen >= 3 && newLen === 0) {
-                       // Reset items only when search is fully cleared
-                       this.clearSearch();
-               }
-               }, 300),
+				// Call without arguments so search_onchange treats it like an Enter key
+				this.search_onchange();
+			} else if (oldLen >= 3 && newLen === 0) {
+				// Reset items only when search is fully cleared
+				this.clearSearch();
+			}
+		}, 300),
 
 		// Refresh item prices whenever the user changes currency
 		selected_currency() {
@@ -874,7 +871,7 @@ export default {
 					!this.itemWorker
 				) {
 					try {
-                                                const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+						const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 						this.itemWorker = new Worker(workerUrl, { type: "classic" });
 						this.itemWorker.onerror = function (event) {
 							console.error("Worker error:", event);
@@ -1099,25 +1096,25 @@ export default {
 					}
 				});
 
-                               vm.$nextTick(async () => {
-                                       updates.forEach(({ item, upd }) => Object.assign(item, upd));
-                                       updateLocalStockCache(details);
-                                       saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
-                                       if (
-                                               vm.pos_profile &&
-                                               vm.pos_profile.posa_local_storage &&
-                                               vm.storageAvailable &&
-                                               !vm.pos_profile.pose_use_limit_search
-                                       ) {
-                                               try {
-                                                       await saveItemsBulk(details);
-                                               } catch (e) {
-                                                       console.error("Failed to persist item details", e);
-                                                       vm.markStorageUnavailable && vm.markStorageUnavailable();
-                                               }
-                                       }
-                                       vm.loading = false;
-                               });
+				vm.$nextTick(async () => {
+					updates.forEach(({ item, upd }) => Object.assign(item, upd));
+					updateLocalStockCache(details);
+					saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
+					if (
+						vm.pos_profile &&
+						vm.pos_profile.posa_local_storage &&
+						vm.storageAvailable &&
+						!vm.pos_profile.pose_use_limit_search
+					) {
+						try {
+							await saveItemsBulk(details);
+						} catch (e) {
+							console.error("Failed to persist item details", e);
+							vm.markStorageUnavailable && vm.markStorageUnavailable();
+						}
+					}
+					vm.loading = false;
+				});
 			} catch (err) {
 				if (err.name !== "AbortError") {
 					console.error("Error fetching item details:", err);
@@ -1162,10 +1159,12 @@ export default {
 			try {
 				const localCount = await getStoredItemsCount();
 				console.log("[ItemsSelector] verifying server item count", { localCount });
+				const profileGroups = (this.pos_profile?.item_groups || []).map((g) => g.item_group);
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_items_count",
 					args: {
 						pos_profile: JSON.stringify(this.pos_profile),
+						item_groups: profileGroups,
 					},
 				});
 				const serverCount = res.message || 0;
@@ -1213,6 +1212,7 @@ export default {
 			const search = this.get_search(this.first_search);
 			const gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
 			const sr = search || "";
+			const profileGroups = (vm.pos_profile?.item_groups || []).map((g) => g.item_group);
 			console.log("[ItemsSelector] prepared fetch params", { search: sr, item_group: gr });
 
 			// Skip if already loading the same data
@@ -1241,6 +1241,7 @@ export default {
 						limit: vm.itemsPageLimit,
 						start_after: null,
 						include_image: 1,
+						item_groups: profileGroups,
 					},
 				});
 				console.log("[ItemsSelector] server responded", { count: response.message?.length });
@@ -1318,6 +1319,7 @@ export default {
 				loaded,
 			});
 			const limit = this.itemsPageLimit;
+			const profileGroups = (this.pos_profile?.item_groups || []).map((g) => g.item_group);
 			// When the limit is extremely high, treat it as
 			// "no incremental loading" and exit early.
 			if (!limit || limit >= 10000) {
@@ -1343,6 +1345,7 @@ export default {
 							limit,
 							start_after: startAfter,
 							include_image: 1,
+							item_groups: profileGroups,
 						},
 						freeze: false,
 					});
@@ -1457,6 +1460,7 @@ export default {
 						limit,
 						start_after: startAfter,
 						include_image: 1,
+						item_groups: profileGroups,
 					},
 					callback: async (r) => {
 						if (this.items_request_token !== requestToken) {
@@ -1926,27 +1930,27 @@ export default {
 						vm.applyCurrencyConversionToItem(item);
 					});
 
-                                       updateLocalStockCache(details);
-                                       saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
+					updateLocalStockCache(details);
+					saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
 
-                                       if (
-                                               vm.pos_profile &&
-                                               vm.pos_profile.posa_local_storage &&
-                                               vm.storageAvailable &&
-                                               !vm.pos_profile.pose_use_limit_search
-                                       ) {
-                                               try {
-                                                       await saveItemsBulk(details);
-                                               } catch (e) {
-                                                       console.error("Failed to persist item details", e);
-                                                       vm.markStorageUnavailable && vm.markStorageUnavailable();
-                                               }
-                                       }
+					if (
+						vm.pos_profile &&
+						vm.pos_profile.posa_local_storage &&
+						vm.storageAvailable &&
+						!vm.pos_profile.pose_use_limit_search
+					) {
+						try {
+							await saveItemsBulk(details);
+						} catch (e) {
+							console.error("Failed to persist item details", e);
+							vm.markStorageUnavailable && vm.markStorageUnavailable();
+						}
+					}
 
-                                       if (qtyChanged) {
-                                               vm.$forceUpdate();
-                                       }
-                               }
+					if (qtyChanged) {
+						vm.$forceUpdate();
+					}
+				}
 			} catch (err) {
 				if (err.name !== "AbortError") {
 					console.error("Error fetching item details:", err);
@@ -2353,18 +2357,18 @@ export default {
 
 			items.forEach((item, index) => {
 				html += `
-          <div class="item-option p-3 mb-2 border rounded cursor-pointer" data-item-index="${index}" style="border: 1px solid #ddd; cursor: pointer;">
-            <div class="d-flex align-items-center">
-              <img src="${item.image || placeholderImage}"
-                   style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;" />
-              <div>
-                <div class="font-weight-bold">${item.item_name}</div>
-                <div class="text-muted small">${item.item_code}</div>
-                <div class="text-primary">${this.format_currency(item.rate, this.pos_profile.currency, this.ratePrecision(item.rate))}</div>
-              </div>
-            </div>
-          </div>
-        `;
+		<div class="item-option p-3 mb-2 border rounded cursor-pointer" data-item-index="${index}" style="border: 1px solid #ddd; cursor: pointer;">
+			<div class="d-flex align-items-center">
+			<img src="${item.image || placeholderImage}"
+				style="width: 50px; height: 50px; object-fit: cover; margin-right: 15px;" />
+			<div>
+				<div class="font-weight-bold">${item.item_name}</div>
+				<div class="text-muted small">${item.item_code}</div>
+				<div class="text-primary">${this.format_currency(item.rate, this.pos_profile.currency, this.ratePrecision(item.rate))}</div>
+			</div>
+			</div>
+		</div>
+		`;
 			});
 
 			html += "</div>";
@@ -2554,36 +2558,36 @@ export default {
 
 			// Apply search filter only for queries with at least three characters
 			if (searchTerm.length >= 3) {
-                               filteredItems = filteredItems.filter((item) => {
-                                       const barcodeList = [];
-                                       if (Array.isArray(item.item_barcode)) {
-                                               barcodeList.push(...item.item_barcode.map((b) => b.barcode).filter(Boolean));
-                                       } else if (item.item_barcode) {
-                                               barcodeList.push(String(item.item_barcode));
-                                       }
-                                       if (Array.isArray(item.barcodes)) {
-                                               barcodeList.push(...item.barcodes.map((b) => String(b)).filter(Boolean));
-                                       }
+				filteredItems = filteredItems.filter((item) => {
+					const barcodeList = [];
+					if (Array.isArray(item.item_barcode)) {
+						barcodeList.push(...item.item_barcode.map((b) => b.barcode).filter(Boolean));
+					} else if (item.item_barcode) {
+						barcodeList.push(String(item.item_barcode));
+					}
+					if (Array.isArray(item.barcodes)) {
+						barcodeList.push(...item.barcodes.map((b) => String(b)).filter(Boolean));
+					}
 
-                                       const searchFields = [
-                                               item.item_code,
-                                               item.item_name,
-                                               item.barcode,
-                                               item.description,
-                                               ...barcodeList,
-                                               ...(this.pos_profile?.posa_search_serial_no && Array.isArray(item.serial_no_data)
-                                                       ? item.serial_no_data.map((s) => s.serial_no)
-                                                       : []),
-                                               ...(this.pos_profile?.posa_search_batch_no && Array.isArray(item.batch_no_data)
-                                                       ? item.batch_no_data.map((b) => b.batch_no)
-                                                       : []),
-                                       ]
-                                               .filter(Boolean)
-                                               .map((field) => field.toLowerCase());
+					const searchFields = [
+						item.item_code,
+						item.item_name,
+						item.barcode,
+						item.description,
+						...barcodeList,
+						...(this.pos_profile?.posa_search_serial_no && Array.isArray(item.serial_no_data)
+							? item.serial_no_data.map((s) => s.serial_no)
+							: []),
+						...(this.pos_profile?.posa_search_batch_no && Array.isArray(item.batch_no_data)
+							? item.batch_no_data.map((b) => b.batch_no)
+							: []),
+					]
+						.filter(Boolean)
+						.map((field) => field.toLowerCase());
 
-                                       return searchFields.some((field) => field.includes(searchTerm));
-                               });
-                       }
+					return searchFields.some((field) => field.includes(searchTerm));
+				});
+			}
 
 			// Apply item group filter
 			if (this.item_group !== "ALL") {
@@ -2685,6 +2689,7 @@ export default {
 				// Load initial items if we have a profile
 				if (this.pos_profile && this.pos_profile.name) {
 					console.log("Loading items with POS Profile:", this.pos_profile.name);
+					this.get_items_groups();
 					await this.get_items();
 					this.verifyServerItemCount();
 				} else {
@@ -2698,6 +2703,7 @@ export default {
 		// Event listeners
 		this.eventBus.on("register_pos_profile", (data) => {
 			this.pos_profile = data.pos_profile;
+			this.get_items_groups();
 			this.get_items();
 			this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
 		});
@@ -2750,7 +2756,7 @@ export default {
 				// Use the plain URL so the service worker can match the cached file
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
-                           const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+				const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {
@@ -2771,7 +2777,7 @@ export default {
 				// Use the plain URL so the service worker can match the cached file
 				// even when offline. Using a query string causes cache lookups to fail
 				// which results in "Failed to fetch a worker script" errors.
-                           const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+				const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 				this.itemWorker = new Worker(workerUrl, { type: "classic" });
 
 				this.itemWorker.onerror = function (event) {
@@ -2824,6 +2830,7 @@ export default {
 
 		// Load items if we have a profile and haven't loaded yet
 		if (this.pos_profile && this.pos_profile.name && !this.items_loaded) {
+			this.get_items_groups();
 			await this.get_items();
 		}
 
