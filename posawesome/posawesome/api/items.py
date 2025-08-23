@@ -104,8 +104,13 @@ def get_items(
 		warehouse = _pos_profile.get("warehouse")
 		ttl = _pos_profile.get("posa_server_cache_duration")
 		if ttl:
-				ttl = int(ttl) * 60
+			ttl = int(ttl) * 60
 
+		if isinstance(item_groups, str):
+			try:
+				item_groups = json.loads(item_groups)
+			except Exception:
+				item_groups = []
 		item_groups = item_groups or get_item_groups(pos_profile_name)
 		item_groups_tuple = tuple(sorted(item_groups)) if item_groups else tuple()
 
@@ -400,10 +405,15 @@ def get_items_groups():
 @frappe.whitelist()
 def get_items_count(pos_profile, item_groups=None):
 		pos_profile = json.loads(pos_profile)
+		if isinstance(item_groups, str):
+			try:
+				item_groups = json.loads(item_groups)
+			except Exception:
+				item_groups = []
 		item_groups = item_groups or get_item_groups(pos_profile.get("name"))
 		filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
 		if item_groups:
-				filters["item_group"] = ["in", item_groups]
+			filters["item_group"] = ["in", item_groups]
 		return frappe.db.count("Item", filters)
 
 
