@@ -92,9 +92,55 @@ def _should_block(pos_profile):
 
 
 def _validate_stock_on_invoice(invoice_doc):
-	errors = _collect_stock_errors([d.as_dict() for d in invoice_doc.items])
-	if errors and _should_block(invoice_doc.pos_profile):
-		frappe.throw(frappe.as_json({"errors": errors}), frappe.ValidationError)
+        errors = _collect_stock_errors([d.as_dict() for d in invoice_doc.items])
+        if errors and _should_block(invoice_doc.pos_profile):
+                frappe.throw(frappe.as_json({"errors": errors}), frappe.ValidationError)
+
+
+def _auto_set_return_batches(invoice_doc):
+        """Assign batch numbers for return invoices without a source invoice.
+
+        When the POS Profile allows returns without an original invoice and an
+        item requires a batch number, this function allocates the first
+        available batch in FIFO order. If no batches exist in the selected
+        warehouse, an informative error is raised instead of the generic
+        validation error.
+        """
+
+        if not invoice_doc.is_return or invoice_doc.get("return_against"):
+                return
+
+        profile = invoice_doc.get("pos_profile")
+        allow_without_invoice = profile and frappe.db.get_value(
+                "POS Profile", profile, "posa_allow_return_without_invoice"
+        )
+        if not cint(allow_without_invoice):
+                return
+
+        allow_free = cint(
+                frappe.db.get_value("POS Profile", profile, "posa_allow_free_batch_return")
+                or 0
+        )
+
+        for d in invoice_doc.items:
+                if not d.get("item_code") or not d.get("warehouse"):
+                        continue
+
+                has_batch = frappe.db.get_value("Item", d.item_code, "has_batch_no")
+                if has_batch and not d.get("batch_no"):
+                        batch_list = get_batch_qty(
+                                item_code=d.item_code, warehouse=d.warehouse
+                        ) or []
+                        batch_list = [b for b in batch_list if flt(b.get("qty")) > 0]
+                        if batch_list:
+                                # FIFO: batches are already sorted by posting/expiry in ERPNext
+                                d.batch_no = batch_list[0].get("batch_no")
+                        elif not allow_free:
+                                frappe.throw(
+                                        _(
+                                                "No batches available in {0} for {1}."
+                                        ).format(d.warehouse, d.item_code)
+                                )
 
 
 @frappe.whitelist()
@@ -437,6 +483,8 @@ def submit_invoice(invoice, data):
 				is_payment_entry = 1
 
 	payments = invoice_doc.payments
+
+	_auto_set_return_batches(invoice_doc)
 
 	# if frappe.get_value("POS Profile", invoice_doc.pos_profile, "posa_auto_set_batch"):
 	#     set_batch_nos(invoice_doc, "warehouse", throw=True)

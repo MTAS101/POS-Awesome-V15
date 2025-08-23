@@ -993,41 +993,50 @@ export default {
 			return Math.round(amount);
 		},
 
-		// Increase quantity of an item (handles return logic)
-		add_one(item) {
-			const proposed = item.qty + 1;
-			const blockSale =
-				!this.stock_settings.allow_negative_stock ||
-				this.pos_profile.posa_block_sale_beyond_available_qty;
-			if (blockSale && item.max_qty !== undefined && proposed > item.max_qty) {
-				item.qty = item.max_qty;
-				this.calc_stock_qty(item, item.qty);
-				this.eventBus.emit("show_message", {
-					title: __("Maximum available quantity is {0}. Quantity adjusted to match stock.", [
-						this.formatFloat(item.max_qty),
-					]),
-					color: "error",
-				});
-				return;
-			}
-			item.qty = proposed;
-			if (item.qty == 0) {
-				this.remove_item(item);
-			}
-			this.calc_stock_qty(item, item.qty);
-			this.$forceUpdate();
-		},
+                // Increase quantity of an item (handles return logic)
+                add_one(item) {
+                        if (this.isReturnInvoice) {
+                                // For returns, make quantity more negative
+                                item.qty--;
+                        } else {
+                                const proposed = item.qty + 1;
+                                const blockSale =
+                                        !this.stock_settings.allow_negative_stock ||
+                                        this.pos_profile.posa_block_sale_beyond_available_qty;
+                                if (blockSale && item.max_qty !== undefined && proposed > item.max_qty) {
+                                        item.qty = item.max_qty;
+                                        this.calc_stock_qty(item, item.qty);
+                                        this.eventBus.emit("show_message", {
+                                                title: __("Maximum available quantity is {0}. Quantity adjusted to match stock.", [
+                                                        this.formatFloat(item.max_qty),
+                                                ]),
+                                                color: "error",
+                                        });
+                                        return;
+                                }
+                                item.qty = proposed;
+                        }
+                        if (item.qty == 0) {
+                                this.remove_item(item);
+                        }
+                        this.calc_stock_qty(item, item.qty);
+                        this.$forceUpdate();
+                },
 
-		// Decrease quantity of an item (handles return logic)
-		subtract_one(item) {
-			// Decrease quantity, return items remain negative
-			item.qty--;
-			if (item.qty == 0) {
-				this.remove_item(item);
-			}
-			this.calc_stock_qty(item, item.qty);
-			this.$forceUpdate();
-		},
+                // Decrease quantity of an item (handles return logic)
+                subtract_one(item) {
+                        if (this.isReturnInvoice) {
+                                // For returns, move quantity toward zero
+                                item.qty++;
+                        } else {
+                                item.qty--;
+                        }
+                        if (item.qty == 0) {
+                                this.remove_item(item);
+                        }
+                        this.calc_stock_qty(item, item.qty);
+                        this.$forceUpdate();
+                },
 
 		// Handle item reordering from drag and drop
 		handleItemReorder(reorderData) {
