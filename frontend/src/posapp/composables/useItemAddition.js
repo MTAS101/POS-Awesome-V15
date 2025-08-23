@@ -137,6 +137,46 @@ export function useItemAddition() {
 					context.fetch_available_qty(new_item);
 				}
 
+				if (
+					context.isReturnInvoice &&
+					context.pos_profile.posa_allow_return_without_invoice &&
+					new_item.has_batch_no &&
+					!context.pos_profile.posa_auto_set_batch
+				) {
+					const opts =
+						Array.isArray(new_item.batch_no_data) && new_item.batch_no_data.length > 0
+							? new_item.batch_no_data
+							: null;
+					if (opts) {
+						const dialog = new frappe.ui.Dialog({
+							title: __("Select Batch"),
+							fields: [
+								{
+									fieldtype: "Select",
+									fieldname: "batch",
+									label: __("Batch"),
+									options: opts.map((b) => `${b.batch_no} | ${b.batch_qty}`).join("\n"),
+									reqd: !context.pos_profile.posa_allow_free_batch_return,
+								},
+							],
+							primary_action_label: __("Select"),
+							primary_action(values) {
+								const selected = values.batch ? values.batch.split("|")[0].trim() : null;
+								context.setBatchQty(new_item, selected, false);
+								dialog.hide();
+							},
+						});
+						dialog.onhide = () => {
+							if (!new_item.batch_no) {
+								context.setBatchQty(new_item, null, false);
+							}
+						};
+						dialog.show();
+					} else {
+						context.setBatchQty(new_item, null, false);
+					}
+				}
+
 				// Expand new item if it has batch or serial number
 				if (
 					(!context.pos_profile.posa_auto_set_batch && new_item.has_batch_no) ||
@@ -231,13 +271,13 @@ export function useItemAddition() {
 	};
 
 	// Create a new item object with default and calculated fields
-        const getNewItem = (item, context) => {
-                const new_item = { ...item };
-                new_item.original_item_name = new_item.item_name;
-                new_item.name_overridden = 0;
-                if (!new_item.warehouse) {
-                        new_item.warehouse = context.pos_profile.warehouse;
-                }
+	const getNewItem = (item, context) => {
+		const new_item = { ...item };
+		new_item.original_item_name = new_item.item_name;
+		new_item.name_overridden = 0;
+		if (!new_item.warehouse) {
+			new_item.warehouse = context.pos_profile.warehouse;
+		}
 		if (!item.qty) {
 			item.qty = 1;
 		}

@@ -181,6 +181,7 @@ fixtures = [
                     "POS Profile-posa_max_discount_allowed",
                     "POS Profile-posa_allow_return",
                     "POS Profile-posa_allow_return_without_invoice",
+                    "POS Profile-posa_allow_free_batch_return",
                     "POS Profile-posa_col_1",
                     "POS Profile-posa_scale_barcode_start",
                     "POS Profile-create_pos_invoice_instead_of_sales_invoice",
