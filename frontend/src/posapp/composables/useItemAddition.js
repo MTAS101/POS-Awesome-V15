@@ -197,11 +197,11 @@ export function useItemAddition() {
 						}
 					});
 				}
-				if (context.isReturnInvoice) {
-					cur_item.qty -= new_item.qty || 1;
-				} else {
-					cur_item.qty += new_item.qty || 1;
-				}
+                                if (context.isReturnInvoice) {
+                                        cur_item.qty -= Math.abs(new_item.qty || 1);
+                                } else {
+                                        cur_item.qty += new_item.qty || 1;
+                                }
 				if (context.calc_stock_qty) context.calc_stock_qty(cur_item, cur_item.qty);
 
 				if (cur_item.has_batch_no && cur_item.batch_no && context.setBatchQty) {
@@ -235,12 +235,12 @@ export function useItemAddition() {
 				item.to_set_serial_no = null;
 			}
 
-			// For returns, subtract from quantity to make it more negative
-			if (context.isReturnInvoice) {
-				cur_item.qty -= item.qty || 1;
-			} else {
-				cur_item.qty += item.qty || 1;
-			}
+                        // For returns, subtract from quantity to make it more negative
+                        if (context.isReturnInvoice) {
+                                cur_item.qty -= Math.abs(item.qty || 1);
+                        } else {
+                                cur_item.qty += item.qty || 1;
+                        }
 			if (context.calc_stock_qty) context.calc_stock_qty(cur_item, cur_item.qty);
 
 			// Update batch quantity if needed
