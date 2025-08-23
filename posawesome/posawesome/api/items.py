@@ -85,60 +85,10 @@ def get_available_qty(items):
 
 @frappe.whitelist()
 def get_items(
-	pos_profile,
-	price_list=None,
-	item_group="",
-	search_value="",
-	customer=None,
-	limit=None,
-	offset=None,
-	start_after=None,
-	modified_after=None,
-	include_description=False,
-	include_image=False,
-):
-	_pos_profile = json.loads(pos_profile)
-	use_price_list = _pos_profile.get("posa_use_server_cache")
-	pos_profile_name = _pos_profile.get("name")
-	warehouse = _pos_profile.get("warehouse")
-	ttl = _pos_profile.get("posa_server_cache_duration")
-	if ttl:
-		ttl = int(ttl) * 60
-
-	@redis_cache(ttl=ttl or 300)
-	def __get_items(
-		_pos_profile_name,
-		_warehouse,
-		price_list,
-		customer,
-		search_value,
-		limit,
-		offset,
-		start_after,
-		modified_after,
-		item_group,
-		include_description,
-		include_image,
-	):
-		return _get_items(
-			pos_profile,
-			price_list,
-			item_group,
-			search_value,
-			customer,
-			limit,
-			offset,
-			start_after,
-			modified_after,
-			include_description,
-			include_image,
-		)
-
-	def _get_items(
 		pos_profile,
-		price_list,
-		item_group,
-		search_value,
+		price_list=None,
+		item_group="",
+		search_value="",
 		customer=None,
 		limit=None,
 		offset=None,
@@ -146,8 +96,65 @@ def get_items(
 		modified_after=None,
 		include_description=False,
 		include_image=False,
-	):
-		pos_profile = json.loads(pos_profile)
+		item_groups=None,
+):
+		_pos_profile = json.loads(pos_profile)
+		use_price_list = _pos_profile.get("posa_use_server_cache")
+		pos_profile_name = _pos_profile.get("name")
+		warehouse = _pos_profile.get("warehouse")
+		ttl = _pos_profile.get("posa_server_cache_duration")
+		if ttl:
+				ttl = int(ttl) * 60
+
+		item_groups = item_groups or get_item_groups(pos_profile_name)
+		item_groups_tuple = tuple(sorted(item_groups)) if item_groups else tuple()
+
+		@redis_cache(ttl=ttl or 300)
+		def __get_items(
+				_pos_profile_name,
+				_warehouse,
+				price_list,
+				customer,
+				search_value,
+				limit,
+				offset,
+				start_after,
+				modified_after,
+				item_group,
+				include_description,
+				include_image,
+				item_groups_tuple,
+		):
+				return _get_items(
+						pos_profile,
+						price_list,
+						item_group,
+						search_value,
+						customer,
+						limit,
+						offset,
+						start_after,
+						modified_after,
+						include_description,
+						include_image,
+						list(item_groups_tuple),
+				)
+
+		def _get_items(
+				pos_profile,
+				price_list,
+				item_group,
+				search_value,
+				customer=None,
+				limit=None,
+				offset=None,
+				start_after=None,
+				modified_after=None,
+				include_description=False,
+				include_image=False,
+				item_groups=None,
+		):
+				pos_profile = json.loads(pos_profile)
 
 		use_limit_search = pos_profile.get("posa_use_limit_search")
 		search_serial_no = pos_profile.get("posa_search_serial_no")
@@ -187,7 +194,6 @@ def get_items(
 			filters["modified"] = [">", parsed_modified_after.isoformat()]
 
 		# Add item group filter
-		item_groups = get_item_groups(pos_profile.get("name"))
 		if item_groups:
 			filters["item_group"] = ["in", item_groups]
 
@@ -349,35 +355,37 @@ def get_items(
 
 		return result[:limit_page_length] if limit_page_length else result
 
-	if use_price_list:
-		return __get_items(
-			pos_profile_name,
-			warehouse,
-			price_list,
-			customer,
-			search_value,
-			limit,
-			offset,
-			start_after,
-			modified_after,
-			item_group,
-			include_description,
-			include_image,
-		)
-	else:
-		return _get_items(
-			pos_profile,
-			price_list,
-			item_group,
-			search_value,
-			customer,
-			limit,
-			offset,
-			start_after,
-			modified_after,
-			include_description,
-			include_image,
-		)
+		if use_price_list:
+				return __get_items(
+						pos_profile_name,
+						warehouse,
+						price_list,
+						customer,
+						search_value,
+						limit,
+						offset,
+						start_after,
+						modified_after,
+						item_group,
+						include_description,
+						include_image,
+						item_groups_tuple,
+				)
+		else:
+				return _get_items(
+						pos_profile,
+						price_list,
+						item_group,
+						search_value,
+						customer,
+						limit,
+						offset,
+						start_after,
+						modified_after,
+						include_description,
+						include_image,
+						item_groups,
+				)
 
 
 @frappe.whitelist()
@@ -390,13 +398,13 @@ def get_items_groups():
 
 
 @frappe.whitelist()
-def get_items_count(pos_profile):
-	pos_profile = json.loads(pos_profile)
-	item_groups = get_item_groups(pos_profile.get("name"))
-	filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
-	if item_groups:
-		filters["item_group"] = ["in", item_groups]
-	return frappe.db.count("Item", filters)
+def get_items_count(pos_profile, item_groups=None):
+		pos_profile = json.loads(pos_profile)
+		item_groups = item_groups or get_item_groups(pos_profile.get("name"))
+		filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
+		if item_groups:
+				filters["item_group"] = ["in", item_groups]
+		return frappe.db.count("Item", filters)
 
 
 @frappe.whitelist()
