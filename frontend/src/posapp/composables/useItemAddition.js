@@ -6,61 +6,58 @@ import { useBundles } from "./useBundles.js";
 
 export function useItemAddition() {
 	// Remove item from invoice
-	const removeItem = (item, context) => {
-		const index = context.items.findIndex((el) => el.posa_row_id == item.posa_row_id);
-		if (index >= 0) {
-			context.items.splice(index, 1);
-		}
-		if (item.is_bundle) {
-			context.items = context.items.filter((it) => it.parent_bundle_code !== item.item_code);
-		}
-		// Remove from expanded if present
-		context.expanded = context.expanded.filter((id) => id !== item.posa_row_id);
-	};
+        const removeItem = (item, context) => {
+                const index = context.items.findIndex((el) => el.posa_row_id == item.posa_row_id);
+                if (index >= 0) {
+                        context.items.splice(index, 1);
+                }
+                if (item.is_bundle) {
+                        context.packed_items = context.packed_items.filter((it) => it.bundle_id !== item.bundle_id);
+                }
+                // Remove from expanded if present
+                context.expanded = context.expanded.filter((id) => id !== item.posa_row_id);
+        };
 
 	const { getBundleComponents } = useBundles();
 
-	const expandBundle = async (parent, context) => {
-		const components = await getBundleComponents(parent.item_code);
-		if (!components || !components.length) {
-			return;
-		}
-		parent.is_bundle = 1;
-		parent.is_stock_item = 0;
-		parent.warehouse = null;
-		parent.stock_qty = 0;
-		components.forEach((comp) => {
-			const child = {
-				item_code: comp.item_code,
-				qty: (parent.qty || 1) * comp.qty,
-				stock_qty: (parent.qty || 1) * comp.qty,
-				uom: comp.uom,
-				rate: 0,
-				price_list_rate: 0,
-				base_rate: 0,
-				base_price_list_rate: 0,
-				discount_amount: 0,
-				parent_bundle_code: parent.item_code,
-				child_qty_per_bundle: comp.qty,
-				is_stock_item: 1,
-				has_batch_no: comp.is_batch,
-				has_serial_no: comp.is_serial,
-				posa_row_id: context.makeid ? context.makeid(20) : Math.random().toString(36).substr(2, 20),
-				posa_is_bundle_component: true,
-			};
-			context.items.push(child);
-			if (context.update_item_detail) {
-				context.update_item_detail(child, false);
-				Object.assign(child, {
-					rate: 0,
-					price_list_rate: 0,
-					base_rate: 0,
-					base_price_list_rate: 0,
-					discount_amount: 0,
-				});
-			}
-		});
-	};
+        const expandBundle = async (parent, context) => {
+                const components = await getBundleComponents(parent.item_code);
+                if (!components || !components.length) {
+                        return;
+                }
+                parent.is_bundle = 1;
+                parent.is_bundle_parent = 1;
+                parent.is_stock_item = 0;
+                parent.warehouse = null;
+                parent.stock_qty = 0;
+                parent.bundle_id = context.makeid ? context.makeid(10) : Math.random().toString(36).substr(2, 10);
+                for (const comp of components) {
+                        const child = {
+                                parent_item: parent.item_code,
+                                bundle_id: parent.bundle_id,
+                                item_code: comp.item_code,
+                                item_name: comp.item_name || comp.item_code,
+                                qty: (parent.qty || 1) * comp.qty,
+                                stock_qty: (parent.qty || 1) * comp.qty,
+                                uom: comp.uom,
+                                rate: 0,
+                                child_qty_per_bundle: comp.qty,
+                                warehouse: context.pos_profile.warehouse,
+                                is_stock_item: 1,
+                                has_batch_no: comp.is_batch,
+                                has_serial_no: comp.is_serial,
+                                posa_row_id: context.makeid ? context.makeid(20) : Math.random().toString(36).substr(2, 20),
+                        };
+                        context.packed_items.push(child);
+                        if (context.update_item_detail) {
+                                context.update_item_detail(child, false);
+                                context.calc_stock_qty && context.calc_stock_qty(child, child.qty);
+                        }
+                        if (context.fetch_available_qty) {
+                                context.fetch_available_qty(child);
+                        }
+                }
+        };
 
 	// Add item to invoice
 	const addItem = async (item, context) => {
@@ -177,10 +174,10 @@ export function useItemAddition() {
 			}
 
 			if (index === -1 || context.new_line) {
-				context.items.unshift(new_item);
-				expandBundle(new_item, context);
-				// Skip recalculation to preserve the manually set rate
-				if (context.update_item_detail) context.update_item_detail(new_item, false);
+                                context.items.unshift(new_item);
+                                await expandBundle(new_item, context);
+                                // Skip recalculation to preserve the manually set rate
+                                if (context.update_item_detail) context.update_item_detail(new_item, false);
 
 				if (context.fetch_available_qty) {
 					context.fetch_available_qty(new_item);
@@ -397,7 +394,8 @@ export function useItemAddition() {
 
 	// Reset all invoice fields to default/empty values
 	const clearInvoice = (context) => {
-		context.items = [];
+                context.items = [];
+                context.packed_items = [];
 		context.posa_offers = [];
 		context.expanded = [];
 		context.eventBus.emit("set_pos_coupons", []);

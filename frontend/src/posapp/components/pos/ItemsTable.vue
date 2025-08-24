@@ -9,7 +9,7 @@
 	>
 		<v-data-table-virtual
 			:headers="headers"
-			:items="filteredItems"
+                        :items="items"
 			:theme="$theme.current"
 			:expanded="expanded"
 			show-expand
@@ -33,11 +33,14 @@
 		>
 			<!-- Item name column -->
 			<template v-slot:item.item_name="{ item }">
-				<div class="d-flex align-center">
-					<span>{{ item.item_name }}</span>
-					<v-chip v-if="item.name_overridden" color="primary" size="x-small" class="ml-1">{{
-						__("Edited")
-					}}</v-chip>
+                                <div class="d-flex align-center">
+                                        <span>{{ item.item_name }}</span>
+                                        <v-chip v-if="item.is_bundle" color="secondary" size="x-small" class="ml-1">{{
+                                                __("Bundle")
+                                        }}</v-chip>
+                                        <v-chip v-if="item.name_overridden" color="primary" size="x-small" class="ml-1">{{
+                                                __("Edited")
+                                        }}</v-chip>
 					<v-icon
 						v-if="pos_profile.posa_allow_line_item_name_override && !item.posa_is_replace"
 						size="x-small"
@@ -135,44 +138,16 @@
 			<template v-slot:expanded-row="{ item }">
 				<td :colspan="headers.length" class="ma-0 pa-0">
 					<div class="expanded-content">
-						<div v-if="item.is_bundle && showBundleComponents" class="bundle-components mb-2">
-							<v-expansion-panels variant="accordion">
-								<v-expansion-panel>
-									<v-expansion-panel-title>
-										{{ __("Included Items") }}
-										(
-										{{
-											items.filter((it) => it.parent_bundle_code === item.item_code)
-												.length
-										}}
-										)
-									</v-expansion-panel-title>
-									<v-expansion-panel-text>
-										<v-list density="compact">
-											<v-list-item
-												v-for="child in items.filter(
-													(it) => it.parent_bundle_code === item.item_code,
-												)"
-												:key="child.posa_row_id"
-											>
-												<div class="d-flex justify-space-between">
-													<span>{{ child.item_code }} - {{ child.item_name }}</span>
-													<span
-														>{{
-															formatFloat(
-																child.qty,
-																hide_qty_decimals ? 0 : undefined,
-															)
-														}}
-														{{ child.uom }}</span
-													>
-												</div>
-											</v-list-item>
-										</v-list>
-									</v-expansion-panel-text>
-								</v-expansion-panel>
-							</v-expansion-panels>
-						</div>
+			<div v-if="item.is_bundle" class="mb-2">
+				<v-btn
+					size="small"
+					variant="text"
+					color="primary"
+					@click.stop="$emit('view-packed', item.bundle_id)"
+				>
+					{{ __("View Packed Items") }}
+				</v-btn>
+			</div>
 						<!-- Enhanced Action Panel with better visual hierarchy -->
 						<div class="action-panel">
 							<div class="action-panel-header">
@@ -731,7 +706,6 @@ export default {
 		toggleOffer: Function,
 		changePriceListRate: Function,
 		isNegative: Function,
-		showBundleComponents: Boolean,
 	},
 	data() {
 		return {
@@ -763,9 +737,6 @@ export default {
 				console.error("Failed to load item selector settings:", e);
 			}
 			return false;
-		},
-		filteredItems() {
-			return this.items.filter((it) => !it.posa_is_bundle_component);
 		},
 	},
 	methods: {

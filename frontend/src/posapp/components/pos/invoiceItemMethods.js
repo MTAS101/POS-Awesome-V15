@@ -161,27 +161,37 @@ export default {
 			this.invoiceTypes = ["Return"];
 		}
 
-		this.invoice_doc = data;
-		this.items = data.items || [];
-		console.log("Items set:", this.items.length, "items");
+                this.invoice_doc = data;
+                this.items = data.items || [];
+                this.packed_items = data.packed_items || [];
+                console.log("Items set:", this.items.length, "items");
 
-		if (this.items.length > 0) {
-			this.update_items_details(this.items);
-			this.posa_offers = data.posa_offers || [];
-			this.items.forEach((item) => {
-				if (!item.posa_row_id) {
-					item.posa_row_id = this.makeid(20);
-				}
-				if (item.batch_no) {
-					this.set_batch_qty(item, item.batch_no);
-				}
-				if (!item.original_item_name) {
-					item.original_item_name = item.item_name;
-				}
-			});
-		} else {
-			console.log("Warning: No items in return invoice");
-		}
+                if (this.items.length > 0) {
+                        this.update_items_details(this.items);
+                        this.posa_offers = data.posa_offers || [];
+                        this.items.forEach((item) => {
+                                if (!item.posa_row_id) {
+                                        item.posa_row_id = this.makeid(20);
+                                }
+                                if (item.batch_no) {
+                                        this.set_batch_qty(item, item.batch_no);
+                                }
+                                if (!item.original_item_name) {
+                                        item.original_item_name = item.item_name;
+                                }
+                        });
+                } else {
+                        console.log("Warning: No items in return invoice");
+                }
+
+                if (this.packed_items.length > 0) {
+                        this.update_items_details(this.packed_items);
+                        this.packed_items.forEach((pi) => {
+                                if (!pi.posa_row_id) {
+                                        pi.posa_row_id = this.makeid(20);
+                                }
+                        });
+                }
 
 		this.customer = data.customer;
 		this.posting_date = this.formatDateForBackend(data.posting_date || frappe.datetime.nowdate());
@@ -353,8 +363,19 @@ export default {
 		doc.is_return = isReturn ? 1 : 0;
 
 		// Calculate amounts in selected currency
-		const items = this.get_invoice_items();
-		doc.items = items;
+                const items = this.get_invoice_items();
+                doc.items = items;
+                doc.packed_items = (this.packed_items || []).map((pi) => ({
+                        parent_item: pi.parent_item,
+                        item_code: pi.item_code,
+                        item_name: pi.item_name,
+                        qty: flt(pi.qty),
+                        uom: pi.uom,
+                        warehouse: pi.warehouse,
+                        batch_no: pi.batch_no,
+                        serial_no: pi.serial_no,
+                        rate: flt(pi.rate),
+                }));
 
 		// Calculate totals in selected currency ensuring negative values for returns
 		let total = this.Total;
@@ -1520,20 +1541,8 @@ export default {
 					item.has_batch_no = data.has_batch_no;
 
 					// Calculate final amount
-					item.amount = vm.flt(item.qty * item.rate, vm.currency_precision);
-					item.base_amount = vm.flt(item.qty * item.base_rate, vm.currency_precision);
-					if (item.posa_is_bundle_component) {
-						Object.assign(item, {
-							rate: 0,
-							price_list_rate: 0,
-							base_rate: 0,
-							base_price_list_rate: 0,
-							discount_amount: 0,
-							base_discount_amount: 0,
-							amount: 0,
-							base_amount: 0,
-						});
-					}
+                                        item.amount = vm.flt(item.qty * item.rate, vm.currency_precision);
+                                        item.base_amount = vm.flt(item.qty * item.base_rate, vm.currency_precision);
 
 					// Log updated rates for debugging
 					console.log(`Updated rates for ${item.item_code} on expand:`, {
