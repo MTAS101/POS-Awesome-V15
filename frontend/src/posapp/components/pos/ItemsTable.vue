@@ -135,6 +135,44 @@
 			<template v-slot:expanded-row="{ item }">
 				<td :colspan="headers.length" class="ma-0 pa-0">
 					<div class="expanded-content">
+						<div v-if="item.is_bundle && showBundleComponents" class="bundle-components mb-2">
+							<v-expansion-panels variant="accordion">
+								<v-expansion-panel>
+									<v-expansion-panel-title>
+										{{ __("Included Items") }}
+										(
+										{{
+											items.filter((it) => it.parent_bundle_code === item.item_code)
+												.length
+										}}
+										)
+									</v-expansion-panel-title>
+									<v-expansion-panel-text>
+										<v-list density="compact">
+											<v-list-item
+												v-for="child in items.filter(
+													(it) => it.parent_bundle_code === item.item_code,
+												)"
+												:key="child.posa_row_id"
+											>
+												<div class="d-flex justify-space-between">
+													<span>{{ child.item_code }} - {{ child.item_name }}</span>
+													<span
+														>{{
+															formatFloat(
+																child.qty,
+																hide_qty_decimals ? 0 : undefined,
+															)
+														}}
+														{{ child.uom }}</span
+													>
+												</div>
+											</v-list-item>
+										</v-list>
+									</v-expansion-panel-text>
+								</v-expansion-panel>
+							</v-expansion-panels>
+						</div>
 						<!-- Enhanced Action Panel with better visual hierarchy -->
 						<div class="action-panel">
 							<div class="action-panel-header">
@@ -727,9 +765,6 @@ export default {
 			return false;
 		},
 		filteredItems() {
-			if (this.showBundleComponents) {
-				return this.items;
-			}
 			return this.items.filter((it) => !it.posa_is_bundle_component);
 		},
 	},

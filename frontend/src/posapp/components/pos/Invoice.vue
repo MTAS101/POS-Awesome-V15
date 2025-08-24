@@ -607,6 +607,14 @@ export default {
 
 			// Recalculate stock quantity with the adjusted value
 			this.calc_stock_qty(item, item[field_name]);
+			if (field_name === "qty" && item.is_bundle) {
+				this.items
+					.filter((it) => it.parent_bundle_code === item.item_code)
+					.forEach((ch) => {
+						ch.qty = item.qty * (ch.child_qty_per_bundle || 1);
+						this.calc_stock_qty(ch, ch.qty);
+					});
+			}
 			return parsedValue;
 		},
 		async fetch_available_currencies() {
