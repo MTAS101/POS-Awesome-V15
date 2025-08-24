@@ -9,7 +9,7 @@
 							<v-icon class="header-icon">mdi-cash-plus</v-icon>
 						</div>
 						<div class="header-text">
-							<h5 class="header-title">{{ __("Create POS Opening Shift") }}</h5>
+							<h5 class="header-title">{{ __("Create POS Opening Shift") }}checking</h5>
 							<p class="header-subtitle">
 								{{ __("Initialize your shift with opening balances") }}
 							</p>
