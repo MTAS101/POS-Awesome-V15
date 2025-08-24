@@ -137,17 +137,7 @@
 			<!-- Expanded row content using Vuetify's built-in system -->
 			<template v-slot:expanded-row="{ item }">
 				<td :colspan="headers.length" class="ma-0 pa-0">
-					<div class="expanded-content">
-			<div v-if="item.is_bundle" class="mb-2">
-				<v-btn
-					size="small"
-					variant="text"
-					color="primary"
-					@click.stop="$emit('view-packed', item.bundle_id)"
-				>
-					{{ __("View Packed Items") }}
-				</v-btn>
-			</div>
+                                        <div class="expanded-content">
 						<!-- Enhanced Action Panel with better visual hierarchy -->
 						<div class="action-panel">
 							<div class="action-panel-header">
@@ -155,19 +145,31 @@
 								<span class="action-panel-title">{{ __("Quick Actions") }}</span>
 							</div>
 							<div class="action-panel-content">
-								<div class="action-button-group">
-									<v-btn
-										:disabled="!!item.posa_is_replace"
-										size="large"
-										color="error"
-										variant="tonal"
-										class="item-action-btn delete-btn"
-										@click.stop="removeItem(item)"
-									>
-										<v-icon size="large">mdi-trash-can-outline</v-icon>
-										<span class="action-label">{{ __("Remove") }}</span>
-									</v-btn>
-								</div>
+                                                                <div class="action-button-group">
+                                                                        <v-btn
+                                                                                :disabled="!!item.posa_is_replace"
+                                                                                size="large"
+                                                                                color="error"
+                                                                                variant="tonal"
+                                                                                class="item-action-btn delete-btn"
+                                                                                @click.stop="removeItem(item)"
+                                                                        >
+                                                                                <v-icon size="large">mdi-trash-can-outline</v-icon>
+                                                                                <span class="action-label">{{ __("Remove") }}</span>
+                                                                        </v-btn>
+                                                                        <v-btn
+                                                                                v-if="item.is_bundle"
+                                                                                :disabled="!!item.posa_is_replace"
+                                                                                size="large"
+                                                                                color="primary"
+                                                                                variant="tonal"
+                                                                                class="item-action-btn bundle-btn"
+                                                                                @click.stop="$emit('view-packed', item.bundle_id)"
+                                                                        >
+                                                                                <v-icon size="large">mdi-package-variant</v-icon>
+                                                                                <span class="action-label">{{ __("Bundle Items") }}</span>
+                                                                        </v-btn>
+                                                                </div>
 
 								<div class="action-button-group">
 									<v-btn

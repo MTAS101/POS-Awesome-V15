@@ -20,11 +20,10 @@ def get_bundle_components(bundles):
 
 	result = {}
 	for code in bundles or []:
-		try:
-			bundle = frappe.get_doc("Product Bundle", code)
-		except frappe.DoesNotExistError:
+		if not frappe.db.exists("Product Bundle", code):
 			result[code] = []
 			continue
+		bundle = frappe.get_doc("Product Bundle", code)
 
 		components = []
 		for row in bundle.items:
