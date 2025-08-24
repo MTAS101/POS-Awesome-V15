@@ -1,5 +1,6 @@
 import { nextTick } from "vue";
 import _ from "lodash";
+import { useBundles } from "./useBundles.js";
 
 /* global frappe, __ */
 
@@ -10,8 +11,55 @@ export function useItemAddition() {
 		if (index >= 0) {
 			context.items.splice(index, 1);
 		}
+		if (item.is_bundle) {
+			context.items = context.items.filter((it) => it.parent_bundle_code !== item.item_code);
+		}
 		// Remove from expanded if present
 		context.expanded = context.expanded.filter((id) => id !== item.posa_row_id);
+	};
+
+	const { getBundleComponents } = useBundles();
+
+	const expandBundle = async (parent, context) => {
+		const components = await getBundleComponents(parent.item_code);
+		if (!components || !components.length) {
+			return;
+		}
+		parent.is_bundle = 1;
+		parent.is_stock_item = 0;
+		parent.warehouse = null;
+		parent.stock_qty = 0;
+		components.forEach((comp) => {
+			const child = {
+				item_code: comp.item_code,
+				qty: (parent.qty || 1) * comp.qty,
+				stock_qty: (parent.qty || 1) * comp.qty,
+				uom: comp.uom,
+				rate: 0,
+				price_list_rate: 0,
+				base_rate: 0,
+				base_price_list_rate: 0,
+				discount_amount: 0,
+				parent_bundle_code: parent.item_code,
+				child_qty_per_bundle: comp.qty,
+				is_stock_item: 1,
+				has_batch_no: comp.is_batch,
+				has_serial_no: comp.is_serial,
+				posa_row_id: context.makeid ? context.makeid(20) : Math.random().toString(36).substr(2, 20),
+				posa_is_bundle_component: true,
+			};
+			context.items.push(child);
+			if (context.update_item_detail) {
+				context.update_item_detail(child, false);
+				Object.assign(child, {
+					rate: 0,
+					price_list_rate: 0,
+					base_rate: 0,
+					base_price_list_rate: 0,
+					discount_amount: 0,
+				});
+			}
+		});
 	};
 
 	// Add item to invoice
@@ -130,6 +178,7 @@ export function useItemAddition() {
 
 			if (index === -1 || context.new_line) {
 				context.items.unshift(new_item);
+				expandBundle(new_item, context);
 				// Skip recalculation to preserve the manually set rate
 				if (context.update_item_detail) context.update_item_detail(new_item, false);
 
@@ -197,11 +246,11 @@ export function useItemAddition() {
 						}
 					});
 				}
-                                if (context.isReturnInvoice) {
-                                        cur_item.qty -= Math.abs(new_item.qty || 1);
-                                } else {
-                                        cur_item.qty += new_item.qty || 1;
-                                }
+				if (context.isReturnInvoice) {
+					cur_item.qty -= Math.abs(new_item.qty || 1);
+				} else {
+					cur_item.qty += new_item.qty || 1;
+				}
 				if (context.calc_stock_qty) context.calc_stock_qty(cur_item, cur_item.qty);
 
 				if (cur_item.has_batch_no && cur_item.batch_no && context.setBatchQty) {
@@ -235,12 +284,12 @@ export function useItemAddition() {
 				item.to_set_serial_no = null;
 			}
 
-                        // For returns, subtract from quantity to make it more negative
-                        if (context.isReturnInvoice) {
-                                cur_item.qty -= Math.abs(item.qty || 1);
-                        } else {
-                                cur_item.qty += item.qty || 1;
-                        }
+			// For returns, subtract from quantity to make it more negative
+			if (context.isReturnInvoice) {
+				cur_item.qty -= Math.abs(item.qty || 1);
+			} else {
+				cur_item.qty += item.qty || 1;
+			}
 			if (context.calc_stock_qty) context.calc_stock_qty(cur_item, cur_item.qty);
 
 			// Update batch quantity if needed

@@ -9,7 +9,7 @@
 	>
 		<v-data-table-virtual
 			:headers="headers"
-			:items="items"
+			:items="filteredItems"
 			:theme="$theme.current"
 			:expanded="expanded"
 			show-expand
@@ -693,6 +693,7 @@ export default {
 		toggleOffer: Function,
 		changePriceListRate: Function,
 		isNegative: Function,
+		showBundleComponents: Boolean,
 	},
 	data() {
 		return {
@@ -724,6 +725,12 @@ export default {
 				console.error("Failed to load item selector settings:", e);
 			}
 			return false;
+		},
+		filteredItems() {
+			if (this.showBundleComponents) {
+				return this.items;
+			}
+			return this.items.filter((it) => !it.posa_is_bundle_component);
 		},
 	},
 	methods: {
