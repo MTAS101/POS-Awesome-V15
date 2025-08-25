@@ -13,17 +13,17 @@
 				style="max-height: 75vh"
 				@mouseover="style = 'cursor: pointer'"
 			>
-				<v-data-table
-					:headers="items_headers"
-					:items="pos_offers"
-					:single-expand="singleExpand"
-					v-model:expanded="expanded"
-					show-expand
-					item-key="row_id"
-					class="elevation-1"
-					:items-per-page="itemsPerPage"
-					hide-default-footer
-				>
+                                <v-data-table
+                                        :headers="items_headers"
+                                        :items="pos_offers"
+                                        :single-expand="singleExpand"
+                                        v-model:expanded="expanded"
+                                        show-expand
+                                        item-value="row_id"
+                                        class="elevation-1"
+                                        :items-per-page="itemsPerPage"
+                                        hide-default-footer
+                                >
 					<template v-slot:item.offer_applied="{ item }">
 						<v-checkbox-btn
 							@click="toggleOfferApplied(item)"
@@ -38,13 +38,13 @@
 							"
 						></v-checkbox-btn>
 					</template>
-					<template v-slot:expanded-item="{ headers, item }">
-						<td :colspan="headers.length">
-							<v-row class="mt-2">
-								<v-col v-if="item.description">
-									<div class="text-primary" v-html="handleNewLine(item.description)"></div>
-								</v-col>
-								<v-col v-if="item.offer == 'Give Product'">
+                                        <template v-slot:expanded-row="{ item }">
+                                                <td :colspan="items_headers.length">
+                                                        <v-row class="mt-2">
+                                                                <v-col v-if="item.description">
+                                                                        <div class="text-primary" v-html="handleNewLine(item.description)"></div>
+                                                                </v-col>
+                                                                <v-col v-if="item.offer == 'Give Product'">
 									<v-autocomplete
 										v-model="item.give_item"
 										:items="get_give_items(item)"
@@ -86,6 +86,7 @@
 </template>
 
 <script>
+/* global __ */
 import format from "../../format";
 export default {
 	mixins: [format],
@@ -241,14 +242,14 @@ export default {
 	},
 
 	watch: {
-		pos_offers: {
-			deep: true,
-			handler(pos_offers) {
-				this.handelOffers();
-				this.updateCounters();
-				this.updatePosCoupuns();
-			},
-		},
+                pos_offers: {
+                        deep: true,
+                        handler() {
+                                this.handelOffers();
+                                this.updateCounters();
+                                this.updatePosCoupuns();
+                        },
+                },
 	},
 
 	created: function () {
