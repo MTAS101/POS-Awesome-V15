@@ -220,44 +220,58 @@
                                                 @reorder-items="handleItemReorder"
                                                 @add-item-from-drag="handleItemDrop"
                                                 @show-drop-feedback="showDropFeedback"
-                                                @item-dropped="showDropFeedback(false)"
-                                                @view-packed="scrollToPackedItems"
-                                        />
-			<div v-if="packed_items.length" ref="packedItemsSection" class="mt-4">
-				<div class="text-subtitle-1 mb-2">{{ __("Packing List") }} ({{ packed_items.length }})</div>
-				<v-alert type="warning" density="compact" class="mb-2">
-					{{ __("For 'Product Bundle' items, Warehouse, Serial No and Batch No will be considered from the 'Packing List' table. If Warehouse and Batch No are same for all packing items for any 'Product Bundle' item, those values can be entered in the main Item table; values will be copied to 'Packing List' table.") }}
-				</v-alert>
-				<v-data-table
-					:headers="packedItemsHeaders"
-					:items="packed_items"
-					class="elevation-1"
-					hide-default-footer
-					density="compact"
-				>
-					<template v-slot:item.index="{ index }">
-						{{ index + 1 }}
-					</template>
-					<template v-slot:item.qty="{ item }">
-						{{ formatFloat(item.qty) }}
-					</template>
-					<template v-slot:item.rate="{ item }">
-						<div class="currency-display">
-							<span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
-							<span class="amount-value">{{ formatCurrency(item.rate) }}</span>
-						</div>
-					</template>
-					<template v-slot:item.warehouse="{ item }">
-						<v-text-field v-model="item.warehouse" hide-details density="compact" />
-					</template>
-					<template v-slot:item.batch_no="{ item }">
-						<v-text-field v-model="item.batch_no" hide-details density="compact" />
-					</template>
-					<template v-slot:item.serial_no="{ item }">
-						<v-text-field v-model="item.serial_no" hide-details density="compact" />
-					</template>
-				</v-data-table>
-			</div>
+                                               @item-dropped="showDropFeedback(false)"
+                                               @view-packed="openPackedItems"
+                                       />
+                       <v-dialog v-model="show_packed_dialog" max-width="800px">
+                               <v-card>
+                                       <v-card-title class="d-flex align-center">
+                                               <span>{{ __("Packing List") }} ({{ packed_dialog_items.length }})</span>
+                                               <v-spacer></v-spacer>
+                                               <v-btn
+                                                       icon="mdi-close"
+                                                       variant="text"
+                                                       density="compact"
+                                                       @click="show_packed_dialog = false"
+                                               ></v-btn>
+                                       </v-card-title>
+                                       <v-divider></v-divider>
+                                       <v-card-text>
+                                               <v-alert type="warning" density="compact" class="mb-2">
+                                                       {{ __("For 'Product Bundle' items, Warehouse, Serial No and Batch No will be considered from the 'Packing List' table. If Warehouse and Batch No are same for all packing items for any 'Product Bundle' item, those values can be entered in the main Item table; values will be copied to 'Packing List' table.") }}
+                                               </v-alert>
+                                               <v-data-table
+                                                       :headers="packedItemsHeaders"
+                                                       :items="packed_dialog_items"
+                                                       class="elevation-1"
+                                                       hide-default-footer
+                                                       density="compact"
+                                               >
+                                                       <template v-slot:item.index="{ index }">
+                                                               {{ index + 1 }}
+                                                       </template>
+                                                       <template v-slot:item.qty="{ item }">
+                                                               {{ formatFloat(item.qty) }}
+                                                       </template>
+                                                       <template v-slot:item.rate="{ item }">
+                                                               <div class="currency-display">
+                                                                       <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
+                                                                       <span class="amount-value">{{ formatCurrency(item.rate) }}</span>
+                                                               </div>
+                                                       </template>
+                                                       <template v-slot:item.warehouse="{ item }">
+                                                               <v-text-field v-model="item.warehouse" hide-details density="compact" />
+                                                       </template>
+                                                       <template v-slot:item.batch_no="{ item }">
+                                                               <v-text-field v-model="item.batch_no" hide-details density="compact" />
+                                                       </template>
+                                                       <template v-slot:item.serial_no="{ item }">
+                                                               <v-text-field v-model="item.serial_no" hide-details density="compact" />
+                                                       </template>
+                                               </v-data-table>
+                                       </v-card-text>
+                               </v-card>
+                       </v-dialog>
                                 </div>
 			</div>
 		</v-card>
@@ -323,8 +337,10 @@ export default {
 			additional_discount: 0,
 			additional_discount_percentage: 0,
 			total_tax: 0,
-                        items: [], // List of invoice items
-                        packed_items: [], // Packed items for bundles
+                       items: [], // List of invoice items
+                       packed_items: [], // Packed items for bundles
+                       packed_dialog_items: [], // Packed items displayed in dialog
+                       show_packed_dialog: false, // Packing list dialog visibility
 			posOffers: [], // All available offers
 			posa_offers: [], // Offers applied to this invoice
 			posa_coupons: [], // Coupons applied
@@ -452,14 +468,12 @@ export default {
                                 }
                         }
                 },
-                scrollToPackedItems() {
-                        this.$nextTick(() => {
-                                const section = this.$refs.packedItemsSection;
-                                if (section && section.scrollIntoView) {
-                                        section.scrollIntoView({ behavior: "smooth" });
-                                }
-                        });
-                },
+               openPackedItems(bundle_id) {
+                       this.packed_dialog_items = this.packed_items.filter(
+                               (it) => it.bundle_id === bundle_id,
+                       );
+                       this.show_packed_dialog = true;
+               },
                 toggleColumnSelection() {
 			// Create a copy of selected columns for temporary editing
 			this.temp_selected_columns = [...this.selected_columns];

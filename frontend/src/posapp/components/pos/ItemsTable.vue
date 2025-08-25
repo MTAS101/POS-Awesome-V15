@@ -167,9 +167,9 @@
                                                                                 @click.stop="$emit('view-packed', item.bundle_id)"
                                                                         >
                                                                                 <v-icon size="large">mdi-package-variant</v-icon>
-                                                                                <span class="action-label">{{ __("Bundle Items") }}</span>
-                                                                        </v-btn>
-                                                                </div>
+                                                                               <span class="action-label">{{ __("Items Included") }}</span>
+                                                                       </v-btn>
+                                                               </div>
 
 								<div class="action-button-group">
 									<v-btn
