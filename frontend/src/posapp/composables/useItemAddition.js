@@ -31,6 +31,8 @@ export function useItemAddition() {
                 parent.warehouse = null;
                 parent.stock_qty = 0;
                 parent.bundle_id = context.makeid ? context.makeid(10) : Math.random().toString(36).substr(2, 10);
+                // Force reactivity so the bundle badge appears immediately
+                context.items = [...context.items];
                 for (const comp of components) {
                         const child = {
                                 parent_item: parent.item_code,
@@ -374,12 +376,15 @@ export function useItemAddition() {
 		new_item.conversion_factor = 1;
 		new_item.posa_offers = JSON.stringify([]);
 		new_item.posa_offer_applied = 0;
-		new_item.posa_is_offer = item.posa_is_offer;
-		new_item.posa_is_replace = item.posa_is_replace || null;
-		new_item.is_free_item = 0;
-		new_item.posa_notes = "";
-		new_item.posa_delivery_date = "";
-		new_item.posa_row_id = context.makeid ? context.makeid(20) : Math.random().toString(36).substr(2, 20);
+                new_item.posa_is_offer = item.posa_is_offer;
+                new_item.posa_is_replace = item.posa_is_replace || null;
+                new_item.is_free_item = 0;
+                new_item.is_bundle = 0;
+                new_item.is_bundle_parent = 0;
+                new_item.bundle_id = null;
+                new_item.posa_notes = "";
+                new_item.posa_delivery_date = "";
+                new_item.posa_row_id = context.makeid ? context.makeid(20) : Math.random().toString(36).substr(2, 20);
 		if (new_item.has_serial_no && !new_item.serial_no_selected) {
 			new_item.serial_no_selected = [];
 			new_item.serial_no_selected_count = 0;
