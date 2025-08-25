@@ -26,7 +26,7 @@
 			<div class="dynamic-padding">
 				<v-alert
 					type="info"
-					dense
+					density="compact"
 					class="mb-2"
 					v-if="pos_profile.create_pos_invoice_instead_of_sales_invoice"
 				>
@@ -217,12 +217,62 @@
 						:changePriceListRate="change_price_list_rate"
 						:isNegative="isNegative"
 						@update:expanded="handleExpandedUpdate"
-						@reorder-items="handleItemReorder"
-						@add-item-from-drag="handleItemDrop"
-						@show-drop-feedback="showDropFeedback"
-						@item-dropped="showDropFeedback(false)"
-					/>
-				</div>
+                                                @reorder-items="handleItemReorder"
+                                                @add-item-from-drag="handleItemDrop"
+                                                @show-drop-feedback="showDropFeedback"
+                                               @item-dropped="showDropFeedback(false)"
+                                               @view-packed="openPackedItems"
+                                       />
+                       <v-dialog v-model="show_packed_dialog" max-width="800px">
+                               <v-card>
+                                       <v-card-title class="d-flex align-center">
+                                               <span>{{ __("Packing List") }} ({{ packed_dialog_items.length }})</span>
+                                               <v-spacer></v-spacer>
+                                               <v-btn
+                                                       icon="mdi-close"
+                                                       variant="text"
+                                                       density="compact"
+                                                       @click="show_packed_dialog = false"
+                                               ></v-btn>
+                                       </v-card-title>
+                                       <v-divider></v-divider>
+                                       <v-card-text>
+                                               <v-alert type="warning" density="compact" class="mb-2">
+                                                       {{ __("For 'Product Bundle' items, Warehouse, Serial No and Batch No will be considered from the 'Packing List' table. If Warehouse and Batch No are same for all packing items for any 'Product Bundle' item, those values can be entered in the main Item table; values will be copied to 'Packing List' table.") }}
+                                               </v-alert>
+                                               <v-data-table
+                                                       :headers="packedItemsHeaders"
+                                                       :items="packed_dialog_items"
+                                                       class="elevation-1"
+                                                       hide-default-footer
+                                                       density="compact"
+                                               >
+                                                       <template v-slot:item.index="{ index }">
+                                                               {{ index + 1 }}
+                                                       </template>
+                                                       <template v-slot:item.qty="{ item }">
+                                                               {{ formatFloat(item.qty) }}
+                                                       </template>
+                                                       <template v-slot:item.rate="{ item }">
+                                                               <div class="currency-display">
+                                                                       <span class="currency-symbol">{{ currencySymbol(displayCurrency) }}</span>
+                                                                       <span class="amount-value">{{ formatCurrency(item.rate) }}</span>
+                                                               </div>
+                                                       </template>
+                                                       <template v-slot:item.warehouse="{ item }">
+                                                               <v-text-field v-model="item.warehouse" hide-details density="compact" />
+                                                       </template>
+                                                       <template v-slot:item.batch_no="{ item }">
+                                                               <v-text-field v-model="item.batch_no" hide-details density="compact" />
+                                                       </template>
+                                                       <template v-slot:item.serial_no="{ item }">
+                                                               <v-text-field v-model="item.serial_no" hide-details density="compact" />
+                                                       </template>
+                                               </v-data-table>
+                                       </v-card-text>
+                               </v-card>
+                       </v-dialog>
+                                </div>
 			</div>
 		</v-card>
 		<!-- Payment Section -->
@@ -287,7 +337,10 @@ export default {
 			additional_discount: 0,
 			additional_discount_percentage: 0,
 			total_tax: 0,
-			items: [], // List of invoice items
+                       items: [], // List of invoice items
+                       packed_items: [], // Packed items for bundles
+                       packed_dialog_items: [], // Packed items displayed in dialog
+                       show_packed_dialog: false, // Packing list dialog visibility
 			posOffers: [], // All available offers
 			posa_offers: [], // Offers applied to this invoice
 			posa_coupons: [], // Coupons applied
@@ -309,7 +362,18 @@ export default {
 			invoice_posting_date: false, // Posting date dialog
 			posting_date: frappe.datetime.nowdate(), // Invoice posting date
 			posting_date_display: "", // Display value for date picker
-			items_headers: [],
+                        items_headers: [],
+                        packedItemsHeaders: [
+                                { title: __("No."), key: "index" },
+                                { title: __("Parent Item"), key: "parent_item" },
+                                { title: __("Item Code"), key: "item_code" },
+                                { title: __("Description"), key: "item_name" },
+                                { title: __("Qty"), key: "qty" },
+                                { title: __("Rate"), key: "rate" },
+                                { title: __("Warehouse"), key: "warehouse" },
+                                { title: __("Batch"), key: "batch_no" },
+                                { title: __("Serial"), key: "serial_no" },
+                        ],
 			selected_currency: "", // Currently selected currency
 			exchange_rate: 1, // Current exchange rate
 			conversion_rate: 1, // Currency to company rate
@@ -393,18 +457,24 @@ export default {
 		},
 
 		// Show visual feedback when item is being dragged over drop zone
-		showDropFeedback(isDragging) {
-			// Add visual feedback class to the items table
-			const itemsTable = this.$el.querySelector(".modern-items-table");
-			if (itemsTable) {
-				if (isDragging) {
-					itemsTable.classList.add("drag-over");
-				} else {
-					itemsTable.classList.remove("drag-over");
-				}
-			}
-		},
-		toggleColumnSelection() {
+                showDropFeedback(isDragging) {
+                        // Add visual feedback class to the items table
+                        const itemsTable = this.$el.querySelector(".modern-items-table");
+                        if (itemsTable) {
+                                if (isDragging) {
+                                        itemsTable.classList.add("drag-over");
+                                } else {
+                                        itemsTable.classList.remove("drag-over");
+                                }
+                        }
+                },
+               openPackedItems(bundle_id) {
+                       this.packed_dialog_items = this.packed_items.filter(
+                               (it) => it.bundle_id === bundle_id,
+                       );
+                       this.show_packed_dialog = true;
+               },
+                toggleColumnSelection() {
 			// Create a copy of selected columns for temporary editing
 			this.temp_selected_columns = [...this.selected_columns];
 			this.show_column_selector = true;
@@ -605,7 +675,15 @@ export default {
 			}
 
 			// Recalculate stock quantity with the adjusted value
-			this.calc_stock_qty(item, item[field_name]);
+                        this.calc_stock_qty(item, item[field_name]);
+                        if (field_name === "qty" && item.is_bundle) {
+                                this.packed_items
+                                        .filter((it) => it.bundle_id === item.bundle_id)
+                                        .forEach((ch) => {
+                                                ch.qty = item.qty * (ch.child_qty_per_bundle || 1);
+                                                this.calc_stock_qty(ch, ch.qty);
+                                        });
+                        }
 			return parsedValue;
 		},
 		async fetch_available_currencies() {
@@ -993,50 +1071,66 @@ export default {
 			return Math.round(amount);
 		},
 
-                // Increase quantity of an item (handles return logic)
-                add_one(item) {
-                        if (this.isReturnInvoice) {
-                                // For returns, make quantity more negative
-                                item.qty--;
-                        } else {
-                                const proposed = item.qty + 1;
-                                const blockSale =
-                                        !this.stock_settings.allow_negative_stock ||
-                                        this.pos_profile.posa_block_sale_beyond_available_qty;
-                                if (blockSale && item.max_qty !== undefined && proposed > item.max_qty) {
-                                        item.qty = item.max_qty;
-                                        this.calc_stock_qty(item, item.qty);
-                                        this.eventBus.emit("show_message", {
-                                                title: __("Maximum available quantity is {0}. Quantity adjusted to match stock.", [
-                                                        this.formatFloat(item.max_qty),
-                                                ]),
-                                                color: "error",
+		// Increase quantity of an item (handles return logic)
+		add_one(item) {
+			if (this.isReturnInvoice) {
+				// For returns, make quantity more negative
+				item.qty--;
+			} else {
+				const proposed = item.qty + 1;
+				const blockSale =
+					!this.stock_settings.allow_negative_stock ||
+					this.pos_profile.posa_block_sale_beyond_available_qty;
+				if (blockSale && item.max_qty !== undefined && proposed > item.max_qty) {
+					item.qty = item.max_qty;
+					this.calc_stock_qty(item, item.qty);
+					this.eventBus.emit("show_message", {
+						title: __("Maximum available quantity is {0}. Quantity adjusted to match stock.", [
+							this.formatFloat(item.max_qty),
+						]),
+						color: "error",
+					});
+					return;
+				}
+				item.qty = proposed;
+			}
+			if (item.qty == 0) {
+				this.remove_item(item);
+			}
+			this.calc_stock_qty(item, item.qty);
+                        if (item.is_bundle) {
+                                this.packed_items
+                                        .filter((it) => it.bundle_id === item.bundle_id)
+                                        .forEach((ch) => {
+                                                ch.qty = item.qty * (ch.child_qty_per_bundle || 1);
+                                                this.calc_stock_qty(ch, ch.qty);
                                         });
-                                        return;
-                                }
-                                item.qty = proposed;
                         }
-                        if (item.qty == 0) {
-                                this.remove_item(item);
-                        }
-                        this.calc_stock_qty(item, item.qty);
-                        this.$forceUpdate();
-                },
+			this.$forceUpdate();
+		},
 
-                // Decrease quantity of an item (handles return logic)
-                subtract_one(item) {
-                        if (this.isReturnInvoice) {
-                                // For returns, move quantity toward zero
-                                item.qty++;
-                        } else {
-                                item.qty--;
+		// Decrease quantity of an item (handles return logic)
+		subtract_one(item) {
+			if (this.isReturnInvoice) {
+				// For returns, move quantity toward zero
+				item.qty++;
+			} else {
+				item.qty--;
+			}
+			if (item.qty == 0) {
+				this.remove_item(item);
+			}
+			this.calc_stock_qty(item, item.qty);
+                        if (item.is_bundle) {
+                                this.packed_items
+                                        .filter((it) => it.bundle_id === item.bundle_id)
+                                        .forEach((ch) => {
+                                                ch.qty = item.qty * (ch.child_qty_per_bundle || 1);
+                                                this.calc_stock_qty(ch, ch.qty);
+                                        });
                         }
-                        if (item.qty == 0) {
-                                this.remove_item(item);
-                        }
-                        this.calc_stock_qty(item, item.qty);
-                        this.$forceUpdate();
-                },
+			this.$forceUpdate();
+		},
 
 		// Handle item reordering from drag and drop
 		handleItemReorder(reorderData) {

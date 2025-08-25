@@ -161,27 +161,37 @@ export default {
 			this.invoiceTypes = ["Return"];
 		}
 
-		this.invoice_doc = data;
-		this.items = data.items || [];
-		console.log("Items set:", this.items.length, "items");
+                this.invoice_doc = data;
+                this.items = data.items || [];
+                this.packed_items = data.packed_items || [];
+                console.log("Items set:", this.items.length, "items");
 
-		if (this.items.length > 0) {
-			this.update_items_details(this.items);
-			this.posa_offers = data.posa_offers || [];
-			this.items.forEach((item) => {
-				if (!item.posa_row_id) {
-					item.posa_row_id = this.makeid(20);
-				}
-				if (item.batch_no) {
-					this.set_batch_qty(item, item.batch_no);
-				}
-				if (!item.original_item_name) {
-					item.original_item_name = item.item_name;
-				}
-			});
-		} else {
-			console.log("Warning: No items in return invoice");
-		}
+                if (this.items.length > 0) {
+                        this.update_items_details(this.items);
+                        this.posa_offers = data.posa_offers || [];
+                        this.items.forEach((item) => {
+                                if (!item.posa_row_id) {
+                                        item.posa_row_id = this.makeid(20);
+                                }
+                                if (item.batch_no) {
+                                        this.set_batch_qty(item, item.batch_no);
+                                }
+                                if (!item.original_item_name) {
+                                        item.original_item_name = item.item_name;
+                                }
+                        });
+                } else {
+                        console.log("Warning: No items in return invoice");
+                }
+
+                if (this.packed_items.length > 0) {
+                        this.update_items_details(this.packed_items);
+                        this.packed_items.forEach((pi) => {
+                                if (!pi.posa_row_id) {
+                                        pi.posa_row_id = this.makeid(20);
+                                }
+                        });
+                }
 
 		this.customer = data.customer;
 		this.posting_date = this.formatDateForBackend(data.posting_date || frappe.datetime.nowdate());
@@ -349,13 +359,23 @@ export default {
 		doc.customer = this.customer;
 
 		// Determine if this is a return invoice
-                const isReturn = this.isReturnInvoice;
-                const usesPosInvoice = this.pos_profile.create_pos_invoice_instead_of_sales_invoice;
+		const isReturn = this.isReturnInvoice;
 		doc.is_return = isReturn ? 1 : 0;
 
 		// Calculate amounts in selected currency
-		const items = this.get_invoice_items();
-		doc.items = items;
+                const items = this.get_invoice_items();
+                doc.items = items;
+                doc.packed_items = (this.packed_items || []).map((pi) => ({
+                        parent_item: pi.parent_item,
+                        item_code: pi.item_code,
+                        item_name: pi.item_name,
+                        qty: flt(pi.qty),
+                        uom: pi.uom,
+                        warehouse: pi.warehouse,
+                        batch_no: pi.batch_no,
+                        serial_no: pi.serial_no,
+                        rate: flt(pi.rate),
+                }));
 
 		// Calculate totals in selected currency ensuring negative values for returns
 		let total = this.Total;
@@ -617,11 +637,11 @@ export default {
 
 	// Prepare items array for invoice doc
 	get_invoice_items() {
-                const items_list = [];
-                const isReturn = this.isReturnInvoice;
-                const usesPosInvoice = this.pos_profile.create_pos_invoice_instead_of_sales_invoice;
+		const items_list = [];
+		const isReturn = this.isReturnInvoice;
+		const usesPosInvoice = this.pos_profile.create_pos_invoice_instead_of_sales_invoice;
 
-                this.items.forEach((item) => {
+		this.items.forEach((item) => {
 			const new_item = {
 				item_code: item.item_code,
 				// Retain the item name for offline invoices
@@ -638,22 +658,22 @@ export default {
 				uom: item.uom,
 				conversion_factor: item.conversion_factor,
 				serial_no: item.serial_no,
-                                // Link to original invoice item when doing returns
-                                // Needed for backend validation that the item exists in
-                                // the referenced Sales or POS Invoice
-                                ...(item.sales_invoice_item && { sales_invoice_item: item.sales_invoice_item }),
-                                ...(item.pos_invoice_item && { pos_invoice_item: item.pos_invoice_item }),
+				// Link to original invoice item when doing returns
+				// Needed for backend validation that the item exists in
+				// the referenced Sales or POS Invoice
+				...(item.sales_invoice_item && { sales_invoice_item: item.sales_invoice_item }),
+				...(item.pos_invoice_item && { pos_invoice_item: item.pos_invoice_item }),
 				discount_percentage: flt(item.discount_percentage),
 				batch_no: item.batch_no,
 				posa_notes: item.posa_notes,
 				posa_delivery_date: this.formatDateForBackend(item.posa_delivery_date),
 			};
-                        if (isReturn) {
-                                const refField = usesPosInvoice ? "pos_invoice_item" : "sales_invoice_item";
-                                if (!new_item[refField] && item.name) {
-                                        new_item[refField] = item.name;
-                                }
-                        }
+			if (isReturn) {
+				const refField = usesPosInvoice ? "pos_invoice_item" : "sales_invoice_item";
+				if (!new_item[refField] && item.name) {
+					new_item[refField] = item.name;
+				}
+			}
 
 			// Handle currency conversion for rates and amounts
 			const baseCurrency = this.price_list_currency || this.pos_profile.currency;
@@ -1521,8 +1541,8 @@ export default {
 					item.has_batch_no = data.has_batch_no;
 
 					// Calculate final amount
-					item.amount = vm.flt(item.qty * item.rate, vm.currency_precision);
-					item.base_amount = vm.flt(item.qty * item.base_rate, vm.currency_precision);
+                                        item.amount = vm.flt(item.qty * item.rate, vm.currency_precision);
+                                        item.base_amount = vm.flt(item.qty * item.base_rate, vm.currency_precision);
 
 					// Log updated rates for debugging
 					console.log(`Updated rates for ${item.item_code} on expand:`, {

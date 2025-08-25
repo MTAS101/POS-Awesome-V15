@@ -9,7 +9,7 @@
 	>
 		<v-data-table-virtual
 			:headers="headers"
-			:items="items"
+                        :items="items"
 			:theme="$theme.current"
 			:expanded="expanded"
 			show-expand
@@ -33,11 +33,14 @@
 		>
 			<!-- Item name column -->
 			<template v-slot:item.item_name="{ item }">
-				<div class="d-flex align-center">
-					<span>{{ item.item_name }}</span>
-					<v-chip v-if="item.name_overridden" color="primary" size="x-small" class="ml-1">{{
-						__("Edited")
-					}}</v-chip>
+                                <div class="d-flex align-center">
+                                        <span>{{ item.item_name }}</span>
+                                        <v-chip v-if="item.is_bundle" color="secondary" size="x-small" class="ml-1">{{
+                                                __("Bundle")
+                                        }}</v-chip>
+                                        <v-chip v-if="item.name_overridden" color="primary" size="x-small" class="ml-1">{{
+                                                __("Edited")
+                                        }}</v-chip>
 					<v-icon
 						v-if="pos_profile.posa_allow_line_item_name_override && !item.posa_is_replace"
 						size="x-small"
@@ -134,7 +137,7 @@
 			<!-- Expanded row content using Vuetify's built-in system -->
 			<template v-slot:expanded-row="{ item }">
 				<td :colspan="headers.length" class="ma-0 pa-0">
-					<div class="expanded-content">
+                                        <div class="expanded-content">
 						<!-- Enhanced Action Panel with better visual hierarchy -->
 						<div class="action-panel">
 							<div class="action-panel-header">
@@ -142,19 +145,31 @@
 								<span class="action-panel-title">{{ __("Quick Actions") }}</span>
 							</div>
 							<div class="action-panel-content">
-								<div class="action-button-group">
-									<v-btn
-										:disabled="!!item.posa_is_replace"
-										size="large"
-										color="error"
-										variant="tonal"
-										class="item-action-btn delete-btn"
-										@click.stop="removeItem(item)"
-									>
-										<v-icon size="large">mdi-trash-can-outline</v-icon>
-										<span class="action-label">{{ __("Remove") }}</span>
-									</v-btn>
-								</div>
+                                                                <div class="action-button-group">
+                                                                        <v-btn
+                                                                                :disabled="!!item.posa_is_replace"
+                                                                                size="large"
+                                                                                color="error"
+                                                                                variant="tonal"
+                                                                                class="item-action-btn delete-btn"
+                                                                                @click.stop="removeItem(item)"
+                                                                        >
+                                                                                <v-icon size="large">mdi-trash-can-outline</v-icon>
+                                                                                <span class="action-label">{{ __("Remove") }}</span>
+                                                                        </v-btn>
+                                                                        <v-btn
+                                                                                v-if="item.is_bundle"
+                                                                                :disabled="!!item.posa_is_replace"
+                                                                                size="large"
+                                                                                color="primary"
+                                                                                variant="tonal"
+                                                                                class="item-action-btn bundle-btn"
+                                                                                @click.stop="$emit('view-packed', item.bundle_id)"
+                                                                        >
+                                                                                <v-icon size="large">mdi-package-variant</v-icon>
+                                                                               <span class="action-label">{{ __("Items Included") }}</span>
+                                                                       </v-btn>
+                                                               </div>
 
 								<div class="action-button-group">
 									<v-btn

@@ -1,18 +1,65 @@
 import { nextTick } from "vue";
 import _ from "lodash";
+import { useBundles } from "./useBundles.js";
 
 /* global frappe, __ */
 
 export function useItemAddition() {
 	// Remove item from invoice
-	const removeItem = (item, context) => {
-		const index = context.items.findIndex((el) => el.posa_row_id == item.posa_row_id);
-		if (index >= 0) {
-			context.items.splice(index, 1);
-		}
-		// Remove from expanded if present
-		context.expanded = context.expanded.filter((id) => id !== item.posa_row_id);
-	};
+        const removeItem = (item, context) => {
+                const index = context.items.findIndex((el) => el.posa_row_id == item.posa_row_id);
+                if (index >= 0) {
+                        context.items.splice(index, 1);
+                }
+                if (item.is_bundle) {
+                        context.packed_items = context.packed_items.filter((it) => it.bundle_id !== item.bundle_id);
+                }
+                // Remove from expanded if present
+                context.expanded = context.expanded.filter((id) => id !== item.posa_row_id);
+        };
+
+	const { getBundleComponents } = useBundles();
+
+        const expandBundle = async (parent, context) => {
+                const components = await getBundleComponents(parent.item_code);
+                if (!components || !components.length) {
+                        return;
+                }
+                parent.is_bundle = 1;
+                parent.is_bundle_parent = 1;
+                parent.is_stock_item = 0;
+                parent.warehouse = null;
+                parent.stock_qty = 0;
+                parent.bundle_id = context.makeid ? context.makeid(10) : Math.random().toString(36).substr(2, 10);
+                // Force reactivity so the bundle badge appears immediately
+                context.items = [...context.items];
+                for (const comp of components) {
+                        const child = {
+                                parent_item: parent.item_code,
+                                bundle_id: parent.bundle_id,
+                                item_code: comp.item_code,
+                                item_name: comp.item_name || comp.item_code,
+                                qty: (parent.qty || 1) * comp.qty,
+                                stock_qty: (parent.qty || 1) * comp.qty,
+                                uom: comp.uom,
+                                rate: 0,
+                                child_qty_per_bundle: comp.qty,
+                                warehouse: context.pos_profile.warehouse,
+                                is_stock_item: 1,
+                                has_batch_no: comp.is_batch,
+                                has_serial_no: comp.is_serial,
+                                posa_row_id: context.makeid ? context.makeid(20) : Math.random().toString(36).substr(2, 20),
+                        };
+                        context.packed_items.push(child);
+                        if (context.update_item_detail) {
+                                context.update_item_detail(child, false);
+                                context.calc_stock_qty && context.calc_stock_qty(child, child.qty);
+                        }
+                        if (context.fetch_available_qty) {
+                                context.fetch_available_qty(child);
+                        }
+                }
+        };
 
 	// Add item to invoice
 	const addItem = async (item, context) => {
@@ -129,9 +176,10 @@ export function useItemAddition() {
 			}
 
 			if (index === -1 || context.new_line) {
-				context.items.unshift(new_item);
-				// Skip recalculation to preserve the manually set rate
-				if (context.update_item_detail) context.update_item_detail(new_item, false);
+                                context.items.unshift(new_item);
+                                await expandBundle(new_item, context);
+                                // Skip recalculation to preserve the manually set rate
+                                if (context.update_item_detail) context.update_item_detail(new_item, false);
 
 				if (context.fetch_available_qty) {
 					context.fetch_available_qty(new_item);
@@ -197,11 +245,11 @@ export function useItemAddition() {
 						}
 					});
 				}
-                                if (context.isReturnInvoice) {
-                                        cur_item.qty -= Math.abs(new_item.qty || 1);
-                                } else {
-                                        cur_item.qty += new_item.qty || 1;
-                                }
+				if (context.isReturnInvoice) {
+					cur_item.qty -= Math.abs(new_item.qty || 1);
+				} else {
+					cur_item.qty += new_item.qty || 1;
+				}
 				if (context.calc_stock_qty) context.calc_stock_qty(cur_item, cur_item.qty);
 
 				if (cur_item.has_batch_no && cur_item.batch_no && context.setBatchQty) {
@@ -235,12 +283,12 @@ export function useItemAddition() {
 				item.to_set_serial_no = null;
 			}
 
-                        // For returns, subtract from quantity to make it more negative
-                        if (context.isReturnInvoice) {
-                                cur_item.qty -= Math.abs(item.qty || 1);
-                        } else {
-                                cur_item.qty += item.qty || 1;
-                        }
+			// For returns, subtract from quantity to make it more negative
+			if (context.isReturnInvoice) {
+				cur_item.qty -= Math.abs(item.qty || 1);
+			} else {
+				cur_item.qty += item.qty || 1;
+			}
 			if (context.calc_stock_qty) context.calc_stock_qty(cur_item, cur_item.qty);
 
 			// Update batch quantity if needed
@@ -328,12 +376,15 @@ export function useItemAddition() {
 		new_item.conversion_factor = 1;
 		new_item.posa_offers = JSON.stringify([]);
 		new_item.posa_offer_applied = 0;
-		new_item.posa_is_offer = item.posa_is_offer;
-		new_item.posa_is_replace = item.posa_is_replace || null;
-		new_item.is_free_item = 0;
-		new_item.posa_notes = "";
-		new_item.posa_delivery_date = "";
-		new_item.posa_row_id = context.makeid ? context.makeid(20) : Math.random().toString(36).substr(2, 20);
+                new_item.posa_is_offer = item.posa_is_offer;
+                new_item.posa_is_replace = item.posa_is_replace || null;
+                new_item.is_free_item = 0;
+                new_item.is_bundle = 0;
+                new_item.is_bundle_parent = 0;
+                new_item.bundle_id = null;
+                new_item.posa_notes = "";
+                new_item.posa_delivery_date = "";
+                new_item.posa_row_id = context.makeid ? context.makeid(20) : Math.random().toString(36).substr(2, 20);
 		if (new_item.has_serial_no && !new_item.serial_no_selected) {
 			new_item.serial_no_selected = [];
 			new_item.serial_no_selected_count = 0;
@@ -348,7 +399,8 @@ export function useItemAddition() {
 
 	// Reset all invoice fields to default/empty values
 	const clearInvoice = (context) => {
-		context.items = [];
+                context.items = [];
+                context.packed_items = [];
 		context.posa_offers = [];
 		context.expanded = [];
 		context.eventBus.emit("set_pos_coupons", []);
