@@ -31,7 +31,7 @@
 							:disabled="
 								(item.offer == 'Give Product' &&
 									!item.give_item &&
-									(!offer.replace_cheapest_item || !offer.replace_item)) ||
+									!(item.replace_cheapest_item || item.replace_item)) ||
 								(item.offer == 'Grand Total' &&
 									discount_percentage_offer_name &&
 									discount_percentage_offer_name != item.name)
@@ -86,6 +86,7 @@
 </template>
 
 <script>
+/* global __ */
 import format from "../../format";
 export default {
 	mixins: [format],
@@ -185,7 +186,14 @@ export default {
 						}
 					}
 					if (newOffer.offer == "Give Product" && !newOffer.give_item) {
-						newOffer.give_item = this.get_give_items(newOffer)[0].item_code;
+						const giveItems = this.get_give_items(newOffer);
+						if (giveItems.length === 1) {
+							const single = giveItems[0];
+							newOffer.give_item = single.item_code || single;
+						} else {
+							newOffer.give_item = null;
+							newOffer.offer_applied = false;
+						}
 					}
 					this.pos_offers.push(newOffer);
 					this.eventBus.emit("show_message", {
@@ -243,7 +251,7 @@ export default {
 	watch: {
 		pos_offers: {
 			deep: true,
-			handler(pos_offers) {
+			handler() {
 				this.handelOffers();
 				this.updateCounters();
 				this.updatePosCoupuns();
