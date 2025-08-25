@@ -92,7 +92,10 @@ def _should_block(pos_profile):
 
 
 def _validate_stock_on_invoice(invoice_doc):
-        errors = _collect_stock_errors([d.as_dict() for d in invoice_doc.items])
+        items_to_check = [d.as_dict() for d in invoice_doc.items if d.get("is_stock_item")]
+        if hasattr(invoice_doc, "packed_items"):
+                items_to_check.extend([d.as_dict() for d in invoice_doc.packed_items])
+        errors = _collect_stock_errors(items_to_check)
         if errors and _should_block(invoice_doc.pos_profile):
                 frappe.throw(frappe.as_json({"errors": errors}), frappe.ValidationError)
 
