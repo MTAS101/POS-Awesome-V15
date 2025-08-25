@@ -29,12 +29,9 @@
 							@click="toggleOfferApplied(item)"
 							v-model="item.offer_applied"
 							:disabled="
-								(item.offer == 'Give Product' &&
-									!item.give_item &&
-									!(item.replace_cheapest_item || item.replace_item)) ||
-								(item.offer == 'Grand Total' &&
-									discount_percentage_offer_name &&
-									discount_percentage_offer_name != item.name)
+								item.offer == 'Grand Total' &&
+								discount_percentage_offer_name &&
+								discount_percentage_offer_name != item.name
 							"
 						></v-checkbox-btn>
 					</template>
@@ -127,6 +124,22 @@ export default {
 			let list_offers = [];
 			list_offers = [...this.pos_offers];
 			this.pos_offers = list_offers;
+		},
+		toggleOfferApplied(item) {
+			if (
+				item.offer === "Give Product" &&
+				!item.give_item &&
+				!(item.replace_cheapest_item || item.replace_item)
+			) {
+				this.expanded = [item.row_id];
+				this.eventBus.emit("show_message", {
+					title: __("Select give item before applying offer"),
+					color: "warning",
+				});
+				item.offer_applied = false;
+				return;
+			}
+			this.forceUpdateItem();
 		},
 		makeid(length) {
 			let result = "";
