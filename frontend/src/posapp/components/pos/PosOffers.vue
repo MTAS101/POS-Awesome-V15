@@ -90,10 +90,11 @@ import format from "../../format";
 export default {
 	mixins: [format],
 	data: () => ({
-		loading: false,
-		pos_profile: "",
-		pos_offers: [],
-		allItems: [],
+               loading: false,
+               pos_profile: "",
+               pos_offers: [],
+               allItems: [],
+               stock_settings: null,
 		discount_percentage_offer_name: null,
 		itemsPerPage: 1000,
 		expanded: [],
@@ -184,9 +185,14 @@ export default {
 							newOffer.offer_applied = !!offer.auto;
 						}
 					}
-					if (newOffer.offer == "Give Product" && !newOffer.give_item) {
-						newOffer.give_item = this.get_give_items(newOffer)[0].item_code;
-					}
+                                       if (newOffer.offer == "Give Product" && !newOffer.give_item) {
+                                               const giveItems = this.get_give_items(newOffer);
+                                               if (giveItems.length === 1) {
+                                                       newOffer.give_item = giveItems[0].item_code;
+                                               } else {
+                                                       newOffer.give_item = null;
+                                               }
+                                       }
 					this.pos_offers.push(newOffer);
 					this.eventBus.emit("show_message", {
 						title: __("New Offer Available"),
@@ -209,23 +215,31 @@ export default {
 				return "";
 			}
 		},
-		get_give_items(offer) {
-			if (offer.apply_type == "Item Code") {
-				return [offer.apply_item_code];
-			} else if (offer.apply_type == "Item Group") {
-				const items = this.allItems;
-				let filterd_items = [];
-				const filterd_items_1 = items.filter((item) => item.item_group == offer.apply_item_group);
-				if (offer.less_then > 0) {
-					filterd_items = filterd_items_1.filter((item) => item.rate < offer.less_then);
-				} else {
-					filterd_items = filterd_items_1;
-				}
-				return filterd_items;
-			} else {
-				return [];
-			}
-		},
+               get_give_items(offer) {
+                       if (offer.apply_type == "Item Code") {
+                               return [offer.apply_item_code];
+                       } else if (offer.apply_type == "Item Group") {
+                               const items = this.allItems || [];
+                               const groupItems = items.filter(
+                                       (item) =>
+                                               item.item_group == offer.apply_item_group &&
+                                               item.is_sales_item &&
+                                               !item.disabled &&
+                                               item.price_list_rate !== undefined &&
+                                               (!this.stock_settings ||
+                                                       this.stock_settings.allow_negative_stock ||
+                                                       item.actual_qty > 0),
+                               );
+                               const filtered =
+                                       offer.less_then > 0
+                                               ? groupItems.filter((item) => item.rate < offer.less_then)
+                                               : groupItems;
+                               // sort by rate for determinism
+                               return filtered.sort((a, b) => a.rate - b.rate);
+                       } else {
+                               return [];
+                       }
+               },
 		updateCounters() {
 			this.eventBus.emit("update_offers_counters", {
 				offersCount: this.offersCount,
@@ -253,9 +267,10 @@ export default {
 
 	created: function () {
 		this.$nextTick(function () {
-			this.eventBus.on("register_pos_profile", (data) => {
-				this.pos_profile = data.pos_profile;
-			});
+                       this.eventBus.on("register_pos_profile", (data) => {
+                               this.pos_profile = data.pos_profile;
+                               this.stock_settings = data.stock_settings;
+                       });
 		});
 		this.eventBus.on("update_customer", (customer) => {
 			if (this.customer != customer) {

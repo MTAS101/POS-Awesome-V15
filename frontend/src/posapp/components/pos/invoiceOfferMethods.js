@@ -406,7 +406,7 @@ export default {
 		this.deleteOfferFromItems(invoiceOffer);
 	},
 
-	applyNewOffer(offer) {
+        applyNewOffer(offer) {
 		if (offer.offer === "Item Price") {
 			this.ApplyOnPrice(offer);
 		}
@@ -487,20 +487,63 @@ export default {
 		};
 		this.posa_offers.push(newOffer);
 		this.addOfferToItems(newOffer);
-	},
+        },
 
-	ApplyOnGiveProduct(offer, item_code) {
-		if (!item_code) {
-			item_code = offer.give_item;
-		}
-		const items = this.allItems;
-		const item = items.find((item) => item.item_code == item_code);
-		if (!item) {
-			return;
-		}
-		const new_item = { ...item };
-		new_item.qty = offer.given_qty;
-		new_item.stock_qty = offer.given_qty;
+       getEligibleGiveItems(offer) {
+               const items = this.allItems || [];
+               const allowNegative = this.stock_settings && this.stock_settings.allow_negative_stock;
+               const groupItems = items.filter(
+                       (item) =>
+                               item.item_group == offer.apply_item_group &&
+                               item.is_sales_item &&
+                               !item.disabled &&
+                               item.price_list_rate !== undefined &&
+                               (allowNegative || item.actual_qty > 0),
+               );
+               const filtered =
+                       offer.less_then > 0
+                               ? groupItems.filter((item) => item.rate < offer.less_then)
+                               : groupItems;
+               return filtered.sort((a, b) => a.rate - b.rate);
+       },
+
+       pickGiveItem(offer, candidates) {
+               const cartItems = this.items || [];
+               const cartCandidates = cartItems.filter((ci) =>
+                       candidates.some((e) => e.item_code === ci.item_code),
+               );
+               const baseList = cartCandidates.length ? cartCandidates : candidates;
+               return baseList.reduce((prev, curr) => (curr.rate < prev.rate ? curr : prev));
+       },
+
+        ApplyOnGiveProduct(offer, item_code) {
+               if (!item_code) {
+                       item_code = offer.give_item;
+               }
+               if (!item_code) {
+                       const candidates = this.getEligibleGiveItems(offer);
+                       if (!candidates.length) {
+                               const allowNegative = this.stock_settings && this.stock_settings.allow_negative_stock;
+                               if (!allowNegative) {
+                                       this.eventBus.emit("show_message", {
+                                               title: __("No stock available in the configured give-away group"),
+                                               color: "error",
+                                       });
+                               }
+                               return;
+                       }
+                       const selected = this.pickGiveItem(offer, candidates);
+                       item_code = selected.item_code;
+                       offer.give_item = item_code;
+               }
+               const items = this.allItems;
+               const item = items.find((it) => it.item_code == item_code);
+               if (!item) {
+                       return;
+               }
+               const new_item = { ...item };
+               new_item.qty = offer.given_qty;
+               new_item.stock_qty = offer.given_qty;
 
 		// Handle rate based on currency
 		if (offer.discount_type === "Rate") {
