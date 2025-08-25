@@ -13,17 +13,17 @@
 				style="max-height: 75vh"
 				@mouseover="style = 'cursor: pointer'"
 			>
-                                <v-data-table
-                                        :headers="items_headers"
-                                        :items="pos_offers"
-                                        :single-expand="singleExpand"
-                                        v-model:expanded="expanded"
-                                        show-expand
-                                        item-value="row_id"
-                                        class="elevation-1"
-                                        :items-per-page="itemsPerPage"
-                                        hide-default-footer
-                                >
+				<v-data-table
+					:headers="items_headers"
+					:items="pos_offers"
+					:single-expand="singleExpand"
+					v-model:expanded="expanded"
+					show-expand
+					item-value="row_id"
+					class="elevation-1"
+					:items-per-page="itemsPerPage"
+					hide-default-footer
+				>
 					<template v-slot:item.offer_applied="{ item }">
 						<v-checkbox-btn
 							@click="toggleOfferApplied(item)"
@@ -38,17 +38,18 @@
 							"
 						></v-checkbox-btn>
 					</template>
-                                        <template v-slot:expanded-row="{ item }">
-                                                <td :colspan="items_headers.length">
-                                                        <v-row class="mt-2">
-                                                                <v-col v-if="item.description">
-                                                                        <div class="text-primary" v-html="handleNewLine(item.description)"></div>
-                                                                </v-col>
-                                                                <v-col v-if="item.offer == 'Give Product'">
+					<template v-slot:expanded-row="{ item }">
+						<td :colspan="items_headers.length">
+							<v-row class="mt-2">
+								<v-col v-if="item.description">
+									<div class="text-primary" v-html="handleNewLine(item.description)"></div>
+								</v-col>
+								<v-col v-if="item.offer == 'Give Product'">
 									<v-autocomplete
 										v-model="item.give_item"
 										:items="get_give_items(item)"
 										item-title="item_code"
+										item-value="item_code"
 										variant="outlined"
 										density="compact"
 										color="primary"
@@ -212,17 +213,14 @@ export default {
 		},
 		get_give_items(offer) {
 			if (offer.apply_type == "Item Code") {
-				return [offer.apply_item_code];
+				return [{ item_code: offer.apply_item_code }];
 			} else if (offer.apply_type == "Item Group") {
-				const items = this.allItems;
-				let filterd_items = [];
-				const filterd_items_1 = items.filter((item) => item.item_group == offer.apply_item_group);
+				const items = this.allItems || [];
+				let filterd_items = items.filter((item) => item.item_group == offer.apply_item_group);
 				if (offer.less_then > 0) {
-					filterd_items = filterd_items_1.filter((item) => item.rate < offer.less_then);
-				} else {
-					filterd_items = filterd_items_1;
+					filterd_items = filterd_items.filter((item) => item.rate < offer.less_then);
 				}
-				return filterd_items;
+				return filterd_items.map((item) => ({ item_code: item.item_code }));
 			} else {
 				return [];
 			}
@@ -242,14 +240,14 @@ export default {
 	},
 
 	watch: {
-                pos_offers: {
-                        deep: true,
-                        handler() {
-                                this.handelOffers();
-                                this.updateCounters();
-                                this.updatePosCoupuns();
-                        },
-                },
+		pos_offers: {
+			deep: true,
+			handler() {
+				this.handelOffers();
+				this.updateCounters();
+				this.updatePosCoupuns();
+			},
+		},
 	},
 
 	created: function () {
