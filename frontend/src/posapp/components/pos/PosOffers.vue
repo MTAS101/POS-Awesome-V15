@@ -87,7 +87,7 @@
 </template>
 
 <script>
-/* global __ */
+/* global __, frappe */
 import format from "../../format";
 export default {
 	mixins: [format],
@@ -95,7 +95,8 @@ export default {
 		loading: false,
 		pos_profile: "",
 		pos_offers: [],
-		allItems: [],
+                allItems: [],
+                groupItemCache: {},
 		discount_percentage_offer_name: null,
 		itemsPerPage: 1000,
 		expanded: [],
@@ -123,6 +124,27 @@ export default {
         methods: {
                 back_to_invoice() {
                         this.eventBus.emit("show_offers", "false");
+                },
+                async fetchGroupItems(group) {
+                        try {
+                                const { message } = await frappe.call({
+                                        method: "posawesome.posawesome.api.items.get_items",
+                                        args: {
+                                                pos_profile: JSON.stringify(this.pos_profile),
+                                                item_group: group,
+                                                limit: 1000,
+                                        },
+                                });
+                                const items = (message || []).map((it) => ({
+                                        item_code: it.item_code,
+                                        item_name: it.item_name || it.item_code,
+                                        rate: it.price_list_rate,
+                                }));
+                                this.groupItemCache[group] = items;
+                                this.forceUpdateItem();
+                        } catch (error) {
+                                console.error("Failed to fetch group items", error);
+                        }
                 },
                 forceUpdateItem() {
                         let list_offers = [];
@@ -227,10 +249,12 @@ export default {
                                         },
                                 ];
                         } else if (offer.apply_type === "Item Group") {
-                                const items = this.allItems || [];
-                                let filtered_items = items.filter(
-                                        (item) => item.item_group === offer.apply_item_group,
-                                );
+                                const group = offer.apply_item_group;
+                                if (!this.groupItemCache[group]) {
+                                        this.fetchGroupItems(group);
+                                        return [];
+                                }
+                                let filtered_items = this.groupItemCache[group];
                                 if (offer.less_then > 0) {
                                         filtered_items = filtered_items.filter(
                                                 (item) => item.rate < offer.less_then,
