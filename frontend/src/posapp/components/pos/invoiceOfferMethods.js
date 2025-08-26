@@ -1,3 +1,4 @@
+/* global __, frappe, flt */
 import { silentPrint } from "../../plugins/print.js";
 
 export default {
@@ -14,14 +15,33 @@ export default {
 		return applied;
 	},
 
-	handelOffers() {
-		const offers = [];
-		this.posOffers.forEach((offer) => {
-			if (offer.apply_on === "Item Code") {
-				const itemOffer = this.getItemOffer(offer);
-				if (itemOffer) {
-					offers.push(itemOffer);
-				}
+        handelOffers() {
+                // Build a lightweight hash of the current offer state so
+                // re-running this logic with the same data doesn't remove and
+                // reapply discounts. Only fields that affect offer evaluation
+                // are included in the hash.
+                const state = JSON.stringify({
+                        price_list: this.selected_price_list,
+                        customer_group: this.customer_info?.customer_group,
+                        posting_date: this.posting_date,
+                        items: (this.items || [])
+                                .filter((it) => !it.posa_is_offer && !it.posa_is_replace)
+                                .map((it) => ({ item_code: it.item_code, qty: it.qty }))
+                                .sort((a, b) => (a.item_code || "").localeCompare(b.item_code || "")),
+                });
+
+                if (state === this._last_offer_state) {
+                        return;
+                }
+                this._last_offer_state = state;
+
+                const offers = [];
+                this.posOffers.forEach((offer) => {
+                        if (offer.apply_on === "Item Code") {
+                                const itemOffer = this.getItemOffer(offer);
+                                if (itemOffer) {
+                                        offers.push(itemOffer);
+                                }
 			} else if (offer.apply_on === "Item Group") {
 				const groupOffer = this.getGroupOffer(offer);
 				if (groupOffer) {
@@ -153,12 +173,13 @@ export default {
 				this.items.forEach((item) => {
 					if (!item.posa_is_offer && item.item_code === offer.item) {
 						const items = [];
-						if (
-							offer.offer === "Item Price" &&
-							item.posa_offer_applied &&
-							!this.checkOfferIsAppley(item, offer)
-						) {
-						} else {
+                                                if (
+                                                        offer.offer === "Item Price" &&
+                                                        item.posa_offer_applied &&
+                                                        !this.checkOfferIsAppley(item, offer)
+                                                ) {
+                                                        // item already has this offer applied
+                                                } else {
 							const res = this.checkQtyAnountOffer(
 								offer,
 								item.stock_qty,
@@ -186,12 +207,13 @@ export default {
 				let total_amount = 0;
 				this.items.forEach((item) => {
 					if (!item.posa_is_offer && item.item_group === offer.item_group) {
-						if (
-							offer.offer === "Item Price" &&
-							item.posa_offer_applied &&
-							!this.checkOfferIsAppley(item, offer)
-						) {
-						} else {
+                                                if (
+                                                        offer.offer === "Item Price" &&
+                                                        item.posa_offer_applied &&
+                                                        !this.checkOfferIsAppley(item, offer)
+                                                ) {
+                                                        // item already has this offer applied
+                                                } else {
 							total_count += item.stock_qty;
 							total_amount += item.stock_qty * item.price_list_rate;
 							items.push(item.posa_row_id);
@@ -219,12 +241,13 @@ export default {
 				let total_amount = 0;
 				this.items.forEach((item) => {
 					if (!item.posa_is_offer && item.brand === offer.brand) {
-						if (
-							offer.offer === "Item Price" &&
-							item.posa_offer_applied &&
-							!this.checkOfferIsAppley(item, offer)
-						) {
-						} else {
+                                                if (
+                                                        offer.offer === "Item Price" &&
+                                                        item.posa_offer_applied &&
+                                                        !this.checkOfferIsAppley(item, offer)
+                                                ) {
+                                                        // item already has this offer applied
+                                                } else {
 							total_count += item.stock_qty;
 							total_amount += item.stock_qty * item.price_list_rate;
 							items.push(item.posa_row_id);

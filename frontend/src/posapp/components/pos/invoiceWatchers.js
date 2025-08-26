@@ -1,14 +1,17 @@
+/* global frappe */
 import { clearPriceListCache } from "../../../offline/index.js";
+import _ from "lodash";
 
 export default {
 	// Watch for customer change and update related data
-	customer() {
-		this.close_payments();
-		this.eventBus.emit("set_customer", this.customer);
-		this.fetch_customer_details();
-		this.fetch_customer_balance();
-		this.set_delivery_charges();
-	},
+        customer: _.debounce(function () {
+                this.close_payments();
+                this.eventBus.emit("set_customer", this.customer);
+                this.fetch_customer_details();
+                this.fetch_customer_balance();
+                this.set_delivery_charges();
+                this.handelOffers();
+        }, 100),
 	// Watch for customer_info change and emit to edit form
 	customer_info() {
 		this.eventBus.emit("set_customer_info_to_edit", this.customer_info);
@@ -30,13 +33,13 @@ export default {
 		});
 	},
 	// Watch for items array changes (deep) and re-handle offers
-	items: {
-		deep: true,
-		handler(items) {
-			this.handelOffers();
-			this.$forceUpdate();
-		},
-	},
+        items: {
+                deep: true,
+                handler: _.debounce(function () {
+                        this.handelOffers();
+                        this.$forceUpdate();
+                }, 100),
+        },
 	// Watch for invoice type change and emit
 	invoiceType() {
 		this.eventBus.emit("update_invoice_type", this.invoiceType);
@@ -68,31 +71,33 @@ export default {
 		this.posting_date = this.formatDateForBackend(newVal);
 	},
 
-	selected_price_list(newVal) {
-		// Clear cached price list items to avoid mixing rates
-		clearPriceListCache();
+        selected_price_list: _.debounce(function (newVal) {
+                // Clear cached price list items to avoid mixing rates
+                clearPriceListCache();
 
-		const price_list = newVal === this.pos_profile.selling_price_list ? null : newVal;
-		this.eventBus.emit("update_customer_price_list", price_list);
-		const applied = newVal || this.pos_profile.selling_price_list;
-		this.apply_cached_price_list(applied);
+                const price_list = newVal === this.pos_profile.selling_price_list ? null : newVal;
+                this.eventBus.emit("update_customer_price_list", price_list);
+                const applied = newVal || this.pos_profile.selling_price_list;
+                this.apply_cached_price_list(applied);
 
-		// If multi-currency is enabled, sync currency with the price list currency
-		if (this.pos_profile.posa_allow_multi_currency && applied) {
-			frappe.call({
-				method: "posawesome.posawesome.api.invoices.get_price_list_currency",
-				args: { price_list: applied },
-				callback: (r) => {
-					if (r.message) {
-						// Store price list currency for later use
-						this.price_list_currency = r.message;
-						// Sync invoice currency with price list currency
-						this.update_currency(r.message);
-					}
-				},
-			});
-		}
-	},
+                // If multi-currency is enabled, sync currency with the price list currency
+                if (this.pos_profile.posa_allow_multi_currency && applied) {
+                        frappe.call({
+                                method: "posawesome.posawesome.api.invoices.get_price_list_currency",
+                                args: { price_list: applied },
+                                callback: (r) => {
+                                        if (r.message) {
+                                                // Store price list currency for later use
+                                                this.price_list_currency = r.message;
+                                                // Sync invoice currency with price list currency
+                                                this.update_currency(r.message);
+                                        }
+                                },
+                        });
+                }
+
+                this.handelOffers();
+        }, 100),
 
 	// Reactively update item prices when currency changes
 	selected_currency() {
