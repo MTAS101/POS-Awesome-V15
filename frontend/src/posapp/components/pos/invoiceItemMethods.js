@@ -1431,23 +1431,21 @@ export default {
 						vm.set_batch_qty(item, null, false);
 					}
 
-					if (!item.locked_price) {
-						// First save base rates if not exists or when force update is requested
-						// Avoid overriding existing base rates when the selected currency
-						// matches the POS Profile currency. This prevents manual or offer
-						// adjusted rates from being reset whenever an item row is expanded.
-						if (force_update || !item.base_rate) {
-							// Always store base rates from server in base currency
-							if (data.price_list_rate !== 0 || !item.base_price_list_rate) {
-								item.base_price_list_rate = data.price_list_rate;
-								if (!item.posa_offer_applied) {
-									item.base_rate = data.price_list_rate;
-								}
-							}
-						}
+                                       if (!item.locked_price) {
+                                               // First save base rates if not exists or when force update is requested
+                                               // Avoid overriding existing base rates when the selected currency
+                                               // matches the POS Profile currency. This prevents manual or offer
+                                               // adjusted rates from being reset whenever an item row is expanded.
+                                               if ((force_update || !item.base_rate) && !item.posa_offer_applied) {
+                                                       // Always store base rates from server in base currency
+                                                       if (data.price_list_rate !== 0 || !item.base_price_list_rate) {
+                                                               item.base_price_list_rate = data.price_list_rate;
+                                                               item.base_rate = data.price_list_rate;
+                                                       }
+                                               }
 
-						// Only update rates if no offer is applied
-						if (!item.posa_offer_applied) {
+                                               // Only update rates if no offer is applied
+                                               if (!item.posa_offer_applied) {
 							const companyCurrency = vm.pos_profile.currency;
 							const baseCurrency = companyCurrency;
 
