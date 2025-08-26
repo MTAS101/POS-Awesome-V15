@@ -304,20 +304,26 @@ export default {
 		this.eventBus.emit("update_pos_offers", offers);
 	},
 
-        updateInvoiceOffers(offers) {
-                console.log("updateInvoiceOffers called", {
-                        incoming: offers,
-                        existing: this.posa_offers,
-                });
-                this.posa_offers.forEach((invoiceOffer) => {
-                        const existOffer = offers.find((offer) => invoiceOffer.row_id == offer.row_id);
-                        if (!existOffer) {
-                                console.log("Removing stale offer", invoiceOffer);
-                                this.removeApplyOffer(invoiceOffer);
-                        }
-                });
-                offers.forEach((offer) => {
-                        const existOffer = this.posa_offers.find((invoiceOffer) => invoiceOffer.row_id == offer.row_id);
+       updateInvoiceOffers(offers) {
+               console.log("updateInvoiceOffers called", {
+                       incoming: offers,
+                       existing: this.posa_offers,
+               });
+
+               // Avoid triggering item watchers while we are mutating items as
+               // part of applying or removing offers. This prevents a cascade
+               // of "state unchanged" logs and redundant offer evaluations.
+               this._suppress_item_watcher = true;
+
+               this.posa_offers.forEach((invoiceOffer) => {
+                       const existOffer = offers.find((offer) => invoiceOffer.row_id == offer.row_id);
+                       if (!existOffer) {
+                               console.log("Removing stale offer", invoiceOffer);
+                               this.removeApplyOffer(invoiceOffer);
+                       }
+               });
+               offers.forEach((offer) => {
+                       const existOffer = this.posa_offers.find((invoiceOffer) => invoiceOffer.row_id == offer.row_id);
                         if (existOffer) {
                                 console.log("Updating existing offer", { existOffer, offer });
                                 existOffer.items = JSON.stringify(offer.items);
@@ -414,8 +420,13 @@ export default {
                                 console.log("Applying new offer", offer);
                                 this.applyNewOffer(offer);
                         }
-                });
-        },
+               });
+
+               // Release suppression after watchers have had a chance to settle
+               setTimeout(() => {
+                       this._suppress_item_watcher = false;
+               }, 150);
+       },
 
 	removeApplyOffer(invoiceOffer) {
 		if (invoiceOffer.offer === "Item Price") {

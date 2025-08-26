@@ -34,14 +34,17 @@ export default {
 		});
 	},
 	// Watch for items array changes (deep) and re-handle offers
-        items: {
-                deep: true,
-                handler: _.debounce(function () {
-                        console.log("Watcher: items changed", this.items);
-                        this.handelOffers();
-                        this.$forceUpdate();
-                }, 100),
-        },
+       items: {
+               deep: true,
+               handler: _.debounce(function () {
+                       if (this._suppress_item_watcher) {
+                               console.log("Watcher: items change suppressed", this.items);
+                               return;
+                       }
+                       console.log("Watcher: items changed", this.items);
+                       this.handelOffers();
+               }, 100),
+       },
 	// Watch for invoice type change and emit
 	invoiceType() {
 		this.eventBus.emit("update_invoice_type", this.invoiceType);
