@@ -24,20 +24,20 @@
 					:items-per-page="itemsPerPage"
 					hide-default-footer
 				>
-					<template v-slot:item.offer_applied="{ item }">
-						<v-checkbox-btn
-							@click="toggleOfferApplied(item)"
-							v-model="item.offer_applied"
-							:disabled="
-								(item.offer == 'Give Product' &&
-									!item.give_item &&
-									(!offer.replace_cheapest_item || !offer.replace_item)) ||
-								(item.offer == 'Grand Total' &&
-									discount_percentage_offer_name &&
-									discount_percentage_offer_name != item.name)
-							"
-						></v-checkbox-btn>
-					</template>
+                                         <template v-slot:item.offer_applied="{ item }">
+                                               <v-checkbox-btn
+                                                       @click="toggleOfferApplied"
+                                                       v-model="item.offer_applied"
+                                                        :disabled="
+                                                                (item.offer == 'Give Product' &&
+                                                                        !item.give_item &&
+                                                                        (!item.replace_cheapest_item || !item.replace_item)) ||
+                                                                (item.offer == 'Grand Total' &&
+                                                                        discount_percentage_offer_name &&
+                                                                        discount_percentage_offer_name != item.name)
+                                                        "
+                                                ></v-checkbox-btn>
+                                        </template>
 					<template v-slot:expanded-row="{ item }">
 						<td :colspan="items_headers.length">
 							<v-row class="mt-2">
@@ -120,18 +120,22 @@ export default {
 		},
 	},
 
-	methods: {
-		back_to_invoice() {
-			this.eventBus.emit("show_offers", "false");
-		},
-		forceUpdateItem() {
-			let list_offers = [];
-			list_offers = [...this.pos_offers];
-			this.pos_offers = list_offers;
-		},
-		makeid(length) {
-			let result = "";
-			const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
+        methods: {
+                back_to_invoice() {
+                        this.eventBus.emit("show_offers", "false");
+                },
+                forceUpdateItem() {
+                        let list_offers = [];
+                        list_offers = [...this.pos_offers];
+                        this.pos_offers = list_offers;
+                },
+                toggleOfferApplied() {
+                        // re-emit updated offers so watchers respond
+                        this.forceUpdateItem();
+                },
+                makeid(length) {
+                        let result = "";
+                        const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
 			const charactersLength = characters.length;
 			for (var i = 0; i < length; i++) {
 				result += characters.charAt(Math.floor(Math.random() * charactersLength));
