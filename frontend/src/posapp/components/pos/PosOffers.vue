@@ -132,7 +132,7 @@ export default {
                                         args: {
                                                 pos_profile: JSON.stringify(this.pos_profile),
                                                 item_group: group,
-                                                limit: 1000,
+                                                // fetch complete inventory; backend paginates internally
                                         },
                                 });
 
