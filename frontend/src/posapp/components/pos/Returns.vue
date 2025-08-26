@@ -579,15 +579,25 @@ export default {
 
 				console.log("Original return doc:", return_doc);
 
-                                return_doc.items.forEach((item) => {
-                                        const new_item = { ...item };
-                                        // reference original invoice row for backend validation
-                                        if (return_doc.doctype === "POS Invoice") {
-                                                new_item.pos_invoice_item = item.name;
-                                        } else {
-                                                new_item.sales_invoice_item = item.name;
-                                        }
-                                        delete new_item.name;
+				return_doc.items.forEach((item) => {
+					const new_item = { ...item };
+					// reference original invoice row for backend validation
+					if (return_doc.doctype === "POS Invoice") {
+						new_item.pos_invoice_item = item.name;
+					} else {
+						new_item.sales_invoice_item = item.name;
+					}
+					delete new_item.name;
+
+					// Preserve original pricing and discounts
+					new_item.rate = item.rate;
+					new_item.price_list_rate = item.price_list_rate;
+					new_item.discount_percentage = item.discount_percentage;
+					new_item.discount_amount = item.discount_amount;
+					new_item.is_free_item = item.is_free_item;
+					new_item.net_rate = item.net_rate;
+					new_item.net_amount = item.net_amount > 0 ? item.net_amount * -1 : item.net_amount;
+					new_item.locked_price = true;
 
 					// Make sure quantities are negative for returns
 					new_item.qty = item.qty > 0 ? item.qty * -1 : item.qty;
@@ -600,6 +610,8 @@ export default {
 				invoice_doc.is_return = 1;
 				invoice_doc.return_against = return_doc.name;
 				invoice_doc.customer = return_doc.customer;
+				invoice_doc.discount_amount = return_doc.discount_amount;
+				invoice_doc.additional_discount_percentage = return_doc.additional_discount_percentage;
 
 				// Make sure grand_total is negative for returns
 				if (return_doc.grand_total > 0) {
