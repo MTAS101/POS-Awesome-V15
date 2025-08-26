@@ -135,12 +135,24 @@ export default {
                                                 limit: 1000,
                                         },
                                 });
-                                const items = (message || []).map((it) => ({
+
+                                const fullItems = message || [];
+
+                                // cache minimal info for dropdown use
+                                this.groupItemCache[group] = fullItems.map((it) => ({
                                         item_code: it.item_code,
                                         item_name: it.item_name || it.item_code,
                                         rate: it.price_list_rate,
                                 }));
-                                this.groupItemCache[group] = items;
+
+                                // merge fetched items into allItems so offer application has details
+                                const existing = new Set(this.allItems.map((it) => it.item_code));
+                                const newItems = fullItems.filter((it) => !existing.has(it.item_code));
+                                if (newItems.length) {
+                                        this.allItems.push(...newItems);
+                                        this.eventBus.emit("set_all_items", this.allItems);
+                                }
+
                                 this.forceUpdateItem();
                         } catch (error) {
                                 console.error("Failed to fetch group items", error);
