@@ -290,18 +290,39 @@ def update_invoice(data):
 
 	# Preserve provided item names for manual overrides
 	overrides = {d.idx: {"item_name": d.item_name} for d in invoice_doc.items}
+	locked_items = {}
+	if invoice_doc.is_return:
+		for d in invoice_doc.items:
+			if d.get("locked_price"):
+				locked_items[d.idx] = {
+					"rate": d.rate,
+					"price_list_rate": d.price_list_rate,
+					"discount_percentage": d.discount_percentage,
+					"discount_amount": d.discount_amount,
+					"is_free_item": d.get("is_free_item"),
+				}
+
+	invoice_doc.ignore_pricing_rule = 1
+	invoice_doc.flags.ignore_pricing_rule = True
 
 	# Set missing values first
-        invoice_doc.set_missing_values()
+	invoice_doc.set_missing_values()
 
-        # Reapply any custom item names after defaults are set
-        _apply_item_name_overrides(invoice_doc, overrides)
+	# Reapply any custom item names after defaults are set
+	_apply_item_name_overrides(invoice_doc, overrides)
 
-        # Remove duplicate taxes from item and profile templates
-        _merge_duplicate_taxes(invoice_doc)
+	# Remove duplicate taxes from item and profile templates
+	_merge_duplicate_taxes(invoice_doc)
 
-        # Ensure selected currency is preserved after set_missing_values
-        if selected_currency:
+	if locked_items:
+		for item in invoice_doc.items:
+			locked = locked_items.get(item.idx)
+			if locked:
+				item.update(locked)
+		invoice_doc.calculate_taxes_and_totals()
+
+	# Ensure selected currency is preserved after set_missing_values
+	if selected_currency:
                 invoice_doc.currency = selected_currency
                 company_currency = frappe.get_cached_value("Company", invoice_doc.company, "default_currency")
 		price_list_currency = price_list_currency or company_currency
