@@ -15,6 +15,21 @@ export default {
 	},
 
 	handelOffers() {
+		// Idempotency: skip reprocessing if nothing relevant changed
+		const offerHash = JSON.stringify({
+			items: this.items.map((i) => ({
+				code: i.item_code,
+				qty: i.qty,
+				rate: i.rate,
+				offers: i.posa_offers,
+			})),
+			offers: this.posOffers.map((o) => o.name),
+		});
+		if (offerHash === this._lastOfferHash) {
+			return;
+		}
+		this._lastOfferHash = offerHash;
+
 		const offers = [];
 		this.posOffers.forEach((offer) => {
 			if (offer.apply_on === "Item Code") {
@@ -737,6 +752,8 @@ export default {
 					});
 
 					item.posa_offer_applied = 1;
+					// Prevent further automatic rate resets
+					item._manual_rate_set = true;
 					this.$forceUpdate();
 				}
 			}

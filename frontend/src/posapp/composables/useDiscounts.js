@@ -78,6 +78,9 @@ export function useDiscounts() {
 					break;
 
 				case "discount_amount":
+					// Mark rate as manually modified to persist
+					item._manual_rate_set = true;
+
 					// Ensure discount amount doesn't exceed price list rate
 					newValue = Math.min(newValue, converted_price_list_rate);
 
@@ -110,6 +113,9 @@ export function useDiscounts() {
 					break;
 
 				case "discount_percentage":
+					// Mark rate as manually modified to persist
+					item._manual_rate_set = true;
+
 					// Ensure percentage doesn't exceed 100%
 					newValue = Math.min(newValue, 100);
 					item.discount_percentage = context.flt(newValue, context.float_precision);
@@ -134,6 +140,11 @@ export function useDiscounts() {
 						context.currency_precision,
 					);
 					break;
+			}
+
+			// Reset manual flag when discounts are cleared
+			if (item.discount_amount === 0 && item.discount_percentage === 0 && fieldId !== "rate") {
+				item._manual_rate_set = false;
 			}
 
 			// Ensure rate doesn't go below zero
@@ -237,6 +248,15 @@ export function useDiscounts() {
 			item.base_amount = context.flt(item.amount / context.exchange_rate, context.currency_precision);
 		} else {
 			item.base_amount = item.amount;
+		}
+
+		// Persist manual rate when discounts are applied outside of offers
+		if (!item.posa_offer_applied) {
+			if (item.discount_amount > 0 || item.discount_percentage > 0) {
+				item._manual_rate_set = true;
+			} else if (item._manual_rate_set) {
+				item._manual_rate_set = false;
+			}
 		}
 
 		if (context.forceUpdate) context.forceUpdate();
