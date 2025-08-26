@@ -1,4 +1,5 @@
 import { clearPriceListCache } from "../../../offline/index.js";
+import _ from "lodash";
 
 export default {
 	// Watch for customer change and update related data
@@ -30,13 +31,13 @@ export default {
 		});
 	},
 	// Watch for items array changes (deep) and re-handle offers
-	items: {
-		deep: true,
-		handler(items) {
-			this.handelOffers();
-			this.$forceUpdate();
-		},
-	},
+        items: {
+                deep: true,
+                handler: _.debounce(function (items) {
+                        this.handelOffers();
+                        this.$forceUpdate();
+                }, 100),
+        },
 	// Watch for invoice type change and emit
 	invoiceType() {
 		this.eventBus.emit("update_invoice_type", this.invoiceType);

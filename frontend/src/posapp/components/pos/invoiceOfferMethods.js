@@ -621,127 +621,158 @@ export default {
 		return new_item;
 	},
 
-	ApplyOnPrice(offer) {
-		console.log("Applying price offer:", offer);
-		if (!offer || !Array.isArray(this.items)) return;
+        ApplyOnPrice(offer) {
+                console.log("Applying price offer:", offer);
+                if (!offer || !Array.isArray(this.items)) return;
 
-		this.items.forEach((item) => {
-			// Check if offer.items exists and is valid
-			if (!item || !offer.items || !Array.isArray(offer.items)) return;
+                this.items.forEach((item) => {
+                        // Check if offer.items exists and is valid
+                        if (!item || !offer.items || !Array.isArray(offer.items)) return;
 
-			if (offer.items.includes(item.posa_row_id)) {
-				// Ensure posa_offers is initialized and valid
-				const item_offers = item.posa_offers ? JSON.parse(item.posa_offers) : [];
-				if (!Array.isArray(item_offers)) return;
+                        if (offer.items.includes(item.posa_row_id)) {
+                                // Ensure posa_offers is initialized and valid
+                                const item_offers = item.posa_offers ? JSON.parse(item.posa_offers) : [];
+                                if (!Array.isArray(item_offers)) return;
 
-				if (!item_offers.includes(offer.row_id)) {
-					// Store original rates only if this is the first offer being applied
-					if (!item.posa_offer_applied) {
-						// Store original prices normalized to conversion factor 1
-						const cf = flt(item.conversion_factor || 1);
-						item.original_base_rate = item.base_rate / cf;
-						item.original_base_price_list_rate = item.base_price_list_rate / cf;
-						item.original_rate = item.rate / cf;
-						item.original_price_list_rate = item.price_list_rate / cf;
-						console.log("Storing original rates (normalized to conversion factor 1):", {
-							original_base_rate: item.original_base_rate,
-							original_base_price_list_rate: item.original_base_price_list_rate,
-							original_rate: item.original_rate,
-							original_price_list_rate: item.original_price_list_rate,
-							conversion_factor: cf,
-						});
-					}
+                                // Idempotency guard to avoid duplicate apply/remove cycles
+                                const offerHash = JSON.stringify({
+                                        offer: offer.row_id,
+                                        item: item.posa_row_id,
+                                        qty: item.qty,
+                                        price_list: this.selected_price_list || this.pos_profile.selling_price_list,
+                                        customer: this.customer,
+                                        date: this.posting_date,
+                                });
+                                if (item._last_offer_hash === offerHash) {
+                                        return;
+                                }
 
-					const conversion_factor = flt(item.conversion_factor || 1);
+                                if (!item_offers.includes(offer.row_id)) {
+                                        // Store original rates only if this is the first offer being applied
+                                        if (!item.posa_offer_applied) {
+                                                // Store original prices normalized to conversion factor 1
+                                                const cf = flt(item.conversion_factor || 1);
+                                                item.original_base_rate = item.base_rate / cf;
+                                                item.original_base_price_list_rate = item.base_price_list_rate / cf;
+                                                item.original_rate = item.rate / cf;
+                                                item.original_price_list_rate = item.price_list_rate / cf;
+                                                console.log("Storing original rates (normalized to conversion factor 1):", {
+                                                        original_base_rate: item.original_base_rate,
+                                                        original_base_price_list_rate: item.original_base_price_list_rate,
+                                                        original_rate: item.original_rate,
+                                                        original_price_list_rate: item.original_price_list_rate,
+                                                        conversion_factor: cf,
+                                                });
+                                        }
 
-					if (offer.discount_type === "Rate") {
-						// offer.rate is always in base currency (e.g. PKR)
-						const base_offer_rate = flt(offer.rate * conversion_factor);
+                                        const conversion_factor = flt(item.conversion_factor || 1);
 
-						// Set base rates first
-						item.base_rate = base_offer_rate;
-						item.base_price_list_rate = base_offer_rate;
+                                        if (offer.discount_type === "Rate") {
+                                                const baseCurrency = this.price_list_currency || this.pos_profile.currency;
 
-						// Convert to selected currency if needed
-						const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-						if (this.selected_currency !== baseCurrency) {
-							// If exchange rate is 285 PKR = 1 USD
-							// To convert PKR to USD multiply by exchange rate
-							item.rate = this.flt(
-								base_offer_rate * this.exchange_rate,
-								this.currency_precision,
-							);
-							item.price_list_rate = item.rate;
-						} else {
-							item.rate = base_offer_rate;
-							item.price_list_rate = base_offer_rate;
-						}
+                                                // Normalize original price before applying discount
+                                                const base_price =
+                                                        item.original_base_price_list_rate * conversion_factor ||
+                                                        item.base_price_list_rate;
+                                                const base_offer_rate = flt(offer.rate * conversion_factor);
+                                                const base_discount = this.flt(
+                                                        base_price - base_offer_rate,
+                                                        this.currency_precision,
+                                                );
 
-						// Reset discounts since we're setting rate directly
-						item.discount_percentage = 0;
-						item.discount_amount = 0;
-						item.base_discount_amount = 0;
-					} else if (offer.discount_type === "Discount Percentage") {
-						item.discount_percentage = offer.discount_percentage;
+                                                // Set base rates and discount
+                                                item.base_price_list_rate = base_price;
+                                                item.base_rate = base_offer_rate;
+                                                item.base_discount_amount = base_discount;
 
-						// Calculate discount in base currency first
-						// Use normalized price * current conversion factor
-						const base_price = this.flt(
-							(item.original_base_price_list_rate ||
-								item.base_price_list_rate / conversion_factor) * conversion_factor,
-							this.currency_precision,
-						);
-						const base_discount = this.flt(
-							(base_price * offer.discount_percentage) / 100,
-							this.currency_precision,
-						);
-						item.base_discount_amount = base_discount;
-						item.base_rate = this.flt(base_price - base_discount, this.currency_precision);
-						item.base_price_list_rate = base_price;
+                                                // Convert to selected currency if needed
+                                                if (this.selected_currency !== baseCurrency) {
+                                                        item.price_list_rate = this.flt(
+                                                                base_price * this.exchange_rate,
+                                                                this.currency_precision,
+                                                        );
+                                                        item.rate = this.flt(
+                                                                base_offer_rate * this.exchange_rate,
+                                                                this.currency_precision,
+                                                        );
+                                                        item.discount_amount = this.flt(
+                                                                base_discount * this.exchange_rate,
+                                                                this.currency_precision,
+                                                        );
+                                                } else {
+                                                        item.price_list_rate = base_price;
+                                                        item.rate = base_offer_rate;
+                                                        item.discount_amount = base_discount;
+                                                }
 
-						// Convert to selected currency if needed
-						const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-						if (this.selected_currency !== baseCurrency) {
-							item.price_list_rate = this.flt(
-								base_price * this.exchange_rate,
-								this.currency_precision,
-							);
-							item.discount_amount = this.flt(
-								base_discount * this.exchange_rate,
-								this.currency_precision,
-							);
-							item.rate = this.flt(
-								item.base_rate * this.exchange_rate,
-								this.currency_precision,
-							);
-						} else {
-							item.price_list_rate = base_price;
-							item.discount_amount = base_discount;
-							item.rate = item.base_rate;
-						}
-					}
+                                                item.discount_percentage = base_price
+                                                        ? this.flt(
+                                                                  (base_discount / base_price) * 100,
+                                                                  this.float_precision,
+                                                          )
+                                                        : 0;
+                                        } else if (offer.discount_type === "Discount Percentage") {
+                                                item.discount_percentage = offer.discount_percentage;
 
-					// Calculate final amounts
-					item.amount = this.flt(item.qty * item.rate, this.currency_precision);
-					item.base_amount = this.flt(item.qty * item.base_rate, this.currency_precision);
+                                                // Calculate discount in base currency first
+                                                // Use normalized price * current conversion factor
+                                                const base_price = this.flt(
+                                                        (item.original_base_price_list_rate ||
+                                                                item.base_price_list_rate / conversion_factor) * conversion_factor,
+                                                        this.currency_precision,
+                                                );
+                                                const base_discount = this.flt(
+                                                        (base_price * offer.discount_percentage) / 100,
+                                                        this.currency_precision,
+                                                );
+                                                item.base_discount_amount = base_discount;
+                                                item.base_rate = this.flt(base_price - base_discount, this.currency_precision);
+                                                item.base_price_list_rate = base_price;
 
-					console.log("Updated rates after applying offer:", {
-						rate: item.rate,
-						base_rate: item.base_rate,
-						price_list_rate: item.price_list_rate,
-						base_price_list_rate: item.base_price_list_rate,
-						discount_amount: item.discount_amount,
-						base_discount_amount: item.base_discount_amount,
-						amount: item.amount,
-						base_amount: item.base_amount,
-					});
+                                                // Convert to selected currency if needed
+                                                const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+                                                if (this.selected_currency !== baseCurrency) {
+                                                        item.price_list_rate = this.flt(
+                                                                base_price * this.exchange_rate,
+                                                                this.currency_precision,
+                                                        );
+                                                        item.discount_amount = this.flt(
+                                                                base_discount * this.exchange_rate,
+                                                                this.currency_precision,
+                                                        );
+                                                        item.rate = this.flt(
+                                                                item.base_rate * this.exchange_rate,
+                                                                this.currency_precision,
+                                                        );
+                                                } else {
+                                                        item.price_list_rate = base_price;
+                                                        item.discount_amount = base_discount;
+                                                        item.rate = item.base_rate;
+                                                }
+                                        }
 
-					item.posa_offer_applied = 1;
-					this.$forceUpdate();
-				}
-			}
-		});
-	},
+                                        // Calculate final amounts
+                                        item.amount = this.flt(item.qty * item.rate, this.currency_precision);
+                                        item.base_amount = this.flt(item.qty * item.base_rate, this.currency_precision);
+
+                                        console.log("Updated rates after applying offer:", {
+                                                rate: item.rate,
+                                                base_rate: item.base_rate,
+                                                price_list_rate: item.price_list_rate,
+                                                base_price_list_rate: item.base_price_list_rate,
+                                                discount_amount: item.discount_amount,
+                                                base_discount_amount: item.base_discount_amount,
+                                                amount: item.amount,
+                                                base_amount: item.base_amount,
+                                        });
+
+                                        item.posa_offer_applied = 1;
+                                        item._last_offer_hash = offerHash;
+                                        this.$forceUpdate();
+                                }
+                        }
+                });
+        },
 
 	RemoveOnPrice(offer) {
 		console.log("Removing price offer:", offer);
@@ -804,13 +835,14 @@ export default {
 
 					// Only clear original rates if no other offers are applied
 					const remaining_offers = item_offers.filter((id) => id !== offer.row_id);
-					if (remaining_offers.length === 0) {
-						item.original_base_rate = null;
-						item.original_base_price_list_rate = null;
-						item.original_rate = null;
-						item.original_price_list_rate = null;
-						item.posa_offer_applied = 0;
-					}
+                                        if (remaining_offers.length === 0) {
+                                                item.original_base_rate = null;
+                                                item.original_base_price_list_rate = null;
+                                                item.original_rate = null;
+                                                item.original_price_list_rate = null;
+                                                item.posa_offer_applied = 0;
+                                                item._last_offer_hash = null;
+                                        }
 
 					// Update posa_offers
 					item.posa_offers = JSON.stringify(remaining_offers);
