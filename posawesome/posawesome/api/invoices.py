@@ -80,14 +80,32 @@ def _collect_stock_errors(items):
 					"available_qty": available,
 				}
 			)
-	return errors
+        return errors
+
+
+def _merge_duplicate_taxes(invoice_doc):
+        """Remove duplicate tax rows with same account and rate.
+
+        If duplicates are found, keep the first occurrence and recalculate totals.
+        """
+        seen = set()
+        unique = []
+        for tax in invoice_doc.get("taxes", []):
+                key = (tax.account_head, flt(tax.rate), cstr(tax.charge_type))
+                if key in seen:
+                        continue
+                seen.add(key)
+                unique.append(tax)
+        if len(unique) != len(invoice_doc.get("taxes", [])):
+                invoice_doc.set("taxes", unique)
+                invoice_doc.calculate_taxes_and_totals()
 
 
 def _should_block(pos_profile):
-	block_sale = cint(
-		frappe.db.get_value("POS Profile", pos_profile, "posa_block_sale_beyond_available_qty") or 1
-	)
-	allow_negative = cint(frappe.get_value("Stock Settings", None, "allow_negative_stock"))
+        block_sale = cint(
+                frappe.db.get_value("POS Profile", pos_profile, "posa_block_sale_beyond_available_qty") or 1
+        )
+        allow_negative = cint(frappe.get_value("Stock Settings", None, "allow_negative_stock"))
 	return block_sale and not allow_negative
 
 
@@ -274,15 +292,18 @@ def update_invoice(data):
 	overrides = {d.idx: {"item_name": d.item_name} for d in invoice_doc.items}
 
 	# Set missing values first
-	invoice_doc.set_missing_values()
+        invoice_doc.set_missing_values()
 
-	# Reapply any custom item names after defaults are set
-	_apply_item_name_overrides(invoice_doc, overrides)
+        # Reapply any custom item names after defaults are set
+        _apply_item_name_overrides(invoice_doc, overrides)
 
-	# Ensure selected currency is preserved after set_missing_values
-	if selected_currency:
-		invoice_doc.currency = selected_currency
-		company_currency = frappe.get_cached_value("Company", invoice_doc.company, "default_currency")
+        # Remove duplicate taxes from item and profile templates
+        _merge_duplicate_taxes(invoice_doc)
+
+        # Ensure selected currency is preserved after set_missing_values
+        if selected_currency:
+                invoice_doc.currency = selected_currency
+                company_currency = frappe.get_cached_value("Company", invoice_doc.company, "default_currency")
 		price_list_currency = price_list_currency or company_currency
 
 		conversion_rate = 1
