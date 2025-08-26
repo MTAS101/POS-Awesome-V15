@@ -161,37 +161,46 @@ export default {
 			this.invoiceTypes = ["Return"];
 		}
 
-                this.invoice_doc = data;
-                this.items = data.items || [];
-                this.packed_items = data.packed_items || [];
-                console.log("Items set:", this.items.length, "items");
+		this.invoice_doc = data;
+		this.items = data.items || [];
+		this.packed_items = data.packed_items || [];
+		console.log("Items set:", this.items.length, "items");
 
-                if (this.items.length > 0) {
-                        this.update_items_details(this.items);
-                        this.posa_offers = data.posa_offers || [];
-                        this.items.forEach((item) => {
-                                if (!item.posa_row_id) {
-                                        item.posa_row_id = this.makeid(20);
-                                }
-                                if (item.batch_no) {
-                                        this.set_batch_qty(item, item.batch_no);
-                                }
-                                if (!item.original_item_name) {
-                                        item.original_item_name = item.item_name;
-                                }
-                        });
-                } else {
-                        console.log("Warning: No items in return invoice");
-                }
+		if (data.is_return && data.return_against) {
+			this.items.forEach((item) => {
+				item.locked_price = true;
+			});
+			this.packed_items.forEach((pi) => {
+				pi.locked_price = true;
+			});
+		}
 
-                if (this.packed_items.length > 0) {
-                        this.update_items_details(this.packed_items);
-                        this.packed_items.forEach((pi) => {
-                                if (!pi.posa_row_id) {
-                                        pi.posa_row_id = this.makeid(20);
-                                }
-                        });
-                }
+		if (this.items.length > 0) {
+			this.update_items_details(this.items);
+			this.posa_offers = data.posa_offers || [];
+			this.items.forEach((item) => {
+				if (!item.posa_row_id) {
+					item.posa_row_id = this.makeid(20);
+				}
+				if (item.batch_no) {
+					this.set_batch_qty(item, item.batch_no);
+				}
+				if (!item.original_item_name) {
+					item.original_item_name = item.item_name;
+				}
+			});
+		} else {
+			console.log("Warning: No items in return invoice");
+		}
+
+		if (this.packed_items.length > 0) {
+			this.update_items_details(this.packed_items);
+			this.packed_items.forEach((pi) => {
+				if (!pi.posa_row_id) {
+					pi.posa_row_id = this.makeid(20);
+				}
+			});
+		}
 
 		this.customer = data.customer;
 		this.posting_date = this.formatDateForBackend(data.posting_date || frappe.datetime.nowdate());
@@ -363,19 +372,19 @@ export default {
 		doc.is_return = isReturn ? 1 : 0;
 
 		// Calculate amounts in selected currency
-                const items = this.get_invoice_items();
-                doc.items = items;
-                doc.packed_items = (this.packed_items || []).map((pi) => ({
-                        parent_item: pi.parent_item,
-                        item_code: pi.item_code,
-                        item_name: pi.item_name,
-                        qty: flt(pi.qty),
-                        uom: pi.uom,
-                        warehouse: pi.warehouse,
-                        batch_no: pi.batch_no,
-                        serial_no: pi.serial_no,
-                        rate: flt(pi.rate),
-                }));
+		const items = this.get_invoice_items();
+		doc.items = items;
+		doc.packed_items = (this.packed_items || []).map((pi) => ({
+			parent_item: pi.parent_item,
+			item_code: pi.item_code,
+			item_name: pi.item_name,
+			qty: flt(pi.qty),
+			uom: pi.uom,
+			warehouse: pi.warehouse,
+			batch_no: pi.batch_no,
+			serial_no: pi.serial_no,
+			rate: flt(pi.rate),
+		}));
 
 		// Calculate totals in selected currency ensuring negative values for returns
 		let total = this.Total;
@@ -1309,8 +1318,12 @@ export default {
 						item.batch_no_data = updated_item.batch_no_data;
 						item.serial_no_data = updated_item.serial_no_data;
 						if (updated_item.rate !== undefined) {
-							if (updated_item.rate !== 0 || !item.rate) {
-								item.rate = updated_item.rate;
+							if (!item.locked_price) {
+								if (updated_item.rate !== 0 || !item.rate) {
+									item.rate = updated_item.rate;
+									item.price_list_rate = updated_item.price_list_rate || updated_item.rate;
+								}
+							} else if (!item.price_list_rate) {
 								item.price_list_rate = updated_item.price_list_rate || updated_item.rate;
 							}
 						}
@@ -1420,113 +1433,115 @@ export default {
 						vm.set_batch_qty(item, null, false);
 					}
 
-					// First save base rates if not exists or when force update is requested
-					// Avoid overriding existing base rates when the selected currency
-					// matches the POS Profile currency. This prevents manual or offer
-					// adjusted rates from being reset whenever an item row is expanded.
-					if (force_update || !item.base_rate) {
-						// Always store base rates from server in base currency
-						if (data.price_list_rate !== 0 || !item.base_price_list_rate) {
-							item.base_price_list_rate = data.price_list_rate;
-							if (!item.posa_offer_applied) {
-								item.base_rate = data.price_list_rate;
+					if (!item.locked_price) {
+						// First save base rates if not exists or when force update is requested
+						// Avoid overriding existing base rates when the selected currency
+						// matches the POS Profile currency. This prevents manual or offer
+						// adjusted rates from being reset whenever an item row is expanded.
+						if (force_update || !item.base_rate) {
+							// Always store base rates from server in base currency
+							if (data.price_list_rate !== 0 || !item.base_price_list_rate) {
+								item.base_price_list_rate = data.price_list_rate;
+								if (!item.posa_offer_applied) {
+									item.base_rate = data.price_list_rate;
+								}
 							}
 						}
-					}
 
-					// Only update rates if no offer is applied
-					if (!item.posa_offer_applied) {
-						const companyCurrency = vm.pos_profile.currency;
-						const baseCurrency = companyCurrency;
+						// Only update rates if no offer is applied
+						if (!item.posa_offer_applied) {
+							const companyCurrency = vm.pos_profile.currency;
+							const baseCurrency = companyCurrency;
 
-						if (
-							vm.selected_currency === vm.price_list_currency &&
-							vm.selected_currency !== companyCurrency
-						) {
-							const conv = vm.conversion_rate || 1;
-							item.price_list_rate = vm.flt(
-								item.base_price_list_rate / conv,
-								vm.currency_precision,
-							);
+							if (
+								vm.selected_currency === vm.price_list_currency &&
+								vm.selected_currency !== companyCurrency
+							) {
+								const conv = vm.conversion_rate || 1;
+								item.price_list_rate = vm.flt(
+									item.base_price_list_rate / conv,
+									vm.currency_precision,
+								);
 
-							if (!item._manual_rate_set) {
-								item.rate = vm.flt(item.base_rate / conv, vm.currency_precision);
+								if (!item._manual_rate_set) {
+									item.rate = vm.flt(item.base_rate / conv, vm.currency_precision);
+								}
+							} else if (vm.selected_currency !== baseCurrency) {
+								const exchange_rate = vm.exchange_rate || 1;
+								item.price_list_rate = vm.flt(
+									item.base_price_list_rate * exchange_rate,
+									vm.currency_precision,
+								);
+
+								item.rate = vm.flt(item.base_rate * exchange_rate, vm.currency_precision);
+							} else {
+								item.price_list_rate = item.base_price_list_rate;
+
+								if (!item._manual_rate_set) {
+									item.rate = item.base_rate;
+								}
 							}
-						} else if (vm.selected_currency !== baseCurrency) {
-							const exchange_rate = vm.exchange_rate || 1;
-							item.price_list_rate = vm.flt(
-								item.base_price_list_rate * exchange_rate,
-								vm.currency_precision,
-							);
-
-							item.rate = vm.flt(item.base_rate * exchange_rate, vm.currency_precision);
 						} else {
-							item.price_list_rate = item.base_price_list_rate;
+							// For items with offers, only update price_list_rate
+							const companyCurrency = vm.pos_profile.currency;
+							const baseCurrency = companyCurrency;
 
-							if (!item._manual_rate_set) {
-								item.rate = item.base_rate;
+							if (
+								vm.selected_currency === vm.price_list_currency &&
+								vm.selected_currency !== companyCurrency
+							) {
+								const conv = vm.conversion_rate || 1;
+								item.price_list_rate = vm.flt(
+									item.base_price_list_rate / conv,
+									vm.currency_precision,
+								);
+							} else if (vm.selected_currency !== baseCurrency) {
+								const exchange_rate = vm.exchange_rate || 1;
+								item.price_list_rate = vm.flt(
+									item.base_price_list_rate * exchange_rate,
+									vm.currency_precision,
+								);
+							} else {
+								item.price_list_rate = item.base_price_list_rate;
 							}
 						}
-					} else {
-						// For items with offers, only update price_list_rate
-						const companyCurrency = vm.pos_profile.currency;
-						const baseCurrency = companyCurrency;
 
+						// Handle customer discount only if no offer is applied
 						if (
-							vm.selected_currency === vm.price_list_currency &&
-							vm.selected_currency !== companyCurrency
+							!item.posa_offer_applied &&
+							vm.pos_profile.posa_apply_customer_discount &&
+							vm.customer_info.posa_discount > 0 &&
+							vm.customer_info.posa_discount <= 100 &&
+							item.posa_is_offer == 0 &&
+							!item.posa_is_replace
 						) {
-							const conv = vm.conversion_rate || 1;
-							item.price_list_rate = vm.flt(
-								item.base_price_list_rate / conv,
+							const discount_percent =
+								item.max_discount > 0
+									? Math.min(item.max_discount, vm.customer_info.posa_discount)
+									: vm.customer_info.posa_discount;
+
+							item.discount_percentage = discount_percent;
+
+							// Calculate discount in selected currency
+							const discount_amount = vm.flt(
+								(item.price_list_rate * discount_percent) / 100,
 								vm.currency_precision,
 							);
-						} else if (vm.selected_currency !== baseCurrency) {
-							const exchange_rate = vm.exchange_rate || 1;
-							item.price_list_rate = vm.flt(
-								item.base_price_list_rate * exchange_rate,
+							item.discount_amount = discount_amount;
+
+							// Also store base discount amount
+							item.base_discount_amount = vm.flt(
+								(item.base_price_list_rate * discount_percent) / 100,
 								vm.currency_precision,
 							);
-						} else {
-							item.price_list_rate = item.base_price_list_rate;
+
+							// Update rates with discount
+							item.rate = vm.flt(item.price_list_rate - discount_amount, vm.currency_precision);
+							item.base_rate = vm.flt(
+								item.base_price_list_rate - item.base_discount_amount,
+								vm.currency_precision,
+							);
 						}
-					}
-
-					// Handle customer discount only if no offer is applied
-					if (
-						!item.posa_offer_applied &&
-						vm.pos_profile.posa_apply_customer_discount &&
-						vm.customer_info.posa_discount > 0 &&
-						vm.customer_info.posa_discount <= 100 &&
-						item.posa_is_offer == 0 &&
-						!item.posa_is_replace
-					) {
-						const discount_percent =
-							item.max_discount > 0
-								? Math.min(item.max_discount, vm.customer_info.posa_discount)
-								: vm.customer_info.posa_discount;
-
-						item.discount_percentage = discount_percent;
-
-						// Calculate discount in selected currency
-						const discount_amount = vm.flt(
-							(item.price_list_rate * discount_percent) / 100,
-							vm.currency_precision,
-						);
-						item.discount_amount = discount_amount;
-
-						// Also store base discount amount
-						item.base_discount_amount = vm.flt(
-							(item.base_price_list_rate * discount_percent) / 100,
-							vm.currency_precision,
-						);
-
-						// Update rates with discount
-						item.rate = vm.flt(item.price_list_rate - discount_amount, vm.currency_precision);
-						item.base_rate = vm.flt(
-							item.base_price_list_rate - item.base_discount_amount,
-							vm.currency_precision,
-						);
 					}
 
 					// Update other item details
@@ -1541,8 +1556,8 @@ export default {
 					item.has_batch_no = data.has_batch_no;
 
 					// Calculate final amount
-                                        item.amount = vm.flt(item.qty * item.rate, vm.currency_precision);
-                                        item.base_amount = vm.flt(item.qty * item.base_rate, vm.currency_precision);
+					item.amount = vm.flt(item.qty * item.rate, vm.currency_precision);
+					item.base_amount = vm.flt(item.qty * item.base_rate, vm.currency_precision);
 
 					// Log updated rates for debugging
 					console.log(`Updated rates for ${item.item_code} on expand:`, {

@@ -52,7 +52,10 @@ export function useDiscounts() {
 			switch (fieldId) {
 				case "rate":
 					// Store base rate and convert to selected currency
-					item.base_rate = context.flt(newValue / context.exchange_rate, context.currency_precision);
+					item.base_rate = context.flt(
+						newValue / context.exchange_rate,
+						context.currency_precision,
+					);
 					item.rate = newValue;
 
 					// Calculate discount amount in selected currency
@@ -162,6 +165,21 @@ export function useDiscounts() {
 			return;
 		}
 
+		if (item.locked_price) {
+			item.amount = context.flt(item.qty * item.rate, context.currency_precision);
+			const baseCurrency = context.price_list_currency || context.pos_profile.currency;
+			if (context.selected_currency !== baseCurrency) {
+				item.base_amount = context.flt(
+					item.amount / context.exchange_rate,
+					context.currency_precision,
+				);
+			} else {
+				item.base_amount = item.amount;
+			}
+			if (context.forceUpdate) context.forceUpdate();
+			return;
+		}
+
 		if (!item.posa_offer_applied) {
 			if (item.price_list_rate) {
 				// Always work with base rates first
@@ -177,7 +195,10 @@ export function useDiscounts() {
 						item.base_price_list_rate / context.exchange_rate,
 						context.currency_precision,
 					);
-					item.rate = context.flt(item.base_rate / context.exchange_rate, context.currency_precision);
+					item.rate = context.flt(
+						item.base_rate / context.exchange_rate,
+						context.currency_precision,
+					);
 				} else {
 					item.price_list_rate = item.base_price_list_rate;
 					item.rate = item.base_rate;
