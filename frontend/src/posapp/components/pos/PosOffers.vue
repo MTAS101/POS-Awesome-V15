@@ -48,8 +48,8 @@
 									<v-autocomplete
 										v-model="item.give_item"
 										:items="get_give_items(item)"
-										item-title="item_code"
-										item-value="item_code"
+                                                                                item-title="item_name"
+                                                                                item-value="item_code"
 										variant="outlined"
 										density="compact"
 										color="primary"
@@ -186,9 +186,12 @@ export default {
 							newOffer.offer_applied = !!offer.auto;
 						}
 					}
-					if (newOffer.offer == "Give Product" && !newOffer.give_item) {
-						newOffer.give_item = this.get_give_items(newOffer)[0].item_code;
-					}
+                                        if (newOffer.offer == "Give Product" && !newOffer.give_item) {
+                                                const giveItems = this.get_give_items(newOffer);
+                                                if (giveItems.length) {
+                                                        newOffer.give_item = giveItems[0].item_code;
+                                                }
+                                        }
 					this.pos_offers.push(newOffer);
 					this.eventBus.emit("show_message", {
 						title: __("New Offer Available"),
@@ -211,20 +214,39 @@ export default {
 				return "";
 			}
 		},
-		get_give_items(offer) {
-			if (offer.apply_type == "Item Code") {
-				return [{ item_code: offer.apply_item_code }];
-			} else if (offer.apply_type == "Item Group") {
-				const items = this.allItems || [];
-				let filterd_items = items.filter((item) => item.item_group == offer.apply_item_group);
-				if (offer.less_then > 0) {
-					filterd_items = filterd_items.filter((item) => item.rate < offer.less_then);
-				}
-				return filterd_items.map((item) => ({ item_code: item.item_code }));
-			} else {
-				return [];
-			}
-		},
+                get_give_items(offer) {
+                        if (offer.apply_type === "Item Code") {
+                                return [
+                                        {
+                                                item_code: offer.apply_item_code,
+                                                item_name: offer.apply_item_code,
+                                        },
+                                ];
+                        } else if (offer.apply_type === "Item Group") {
+                                const items = this.allItems || [];
+                                let filtered_items = items.filter(
+                                        (item) => item.item_group === offer.apply_item_group,
+                                );
+                                if (offer.less_then > 0) {
+                                        filtered_items = filtered_items.filter(
+                                                (item) => item.rate < offer.less_then,
+                                        );
+                                }
+                                const unique = [];
+                                const seen = new Set();
+                                filtered_items.forEach((item) => {
+                                        if (!seen.has(item.item_code)) {
+                                                seen.add(item.item_code);
+                                                unique.push({
+                                                        item_code: item.item_code,
+                                                        item_name: item.item_name || item.item_code,
+                                                });
+                                        }
+                                });
+                                return unique;
+                        }
+                        return [];
+                },
 		updateCounters() {
 			this.eventBus.emit("update_offers_counters", {
 				offersCount: this.offersCount,
