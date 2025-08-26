@@ -1,3 +1,7 @@
+# Changelog
+
+All notable changes.
+
 ## [15.8.3](https://github.com/defendicon/POS-Awesome-V15/compare/15.8.2...15.8.3) (2025-08-26)
 
 
