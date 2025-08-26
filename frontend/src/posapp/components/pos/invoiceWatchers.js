@@ -5,6 +5,7 @@ import _ from "lodash";
 export default {
 	// Watch for customer change and update related data
         customer: _.debounce(function () {
+                console.log("Watcher: customer changed", this.customer);
                 this.close_payments();
                 this.eventBus.emit("set_customer", this.customer);
                 this.fetch_customer_details();
@@ -36,6 +37,7 @@ export default {
         items: {
                 deep: true,
                 handler: _.debounce(function () {
+                        console.log("Watcher: items changed", this.items);
                         this.handelOffers();
                         this.$forceUpdate();
                 }, 100),
@@ -72,6 +74,7 @@ export default {
 	},
 
         selected_price_list: _.debounce(function (newVal) {
+                console.log("Watcher: price list changed", newVal);
                 // Clear cached price list items to avoid mixing rates
                 clearPriceListCache();
 

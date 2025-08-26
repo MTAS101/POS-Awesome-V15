@@ -30,7 +30,13 @@ export default {
                                 .sort((a, b) => (a.item_code || "").localeCompare(b.item_code || "")),
                 });
 
+                console.log("handelOffers triggered", {
+                        state,
+                        last_state: this._last_offer_state,
+                });
+
                 if (state === this._last_offer_state) {
+                        console.log("handelOffers: state unchanged, skipping");
                         return;
                 }
                 this._last_offer_state = state;
@@ -58,11 +64,12 @@ export default {
 					offers.push(transactionOffer);
 				}
 			}
-		});
+                });
 
-		this.setItemGiveOffer(offers);
-		this.updatePosOffers(offers);
-	},
+                this.setItemGiveOffer(offers);
+                console.log("handelOffers: computed offers", offers);
+                this.updatePosOffers(offers);
+        },
 
 	setItemGiveOffer(offers) {
 		// Set item give offer for replace
@@ -297,22 +304,28 @@ export default {
 		this.eventBus.emit("update_pos_offers", offers);
 	},
 
-	updateInvoiceOffers(offers) {
-		this.posa_offers.forEach((invoiceOffer) => {
-			const existOffer = offers.find((offer) => invoiceOffer.row_id == offer.row_id);
-			if (!existOffer) {
-				this.removeApplyOffer(invoiceOffer);
-			}
-		});
-		offers.forEach((offer) => {
-			const existOffer = this.posa_offers.find((invoiceOffer) => invoiceOffer.row_id == offer.row_id);
-			if (existOffer) {
-				existOffer.items = JSON.stringify(offer.items);
-				if (
-					existOffer.offer === "Give Product" &&
-					existOffer.give_item &&
-					existOffer.give_item != offer.give_item
-				) {
+        updateInvoiceOffers(offers) {
+                console.log("updateInvoiceOffers called", {
+                        incoming: offers,
+                        existing: this.posa_offers,
+                });
+                this.posa_offers.forEach((invoiceOffer) => {
+                        const existOffer = offers.find((offer) => invoiceOffer.row_id == offer.row_id);
+                        if (!existOffer) {
+                                console.log("Removing stale offer", invoiceOffer);
+                                this.removeApplyOffer(invoiceOffer);
+                        }
+                });
+                offers.forEach((offer) => {
+                        const existOffer = this.posa_offers.find((invoiceOffer) => invoiceOffer.row_id == offer.row_id);
+                        if (existOffer) {
+                                console.log("Updating existing offer", { existOffer, offer });
+                                existOffer.items = JSON.stringify(offer.items);
+                                if (
+                                        existOffer.offer === "Give Product" &&
+                                        existOffer.give_item &&
+                                        existOffer.give_item != offer.give_item
+                                ) {
 					const item_to_remove = this.items.find(
 						(item) => item.posa_row_id == existOffer.give_item_row_id,
 					);
@@ -396,12 +409,13 @@ export default {
 				} else if (existOffer.offer === "Grand Total") {
 					this.ApplyOnTotal(offer);
 				}
-				this.addOfferToItems(existOffer);
-			} else {
-				this.applyNewOffer(offer);
-			}
-		});
-	},
+                                this.addOfferToItems(existOffer);
+                        } else {
+                                console.log("Applying new offer", offer);
+                                this.applyNewOffer(offer);
+                        }
+                });
+        },
 
 	removeApplyOffer(invoiceOffer) {
 		if (invoiceOffer.offer === "Item Price") {
@@ -429,11 +443,12 @@ export default {
 		this.deleteOfferFromItems(invoiceOffer);
 	},
 
-	applyNewOffer(offer) {
-		if (offer.offer === "Item Price") {
-			this.ApplyOnPrice(offer);
-		}
-		if (offer.offer === "Give Product") {
+        applyNewOffer(offer) {
+                console.log("applyNewOffer called", offer);
+                if (offer.offer === "Item Price") {
+                        this.ApplyOnPrice(offer);
+                }
+                if (offer.offer === "Give Product") {
 			let itemsRowID;
 			if (typeof offer.items === "string") {
 				itemsRowID = JSON.parse(offer.items);
