@@ -533,7 +533,9 @@ export default {
 		};
                 this.posa_offers.push(newOffer);
                 this.addOfferToItems(newOffer);
-                this.isApplyingOffer = false;
+                this.$nextTick(() => {
+                        this.isApplyingOffer = false;
+                });
         },
 
 	ApplyOnGiveProduct(offer, item_code) {
