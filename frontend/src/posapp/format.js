@@ -1,6 +1,6 @@
 /* global frappe, flt, get_currency_symbol */
 // Utility functions for RTL number formatting (standalone)
-const formatUtils = {
+export const formatUtils = {
 	// Check if current language/layout is RTL
 	isRtl() {
 		// Check via frappe utils first

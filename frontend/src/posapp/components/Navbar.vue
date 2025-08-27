@@ -95,10 +95,10 @@
 		/>
 
 		<!-- Snackbar for notifications -->
-		<v-snackbar 
-			v-model="snack" 
-			:timeout="snackTimeout" 
-			:color="snackColor" 
+		<v-snackbar
+			v-model="snack"
+			:timeout="snackTimeout"
+			:color="snackColor"
 			:location="isRtl ? 'top left' : 'top right'"
 		>
 			{{ snackText }}
@@ -110,6 +110,7 @@
 </template>
 
 <script>
+/* global frappe */
 import NavbarAppBar from "./navbar/NavbarAppBar.vue";
 import NavbarDrawer from "./navbar/NavbarDrawer.vue";
 import NavbarMenu from "./navbar/NavbarMenu.vue";
@@ -132,7 +133,7 @@ export default {
 		return {
 			isRtl,
 			rtlStyles,
-			rtlClasses
+			rtlClasses,
 		};
 	},
 	components: {
@@ -189,7 +190,7 @@ export default {
 		},
 		loadingMessage: {
 			type: String,
-			default: 'Loading app data...',
+			default: "Loading app data...",
 		},
 	},
 	data() {
@@ -201,8 +202,8 @@ export default {
 				{ text: "POS", icon: "mdi-network-pos" },
 				{ text: "Payments", icon: "mdi-credit-card" },
 			],
-                        company: "POS Awesome",
-                        companyImg: posLogo,
+			company: "POS Awesome",
+			companyImg: posLogo,
 			showAboutDialog: false,
 			showOfflineInvoices: false,
 			freeze: false,
@@ -289,8 +290,15 @@ export default {
 				return;
 			}
 			try {
+				let westernPref = null;
+				if (typeof localStorage !== "undefined") {
+					westernPref = localStorage.getItem("use_western_numerals");
+				}
 				await forceClearAllCache();
 				await clearAllCaches({ confirmBeforeClear: false }).catch(() => {});
+				if (westernPref !== null && typeof localStorage !== "undefined") {
+					localStorage.setItem("use_western_numerals", westernPref);
+				}
 				this.showMessage({
 					color: "success",
 					title: this.__("Cache cleared successfully"),
