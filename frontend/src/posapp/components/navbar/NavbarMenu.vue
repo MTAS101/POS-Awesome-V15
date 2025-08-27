@@ -210,7 +210,11 @@
 						<v-list-item v-bind="props">
 							<template #prepend>
 								<v-icon :color="item.raw.code === currentLanguage ? 'primary' : 'grey'">
-									{{ item.raw.code === currentLanguage ? 'mdi-check-circle' : 'mdi-circle-outline' }}
+									{{
+										item.raw.code === currentLanguage
+											? "mdi-check-circle"
+											: "mdi-circle-outline"
+									}}
 								</v-icon>
 							</template>
 							<v-list-item-title>
@@ -223,6 +227,15 @@
 					</template>
 				</v-select>
 
+				<v-switch
+					v-model="useWesternNumerals"
+					class="mt-3"
+					density="compact"
+					inset
+					:label="__('Use Western numerals')"
+					@update:modelValue="saveWesternPreference"
+				></v-switch>
+
 				<v-alert
 					v-if="selectedLanguage !== currentLanguage"
 					type="info"
@@ -230,19 +243,14 @@
 					density="compact"
 					class="mt-3"
 				>
-					{{ __("Language will be changed to") }}: 
+					{{ __("Language will be changed to") }}:
 					<strong>{{ selectedLanguageName }}</strong>
 				</v-alert>
 			</v-card-text>
 
 			<v-card-actions class="pa-4 pt-0">
 				<v-spacer />
-				<v-btn
-					color="grey"
-					variant="text"
-					@click="closeLanguageDialog"
-					:disabled="changing"
-				>
+				<v-btn color="grey" variant="text" @click="closeLanguageDialog" :disabled="changing">
 					{{ __("Cancel") }}
 				</v-btn>
 				<v-btn
@@ -274,6 +282,7 @@
 </template>
 
 <script>
+/* global frappe */
 const FALLBACK_LANGUAGES = [
 	{ code: "en", name: "English", native_name: "English" },
 	{ code: "ar", name: "العربية", native_name: "العربية" },
@@ -299,6 +308,8 @@ export default {
 			availableLanguages: FALLBACK_LANGUAGES,
 			loading: false,
 			changing: false,
+			useWesternNumerals: false,
+			originalWesternNumerals: false,
 			notification: {
 				show: false,
 				message: "",
@@ -309,44 +320,88 @@ export default {
 	},
 	computed: {
 		canChangeLanguage() {
-			return this.selectedLanguage !== this.currentLanguage && !this.changing;
+			return (
+				(this.selectedLanguage !== this.currentLanguage ||
+					this.useWesternNumerals !== this.originalWesternNumerals) &&
+				!this.changing
+			);
 		},
 		selectedLanguageName() {
-			const lang = this.availableLanguages.find(l => l.code === this.selectedLanguage);
+			const lang = this.availableLanguages.find((l) => l.code === this.selectedLanguage);
 			return lang?.name || this.selectedLanguage.toUpperCase();
 		},
 	},
 	async mounted() {
 		await this.initializeLanguage();
+		this.initializeWesternNumerals();
 	},
 	methods: {
+		initializeWesternNumerals() {
+			try {
+				const stored = localStorage.getItem("use_western_numerals");
+				if (stored !== null) {
+					this.useWesternNumerals = ["1", "true", "yes"].includes(stored.toLowerCase());
+				} else if (window.frappe && window.frappe.boot) {
+					const bootVal =
+						window.frappe.boot.use_western_numerals ||
+						window.frappe.boot.pos_profile?.use_western_numerals;
+					if (typeof bootVal !== "undefined") {
+						this.useWesternNumerals = Boolean(bootVal);
+					}
+				}
+			} catch {
+				this.useWesternNumerals = false;
+			}
+			this.originalWesternNumerals = this.useWesternNumerals;
+		},
+
+		saveWesternPreference() {
+			try {
+				localStorage.setItem("use_western_numerals", this.useWesternNumerals ? "1" : "0");
+			} catch {
+				/* ignore */
+			}
+			if (window.frappe && window.frappe.boot) {
+				window.frappe.boot.use_western_numerals = this.useWesternNumerals;
+			}
+			this.showNotification(
+				this.useWesternNumerals ? "Western numerals enabled" : "Western numerals disabled",
+			);
+		},
+
 		async changeLanguage() {
-			if (!this.canChangeLanguage) {
-				this.showNotification("Cannot change language - same language selected", "warning");
+			if (this.selectedLanguage === this.currentLanguage) {
+				this.originalWesternNumerals = this.useWesternNumerals;
+				this.showNotification("Settings updated. Reloading...", "success");
+				this.closeLanguageDialog();
+				this.$emit("clear-cache");
+				setTimeout(() => {
+					window.location.reload();
+				}, 200);
 				return;
 			}
 
 			this.changing = true;
 			try {
 				const response = await frappe.call({
-					method: 'posawesome.posawesome.api.utilities.set_current_user_language',
-					args: { lang_code: this.selectedLanguage }
+					method: "posawesome.posawesome.api.utilities.set_current_user_language",
+					args: { lang_code: this.selectedLanguage },
 				});
 
 				const result = response?.message || response;
-				
+
 				if (result?.success) {
 					this.currentLanguage = this.selectedLanguage;
-					
+
 					if (window.frappe && window.frappe.boot) {
 						window.frappe.boot.lang = this.selectedLanguage;
 					}
-					
+
 					this.showNotification("Language changed successfully! Reloading...", "success");
 					this.closeLanguageDialog();
-					
-					this.$emit('clear-cache');
-					
+
+					this.$emit("clear-cache");
+
 					setTimeout(() => {
 						window.location.reload();
 					}, 2000);
@@ -355,7 +410,10 @@ export default {
 					this.showNotification(errorMsg, "error");
 				}
 			} catch (error) {
-				this.showNotification(`Failed to change language: ${error.message || 'Unknown error'}`, "error");
+				this.showNotification(
+					`Failed to change language: ${error.message || "Unknown error"}`,
+					"error",
+				);
 			} finally {
 				this.changing = false;
 			}
@@ -365,11 +423,11 @@ export default {
 			this.loading = true;
 			try {
 				const response = await frappe.call({
-					method: 'posawesome.posawesome.api.utilities.get_current_user_language'
+					method: "posawesome.posawesome.api.utilities.get_current_user_language",
 				});
-				
+
 				const result = response?.message || response;
-				
+
 				if (result?.success) {
 					Object.assign(this, {
 						availableLanguages: result.available_languages,
@@ -387,6 +445,7 @@ export default {
 		closeLanguageDialog() {
 			this.showLanguageDialog = false;
 			this.selectedLanguage = this.currentLanguage;
+			this.originalWesternNumerals = this.useWesternNumerals;
 		},
 
 		showNotification(message, type = "info", timeout = 3000) {
@@ -408,7 +467,7 @@ export default {
 	},
 	emits: [
 		"close-shift",
-		"print-last-invoice", 
+		"print-last-invoice",
 		"sync-invoices",
 		"toggle-offline",
 		"clear-cache",

@@ -9,7 +9,12 @@
 					<!-- Invoice ID and Date Range search -->
 					<v-row class="mb-2">
 						<v-col cols="12">
-							<v-alert dense type="info" text outlined v-if="!from_date && !to_date">
+							<v-alert
+								density="compact"
+								type="info"
+								variant="outlined"
+								v-if="!from_date && !to_date"
+							>
 								<small>{{ __("Use date range to search for older invoices") }}</small>
 							</v-alert>
 						</v-col>
@@ -155,11 +160,11 @@
 							theme="dark"
 							@click="search_invoices"
 						>
-							<v-icon left>mdi-magnify</v-icon>
+							<v-icon start>mdi-magnify</v-icon>
 							{{ __("Search") }}
 						</v-btn>
 						<v-btn variant="text" class="ml-2" color="warning" theme="dark" @click="clear_search">
-							<v-icon left>mdi-refresh</v-icon>
+							<v-icon start>mdi-refresh</v-icon>
 							{{ __("Clear") }}
 						</v-btn>
 						<v-btn
@@ -205,8 +210,7 @@
 							<div class="text-center mt-3" v-if="has_more_invoices">
 								<v-btn
 									color="primary"
-									text
-									outlined
+									variant="outlined"
 									:loading="loading_more"
 									@click="load_more_invoices"
 								>
@@ -238,7 +242,8 @@
 </template>
 
 <script>
-import format from "../../format";
+/* global __, frappe */
+import format, { formatUtils } from "../../format";
 
 export default {
 	mixins: [format],
@@ -309,15 +314,16 @@ export default {
 		formatDateDisplay(dateStr) {
 			if (!dateStr) return "";
 			try {
-				// Convert YYYY-MM-DD to DD-MM-YYYY
-				const parts = dateStr.split("-");
+				const western = formatUtils.fromArabicNumerals(String(dateStr));
+				const parts = western.split("-");
 				if (parts.length === 3) {
-					return `${parts[2]}-${parts[1]}-${parts[0]}`;
+					const formatted = `${parts[2]}-${parts[1]}-${parts[0]}`;
+					return formatUtils.toArabicNumerals(formatted);
 				}
 			} catch (error) {
 				console.error("Error formatting date:", error);
 			}
-			return dateStr;
+			return formatUtils.toArabicNumerals(String(dateStr));
 		},
 		formatFromDate() {
 			if (this.from_date) {
@@ -333,22 +339,22 @@ export default {
 					}
 					// Handle string in YYYY-MM-DD format
 					else if (typeof this.from_date === "string" && this.from_date.includes("-")) {
-						const parts = this.from_date.split("-");
+						const parts = formatUtils.fromArabicNumerals(this.from_date).split("-");
 						if (parts.length === 3) {
 							dateString = `${parts[2]}-${parts[1]}-${parts[0]}`;
 						} else {
-							dateString = this.from_date;
+							dateString = formatUtils.fromArabicNumerals(this.from_date);
 						}
 					}
 					// Handle any other format - just display as is
 					else {
-						dateString = String(this.from_date);
+						dateString = formatUtils.fromArabicNumerals(String(this.from_date));
 					}
 
-					this.from_date_formatted = dateString;
+					this.from_date_formatted = formatUtils.toArabicNumerals(dateString);
 				} catch (error) {
 					console.error("Error formatting from_date:", error);
-					this.from_date_formatted = String(this.from_date);
+					this.from_date_formatted = formatUtils.toArabicNumerals(String(this.from_date));
 				}
 			} else {
 				this.from_date_formatted = null;
@@ -368,22 +374,22 @@ export default {
 					}
 					// Handle string in YYYY-MM-DD format
 					else if (typeof this.to_date === "string" && this.to_date.includes("-")) {
-						const parts = this.to_date.split("-");
+						const parts = formatUtils.fromArabicNumerals(this.to_date).split("-");
 						if (parts.length === 3) {
 							dateString = `${parts[2]}-${parts[1]}-${parts[0]}`;
 						} else {
-							dateString = this.to_date;
+							dateString = formatUtils.fromArabicNumerals(this.to_date);
 						}
 					}
 					// Handle any other format - just display as is
 					else {
-						dateString = String(this.to_date);
+						dateString = formatUtils.fromArabicNumerals(String(this.to_date));
 					}
 
-					this.to_date_formatted = dateString;
+					this.to_date_formatted = formatUtils.toArabicNumerals(dateString);
 				} catch (error) {
 					console.error("Error formatting to_date:", error);
-					this.to_date_formatted = String(this.to_date);
+					this.to_date_formatted = formatUtils.toArabicNumerals(String(this.to_date));
 				}
 			} else {
 				this.to_date_formatted = null;
@@ -444,17 +450,18 @@ export default {
 						String(vm.from_date.getDate()).padStart(2, "0"),
 					].join("-");
 				} else if (typeof vm.from_date === "string") {
-					if (vm.from_date.includes("/")) {
+					const fromStr = formatUtils.fromArabicNumerals(vm.from_date);
+					if (fromStr.includes("/")) {
 						// Convert DD/MM/YYYY to YYYY-MM-DD
-						const parts = vm.from_date.split("/");
+						const parts = fromStr.split("/");
 						if (parts.length === 3) {
 							formattedFromDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
 						}
-					} else if (vm.from_date.includes("-")) {
-						const parts = vm.from_date.split("-");
+					} else if (fromStr.includes("-")) {
+						const parts = fromStr.split("-");
 						if (parts.length === 3) {
 							if (parts[0].length === 4) {
-								formattedFromDate = vm.from_date; // Already YYYY-MM-DD
+								formattedFromDate = fromStr; // Already YYYY-MM-DD
 							} else {
 								formattedFromDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
 							}
@@ -475,17 +482,18 @@ export default {
 						String(vm.to_date.getDate()).padStart(2, "0"),
 					].join("-");
 				} else if (typeof vm.to_date === "string") {
-					if (vm.to_date.includes("/")) {
+					const toStr = formatUtils.fromArabicNumerals(vm.to_date);
+					if (toStr.includes("/")) {
 						// Convert DD/MM/YYYY to YYYY-MM-DD
-						const parts = vm.to_date.split("/");
+						const parts = toStr.split("/");
 						if (parts.length === 3) {
 							formattedToDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
 						}
-					} else if (vm.to_date.includes("-")) {
-						const parts = vm.to_date.split("-");
+					} else if (toStr.includes("-")) {
+						const parts = toStr.split("-");
 						if (parts.length === 3) {
 							if (parts[0].length === 4) {
-								formattedToDate = vm.to_date; // Already YYYY-MM-DD
+								formattedToDate = toStr; // Already YYYY-MM-DD
 							} else {
 								formattedToDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
 							}
@@ -498,8 +506,8 @@ export default {
 			}
 
 			// Process amount filters
-			let minAmount = vm.min_amount ? parseFloat(vm.min_amount) : null;
-			let maxAmount = vm.max_amount ? parseFloat(vm.max_amount) : null;
+			let minAmount = vm.min_amount ? parseFloat(formatUtils.fromArabicNumerals(vm.min_amount)) : null;
+			let maxAmount = vm.max_amount ? parseFloat(formatUtils.fromArabicNumerals(vm.max_amount)) : null;
 
 			// Save current search parameters for "load more" functionality
 			this.current_search_params = {

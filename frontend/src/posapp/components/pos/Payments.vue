@@ -741,7 +741,7 @@
 <script>
 /* global frappe, __, get_currency_symbol */
 // Importing format mixin for currency and utility functions
-import format from "../../format";
+import format, { formatUtils } from "../../format";
 import {
 	saveOfflineInvoice,
 	syncOfflineInvoices,
@@ -812,7 +812,7 @@ export default {
 			if (this.invoice_doc && this.invoice_doc.payments) {
 				this.invoice_doc.payments.forEach((payment) => {
 					// Payment amount is already in selected currency
-					total += parseFloat(payment.amount) || 0;
+					total += parseFloat(formatUtils.fromArabicNumerals(String(payment.amount))) || 0;
 				});
 			}
 
@@ -826,7 +826,7 @@ export default {
 						this.currency_precision,
 					);
 				} else {
-					total += parseFloat(this.loyalty_amount) || 0;
+					total += parseFloat(formatUtils.fromArabicNumerals(String(this.loyalty_amount))) || 0;
 				}
 			}
 
@@ -840,7 +840,9 @@ export default {
 						this.currency_precision,
 					);
 				} else {
-					total += parseFloat(this.redeemed_customer_credit) || 0;
+					total +=
+						parseFloat(formatUtils.fromArabicNumerals(String(this.redeemed_customer_credit))) ||
+						0;
 				}
 			}
 
@@ -1805,13 +1807,18 @@ export default {
 		},
 		// Apply preset or typed number of days to set due date
 		applyDuePreset(days) {
-			if (days === null || days === "" || isNaN(days)) {
+			if (days === null || days === "") {
 				return;
 			}
+			const westernDays = formatUtils.fromArabicNumerals(String(days));
+			if (isNaN(westernDays)) {
+				return;
+			}
+			const parsed = parseInt(westernDays, 10);
 			const d = new Date();
-			d.setDate(d.getDate() + parseInt(days, 10));
+			d.setDate(d.getDate() + parsed);
 			this.new_credit_due_date = this.formatDateDisplay(d);
-			this.credit_due_days = parseInt(days, 10);
+			this.credit_due_days = parsed;
 			this.update_credit_due_date();
 		},
 		// Apply days entered in dialog
@@ -1823,38 +1830,41 @@ export default {
 		formatDate(date) {
 			if (!date) return null;
 			if (typeof date === "string") {
-				if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-					return date;
+				const western = formatUtils.fromArabicNumerals(date);
+				if (/^\d{4}-\d{2}-\d{2}$/.test(western)) {
+					return western;
 				}
-				if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(date)) {
-					const [d, m, y] = date.split("-");
+				if (/^\d{1,2}-\d{1,2}-\d{4}$/.test(western)) {
+					const [d, m, y] = western.split("-");
 					return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
 				}
+				date = western;
 			}
-			const d = new Date(date);
+			const d = new Date(formatUtils.fromArabicNumerals(String(date)));
 			if (!isNaN(d.getTime())) {
 				const year = d.getFullYear();
 				const month = `0${d.getMonth() + 1}`.slice(-2);
 				const day = `0${d.getDate()}`.slice(-2);
 				return `${year}-${month}-${day}`;
 			}
-			return date;
+			return formatUtils.fromArabicNumerals(String(date));
 		},
 
 		formatDateDisplay(date) {
 			if (!date) return "";
-			if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-				const [y, m, d] = date.split("-");
-				return `${d}-${m}-${y}`;
+			const western = formatUtils.fromArabicNumerals(String(date));
+			if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(western)) {
+				const [y, m, d] = western.split("-");
+				return formatUtils.toArabicNumerals(`${d}-${m}-${y}`);
 			}
-			const d = new Date(date);
+			const d = new Date(western);
 			if (!isNaN(d.getTime())) {
 				const year = d.getFullYear();
 				const month = `0${d.getMonth() + 1}`.slice(-2);
 				const day = `0${d.getDate()}`.slice(-2);
-				return `${day}-${month}-${year}`;
+				return formatUtils.toArabicNumerals(`${day}-${month}-${year}`);
 			}
-			return date;
+			return formatUtils.toArabicNumerals(western);
 		},
 		// Show paid amount info message
 		showPaidAmount() {
