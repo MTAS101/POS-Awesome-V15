@@ -309,6 +309,7 @@ export default {
 			loading: false,
 			changing: false,
 			useWesternNumerals: false,
+			originalWesternNumerals: false,
 			notification: {
 				show: false,
 				message: "",
@@ -319,7 +320,11 @@ export default {
 	},
 	computed: {
 		canChangeLanguage() {
-			return this.selectedLanguage !== this.currentLanguage && !this.changing;
+			return (
+				(this.selectedLanguage !== this.currentLanguage ||
+					this.useWesternNumerals !== this.originalWesternNumerals) &&
+				!this.changing
+			);
 		},
 		selectedLanguageName() {
 			const lang = this.availableLanguages.find((l) => l.code === this.selectedLanguage);
@@ -347,6 +352,7 @@ export default {
 			} catch {
 				this.useWesternNumerals = false;
 			}
+			this.originalWesternNumerals = this.useWesternNumerals;
 		},
 
 		saveWesternPreference() {
@@ -364,8 +370,14 @@ export default {
 		},
 
 		async changeLanguage() {
-			if (!this.canChangeLanguage) {
-				this.showNotification("Cannot change language - same language selected", "warning");
+			if (this.selectedLanguage === this.currentLanguage) {
+				this.originalWesternNumerals = this.useWesternNumerals;
+				this.showNotification("Settings updated. Reloading...", "success");
+				this.closeLanguageDialog();
+				this.$emit("clear-cache");
+				setTimeout(() => {
+					window.location.reload();
+				}, 200);
 				return;
 			}
 
@@ -433,6 +445,7 @@ export default {
 		closeLanguageDialog() {
 			this.showLanguageDialog = false;
 			this.selectedLanguage = this.currentLanguage;
+			this.originalWesternNumerals = this.useWesternNumerals;
 		},
 
 		showNotification(message, type = "info", timeout = 3000) {
