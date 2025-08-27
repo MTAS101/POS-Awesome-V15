@@ -1315,16 +1315,18 @@ export default {
 						item.has_serial_no = updated_item.has_serial_no;
 						item.batch_no_data = updated_item.batch_no_data;
 						item.serial_no_data = updated_item.serial_no_data;
-						if (updated_item.rate !== undefined) {
-							if (!item.locked_price) {
-								if (updated_item.rate !== 0 || !item.rate) {
-									item.rate = updated_item.rate;
-									item.price_list_rate = updated_item.price_list_rate || updated_item.rate;
-								}
-							} else if (!item.price_list_rate) {
-								item.price_list_rate = updated_item.price_list_rate || updated_item.rate;
-							}
-						}
+                                               if (updated_item.rate !== undefined) {
+                                                       if (!item.locked_price && !item.posa_offer_applied) {
+                                                               if (updated_item.rate !== 0 || !item.rate) {
+                                                                       item.rate = updated_item.rate;
+                                                                       item.price_list_rate =
+                                                                               updated_item.price_list_rate || updated_item.rate;
+                                                               }
+                                                       } else if (!item.price_list_rate) {
+                                                               item.price_list_rate =
+                                                                       updated_item.price_list_rate || updated_item.rate;
+                                                       }
+                                               }
 						if (updated_item.currency) {
 							item.currency = updated_item.currency;
 						}
