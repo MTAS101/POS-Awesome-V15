@@ -1,4 +1,5 @@
 import { clearPriceListCache } from "../../../offline/index.js";
+/* global frappe */
 
 export default {
 	// Watch for customer change and update related data
@@ -30,13 +31,22 @@ export default {
 		});
 	},
 	// Watch for items array changes (deep) and re-handle offers
-	items: {
-		deep: true,
-		handler(items) {
-			this.handelOffers();
-			this.$forceUpdate();
-		},
-	},
+        items: {
+                deep: true,
+                handler() {
+                        if (this.isApplyingOffer) return;
+                        this.handelOffers();
+                        this.$forceUpdate();
+                },
+        },
+        packed_items: {
+                deep: true,
+                handler() {
+                        if (this.isApplyingOffer) return;
+                        this.handelOffers();
+                        this.$forceUpdate();
+                },
+        },
 	// Watch for invoice type change and emit
 	invoiceType() {
 		this.eventBus.emit("update_invoice_type", this.invoiceType);
