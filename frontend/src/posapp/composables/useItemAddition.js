@@ -49,6 +49,9 @@ export function useItemAddition() {
                                 has_batch_no: comp.is_batch,
                                 has_serial_no: comp.is_serial,
                                 posa_row_id: context.makeid ? context.makeid(20) : Math.random().toString(36).substr(2, 20),
+                                posa_offers: JSON.stringify([]),
+                                posa_offer_applied: 0,
+                                posa_is_offer: 0,
                         };
                         context.packed_items.push(child);
                         if (context.update_item_detail) {

@@ -1315,16 +1315,18 @@ export default {
 						item.has_serial_no = updated_item.has_serial_no;
 						item.batch_no_data = updated_item.batch_no_data;
 						item.serial_no_data = updated_item.serial_no_data;
-						if (updated_item.rate !== undefined) {
-							if (!item.locked_price) {
-								if (updated_item.rate !== 0 || !item.rate) {
-									item.rate = updated_item.rate;
-									item.price_list_rate = updated_item.price_list_rate || updated_item.rate;
-								}
-							} else if (!item.price_list_rate) {
-								item.price_list_rate = updated_item.price_list_rate || updated_item.rate;
-							}
-						}
+                                               if (updated_item.rate !== undefined) {
+                                                       if (!item.locked_price && !item.posa_offer_applied) {
+                                                               if (updated_item.rate !== 0 || !item.rate) {
+                                                                       item.rate = updated_item.rate;
+                                                                       item.price_list_rate =
+                                                                               updated_item.price_list_rate || updated_item.rate;
+                                                               }
+                                                       } else if (!item.price_list_rate) {
+                                                               item.price_list_rate =
+                                                                       updated_item.price_list_rate || updated_item.rate;
+                                                       }
+                                               }
 						if (updated_item.currency) {
 							item.currency = updated_item.currency;
 						}
@@ -1479,30 +1481,19 @@ export default {
 									item.rate = item.base_rate;
 								}
 							}
-						} else {
-							// For items with offers, only update price_list_rate
-							const companyCurrency = vm.pos_profile.currency;
-							const baseCurrency = companyCurrency;
-
-							if (
-								vm.selected_currency === vm.price_list_currency &&
-								vm.selected_currency !== companyCurrency
-							) {
-								const conv = vm.conversion_rate || 1;
-								item.price_list_rate = vm.flt(
-									item.base_price_list_rate / conv,
-									vm.currency_precision,
-								);
-							} else if (vm.selected_currency !== baseCurrency) {
-								const exchange_rate = vm.exchange_rate || 1;
-								item.price_list_rate = vm.flt(
-									item.base_price_list_rate * exchange_rate,
-									vm.currency_precision,
-								);
-							} else {
-								item.price_list_rate = item.base_price_list_rate;
-							}
-						}
+                                               } else {
+                                                       // Preserve discounted price when an offer is applied so the
+                                                       // rate doesn't revert to the original price list value.
+                                                       const baseCurrency = vm.price_list_currency || vm.pos_profile.currency;
+                                                       if (vm.selected_currency !== baseCurrency) {
+                                                               item.price_list_rate = vm.flt(
+                                                                       item.base_rate * vm.exchange_rate,
+                                                                       vm.currency_precision,
+                                                               );
+                                                       } else {
+                                                               item.price_list_rate = item.base_rate;
+                                                       }
+                                               }
 
 						// Handle customer discount only if no offer is applied
 						if (
