@@ -359,10 +359,11 @@ export default {
 			packed_items: [], // Packed items for bundles
 			packed_dialog_items: [], // Packed items displayed in dialog
 			show_packed_dialog: false, // Packing list dialog visibility
-			posOffers: [], // All available offers
-			posa_offers: [], // Offers applied to this invoice
-			posa_coupons: [], // Coupons applied
-			allItems: [], // All items for offer logic
+                        posOffers: [], // All available offers
+                        posa_offers: [], // Offers applied to this invoice
+                        posa_coupons: [], // Coupons applied
+                        isApplyingOffer: false, // Flag to prevent offer watcher loops
+                        allItems: [], // All items for offer logic
 			discount_percentage_offer_name: null, // Track which offer is applied
 			invoiceTypes: ["Invoice", "Order"], // Types of invoices
 			invoiceType: "Invoice", // Current invoice type
