@@ -1836,18 +1836,19 @@ export default {
 				} else {
 					vm.get_items(true);
 				}
-			} else {
-				// Save the current filtered items before search to maintain quantity data
-				const current_items = [...vm.filtered_items];
-				vm.enter_event();
+                       } else {
+                               // When local storage is disabled, always fetch items
+                               // from the server so searches aren't limited to the
+                               // initially loaded set.
+                               await vm.get_items(true);
+                               vm.enter_event();
 
-				// After search, update quantities for newly filtered items
-				if (vm.filtered_items && vm.filtered_items.length > 0) {
-					setTimeout(() => {
-						vm.update_items_details(vm.filtered_items);
-					}, 300);
-				}
-			}
+                               if (vm.filtered_items && vm.filtered_items.length > 0) {
+                                       setTimeout(() => {
+                                               vm.update_items_details(vm.filtered_items);
+                                       }, 300);
+                               }
+                       }
 
 			// Clear the input only when triggered via scanner
 			if (fromScanner) {
