@@ -1346,15 +1346,13 @@ export default {
 				}
 			}
 		},
-		async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
-			if (loaded === 0) {
-				this.isBackgroundLoading = true;
-			}
-			console.log("[ItemsSelector] backgroundLoadItems called", {
-				startAfter,
-				syncSince,
-				clearBefore,
-				requestToken,
+               async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
+                       this.isBackgroundLoading = true;
+                       console.log("[ItemsSelector] backgroundLoadItems called", {
+                               startAfter,
+                               syncSince,
+                               clearBefore,
+                               requestToken,
 				loaded,
 			});
 			const limit = this.itemsPageLimit;
@@ -1764,29 +1762,30 @@ export default {
 				this.$refs.debounce_search.focus();
 			}
 		},
-		search_onchange: _.debounce(async function (newSearchTerm) {
-			const vm = this;
+               search_onchange: _.debounce(async function (newSearchTerm) {
+                       const vm = this;
 
-			vm.cancelItemDetailsRequest();
+                       vm.cancelItemDetailsRequest();
 
-			// Determine the actual query string and trim whitespace
-			const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
+                       // Determine the actual query string and trim whitespace
+                       const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
+                       const trimmedQuery = (query || "").trim();
 
-			vm.search = (query || "").trim();
+                       // Require a minimum of three characters before running a search
+                       if (!trimmedQuery || trimmedQuery.length < 3) {
+                               vm.search_from_scanner = false;
+                               return;
+                       }
 
-			// Require a minimum of three characters before running a search
-			if (!vm.search || vm.search.length < 3) {
-				vm.search_from_scanner = false;
-				return;
-			}
+                       // If background loading is in progress, defer the search without changing the active query
+                       if (vm.isBackgroundLoading) {
+                               vm.pendingItemSearch = trimmedQuery;
+                               return;
+                       }
 
-			// If background loading is in progress, defer the search
-			if (vm.isBackgroundLoading) {
-				vm.pendingItemSearch = vm.search;
-				return;
-			}
+                       vm.search = trimmedQuery;
 
-			const fromScanner = vm.search_from_scanner;
+                       const fromScanner = vm.search_from_scanner;
 
 			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 				if (vm.pos_profile && (!vm.pos_profile.posa_local_storage || !vm.storageAvailable)) {
