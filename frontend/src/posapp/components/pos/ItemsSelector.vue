@@ -1661,18 +1661,21 @@ export default {
 					item.base_price_list_rate = base_rate;
 				}
 
-				if (!item.qty || item.qty === 1) {
-					let qtyVal = this.qty != null ? this.qty : 1;
-					qtyVal = Math.abs(qtyVal);
-					if (this.hide_qty_decimals) {
-						qtyVal = Math.trunc(qtyVal);
-					}
-					item.qty = qtyVal;
-				}
-				this.eventBus.emit("add_item", item);
-				this.qty = 1;
-			}
-		},
+                                const hasBarcodeQty = item._barcode_qty;
+                                if (!item.qty || (item.qty === 1 && !hasBarcodeQty)) {
+                                        let qtyVal = this.qty != null ? this.qty : 1;
+                                        qtyVal = Math.abs(qtyVal);
+                                        if (this.hide_qty_decimals) {
+                                                qtyVal = Math.trunc(qtyVal);
+                                        }
+                                        item.qty = qtyVal;
+                                }
+                                const payload = { ...item };
+                                delete payload._barcode_qty;
+                                this.eventBus.emit("add_item", payload);
+                                this.qty = 1;
+                        }
+                },
 		async enter_event() {
 			let match = false;
 			if (!this.filtered_items.length || !this.first_search) {
@@ -2338,6 +2341,7 @@ export default {
                         // Apply quantity from scale barcode if available
                         if (qtyFromBarcode !== null && !isNaN(qtyFromBarcode)) {
                                 newItem.qty = qtyFromBarcode;
+                                newItem._barcode_qty = true;
                         }
 
                         // Use existing add_item method with enhanced feedback
