@@ -1756,36 +1756,40 @@ export default {
 				vm.search_from_scanner = false;
 			}
 		}, 300),
-		get_item_qty(first_search) {
-			const qtyVal = this.qty != null ? this.qty : 1;
-			let scal_qty = Math.abs(qtyVal);
-			if (first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
-				let pesokg1 = first_search.substr(7, 5);
-				let pesokg;
-				if (pesokg1.startsWith("0000")) {
-					pesokg = "0.00" + pesokg1.substr(4);
-				} else if (pesokg1.startsWith("000")) {
-					pesokg = "0.0" + pesokg1.substr(3);
-				} else if (pesokg1.startsWith("00")) {
-					pesokg = "0." + pesokg1.substr(2);
-				} else if (pesokg1.startsWith("0")) {
-					pesokg = pesokg1.substr(1, 1) + "." + pesokg1.substr(2, pesokg1.length);
-				} else if (!pesokg1.startsWith("0")) {
-					pesokg = pesokg1.substr(0, 2) + "." + pesokg1.substr(2, pesokg1.length);
-				}
-				scal_qty = pesokg;
-			}
-			if (this.hide_qty_decimals) {
-				scal_qty = Math.trunc(scal_qty);
-			}
-			return scal_qty;
-		},
-		get_search(first_search) {
-			if (!first_search) return "";
-			return first_search.startsWith(this.pos_profile.posa_scale_barcode_start)
-				? first_search.substr(0, 7)
-				: first_search;
-		},
+                get_item_qty(first_search) {
+                        const qtyVal = this.qty != null ? this.qty : 1;
+                        let scal_qty = Math.abs(qtyVal);
+                        const prefix_len =
+                                this.pos_profile.posa_scale_barcode_start?.length || 0;
+                        if (first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
+                                let pesokg1 = first_search.substr(prefix_len + 5, 5);
+                                let pesokg;
+                                if (pesokg1.startsWith("0000")) {
+                                        pesokg = "0.00" + pesokg1.substr(4);
+                                } else if (pesokg1.startsWith("000")) {
+                                        pesokg = "0.0" + pesokg1.substr(3);
+                                } else if (pesokg1.startsWith("00")) {
+                                        pesokg = "0." + pesokg1.substr(2);
+                                } else if (pesokg1.startsWith("0")) {
+                                        pesokg = pesokg1.substr(1, 1) + "." + pesokg1.substr(2, pesokg1.length);
+                                } else if (!pesokg1.startsWith("0")) {
+                                        pesokg = pesokg1.substr(0, 2) + "." + pesokg1.substr(2, pesokg1.length);
+                                }
+                                scal_qty = pesokg;
+                        }
+                        if (this.hide_qty_decimals) {
+                                scal_qty = Math.trunc(scal_qty);
+                        }
+                        return scal_qty;
+                },
+                get_search(first_search) {
+                        if (!first_search) return "";
+                        const prefix_len =
+                                this.pos_profile.posa_scale_barcode_start?.length || 0;
+                        return first_search.startsWith(this.pos_profile.posa_scale_barcode_start)
+                                ? first_search.substr(0, prefix_len + 5)
+                                : first_search;
+                },
 		esc_event() {
 			this.search = null;
 			this.first_search = null;
