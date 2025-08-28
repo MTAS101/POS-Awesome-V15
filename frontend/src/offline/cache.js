@@ -214,6 +214,27 @@ export async function setCustomerStorage(customers) {
         }
 }
 
+export async function getCustomerStorageCount() {
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                return await db.table("customers").count();
+        } catch (e) {
+                console.error("Failed to count customers", e);
+                return 0;
+        }
+}
+
+export async function clearCustomerStorage() {
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                await db.table("customers").clear();
+        } catch (e) {
+                console.error("Failed to clear customer storage", e);
+        }
+}
+
 export function getItemsLastSync() {
 	return memory.items_last_sync || null;
 }
