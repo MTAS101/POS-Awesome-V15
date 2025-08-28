@@ -156,15 +156,15 @@
 </style>
 
 <script>
-/* global frappe */
+/* global frappe __ */
 import UpdateCustomer from "./UpdateCustomer.vue";
 import {
-        db,
-        checkDbHealth,
-        setCustomerStorage,
-        memoryInitPromise,
-        getCustomersLastSync,
-        setCustomersLastSync,
+	db,
+	checkDbHealth,
+	setCustomerStorage,
+	memoryInitPromise,
+	getCustomersLastSync,
+	setCustomersLastSync,
 } from "../../../offline/index.js";
 import _ from "lodash";
 
@@ -173,25 +173,25 @@ export default {
 		pos_profile: Object,
 	},
 
-        data: () => ({
-                pos_profile: "",
-                customers: [],
-                customer: "",
-                internalCustomer: null,
-                tempSelectedCustomer: null,
-                isMenuOpen: false,
-                readonly: false,
-                effectiveReadonly: false,
-                customer_info: {},
-                loadingCustomers: false,
-                customers_loaded: false,
-                searchTerm: "",
-                page: 0,
-                pageSize: 200,
-                hasMore: true,
-                nextCustomerStart: null,
-                searchDebounce: null,
-        }),
+	data: () => ({
+		pos_profile: "",
+		customers: [],
+		customer: "",
+		internalCustomer: null,
+		tempSelectedCustomer: null,
+		isMenuOpen: false,
+		readonly: false,
+		effectiveReadonly: false,
+		customer_info: {},
+		loadingCustomers: false,
+		customers_loaded: false,
+		searchTerm: "",
+		page: 0,
+		pageSize: 200,
+		hasMore: true,
+		nextCustomerStart: null,
+		searchDebounce: null,
+	}),
 
 	components: {
 		UpdateCustomer,
@@ -202,95 +202,95 @@ export default {
 			return this.$theme.current === "dark";
 		},
 
-                filteredCustomers() {
-                        return this.customers;
-                },
+		filteredCustomers() {
+			return this.customers;
+		},
 	},
 
 	watch: {
 		readonly(val) {
 			this.effectiveReadonly = val && navigator.onLine;
 		},
-               customers_loaded(val) {
-                       if (val) {
-                               this.eventBus.emit("customers_loaded");
-                       }
-               },
+		customers_loaded(val) {
+			if (val) {
+				this.eventBus.emit("customers_loaded");
+			}
+		},
 	},
 
 	methods: {
 		// Called when dropdown opens or closes
-                onCustomerMenuToggle(isOpen) {
-                        this.isMenuOpen = isOpen;
+		onCustomerMenuToggle(isOpen) {
+			this.isMenuOpen = isOpen;
 
-                        if (isOpen) {
-                                this.internalCustomer = null;
+			if (isOpen) {
+				this.internalCustomer = null;
 
-                                this.$nextTick(() => {
-                                        setTimeout(() => {
-                                                const dropdown = this.$refs.customerDropdown?.$el?.querySelector(
-                                                        ".v-overlay__content .v-select-list",
-                                                );
-                                                if (dropdown) {
-                                                        dropdown.scrollTop = 0;
-                                                        dropdown.addEventListener("scroll", this.onCustomerScroll);
-                                                }
-                                        }, 50);
-                                });
-                        } else {
-                                const dropdown = this.$refs.customerDropdown?.$el?.querySelector(
-                                        ".v-overlay__content .v-select-list",
-                                );
-                                if (dropdown) {
-                                        dropdown.removeEventListener("scroll", this.onCustomerScroll);
-                                }
-                                if (this.tempSelectedCustomer) {
-                                        this.internalCustomer = this.tempSelectedCustomer;
-                                        this.customer = this.tempSelectedCustomer;
-                                        this.eventBus.emit("update_customer", this.customer);
-                                } else if (this.customer) {
-                                        this.internalCustomer = this.customer;
-                                }
+				this.$nextTick(() => {
+					setTimeout(() => {
+						const dropdown = this.$refs.customerDropdown?.$el?.querySelector(
+							".v-overlay__content .v-select-list",
+						);
+						if (dropdown) {
+							dropdown.scrollTop = 0;
+							dropdown.addEventListener("scroll", this.onCustomerScroll);
+						}
+					}, 50);
+				});
+			} else {
+				const dropdown = this.$refs.customerDropdown?.$el?.querySelector(
+					".v-overlay__content .v-select-list",
+				);
+				if (dropdown) {
+					dropdown.removeEventListener("scroll", this.onCustomerScroll);
+				}
+				if (this.tempSelectedCustomer) {
+					this.internalCustomer = this.tempSelectedCustomer;
+					this.customer = this.tempSelectedCustomer;
+					this.eventBus.emit("update_customer", this.customer);
+				} else if (this.customer) {
+					this.internalCustomer = this.customer;
+				}
 
-                                this.tempSelectedCustomer = null;
-                        }
-                },
+				this.tempSelectedCustomer = null;
+			}
+		},
 
-                onCustomerScroll(e) {
-                        const el = e.target;
-                        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
-                                this.loadMoreCustomers();
-                        }
-                },
+		onCustomerScroll(e) {
+			const el = e.target;
+			if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
+				this.loadMoreCustomers();
+			}
+		},
 
-                // Called when a customer is selected
-               onCustomerChange(val) {
-                        // if user selects the same customer again, show a meaningful error
-                        if (val && val === this.customer) {
-                                // keep the current selection and notify the user
-                                this.internalCustomer = this.customer;
-                                this.eventBus.emit("show_message", {
-                                        title: __("Customer already selected"),
-                                        color: "error",
-                                });
-                                return;
-                        }
+		// Called when a customer is selected
+		onCustomerChange(val) {
+			// if user selects the same customer again, show a meaningful error
+			if (val && val === this.customer) {
+				// keep the current selection and notify the user
+				this.internalCustomer = this.customer;
+				this.eventBus.emit("show_message", {
+					title: __("Customer already selected"),
+					color: "error",
+				});
+				return;
+			}
 
-                        this.tempSelectedCustomer = val;
+			this.tempSelectedCustomer = val;
 
-                        if (!this.isMenuOpen && val) {
-                                this.customer = val;
-                                this.eventBus.emit("update_customer", val);
-                        }
-               },
+			if (!this.isMenuOpen && val) {
+				this.customer = val;
+				this.eventBus.emit("update_customer", val);
+			}
+		},
 
-                onCustomerSearch(val) {
-                        this.searchDebounce(val);
-                },
+		onCustomerSearch(val) {
+			this.searchDebounce(val);
+		},
 
 		// Pressing Enter in input
-                handleEnter(event) {
-                        const inputText = event.target.value?.toLowerCase() || "";
+		handleEnter(event) {
+			const inputText = event.target.value?.toLowerCase() || "";
 
 			const matched = this.customers.find((cust) => {
 				return (
@@ -299,130 +299,137 @@ export default {
 				);
 			});
 
-                        if (matched) {
-                                this.tempSelectedCustomer = matched.name;
-                                this.internalCustomer = matched.name;
-                                this.customer = matched.name;
-                                this.eventBus.emit("update_customer", matched.name);
-                                this.isMenuOpen = false;
+			if (matched) {
+				this.tempSelectedCustomer = matched.name;
+				this.internalCustomer = matched.name;
+				this.customer = matched.name;
+				this.eventBus.emit("update_customer", matched.name);
+				this.isMenuOpen = false;
 
-                                event.target.blur();
-                        }
-                },
+				event.target.blur();
+			}
+		},
 
-                async searchCustomers(term, append = false) {
-                        try {
-                                await checkDbHealth();
-                                if (!db.isOpen()) await db.open();
-                                let collection = db.table("customers");
-                                if (term) {
-                                        collection = db
-                                                .table("customers")
-                                                .where("customer_name")
-                                                .startsWithIgnoreCase(term)
-                                                .or("mobile_no")
-                                                .startsWithIgnoreCase(term)
-                                                .or("email_id")
-                                                .startsWithIgnoreCase(term)
-                                                .or("tax_id")
-                                                .startsWithIgnoreCase(term)
-                                                .or("name")
-                                                .startsWithIgnoreCase(term);
-                                }
-                                const results = await collection
-                                        .offset(this.page * this.pageSize)
-                                        .limit(this.pageSize)
-                                        .toArray();
-                                if (append) {
-                                        this.customers.push(...results);
-                                } else {
-                                        this.customers = results;
-                                }
-                                this.hasMore = results.length === this.pageSize;
-                                if (this.hasMore) {
-                                        this.page += 1;
-                                }
-                                return results.length;
-                        } catch (e) {
-                                console.error("Failed to search customers", e);
-                                return 0;
-                        }
-                },
+		async searchCustomers(term, append = false) {
+			try {
+				await checkDbHealth();
+				if (!db.isOpen()) await db.open();
+				let collection = db.table("customers");
+				if (term) {
+					collection = db
+						.table("customers")
+						.where("customer_name")
+						.startsWithIgnoreCase(term)
+						.or("mobile_no")
+						.startsWithIgnoreCase(term)
+						.or("email_id")
+						.startsWithIgnoreCase(term)
+						.or("tax_id")
+						.startsWithIgnoreCase(term)
+						.or("name")
+						.startsWithIgnoreCase(term);
+				}
+				const results = await collection
+					.offset(this.page * this.pageSize)
+					.limit(this.pageSize)
+					.toArray();
+				if (append) {
+					this.customers.push(...results);
+				} else {
+					this.customers = results;
+				}
+				this.hasMore = results.length === this.pageSize;
+				if (this.hasMore) {
+					this.page += 1;
+				}
+				return results.length;
+			} catch (e) {
+				console.error("Failed to search customers", e);
+				return 0;
+			}
+		},
 
-                async loadMoreCustomers() {
-                        if (this.loadingCustomers) return;
-                        const count = await this.searchCustomers(this.searchTerm, true);
-                        if (count === this.pageSize) return;
-                        if (this.nextCustomerStart) {
-                                await this.backgroundLoadCustomers(this.nextCustomerStart, getCustomersLastSync());
-                                await this.searchCustomers(this.searchTerm, true);
-                        }
-                },
+		async loadMoreCustomers() {
+			if (this.loadingCustomers) return;
+			const count = await this.searchCustomers(this.searchTerm, true);
+			if (count === this.pageSize) return;
+			if (this.nextCustomerStart) {
+				await this.backgroundLoadCustomers(this.nextCustomerStart, getCustomersLastSync());
+				await this.searchCustomers(this.searchTerm, true);
+			}
+		},
 
-                async backgroundLoadCustomers(startAfter, syncSince) {
-                        const limit = this.pageSize;
-                        try {
-                                const rows = await this.fetchCustomerPage(startAfter, syncSince, limit);
-                                await setCustomerStorage(rows);
-                                if (rows.length === limit) {
-                                        this.nextCustomerStart = rows[rows.length - 1]?.name || null;
-                                } else {
-                                        this.nextCustomerStart = null;
-                                        setCustomersLastSync(new Date().toISOString());
-                                        this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
-                                        this.eventBus.emit("data-loaded", "customers");
-                                }
-                        } catch (err) {
-                                console.error("Failed to background load customers", err);
-                        }
-                },
+		async backgroundLoadCustomers(startAfter, syncSince) {
+			const limit = this.pageSize;
+			try {
+				let cursor = startAfter;
+				while (cursor) {
+					const rows = await this.fetchCustomerPage(cursor, syncSince, limit);
+					await setCustomerStorage(rows);
+					if (rows.length === limit) {
+						cursor = rows[rows.length - 1]?.name || null;
+						this.nextCustomerStart = cursor;
+					} else {
+						cursor = null;
+						this.nextCustomerStart = null;
+						setCustomersLastSync(new Date().toISOString());
+						this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
+						this.eventBus.emit("data-loaded", "customers");
+					}
+				}
+			} catch (err) {
+				console.error("Failed to background load customers", err);
+			}
+		},
 
-                fetchCustomerPage(startAfter, modifiedAfter, limit) {
-                        return new Promise((resolve, reject) => {
-                                frappe.call({
-                                        method: "posawesome.posawesome.api.customers.get_customer_names",
-                                        args: {
-                                                pos_profile: this.pos_profile.pos_profile,
-                                                modified_after: modifiedAfter,
-                                                limit,
-                                                start_after: startAfter,
-                                        },
-                                        callback: (r) => resolve(r.message || []),
-                                        error: (err) => {
-                                                console.error("Failed to fetch customers", err);
-                                                reject(err);
-                                        },
-                                });
-                        });
-                },
+		fetchCustomerPage(startAfter, modifiedAfter, limit) {
+			return new Promise((resolve, reject) => {
+				frappe.call({
+					method: "posawesome.posawesome.api.customers.get_customer_names",
+					args: {
+						pos_profile: this.pos_profile.pos_profile,
+						modified_after: modifiedAfter,
+						limit,
+						start_after: startAfter,
+					},
+					callback: (r) => resolve(r.message || []),
+					error: (err) => {
+						console.error("Failed to fetch customers", err);
+						reject(err);
+					},
+				});
+			});
+		},
 
-                async get_customer_names() {
-                        if (this.customers.length > 0) {
-                                this.customers_loaded = true;
-                                return;
-                        }
-                        const syncSince = getCustomersLastSync();
-                        this.eventBus.emit("data-load-progress", { name: "customers", progress: 0 });
-                        this.loadingCustomers = true;
-                        try {
-                                const rows = await this.fetchCustomerPage(null, syncSince, this.pageSize);
-                                await setCustomerStorage(rows);
-                                if (rows.length === this.pageSize) {
-                                        this.nextCustomerStart = rows[rows.length - 1]?.name || null;
-                                } else {
-                                        this.nextCustomerStart = null;
-                                        setCustomersLastSync(new Date().toISOString());
-                                        this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
-                                        this.eventBus.emit("data-loaded", "customers");
-                                }
-                                this.customers_loaded = true;
-                        } catch (err) {
-                                console.error("Failed to fetch customers:", err);
-                        } finally {
-                                this.loadingCustomers = false;
-                                await this.searchCustomers(this.searchTerm);
-                        }
-                },
+		async get_customer_names() {
+			if (this.customers.length > 0) {
+				this.customers_loaded = true;
+				return;
+			}
+			const syncSince = getCustomersLastSync();
+			this.eventBus.emit("data-load-progress", { name: "customers", progress: 0 });
+			this.loadingCustomers = true;
+			try {
+				const rows = await this.fetchCustomerPage(null, syncSince, this.pageSize);
+				await setCustomerStorage(rows);
+				this.nextCustomerStart =
+					rows.length === this.pageSize ? rows[rows.length - 1]?.name || null : null;
+				if (this.nextCustomerStart) {
+					// Load remaining customers in the background
+					this.backgroundLoadCustomers(this.nextCustomerStart, syncSince);
+				} else {
+					setCustomersLastSync(new Date().toISOString());
+					this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
+					this.eventBus.emit("data-loaded", "customers");
+				}
+				this.customers_loaded = true;
+			} catch (err) {
+				console.error("Failed to fetch customers:", err);
+			} finally {
+				this.loadingCustomers = false;
+				await this.searchCustomers(this.searchTerm);
+			}
+		},
 
 		new_customer() {
 			this.eventBus.emit("open_update_customer", null);
@@ -434,64 +441,64 @@ export default {
 	},
 
 	created() {
-                memoryInitPromise.then(async () => {
-                        await this.searchCustomers("");
-                        this.effectiveReadonly = this.readonly && navigator.onLine;
-                });
+		memoryInitPromise.then(async () => {
+			await this.searchCustomers("");
+			this.effectiveReadonly = this.readonly && navigator.onLine;
+		});
 
-                this.searchDebounce = _.debounce(async (val) => {
-                        this.searchTerm = val || "";
-                        this.page = 0;
-                        this.customers = [];
-                        this.hasMore = true;
-                        await this.searchCustomers(this.searchTerm);
-                }, 300);
+		this.searchDebounce = _.debounce(async (val) => {
+			this.searchTerm = val || "";
+			this.page = 0;
+			this.customers = [];
+			this.hasMore = true;
+			await this.searchCustomers(this.searchTerm);
+		}, 300);
 
-                this.effectiveReadonly = this.readonly && navigator.onLine;
+		this.effectiveReadonly = this.readonly && navigator.onLine;
 
-                this.$nextTick(() => {
-                        this.eventBus.on("register_pos_profile", async (pos_profile) => {
-                                await memoryInitPromise;
-                                this.pos_profile = pos_profile;
-                                await this.get_customer_names();
-                        });
+		this.$nextTick(() => {
+			this.eventBus.on("register_pos_profile", async (pos_profile) => {
+				await memoryInitPromise;
+				this.pos_profile = pos_profile;
+				await this.get_customer_names();
+			});
 
-                        this.eventBus.on("payments_register_pos_profile", async (pos_profile) => {
-                                await memoryInitPromise;
-                                this.pos_profile = pos_profile;
-                                await this.get_customer_names();
-                        });
+			this.eventBus.on("payments_register_pos_profile", async (pos_profile) => {
+				await memoryInitPromise;
+				this.pos_profile = pos_profile;
+				await this.get_customer_names();
+			});
 
-                        this.eventBus.on("set_customer", (customer) => {
-                                this.customer = customer;
-                                this.internalCustomer = customer;
-                        });
+			this.eventBus.on("set_customer", (customer) => {
+				this.customer = customer;
+				this.internalCustomer = customer;
+			});
 
-                        this.eventBus.on("add_customer_to_list", async (customer) => {
-                                const index = this.customers.findIndex((c) => c.name === customer.name);
-                                if (index !== -1) {
-                                        this.customers.splice(index, 1, customer);
-                                } else {
-                                        this.customers.push(customer);
-                                }
-                                await setCustomerStorage([customer]);
-                                this.customer = customer.name;
-                                this.internalCustomer = customer.name;
-                                this.eventBus.emit("update_customer", customer.name);
-                        });
+			this.eventBus.on("add_customer_to_list", async (customer) => {
+				const index = this.customers.findIndex((c) => c.name === customer.name);
+				if (index !== -1) {
+					this.customers.splice(index, 1, customer);
+				} else {
+					this.customers.push(customer);
+				}
+				await setCustomerStorage([customer]);
+				this.customer = customer.name;
+				this.internalCustomer = customer.name;
+				this.eventBus.emit("update_customer", customer.name);
+			});
 
-                        this.eventBus.on("set_customer_readonly", (value) => {
-                                this.readonly = value;
-                        });
+			this.eventBus.on("set_customer_readonly", (value) => {
+				this.readonly = value;
+			});
 
-                        this.eventBus.on("set_customer_info_to_edit", (data) => {
-                                this.customer_info = data;
-                        });
+			this.eventBus.on("set_customer_info_to_edit", (data) => {
+				this.customer_info = data;
+			});
 
-                        this.eventBus.on("fetch_customer_details", async () => {
-                                await this.get_customer_names();
-                        });
-                });
+			this.eventBus.on("fetch_customer_details", async () => {
+				await this.get_customer_names();
+			});
+		});
 	},
 };
 </script>
