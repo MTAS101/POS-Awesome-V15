@@ -12,6 +12,7 @@
 				backgroundColor: isDarkTheme ? '#121212' : '',
 				resize: 'vertical',
 				overflow: 'auto',
+				position: 'relative',
 			}"
 		>
 			<v-progress-linear
@@ -21,6 +22,11 @@
 				location="top"
 				color="info"
 			></v-progress-linear>
+			<LoadingOverlay
+				:loading="loading || isBackgroundLoading"
+				:message="__('Loading item data...')"
+				:progress="loadProgress"
+			/>
 
 			<!-- Add dynamic-padding wrapper like Invoice component -->
 			<div class="dynamic-padding">
@@ -186,10 +192,7 @@
 				</div>
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
-						<div v-if="isBackgroundLoading" class="pa-4 text-center">
-							{{ __("Loading items data...") }}
-						</div>
-						<div v-else-if="items_view == 'card'" class="items-card-container">
+						<div v-if="items_view == 'card'" class="items-card-container">
 							<div
 								class="items-card-grid"
 								ref="itemsContainer"
@@ -458,6 +461,7 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import placeholderImage from "./placeholder-image.png";
+import LoadingOverlay from "./LoadingOverlay.vue";
 
 export default {
 	mixins: [format],
@@ -468,6 +472,7 @@ export default {
 	},
 	components: {
 		CameraScanner,
+		LoadingOverlay,
 	},
 	data: () => ({
 		pos_profile: {},
@@ -537,6 +542,8 @@ export default {
 		// Track background loading state and pending searches
 		isBackgroundLoading: false,
 		pendingItemSearch: null,
+		loadProgress: 0,
+		totalItemCount: 0,
 	}),
 
 	watch: {
@@ -896,6 +903,7 @@ export default {
 			return dbHealthy;
 		},
 		async loadVisibleItems(reset = false) {
+			this.loadProgress = 0;
 			this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
 			await initPromise;
 			await this.ensureStorageHealth();
@@ -914,9 +922,11 @@ export default {
 			const total = pageItems.length || 1;
 			pageItems.forEach((it, idx) => {
 				this.items.push(it);
+				const progress = Math.round(((idx + 1) / total) * 100);
+				this.loadProgress = progress;
 				this.eventBus.emit("data-load-progress", {
 					name: "items",
-					progress: Math.round(((idx + 1) / total) * 100),
+					progress,
 				});
 			});
 			this.eventBus.emit("set_all_items", this.items);
@@ -1189,6 +1199,8 @@ export default {
 				const serverCount = res.message || 0;
 				console.log("[ItemsSelector] server item count result", { serverCount });
 				if (typeof serverCount === "number") {
+					this.totalItemCount = serverCount;
+					this.loadProgress = serverCount ? Math.round((localCount / serverCount) * 100) : 0;
 					if (serverCount > localCount) {
 						const lastSync = getItemsLastSync();
 						const requestToken = ++this.items_request_token;
@@ -1250,8 +1262,24 @@ export default {
 			this.loading = true;
 			const requestToken = ++this.items_request_token;
 			console.log("[ItemsSelector] sending request", { requestToken });
+			this.loadProgress = 0;
 			this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
 			console.log("[ItemsSelector] data-load-progress emitted", { progress: 0 });
+
+			// Fetch total item count to calculate real-time progress
+			try {
+				const countRes = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_items_count",
+					args: {
+						pos_profile: JSON.stringify(vm.pos_profile),
+						item_groups: profileGroups,
+					},
+				});
+				this.totalItemCount = countRes.message || 0;
+			} catch (e) {
+				console.error("Failed to fetch item count", e);
+				this.totalItemCount = 0;
+			}
 
 			try {
 				// Simple API call to get items
@@ -1294,11 +1322,11 @@ export default {
 				console.log("[ItemsSelector] set_all_items emitted", { itemsLength: vm.items.length });
 
 				const hasMore = !vm.pos_profile.pose_use_limit_search && items.length === vm.itemsPageLimit;
-				const progress = hasMore
-					? Math.min(99, Math.round((items.length / (items.length + vm.itemsPageLimit)) * 100))
+				vm.loadProgress = vm.totalItemCount
+					? Math.round((items.length / vm.totalItemCount) * 100)
 					: 100;
-				vm.eventBus.emit("data-load-progress", { name: "items", progress });
-				console.log("[ItemsSelector] data-load-progress emitted", { progress });
+				vm.eventBus.emit("data-load-progress", { name: "items", progress: vm.loadProgress });
+				console.log("[ItemsSelector] data-load-progress emitted", { progress: vm.loadProgress });
 
 				if (
 					vm.pos_profile &&
@@ -1346,13 +1374,13 @@ export default {
 				}
 			}
 		},
-               async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
-                       this.isBackgroundLoading = true;
-                       console.log("[ItemsSelector] backgroundLoadItems called", {
-                               startAfter,
-                               syncSince,
-                               clearBefore,
-                               requestToken,
+		async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
+			this.isBackgroundLoading = true;
+			console.log("[ItemsSelector] backgroundLoadItems called", {
+				startAfter,
+				syncSince,
+				clearBefore,
+				requestToken,
 				loaded,
 			});
 			const limit = this.itemsPageLimit;
@@ -1468,7 +1496,10 @@ export default {
 						return;
 					}
 					const newLoaded = loaded + count;
-					const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+					const progress = this.totalItemCount
+						? Math.min(99, Math.round((newLoaded / this.totalItemCount) * 100))
+						: Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+					this.loadProgress = progress;
 					this.eventBus.emit("data-load-progress", { name: "items", progress });
 					console.log("[ItemsSelector] background load progress", { progress });
 					if (count === limit) {
@@ -1490,6 +1521,7 @@ export default {
 						if (this.items && this.items.length > 0) {
 							await this.prePopulateStockCache(this.items);
 						}
+						this.loadProgress = 100;
 						this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 						console.log("[ItemsSelector] background load completed");
 						this.items_loaded = true;
@@ -1555,7 +1587,10 @@ export default {
 							}
 						}
 						const newLoaded = loaded + rows.length;
-						const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+						const progress = this.totalItemCount
+							? Math.min(99, Math.round((newLoaded / this.totalItemCount) * 100))
+							: Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+						this.loadProgress = progress;
 						this.eventBus.emit("data-load-progress", { name: "items", progress });
 						console.log("[ItemsSelector] background load progress", { progress });
 						if (rows.length === limit) {
@@ -1574,6 +1609,7 @@ export default {
 							if (this.items && this.items.length > 0) {
 								await this.prePopulateStockCache(this.items);
 							}
+							this.loadProgress = 100;
 							this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 							console.log("[ItemsSelector] background load completed");
 							this.items_loaded = true;
@@ -1762,30 +1798,30 @@ export default {
 				this.$refs.debounce_search.focus();
 			}
 		},
-               search_onchange: _.debounce(async function (newSearchTerm) {
-                       const vm = this;
+		search_onchange: _.debounce(async function (newSearchTerm) {
+			const vm = this;
 
-                       vm.cancelItemDetailsRequest();
+			vm.cancelItemDetailsRequest();
 
-                       // Determine the actual query string and trim whitespace
-                       const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
-                       const trimmedQuery = (query || "").trim();
+			// Determine the actual query string and trim whitespace
+			const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
+			const trimmedQuery = (query || "").trim();
 
-                       // Require a minimum of three characters before running a search
-                       if (!trimmedQuery || trimmedQuery.length < 3) {
-                               vm.search_from_scanner = false;
-                               return;
-                       }
+			// Require a minimum of three characters before running a search
+			if (!trimmedQuery || trimmedQuery.length < 3) {
+				vm.search_from_scanner = false;
+				return;
+			}
 
-                       // If background loading is in progress, defer the search without changing the active query
-                       if (vm.isBackgroundLoading) {
-                               vm.pendingItemSearch = trimmedQuery;
-                               return;
-                       }
+			// If background loading is in progress, defer the search without changing the active query
+			if (vm.isBackgroundLoading) {
+				vm.pendingItemSearch = trimmedQuery;
+				return;
+			}
 
-                       vm.search = trimmedQuery;
+			vm.search = trimmedQuery;
 
-                       const fromScanner = vm.search_from_scanner;
+			const fromScanner = vm.search_from_scanner;
 
 			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 				if (vm.pos_profile && (!vm.pos_profile.posa_local_storage || !vm.storageAvailable)) {
