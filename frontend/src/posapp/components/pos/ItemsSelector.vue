@@ -186,7 +186,10 @@
 				</div>
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
-						<div v-if="items_view == 'card'" class="items-card-container">
+						<div v-if="isBackgroundLoading" class="pa-4 text-center">
+							{{ __("Loading items data...") }}
+						</div>
+						<div v-else-if="items_view == 'card'" class="items-card-container">
 							<div
 								class="items-card-grid"
 								ref="itemsContainer"
@@ -531,6 +534,9 @@ export default {
 		search_from_scanner: false,
 		currentPage: 0,
 		isOverflowing: false,
+		// Track background loading state and pending searches
+		isBackgroundLoading: false,
+		pendingItemSearch: null,
 	}),
 
 	watch: {
@@ -1126,28 +1132,24 @@ export default {
 		show_offers() {
 			this.eventBus.emit("show_offers", "true");
 		},
-                show_coupons() {
-                        this.eventBus.emit("show_coupons", "true");
-                },
-               async initializeItems() {
-                       await this.ensureStorageHealth();
-                       if (
-                               this.pos_profile &&
-                               this.pos_profile.posa_local_storage &&
-                               this.storageAvailable
-                       ) {
-                               const localCount = await getStoredItemsCount();
-                               if (localCount > 0) {
-                                       await this.loadVisibleItems(true);
-                                       this.items_loaded = true;
-                                       await this.verifyServerItemCount();
-                                       return;
-                               }
-                       }
-                       await this.get_items(true);
-               },
-                async forceReloadItems() {
-                        console.log("[ItemsSelector] forceReloadItems called");
+		show_coupons() {
+			this.eventBus.emit("show_coupons", "true");
+		},
+		async initializeItems() {
+			await this.ensureStorageHealth();
+			if (this.pos_profile && this.pos_profile.posa_local_storage && this.storageAvailable) {
+				const localCount = await getStoredItemsCount();
+				if (localCount > 0) {
+					await this.loadVisibleItems(true);
+					this.items_loaded = true;
+					await this.verifyServerItemCount();
+					return;
+				}
+			}
+			await this.get_items(true);
+		},
+		async forceReloadItems() {
+			console.log("[ItemsSelector] forceReloadItems called");
 			// Clear cached price list items so the reload always
 			// fetches the latest data from the server
 			await clearPriceListCache();
@@ -1168,44 +1170,38 @@ export default {
 			await this.get_items(true);
 			console.log("[ItemsSelector] forceReloadItems finished");
 		},
-               async verifyServerItemCount() {
-                       if (isOffline()) {
-                               console.log("[ItemsSelector] offline, skipping server item count check");
-                               return;
-                       }
-                       try {
-                               const localCount = await getStoredItemsCount();
-                               console.log("[ItemsSelector] verifying server item count", { localCount });
-                               const profileGroups = (this.pos_profile?.item_groups || []).map((g) => g.item_group);
-                               const res = await frappe.call({
-                                       method: "posawesome.posawesome.api.items.get_items_count",
-                                       args: {
-                                               pos_profile: JSON.stringify(this.pos_profile),
-                                               item_groups: profileGroups,
-                                       },
-                               });
-                               const serverCount = res.message || 0;
-                               console.log("[ItemsSelector] server item count result", { serverCount });
-                               if (typeof serverCount === "number") {
-                                       if (serverCount > localCount) {
-                                               const lastSync = getItemsLastSync();
-                                               const requestToken = ++this.items_request_token;
-                                               await this.backgroundLoadItems(
-                                                       null,
-                                                       lastSync,
-                                                       false,
-                                                       requestToken,
-                                                       localCount,
-                                               );
-                                       } else if (serverCount < localCount) {
-                                               console.log("[ItemsSelector] local cache has extra items, forcing reload");
-                                               await this.forceReloadItems();
-                                       }
-                               }
-                       } catch (err) {
-                               console.error("Error checking item count:", err);
-                       }
-               },
+		async verifyServerItemCount() {
+			if (isOffline()) {
+				console.log("[ItemsSelector] offline, skipping server item count check");
+				return;
+			}
+			try {
+				const localCount = await getStoredItemsCount();
+				console.log("[ItemsSelector] verifying server item count", { localCount });
+				const profileGroups = (this.pos_profile?.item_groups || []).map((g) => g.item_group);
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_items_count",
+					args: {
+						pos_profile: JSON.stringify(this.pos_profile),
+						item_groups: profileGroups,
+					},
+				});
+				const serverCount = res.message || 0;
+				console.log("[ItemsSelector] server item count result", { serverCount });
+				if (typeof serverCount === "number") {
+					if (serverCount > localCount) {
+						const lastSync = getItemsLastSync();
+						const requestToken = ++this.items_request_token;
+						await this.backgroundLoadItems(null, lastSync, false, requestToken, localCount);
+					} else if (serverCount < localCount) {
+						console.log("[ItemsSelector] local cache has extra items, forcing reload");
+						await this.forceReloadItems();
+					}
+				}
+			} catch (err) {
+				console.error("Error checking item count:", err);
+			}
+		},
 		async get_items(force_server = false) {
 			console.log("[ItemsSelector] get_items called", {
 				force_server,
@@ -1315,8 +1311,8 @@ export default {
 							console.log("[ItemsSelector] clearing local items before save");
 							await clearStoredItems();
 						}
-                                                await saveItemsBulk(items);
-                                                console.log("[ItemsSelector] items persisted locally", { length: items.length });
+						await saveItemsBulk(items);
+						console.log("[ItemsSelector] items persisted locally", { length: items.length });
 					} catch (e) {
 						console.error("Failed to persist items locally", e);
 						vm.markStorageUnavailable();
@@ -1339,7 +1335,21 @@ export default {
 				console.log("[ItemsSelector] get_items finished");
 			}
 		},
+		finishBackgroundLoad() {
+			this.isBackgroundLoading = false;
+			if (this.pendingItemSearch) {
+				const pending = this.pendingItemSearch;
+				this.pendingItemSearch = null;
+				this.search_onchange(pending);
+				if (this.search_onchange.flush) {
+					this.search_onchange.flush();
+				}
+			}
+		},
 		async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
+			if (loaded === 0) {
+				this.isBackgroundLoading = true;
+			}
 			console.log("[ItemsSelector] backgroundLoadItems called", {
 				startAfter,
 				syncSince,
@@ -1353,10 +1363,16 @@ export default {
 			// "no incremental loading" and exit early.
 			if (!limit || limit >= 10000) {
 				console.log("[ItemsSelector] background load skipped due to high limit", { limit });
+				if (loaded === 0) {
+					this.finishBackgroundLoad();
+				}
 				return;
 			}
 			if (this.items_request_token !== requestToken) {
 				console.log("[ItemsSelector] background load token mismatch, aborting");
+				if (loaded === 0) {
+					this.finishBackgroundLoad();
+				}
 				return;
 			}
 			const lastSync = syncSince;
@@ -1384,6 +1400,9 @@ export default {
 					const text = JSON.stringify(res);
 					if (this.items_request_token !== requestToken) {
 						console.log("[ItemsSelector] background load token mismatch after response");
+						if (loaded === 0) {
+							this.finishBackgroundLoad();
+						}
 						return;
 					}
 					let lastItemName = null;
@@ -1393,6 +1412,9 @@ export default {
 								console.log(
 									"[ItemsSelector] background load token mismatch during worker message",
 								);
+								if (loaded === 0) {
+									this.finishBackgroundLoad();
+								}
 								resolve(0);
 								return;
 							}
@@ -1442,6 +1464,9 @@ export default {
 					});
 					if (this.items_request_token !== requestToken) {
 						console.log("[ItemsSelector] background load token mismatch after worker");
+						if (loaded === 0) {
+							this.finishBackgroundLoad();
+						}
 						return;
 					}
 					const newLoaded = loaded + count;
@@ -1470,6 +1495,7 @@ export default {
 						this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 						console.log("[ItemsSelector] background load completed");
 						this.items_loaded = true;
+						this.finishBackgroundLoad();
 					}
 				} catch (err) {
 					console.error("Failed to background load items", err);
@@ -1494,6 +1520,9 @@ export default {
 					callback: async (r) => {
 						if (this.items_request_token !== requestToken) {
 							console.log("[ItemsSelector] background load token mismatch in callback");
+							if (loaded === 0) {
+								this.finishBackgroundLoad();
+							}
 							return;
 						}
 						const rows = r.message || [];
@@ -1550,6 +1579,7 @@ export default {
 							this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 							console.log("[ItemsSelector] background load completed");
 							this.items_loaded = true;
+							this.finishBackgroundLoad();
 						}
 					},
 					error: (err) => {
@@ -1747,6 +1777,12 @@ export default {
 			// Require a minimum of three characters before running a search
 			if (!vm.search || vm.search.length < 3) {
 				vm.search_from_scanner = false;
+				return;
+			}
+
+			// If background loading is in progress, defer the search
+			if (vm.isBackgroundLoading) {
+				vm.pendingItemSearch = vm.search;
 				return;
 			}
 
@@ -2716,25 +2752,25 @@ export default {
 				}
 
 				// Load initial items if we have a profile
-                               if (this.pos_profile && this.pos_profile.name) {
-                                       console.log("Loading items with POS Profile:", this.pos_profile.name);
-                                       this.get_items_groups();
-                                       await this.initializeItems();
-                               } else {
-                                       console.warn("No POS Profile available during initialization");
-                               }
+				if (this.pos_profile && this.pos_profile.name) {
+					console.log("Loading items with POS Profile:", this.pos_profile.name);
+					this.get_items_groups();
+					await this.initializeItems();
+				} else {
+					console.warn("No POS Profile available during initialization");
+				}
 			} catch (error) {
 				console.error("Error during initialization:", error);
 			}
 		});
 
 		// Event listeners
-               this.eventBus.on("register_pos_profile", async (data) => {
-                       this.pos_profile = data.pos_profile;
-                       this.get_items_groups();
-                       await this.initializeItems();
-                       this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
-               });
+		this.eventBus.on("register_pos_profile", async (data) => {
+			this.pos_profile = data.pos_profile;
+			this.get_items_groups();
+			await this.initializeItems();
+			this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
+		});
 		this.eventBus.on("update_cur_items_details", () => {
 			this.update_cur_items_details();
 		});
