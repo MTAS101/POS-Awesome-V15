@@ -1673,38 +1673,29 @@ export default {
 				this.qty = 1;
 			}
 		},
-               async enter_event() {
-                       let match = false;
-                       if (!this.filtered_items.length || !this.first_search) {
-                               return;
-                       }
-                       const qty = this.get_item_qty(this.first_search);
-                       const new_item = { ...this.filtered_items[0] };
-                       new_item.qty = flt(qty);
-                       const searchVal = this.get_search(this.first_search);
-                       if (Array.isArray(new_item.item_barcode)) {
-                               new_item.item_barcode.forEach((element) => {
-                                       if (searchVal === element.barcode) {
-                                               new_item.uom = element.posa_uom;
-                                               match = true;
-                                       }
-                               });
-                       }
-                       // Always allow scale barcodes even if they don't match exactly
-                       if (
-                               !match &&
-                               this.pos_profile.posa_scale_barcode_start &&
-                               this.first_search.startsWith(this.pos_profile.posa_scale_barcode_start)
-                       ) {
-                               match = true;
-                       }
-                       if (this.flags.serial_no) {
-                               new_item.to_set_serial_no = this.flags.serial_no;
-                       }
-                       if (this.flags.batch_no) {
-                               new_item.to_set_batch_no = this.flags.batch_no;
-                       }
-                       if (match) {
+		async enter_event() {
+			let match = false;
+			if (!this.filtered_items.length || !this.first_search) {
+				return;
+			}
+			const qty = this.get_item_qty(this.first_search);
+			const new_item = { ...this.filtered_items[0] };
+			new_item.qty = flt(qty);
+			if (Array.isArray(new_item.item_barcode)) {
+				new_item.item_barcode.forEach((element) => {
+					if (this.search == element.barcode) {
+						new_item.uom = element.posa_uom;
+						match = true;
+					}
+				});
+			}
+			if (this.flags.serial_no) {
+				new_item.to_set_serial_no = this.flags.serial_no;
+			}
+			if (this.flags.batch_no) {
+				new_item.to_set_batch_no = this.flags.batch_no;
+			}
+			if (match) {
 				await this.add_item(new_item);
 				this.flags.serial_no = null;
 				this.flags.batch_no = null;
