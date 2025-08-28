@@ -1571,11 +1571,12 @@ export default {
 		var vm = this;
 		if (!this.customer) return;
 
-		if (isOffline()) {
-			try {
-				const cached = (getCustomerStorage() || []).find(
-					(c) => c.name === vm.customer || c.customer_name === vm.customer,
-				);
+                if (isOffline()) {
+                        try {
+                                const list = await getCustomerStorage();
+                                const cached = (list || []).find(
+                                        (c) => c.name === vm.customer || c.customer_name === vm.customer,
+                                );
 				if (cached) {
 					vm.customer_info = { ...cached };
 					if (vm.pos_profile.posa_force_reload_items && cached.customer_price_list) {

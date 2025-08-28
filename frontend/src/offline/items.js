@@ -196,16 +196,16 @@ export async function getCachedItemDetails(profileName, priceList, itemCodes, tt
 // Persistent item storage helpers
 
 export async function saveItemsBulk(items) {
-	try {
-		await checkDbHealth();
-		if (!db.isOpen()) await db.open();
-		let cleanItems;
-		try {
-			cleanItems = JSON.parse(JSON.stringify(items));
-		} catch (err) {
-			console.error("Failed to serialize items", err);
-			cleanItems = [];
-		}
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                let cleanItems;
+                try {
+                        cleanItems = JSON.parse(JSON.stringify(items));
+                } catch (err) {
+                        console.error("Failed to serialize items", err);
+                        cleanItems = [];
+                }
                cleanItems = cleanItems.map((it) => ({
                        ...it,
                        barcodes: Array.isArray(it.item_barcode)
@@ -213,7 +213,9 @@ export async function saveItemsBulk(items) {
                                : it.item_barcode
                                        ? [String(it.item_barcode)]
                                        : [],
-                       name_keywords: it.item_name ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean) : [],
+                       name_keywords: it.item_name
+                               ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean)
+                               : [],
                        serials: Array.isArray(it.serial_no_data)
                                ? it.serial_no_data.map((s) => s.serial_no).filter(Boolean)
                                : [],
@@ -221,7 +223,13 @@ export async function saveItemsBulk(items) {
                                ? it.batch_no_data.map((b) => b.batch_no).filter(Boolean)
                                : [],
                }));
-               await db.table("items").bulkPut(cleanItems);
+               const CHUNK_SIZE = 1000;
+               await db.transaction("rw", db.table("items"), async () => {
+                       for (let i = 0; i < cleanItems.length; i += CHUNK_SIZE) {
+                               const chunk = cleanItems.slice(i, i + CHUNK_SIZE);
+                               await db.table("items").bulkPut(chunk);
+                       }
+               });
        } catch (e) {
                console.error("Failed to save items", e);
        }

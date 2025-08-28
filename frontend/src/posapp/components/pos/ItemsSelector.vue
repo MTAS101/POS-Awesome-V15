@@ -1286,8 +1286,8 @@ export default {
 							console.log("[ItemsSelector] clearing local items before save");
 							await clearStoredItems();
 						}
-						await saveItemsBulk(vm.items);
-						console.log("[ItemsSelector] items persisted locally", { length: vm.items.length });
+                                                await saveItemsBulk(items);
+                                                console.log("[ItemsSelector] items persisted locally", { length: items.length });
 					} catch (e) {
 						console.error("Failed to persist items locally", e);
 						vm.markStorageUnavailable();
