@@ -86,6 +86,10 @@
 		<div class="mt-4">
 			<UpdateCustomer />
 		</div>
+		<LoadingOverlay
+			:loading="loadingCustomers || isCustomerBackgroundLoading"
+			:message="__('Loading customer data...')"
+		/>
 	</div>
 </template>
 
@@ -98,6 +102,7 @@
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
+	position: relative;
 }
 
 .customer-autocomplete {
@@ -160,6 +165,7 @@
 <script>
 /* global frappe __ */
 import UpdateCustomer from "./UpdateCustomer.vue";
+import LoadingOverlay from "./LoadingOverlay.vue";
 import {
 	db,
 	checkDbHealth,
@@ -203,6 +209,7 @@ export default {
 
 	components: {
 		UpdateCustomer,
+		LoadingOverlay,
 	},
 
 	computed: {

@@ -12,6 +12,7 @@
 				backgroundColor: isDarkTheme ? '#121212' : '',
 				resize: 'vertical',
 				overflow: 'auto',
+				position: 'relative',
 			}"
 		>
 			<v-progress-linear
@@ -21,6 +22,7 @@
 				location="top"
 				color="info"
 			></v-progress-linear>
+			<LoadingOverlay :loading="loading || isBackgroundLoading" :message="__('Loading item data...')" />
 
 			<!-- Add dynamic-padding wrapper like Invoice component -->
 			<div class="dynamic-padding">
@@ -186,10 +188,7 @@
 				</div>
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
-						<div v-if="isBackgroundLoading" class="pa-4 text-center">
-							{{ __("Loading items data...") }}
-						</div>
-						<div v-else-if="items_view == 'card'" class="items-card-container">
+						<div v-if="items_view == 'card'" class="items-card-container">
 							<div
 								class="items-card-grid"
 								ref="itemsContainer"
@@ -458,6 +457,7 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import placeholderImage from "./placeholder-image.png";
+import LoadingOverlay from "./LoadingOverlay.vue";
 
 export default {
 	mixins: [format],
@@ -468,6 +468,7 @@ export default {
 	},
 	components: {
 		CameraScanner,
+		LoadingOverlay,
 	},
 	data: () => ({
 		pos_profile: {},
@@ -1346,13 +1347,13 @@ export default {
 				}
 			}
 		},
-               async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
-                       this.isBackgroundLoading = true;
-                       console.log("[ItemsSelector] backgroundLoadItems called", {
-                               startAfter,
-                               syncSince,
-                               clearBefore,
-                               requestToken,
+		async backgroundLoadItems(startAfter, syncSince, clearBefore = false, requestToken, loaded = 0) {
+			this.isBackgroundLoading = true;
+			console.log("[ItemsSelector] backgroundLoadItems called", {
+				startAfter,
+				syncSince,
+				clearBefore,
+				requestToken,
 				loaded,
 			});
 			const limit = this.itemsPageLimit;
@@ -1762,30 +1763,30 @@ export default {
 				this.$refs.debounce_search.focus();
 			}
 		},
-               search_onchange: _.debounce(async function (newSearchTerm) {
-                       const vm = this;
+		search_onchange: _.debounce(async function (newSearchTerm) {
+			const vm = this;
 
-                       vm.cancelItemDetailsRequest();
+			vm.cancelItemDetailsRequest();
 
-                       // Determine the actual query string and trim whitespace
-                       const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
-                       const trimmedQuery = (query || "").trim();
+			// Determine the actual query string and trim whitespace
+			const query = typeof newSearchTerm === "string" ? newSearchTerm : vm.first_search;
+			const trimmedQuery = (query || "").trim();
 
-                       // Require a minimum of three characters before running a search
-                       if (!trimmedQuery || trimmedQuery.length < 3) {
-                               vm.search_from_scanner = false;
-                               return;
-                       }
+			// Require a minimum of three characters before running a search
+			if (!trimmedQuery || trimmedQuery.length < 3) {
+				vm.search_from_scanner = false;
+				return;
+			}
 
-                       // If background loading is in progress, defer the search without changing the active query
-                       if (vm.isBackgroundLoading) {
-                               vm.pendingItemSearch = trimmedQuery;
-                               return;
-                       }
+			// If background loading is in progress, defer the search without changing the active query
+			if (vm.isBackgroundLoading) {
+				vm.pendingItemSearch = trimmedQuery;
+				return;
+			}
 
-                       vm.search = trimmedQuery;
+			vm.search = trimmedQuery;
 
-                       const fromScanner = vm.search_from_scanner;
+			const fromScanner = vm.search_from_scanner;
 
 			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
 				if (vm.pos_profile && (!vm.pos_profile.posa_local_storage || !vm.storageAvailable)) {
