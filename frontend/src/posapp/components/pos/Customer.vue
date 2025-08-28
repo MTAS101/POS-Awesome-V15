@@ -89,6 +89,7 @@
 		<LoadingOverlay
 			:loading="loadingCustomers || isCustomerBackgroundLoading"
 			:message="__('Loading customer data...')"
+			:progress="loadProgress"
 		/>
 	</div>
 </template>
@@ -205,6 +206,9 @@ export default {
 		// Track background loading state and pending searches
 		isCustomerBackgroundLoading: false,
 		pendingCustomerSearch: null,
+		loadProgress: 0,
+		totalCustomerCount: 0,
+		loadedCustomerCount: 0,
 	}),
 
 	components: {
@@ -386,6 +390,15 @@ export default {
 				while (cursor) {
 					const rows = await this.fetchCustomerPage(cursor, syncSince, limit);
 					await setCustomerStorage(rows);
+					this.loadedCustomerCount += rows.length;
+					if (this.totalCustomerCount) {
+						const progress = Math.min(
+							99,
+							Math.round((this.loadedCustomerCount / this.totalCustomerCount) * 100),
+						);
+						this.loadProgress = progress;
+						this.eventBus.emit("data-load-progress", { name: "customers", progress });
+					}
 					if (rows.length === limit) {
 						cursor = rows[rows.length - 1]?.name || null;
 						this.nextCustomerStart = cursor;
@@ -393,6 +406,7 @@ export default {
 						cursor = null;
 						this.nextCustomerStart = null;
 						setCustomersLastSync(new Date().toISOString());
+						this.loadProgress = 100;
 						this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
 						this.eventBus.emit("data-loaded", "customers");
 					}
@@ -421,16 +435,34 @@ export default {
 				});
 				const serverCount = res.message || 0;
 				if (typeof serverCount === "number") {
+					this.totalCustomerCount = serverCount;
+					this.loadedCustomerCount = localCount;
+					this.loadProgress = serverCount ? Math.round((localCount / serverCount) * 100) : 0;
+					this.eventBus.emit("data-load-progress", {
+						name: "customers",
+						progress: this.loadProgress,
+					});
 					if (serverCount > localCount) {
 						const syncSince = getCustomersLastSync();
 						const rows = await this.fetchCustomerPage(null, syncSince, this.pageSize);
 						await setCustomerStorage(rows);
+						this.loadedCustomerCount += rows.length;
+						if (this.totalCustomerCount) {
+							this.loadProgress = Math.round(
+								(this.loadedCustomerCount / this.totalCustomerCount) * 100,
+							);
+							this.eventBus.emit("data-load-progress", {
+								name: "customers",
+								progress: this.loadProgress,
+							});
+						}
 						const startAfter =
 							rows.length === this.pageSize ? rows[rows.length - 1]?.name || null : null;
 						if (startAfter) {
 							this.backgroundLoadCustomers(startAfter, syncSince);
 						} else {
 							setCustomersLastSync(new Date().toISOString());
+							this.loadProgress = 100;
 							this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
 							this.eventBus.emit("data-loaded", "customers");
 						}
@@ -475,11 +507,34 @@ export default {
 				return;
 			}
 			const syncSince = getCustomersLastSync();
+			this.loadProgress = 0;
 			this.eventBus.emit("data-load-progress", { name: "customers", progress: 0 });
 			this.loadingCustomers = true;
 			try {
+				// Fetch total customer count for accurate progress
+				try {
+					const countRes = await frappe.call({
+						method: "posawesome.posawesome.api.customers.get_customers_count",
+						args: { pos_profile: this.pos_profile.pos_profile },
+					});
+					this.totalCustomerCount = countRes.message || 0;
+				} catch (e) {
+					console.error("Failed to fetch customer count", e);
+					this.totalCustomerCount = 0;
+				}
+
 				const rows = await this.fetchCustomerPage(null, syncSince, this.pageSize);
 				await setCustomerStorage(rows);
+				this.loadedCustomerCount = rows.length;
+				if (this.totalCustomerCount) {
+					this.loadProgress = Math.round(
+						(this.loadedCustomerCount / this.totalCustomerCount) * 100,
+					);
+					this.eventBus.emit("data-load-progress", {
+						name: "customers",
+						progress: this.loadProgress,
+					});
+				}
 				this.nextCustomerStart =
 					rows.length === this.pageSize ? rows[rows.length - 1]?.name || null : null;
 				if (this.nextCustomerStart) {
@@ -487,6 +542,7 @@ export default {
 					this.backgroundLoadCustomers(this.nextCustomerStart, syncSince);
 				} else {
 					setCustomersLastSync(new Date().toISOString());
+					this.loadProgress = 100;
 					this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
 					this.eventBus.emit("data-loaded", "customers");
 				}

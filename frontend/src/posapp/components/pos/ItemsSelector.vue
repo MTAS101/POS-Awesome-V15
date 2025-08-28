@@ -22,7 +22,11 @@
 				location="top"
 				color="info"
 			></v-progress-linear>
-			<LoadingOverlay :loading="loading || isBackgroundLoading" :message="__('Loading item data...')" />
+			<LoadingOverlay
+				:loading="loading || isBackgroundLoading"
+				:message="__('Loading item data...')"
+				:progress="loadProgress"
+			/>
 
 			<!-- Add dynamic-padding wrapper like Invoice component -->
 			<div class="dynamic-padding">
@@ -538,6 +542,8 @@ export default {
 		// Track background loading state and pending searches
 		isBackgroundLoading: false,
 		pendingItemSearch: null,
+		loadProgress: 0,
+		totalItemCount: 0,
 	}),
 
 	watch: {
@@ -897,6 +903,7 @@ export default {
 			return dbHealthy;
 		},
 		async loadVisibleItems(reset = false) {
+			this.loadProgress = 0;
 			this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
 			await initPromise;
 			await this.ensureStorageHealth();
@@ -915,9 +922,11 @@ export default {
 			const total = pageItems.length || 1;
 			pageItems.forEach((it, idx) => {
 				this.items.push(it);
+				const progress = Math.round(((idx + 1) / total) * 100);
+				this.loadProgress = progress;
 				this.eventBus.emit("data-load-progress", {
 					name: "items",
-					progress: Math.round(((idx + 1) / total) * 100),
+					progress,
 				});
 			});
 			this.eventBus.emit("set_all_items", this.items);
@@ -1190,6 +1199,8 @@ export default {
 				const serverCount = res.message || 0;
 				console.log("[ItemsSelector] server item count result", { serverCount });
 				if (typeof serverCount === "number") {
+					this.totalItemCount = serverCount;
+					this.loadProgress = serverCount ? Math.round((localCount / serverCount) * 100) : 0;
 					if (serverCount > localCount) {
 						const lastSync = getItemsLastSync();
 						const requestToken = ++this.items_request_token;
@@ -1251,8 +1262,24 @@ export default {
 			this.loading = true;
 			const requestToken = ++this.items_request_token;
 			console.log("[ItemsSelector] sending request", { requestToken });
+			this.loadProgress = 0;
 			this.eventBus.emit("data-load-progress", { name: "items", progress: 0 });
 			console.log("[ItemsSelector] data-load-progress emitted", { progress: 0 });
+
+			// Fetch total item count to calculate real-time progress
+			try {
+				const countRes = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_items_count",
+					args: {
+						pos_profile: JSON.stringify(vm.pos_profile),
+						item_groups: profileGroups,
+					},
+				});
+				this.totalItemCount = countRes.message || 0;
+			} catch (e) {
+				console.error("Failed to fetch item count", e);
+				this.totalItemCount = 0;
+			}
 
 			try {
 				// Simple API call to get items
@@ -1295,11 +1322,11 @@ export default {
 				console.log("[ItemsSelector] set_all_items emitted", { itemsLength: vm.items.length });
 
 				const hasMore = !vm.pos_profile.pose_use_limit_search && items.length === vm.itemsPageLimit;
-				const progress = hasMore
-					? Math.min(99, Math.round((items.length / (items.length + vm.itemsPageLimit)) * 100))
+				vm.loadProgress = vm.totalItemCount
+					? Math.round((items.length / vm.totalItemCount) * 100)
 					: 100;
-				vm.eventBus.emit("data-load-progress", { name: "items", progress });
-				console.log("[ItemsSelector] data-load-progress emitted", { progress });
+				vm.eventBus.emit("data-load-progress", { name: "items", progress: vm.loadProgress });
+				console.log("[ItemsSelector] data-load-progress emitted", { progress: vm.loadProgress });
 
 				if (
 					vm.pos_profile &&
@@ -1469,7 +1496,10 @@ export default {
 						return;
 					}
 					const newLoaded = loaded + count;
-					const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+					const progress = this.totalItemCount
+						? Math.min(99, Math.round((newLoaded / this.totalItemCount) * 100))
+						: Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+					this.loadProgress = progress;
 					this.eventBus.emit("data-load-progress", { name: "items", progress });
 					console.log("[ItemsSelector] background load progress", { progress });
 					if (count === limit) {
@@ -1491,6 +1521,7 @@ export default {
 						if (this.items && this.items.length > 0) {
 							await this.prePopulateStockCache(this.items);
 						}
+						this.loadProgress = 100;
 						this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 						console.log("[ItemsSelector] background load completed");
 						this.items_loaded = true;
@@ -1556,7 +1587,10 @@ export default {
 							}
 						}
 						const newLoaded = loaded + rows.length;
-						const progress = Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+						const progress = this.totalItemCount
+							? Math.min(99, Math.round((newLoaded / this.totalItemCount) * 100))
+							: Math.min(99, Math.round((newLoaded / (newLoaded + limit)) * 100));
+						this.loadProgress = progress;
 						this.eventBus.emit("data-load-progress", { name: "items", progress });
 						console.log("[ItemsSelector] background load progress", { progress });
 						if (rows.length === limit) {
@@ -1575,6 +1609,7 @@ export default {
 							if (this.items && this.items.length > 0) {
 								await this.prePopulateStockCache(this.items);
 							}
+							this.loadProgress = 100;
 							this.eventBus.emit("data-load-progress", { name: "items", progress: 100 });
 							console.log("[ItemsSelector] background load completed");
 							this.items_loaded = true;

@@ -27,52 +27,9 @@ export default {
 			type: String,
 			default: "",
 		},
-	},
-	data() {
-		return {
-			progress: 0,
-			intervalId: null,
-		};
-	},
-	watch: {
-		loading(val) {
-			if (val) {
-				this.startProgress();
-			} else {
-				this.finishProgress();
-			}
-		},
-	},
-	mounted() {
-		if (this.loading) {
-			this.startProgress();
-		}
-	},
-	beforeUnmount() {
-		this.clearTimer();
-	},
-	methods: {
-		startProgress() {
-			this.clearTimer();
-			this.progress = 0;
-			this.intervalId = setInterval(() => {
-				if (this.progress < 90) {
-					this.progress += 5;
-				}
-			}, 200);
-		},
-		finishProgress() {
-			this.clearTimer();
-			this.progress = 100;
-			setTimeout(() => {
-				this.progress = 0;
-			}, 300);
-		},
-		clearTimer() {
-			if (this.intervalId) {
-				clearInterval(this.intervalId);
-				this.intervalId = null;
-			}
+		progress: {
+			type: Number,
+			default: 0,
 		},
 	},
 };
