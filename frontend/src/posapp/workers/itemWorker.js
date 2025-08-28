@@ -12,13 +12,14 @@ let db;
                 DexieLib = await import("/assets/posawesome/dist/js/libs/dexie.min.js?v=1");
 	}
        db = new DexieLib.default("posawesome_offline");
-       db.version(6)
+       db.version(7)
                 .stores({
                         keyval: "&key",
                         queue: "&key",
                         cache: "&key",
                        items: "&item_code,item_name,item_group,*barcodes,*name_keywords,*serials,*batches",
                         item_prices: "&[price_list+item_code],price_list,item_code",
+                        customers: "&name,customer_name,mobile_no,email_id,tax_id",
                 })
                 .upgrade((tx) =>
                         tx
@@ -83,14 +84,20 @@ async function persist(key, value) {
 }
 
 async function bulkPutItems(items) {
-	try {
-		if (!db.isOpen()) {
-			await db.open();
-		}
-		await db.table("items").bulkPut(items);
-	} catch (e) {
-		console.error("Worker bulkPut items failed", e);
-	}
+        try {
+                if (!db.isOpen()) {
+                        await db.open();
+                }
+                const CHUNK_SIZE = 1000;
+                await db.transaction("rw", db.table("items"), async () => {
+                        for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+                                const chunk = items.slice(i, i + CHUNK_SIZE);
+                                await db.table("items").bulkPut(chunk);
+                        }
+                });
+        } catch (e) {
+                console.error("Worker bulkPut items failed", e);
+        }
 }
 
 async function bulkPutPrices(priceList, items) {

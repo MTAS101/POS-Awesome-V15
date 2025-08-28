@@ -183,21 +183,29 @@ export function getCustomerStorage() {
 	return memory.customer_storage || [];
 }
 
-export function setCustomerStorage(customers) {
-	try {
-		memory.customer_storage = customers.map((c) => ({
-			name: c.name,
-			customer_name: c.customer_name,
-			mobile_no: c.mobile_no,
-			email_id: c.email_id,
-			primary_address: c.primary_address,
-			tax_id: c.tax_id,
-		}));
-	} catch (e) {
-		console.error("Failed to trim customers for storage", e);
-		memory.customer_storage = [];
-	}
-	persist("customer_storage", memory.customer_storage);
+export async function setCustomerStorage(customers) {
+        try {
+                await checkDbHealth();
+                if (!db.isOpen()) await db.open();
+                const trimmed = customers.map((c) => ({
+                        name: c.name,
+                        customer_name: c.customer_name,
+                        mobile_no: c.mobile_no,
+                        email_id: c.email_id,
+                        primary_address: c.primary_address,
+                        tax_id: c.tax_id,
+                }));
+                memory.customer_storage = trimmed;
+                const CHUNK_SIZE = 1000;
+                await db.transaction("rw", db.table("customers"), async () => {
+                        for (let i = 0; i < trimmed.length; i += CHUNK_SIZE) {
+                                const chunk = trimmed.slice(i, i + CHUNK_SIZE);
+                                await db.table("customers").bulkPut(chunk);
+                        }
+                });
+        } catch (e) {
+                console.error("Failed to store customers", e);
+        }
 }
 
 export function getItemsLastSync() {

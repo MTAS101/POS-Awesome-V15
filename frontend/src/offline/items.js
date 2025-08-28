@@ -213,7 +213,9 @@ export async function saveItemsBulk(items) {
                                : it.item_barcode
                                        ? [String(it.item_barcode)]
                                        : [],
-                       name_keywords: it.item_name ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean) : [],
+                       name_keywords: it.item_name
+                               ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean)
+                               : [],
                        serials: Array.isArray(it.serial_no_data)
                                ? it.serial_no_data.map((s) => s.serial_no).filter(Boolean)
                                : [],
@@ -221,7 +223,14 @@ export async function saveItemsBulk(items) {
                                ? it.batch_no_data.map((b) => b.batch_no).filter(Boolean)
                                : [],
                }));
-               await db.table("items").bulkPut(cleanItems);
+
+               const CHUNK_SIZE = 1000;
+               await db.transaction("rw", db.table("items"), async () => {
+                       for (let i = 0; i < cleanItems.length; i += CHUNK_SIZE) {
+                               const chunk = cleanItems.slice(i, i + CHUNK_SIZE);
+                               await db.table("items").bulkPut(chunk);
+                       }
+               });
        } catch (e) {
                console.error("Failed to save items", e);
        }
