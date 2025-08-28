@@ -1126,11 +1126,28 @@ export default {
 		show_offers() {
 			this.eventBus.emit("show_offers", "true");
 		},
-		show_coupons() {
-			this.eventBus.emit("show_coupons", "true");
-		},
-		async forceReloadItems() {
-			console.log("[ItemsSelector] forceReloadItems called");
+                show_coupons() {
+                        this.eventBus.emit("show_coupons", "true");
+                },
+               async initializeItems() {
+                       await this.ensureStorageHealth();
+                       if (
+                               this.pos_profile &&
+                               this.pos_profile.posa_local_storage &&
+                               this.storageAvailable
+                       ) {
+                               const localCount = await getStoredItemsCount();
+                               if (localCount > 0) {
+                                       await this.loadVisibleItems(true);
+                                       this.items_loaded = true;
+                                       await this.verifyServerItemCount();
+                                       return;
+                               }
+                       }
+                       await this.get_items(true);
+               },
+                async forceReloadItems() {
+                        console.log("[ItemsSelector] forceReloadItems called");
 			// Clear cached price list items so the reload always
 			// fetches the latest data from the server
 			await clearPriceListCache();
@@ -1151,32 +1168,44 @@ export default {
 			await this.get_items(true);
 			console.log("[ItemsSelector] forceReloadItems finished");
 		},
-		async verifyServerItemCount() {
-			if (isOffline()) {
-				console.log("[ItemsSelector] offline, skipping server item count check");
-				return;
-			}
-			try {
-				const localCount = await getStoredItemsCount();
-				console.log("[ItemsSelector] verifying server item count", { localCount });
-				const profileGroups = (this.pos_profile?.item_groups || []).map((g) => g.item_group);
-				const res = await frappe.call({
-					method: "posawesome.posawesome.api.items.get_items_count",
-					args: {
-						pos_profile: JSON.stringify(this.pos_profile),
-						item_groups: profileGroups,
-					},
-				});
-				const serverCount = res.message || 0;
-				console.log("[ItemsSelector] server item count result", { serverCount });
-				if (typeof serverCount === "number" && serverCount !== localCount) {
-					console.log("[ItemsSelector] count mismatch, forcing reload");
-					await this.forceReloadItems();
-				}
-			} catch (err) {
-				console.error("Error checking item count:", err);
-			}
-		},
+               async verifyServerItemCount() {
+                       if (isOffline()) {
+                               console.log("[ItemsSelector] offline, skipping server item count check");
+                               return;
+                       }
+                       try {
+                               const localCount = await getStoredItemsCount();
+                               console.log("[ItemsSelector] verifying server item count", { localCount });
+                               const profileGroups = (this.pos_profile?.item_groups || []).map((g) => g.item_group);
+                               const res = await frappe.call({
+                                       method: "posawesome.posawesome.api.items.get_items_count",
+                                       args: {
+                                               pos_profile: JSON.stringify(this.pos_profile),
+                                               item_groups: profileGroups,
+                                       },
+                               });
+                               const serverCount = res.message || 0;
+                               console.log("[ItemsSelector] server item count result", { serverCount });
+                               if (typeof serverCount === "number") {
+                                       if (serverCount > localCount) {
+                                               const lastSync = getItemsLastSync();
+                                               const requestToken = ++this.items_request_token;
+                                               await this.backgroundLoadItems(
+                                                       null,
+                                                       lastSync,
+                                                       false,
+                                                       requestToken,
+                                                       localCount,
+                                               );
+                                       } else if (serverCount < localCount) {
+                                               console.log("[ItemsSelector] local cache has extra items, forcing reload");
+                                               await this.forceReloadItems();
+                                       }
+                               }
+                       } catch (err) {
+                               console.error("Error checking item count:", err);
+                       }
+               },
 		async get_items(force_server = false) {
 			console.log("[ItemsSelector] get_items called", {
 				force_server,
@@ -2687,26 +2716,25 @@ export default {
 				}
 
 				// Load initial items if we have a profile
-				if (this.pos_profile && this.pos_profile.name) {
-					console.log("Loading items with POS Profile:", this.pos_profile.name);
-					this.get_items_groups();
-					await this.get_items();
-					this.verifyServerItemCount();
-				} else {
-					console.warn("No POS Profile available during initialization");
-				}
+                               if (this.pos_profile && this.pos_profile.name) {
+                                       console.log("Loading items with POS Profile:", this.pos_profile.name);
+                                       this.get_items_groups();
+                                       await this.initializeItems();
+                               } else {
+                                       console.warn("No POS Profile available during initialization");
+                               }
 			} catch (error) {
 				console.error("Error during initialization:", error);
 			}
 		});
 
 		// Event listeners
-		this.eventBus.on("register_pos_profile", (data) => {
-			this.pos_profile = data.pos_profile;
-			this.get_items_groups();
-			this.get_items();
-			this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
-		});
+               this.eventBus.on("register_pos_profile", async (data) => {
+                       this.pos_profile = data.pos_profile;
+                       this.get_items_groups();
+                       await this.initializeItems();
+                       this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
+               });
 		this.eventBus.on("update_cur_items_details", () => {
 			this.update_cur_items_details();
 		});

@@ -159,12 +159,15 @@
 /* global frappe __ */
 import UpdateCustomer from "./UpdateCustomer.vue";
 import {
-	db,
-	checkDbHealth,
-	setCustomerStorage,
-	memoryInitPromise,
-	getCustomersLastSync,
-	setCustomersLastSync,
+        db,
+        checkDbHealth,
+        setCustomerStorage,
+        memoryInitPromise,
+        getCustomersLastSync,
+        setCustomersLastSync,
+       getCustomerStorageCount,
+       clearCustomerStorage,
+       isOffline,
 } from "../../../offline/index.js";
 import _ from "lodash";
 
@@ -359,28 +362,66 @@ export default {
 			}
 		},
 
-		async backgroundLoadCustomers(startAfter, syncSince) {
-			const limit = this.pageSize;
-			try {
-				let cursor = startAfter;
-				while (cursor) {
-					const rows = await this.fetchCustomerPage(cursor, syncSince, limit);
-					await setCustomerStorage(rows);
-					if (rows.length === limit) {
-						cursor = rows[rows.length - 1]?.name || null;
-						this.nextCustomerStart = cursor;
-					} else {
-						cursor = null;
-						this.nextCustomerStart = null;
-						setCustomersLastSync(new Date().toISOString());
-						this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
-						this.eventBus.emit("data-loaded", "customers");
-					}
-				}
-			} catch (err) {
-				console.error("Failed to background load customers", err);
-			}
-		},
+               async backgroundLoadCustomers(startAfter, syncSince) {
+                       const limit = this.pageSize;
+                       try {
+                               let cursor = startAfter;
+                               while (cursor) {
+                                       const rows = await this.fetchCustomerPage(cursor, syncSince, limit);
+                                       await setCustomerStorage(rows);
+                                       if (rows.length === limit) {
+                                               cursor = rows[rows.length - 1]?.name || null;
+                                               this.nextCustomerStart = cursor;
+                                       } else {
+                                               cursor = null;
+                                               this.nextCustomerStart = null;
+                                               setCustomersLastSync(new Date().toISOString());
+                                               this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
+                                               this.eventBus.emit("data-loaded", "customers");
+                                       }
+                               }
+                       } catch (err) {
+                               console.error("Failed to background load customers", err);
+                       }
+               },
+
+               async verifyServerCustomerCount() {
+                       if (isOffline()) return;
+                       try {
+                               const localCount = await getCustomerStorageCount();
+                               const res = await frappe.call({
+                                       method: "posawesome.posawesome.api.customers.get_customers_count",
+                                       args: { pos_profile: this.pos_profile.pos_profile },
+                               });
+                               const serverCount = res.message || 0;
+                               if (typeof serverCount === "number") {
+                                       if (serverCount > localCount) {
+                                               const syncSince = getCustomersLastSync();
+                                               const rows = await this.fetchCustomerPage(null, syncSince, this.pageSize);
+                                               await setCustomerStorage(rows);
+                                               const startAfter =
+                                                       rows.length === this.pageSize
+                                                               ? rows[rows.length - 1]?.name || null
+                                                               : null;
+                                               if (startAfter) {
+                                                       this.backgroundLoadCustomers(startAfter, syncSince);
+                                               } else {
+                                                       setCustomersLastSync(new Date().toISOString());
+                                                       this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
+                                                       this.eventBus.emit("data-loaded", "customers");
+                                               }
+                                               await this.searchCustomers(this.searchTerm);
+                                       } else if (serverCount < localCount) {
+                                               await clearCustomerStorage();
+                                               setCustomersLastSync(null);
+                                               this.customers = [];
+                                               await this.get_customer_names();
+                                       }
+                               }
+                       } catch (err) {
+                               console.error("Error verifying customer count:", err);
+                       }
+               },
 
 		fetchCustomerPage(startAfter, modifiedAfter, limit) {
 			return new Promise((resolve, reject) => {
@@ -401,35 +442,38 @@ export default {
 			});
 		},
 
-		async get_customer_names() {
-			if (this.customers.length > 0) {
-				this.customers_loaded = true;
-				return;
-			}
-			const syncSince = getCustomersLastSync();
-			this.eventBus.emit("data-load-progress", { name: "customers", progress: 0 });
-			this.loadingCustomers = true;
-			try {
-				const rows = await this.fetchCustomerPage(null, syncSince, this.pageSize);
-				await setCustomerStorage(rows);
-				this.nextCustomerStart =
-					rows.length === this.pageSize ? rows[rows.length - 1]?.name || null : null;
-				if (this.nextCustomerStart) {
-					// Load remaining customers in the background
-					this.backgroundLoadCustomers(this.nextCustomerStart, syncSince);
-				} else {
-					setCustomersLastSync(new Date().toISOString());
-					this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
-					this.eventBus.emit("data-loaded", "customers");
-				}
-				this.customers_loaded = true;
-			} catch (err) {
-				console.error("Failed to fetch customers:", err);
-			} finally {
-				this.loadingCustomers = false;
-				await this.searchCustomers(this.searchTerm);
-			}
-		},
+               async get_customer_names() {
+                       const localCount = await getCustomerStorageCount();
+                       if (localCount > 0) {
+                               this.customers_loaded = true;
+                               await this.searchCustomers(this.searchTerm);
+                               await this.verifyServerCustomerCount();
+                               return;
+                       }
+                       const syncSince = getCustomersLastSync();
+                       this.eventBus.emit("data-load-progress", { name: "customers", progress: 0 });
+                       this.loadingCustomers = true;
+                       try {
+                               const rows = await this.fetchCustomerPage(null, syncSince, this.pageSize);
+                               await setCustomerStorage(rows);
+                               this.nextCustomerStart =
+                                       rows.length === this.pageSize ? rows[rows.length - 1]?.name || null : null;
+                               if (this.nextCustomerStart) {
+                                       // Load remaining customers in the background
+                                       this.backgroundLoadCustomers(this.nextCustomerStart, syncSince);
+                               } else {
+                                       setCustomersLastSync(new Date().toISOString());
+                                       this.eventBus.emit("data-load-progress", { name: "customers", progress: 100 });
+                                       this.eventBus.emit("data-loaded", "customers");
+                               }
+                               this.customers_loaded = true;
+                       } catch (err) {
+                               console.error("Failed to fetch customers:", err);
+                       } finally {
+                               this.loadingCustomers = false;
+                               await this.searchCustomers(this.searchTerm);
+                       }
+               },
 
 		new_customer() {
 			this.eventBus.emit("open_update_customer", null);
