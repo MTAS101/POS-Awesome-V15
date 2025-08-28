@@ -3,13 +3,14 @@ import { withWriteLock } from "./db-utils.js";
 
 // --- Dexie initialization ---------------------------------------------------
 export const db = new Dexie("posawesome_offline");
-db.version(6)
+db.version(7)
         .stores({
                 keyval: "&key",
                 queue: "&key",
                 cache: "&key",
                items: "&item_code,item_name,item_group,*barcodes,*name_keywords,*serials,*batches",
                 item_prices: "&[price_list+item_code],price_list,item_code",
+                customers: "&name,customer_name,mobile_no,email_id,tax_id",
         })
         .upgrade((tx) =>
                 tx

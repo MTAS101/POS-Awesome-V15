@@ -116,6 +116,16 @@ def get_customer_names(
 
 
 @frappe.whitelist()
+def get_customers_count(pos_profile):
+    pos_profile = json.loads(pos_profile)
+    filters = {"disabled": 0}
+    customer_groups = get_customer_groups(pos_profile)
+    if customer_groups:
+        filters["customer_group"] = ["in", customer_groups]
+    return frappe.db.count("Customer", filters)
+
+
+@frappe.whitelist()
 def get_customer_info(customer):
     customer = frappe.get_doc("Customer", customer)
 

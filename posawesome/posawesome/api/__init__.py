@@ -4,11 +4,12 @@ from .bundles import get_bundle_components
 from .customers import (
 	create_customer,
 	get_customer_addresses,
-	get_customer_info,
-	get_customer_names,
-	get_sales_person_names,
-	make_address,
-	set_customer_info,
+        get_customer_info,
+        get_customer_names,
+        get_customers_count,
+        get_sales_person_names,
+        make_address,
+        set_customer_info,
 )
 from .invoices import (
 	delete_invoice,
