@@ -1681,9 +1681,15 @@ export default {
 			if (!this.filtered_items.length || !this.first_search) {
 				return;
 			}
-			const qty = this.get_item_qty(this.first_search);
-			const new_item = { ...this.filtered_items[0] };
-			new_item.qty = flt(qty);
+                       const qty = this.get_item_qty(this.first_search);
+                       const new_item = { ...this.filtered_items[0] };
+                       new_item.qty = flt(qty);
+                       if (
+                               this.pos_profile.posa_scale_barcode_start &&
+                               this.first_search?.startsWith(this.pos_profile.posa_scale_barcode_start)
+                       ) {
+                               new_item._barcode_qty = true;
+                       }
 			if (Array.isArray(new_item.item_barcode)) {
 				new_item.item_barcode.forEach((element) => {
 					if (this.search == element.barcode) {
@@ -1759,40 +1765,43 @@ export default {
 				vm.search_from_scanner = false;
 			}
 		}, 300),
-                get_item_qty(first_search) {
-                        const qtyVal = this.qty != null ? this.qty : 1;
-                        let scal_qty = Math.abs(qtyVal);
-                        const prefix_len =
-                                this.pos_profile.posa_scale_barcode_start?.length || 0;
+               get_item_qty(first_search) {
+                       const qtyVal = this.qty != null ? this.qty : 1;
+                       let scal_qty = Math.abs(qtyVal);
+                       const prefix_len =
+                               this.pos_profile.posa_scale_barcode_start?.length || 0;
 
-                        if (first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
-                                // Determine item code length dynamically based on EAN-13 structure:
-                                // prefix + item_code + 5 qty digits + 1 check digit
-                                const item_code_len =
-                                        first_search.length - prefix_len - 6;
-                                let pesokg1 = first_search.substr(
-                                        prefix_len + item_code_len,
-                                        5,
-                                );
-                                let pesokg;
-                                if (pesokg1.startsWith("0000")) {
-                                        pesokg = "0.00" + pesokg1.substr(4);
-                                } else if (pesokg1.startsWith("000")) {
-                                        pesokg = "0.0" + pesokg1.substr(3);
-                                } else if (pesokg1.startsWith("00")) {
-                                        pesokg = "0." + pesokg1.substr(2);
-                                } else if (pesokg1.startsWith("0")) {
-                                        pesokg = pesokg1.substr(1, 1) + "." + pesokg1.substr(2, pesokg1.length);
-                                } else if (!pesokg1.startsWith("0")) {
-                                        pesokg = pesokg1.substr(0, 2) + "." + pesokg1.substr(2, pesokg1.length);
-                                }
-                                scal_qty = pesokg;
-                        }
-                        if (this.hide_qty_decimals) {
-                                scal_qty = Math.trunc(scal_qty);
-                        }
-                        return scal_qty;
-                },
+                       let isScale = false;
+                       if (first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
+                               isScale = true;
+                               // Determine item code length dynamically based on EAN-13 structure:
+                               // prefix + item_code + 5 qty digits + 1 check digit
+                               const item_code_len =
+                                       first_search.length - prefix_len - 6;
+                               const pesokg1 = first_search.substr(
+                                       prefix_len + item_code_len,
+                                       5,
+                               );
+                               let qtyString;
+                               if (pesokg1.startsWith("0000")) {
+                                       qtyString = "0.00" + pesokg1.substr(4);
+                               } else if (pesokg1.startsWith("000")) {
+                                       qtyString = "0.0" + pesokg1.substr(3);
+                               } else if (pesokg1.startsWith("00")) {
+                                       qtyString = "0." + pesokg1.substr(2);
+                               } else if (pesokg1.startsWith("0")) {
+                                       qtyString = pesokg1.substr(1, 1) + "." + pesokg1.substr(2);
+                               } else {
+                                       qtyString = pesokg1.substr(0, 2) + "." + pesokg1.substr(2);
+                               }
+                               scal_qty = parseFloat(qtyString);
+                       }
+                       // Only truncate decimals when not dealing with a scale barcode value
+                       if (this.hide_qty_decimals && !isScale) {
+                               scal_qty = Math.trunc(scal_qty);
+                       }
+                       return scal_qty;
+               },
                 get_search(first_search) {
                         if (!first_search) return "";
                         const prefix_len =
@@ -2216,7 +2225,7 @@ export default {
                                 scannedCode.startsWith(this.pos_profile.posa_scale_barcode_start)
                         ) {
                                 searchCode = this.get_search(scannedCode);
-                                qtyFromBarcode = parseFloat(this.get_item_qty(scannedCode));
+                               qtyFromBarcode = this.get_item_qty(scannedCode);
                         }
 
                         // First try to find exact match by processed code
