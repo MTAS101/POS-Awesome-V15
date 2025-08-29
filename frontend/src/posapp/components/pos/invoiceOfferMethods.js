@@ -7,7 +7,14 @@ export default {
                return (brand || "").toString().trim().toLowerCase();
        },
        getItemBrand(item) {
+               if (!this._brandCache) this._brandCache = {};
+
                let brand = this.normalizeBrand(item.brand);
+
+               if (!brand && this._brandCache[item.item_code]) {
+                       brand = this._brandCache[item.item_code];
+               }
+
                if (!brand && item.variant_of && this.allItems) {
                        const template = this.allItems.find((it) => it.item_code == item.variant_of);
                        if (template && template.brand) {
@@ -15,6 +22,26 @@ export default {
                                item.brand = template.brand;
                        }
                }
+
+               if (!brand) {
+                       try {
+                               frappe.call({
+                                       method: "posawesome.posawesome.api.items.get_item_brand",
+                                       args: { item_code: item.item_code },
+                                       async: false,
+                                       callback: (r) => {
+                                               if (r.message) {
+                                                       brand = this.normalizeBrand(r.message);
+                                                       item.brand = r.message;
+                                                       this._brandCache[item.item_code] = brand;
+                                               }
+                                       },
+                               });
+                       } catch (e) {
+                               console.error("Failed to fetch item brand", e);
+                       }
+               }
+
                return brand;
        },
 checkOfferIsAppley(item, offer) {

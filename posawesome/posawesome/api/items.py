@@ -912,16 +912,32 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 		if not stock_uom_exists:
 			uoms.append({"uom": stock_uom, "conversion_factor": 1.0})
 
-	res["item_uoms"] = uoms
+        res["item_uoms"] = uoms
 
-	return res
+        return res
+
+
+@frappe.whitelist()
+def get_item_brand(item_code):
+        """Return brand for an item, falling back to its template's brand."""
+        if not item_code:
+                return None
+
+        brand, variant_of = frappe.db.get_value(
+                "Item", item_code, ["brand", "variant_of"], as_dict=False
+        ) or (None, None)
+
+        if not brand and variant_of:
+                brand = frappe.db.get_value("Item", variant_of, "brand")
+
+        return brand
 
 
 @frappe.whitelist()
 def get_items_from_barcode(selling_price_list, currency, barcode):
-	search_item = frappe.db.get_value(
-		"Item Barcode",
-		{"barcode": barcode},
+        search_item = frappe.db.get_value(
+                "Item Barcode",
+                {"barcode": barcode},
 		["parent as item_code", "posa_uom"],
 		as_dict=1,
 	)
