@@ -20,12 +20,13 @@ from .invoices import (
 	validate_return_items,
 )
 from .items import (
-	get_item_attributes,
-	get_item_detail,
-	get_items,
-	get_items_count,
-	get_items_details,
-	get_items_from_barcode,
+        get_item_attributes,
+       get_item_brand,
+        get_item_detail,
+        get_items,
+        get_items_count,
+        get_items_details,
+        get_items_from_barcode,
 	get_items_groups,
 )
 from .offers import (
