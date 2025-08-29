@@ -1398,11 +1398,15 @@ export default {
 				},
 			},
 			callback: function (r) {
-				if (r.message) {
-					const data = r.message;
-					if (!item.warehouse) {
-						item.warehouse = vm.pos_profile.warehouse;
-					}
+                               if (r.message) {
+                                       const data = r.message;
+                                       // ensure brand is populated so brand-based offers can evaluate
+                                       if (data.brand) {
+                                               item.brand = data.brand;
+                                       }
+                                       if (!item.warehouse) {
+                                               item.warehouse = vm.pos_profile.warehouse;
+                                       }
 					// Ensure price list currency is synced from server response
 					if (data.price_list_currency) {
 						vm.price_list_currency = data.price_list_currency;

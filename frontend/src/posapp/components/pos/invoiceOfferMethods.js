@@ -83,15 +83,28 @@ export default {
 		return result;
 	},
 
-	getItemFromRowID(row_id) {
-		const combined = [...this.items, ...this.packed_items];
-		return combined.find((el) => el.posa_row_id == row_id);
-	},
+       getItemFromRowID(row_id) {
+               const combined = [...this.items, ...this.packed_items];
+               return combined.find((el) => el.posa_row_id == row_id);
+       },
 
-	checkQtyAnountOffer(offer, qty, amount) {
-		let min_qty = false;
-		let max_qty = false;
-		let min_amt = false;
+       getLineBrand(line) {
+               let brand =
+                       line.brand ||
+                       line.item_brand ||
+                       (this.item_details_cache &&
+                               this.item_details_cache[line.item_code] &&
+                               this.item_details_cache[line.item_code].brand);
+               if (!brand) {
+                       return null;
+               }
+               return String(brand).trim().toLowerCase();
+       },
+
+       checkQtyAnountOffer(offer, qty, amount) {
+               let min_qty = false;
+               let max_qty = false;
+               let min_amt = false;
 		let max_amt = false;
 		const applys = [];
 
@@ -212,40 +225,42 @@ export default {
 		return apply_offer;
 	},
 
-	getBrandOffer(offer) {
-		let apply_offer = null;
-		if (offer.apply_on === "Brand") {
-			if (this.checkOfferCoupon(offer)) {
-				const items = [];
-				let total_count = 0;
-				let total_amount = 0;
-				const combined = [...this.items, ...this.packed_items];
-				combined.forEach((item) => {
-					if (!item.posa_is_offer && item.brand === offer.brand) {
-						if (
-							offer.offer === "Item Price" &&
-							item.posa_offer_applied &&
-							!this.checkOfferIsAppley(item, offer)
-						) {
-							return;
-						}
-						total_count += item.stock_qty;
-						const rate = item.original_price_list_rate || item.price_list_rate;
-						total_amount += item.stock_qty * rate;
-						items.push(item.posa_row_id);
-					}
-				});
-				if (total_count || total_amount) {
-					const res = this.checkQtyAnountOffer(offer, total_count, total_amount);
-					if (res.apply) {
-						offer.items = items;
-						apply_offer = offer;
-					}
-				}
-			}
-		}
-		return apply_offer;
-	},
+       getBrandOffer(offer) {
+               let apply_offer = null;
+               if (offer.apply_on === "Brand") {
+                       if (this.checkOfferCoupon(offer)) {
+                               const items = [];
+                               let total_count = 0;
+                               let total_amount = 0;
+                               const combined = [...this.items, ...this.packed_items];
+                               const offerBrand = String(offer.brand || "").trim().toLowerCase();
+                               combined.forEach((item) => {
+                                       const itemBrand = this.getLineBrand(item);
+                                       if (!item.posa_is_offer && itemBrand && itemBrand === offerBrand) {
+                                               if (
+                                                       offer.offer === "Item Price" &&
+                                                       item.posa_offer_applied &&
+                                                       !this.checkOfferIsAppley(item, offer)
+                                               ) {
+                                                       return;
+                                               }
+                                               total_count += item.stock_qty;
+                                               const rate = item.original_price_list_rate || item.price_list_rate;
+                                               total_amount += item.stock_qty * rate;
+                                               items.push(item.posa_row_id);
+                                       }
+                               });
+                               if (total_count || total_amount) {
+                                       const res = this.checkQtyAnountOffer(offer, total_count, total_amount);
+                                       if (res.apply) {
+                                               offer.items = items;
+                                               apply_offer = offer;
+                                       }
+                               }
+                       }
+               }
+               return apply_offer;
+       },
 	getTransactionOffer(offer) {
 		let apply_offer = null;
 		if (offer.apply_on === "Transaction") {
