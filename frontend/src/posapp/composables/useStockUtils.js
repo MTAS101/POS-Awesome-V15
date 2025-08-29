@@ -67,29 +67,76 @@ export function useStockUtils() {
                         }
                 }
 
-                if (uomRate) {
-                        item._manual_rate_set = true;
-                        item.base_price_list_rate = uomRate;
-                        if (!item.posa_offer_applied) {
-                                item.base_rate = uomRate;
-                        }
+               if (uomRate) {
+                       item._manual_rate_set = true;
 
-			const baseCurrency = context.price_list_currency || context.pos_profile.currency;
-			if (context.selected_currency !== baseCurrency) {
-				item.price_list_rate = context.flt(
-					item.base_price_list_rate * context.exchange_rate,
-					context.currency_precision,
-				);
-				item.rate = context.flt(item.base_rate * context.exchange_rate, context.currency_precision);
-			} else {
-				item.price_list_rate = item.base_price_list_rate;
-				item.rate = item.base_rate;
-			}
+                       // default rates based on fetched UOM price
+                       let base_price = uomRate;
+                       let base_rate = uomRate;
+                       let base_discount = 0;
 
-                        if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
-                        if (context.forceUpdate) context.forceUpdate();
-                        return;
-                }
+                       // Reapply offer if present
+                       if (item.posa_offer_applied) {
+                               const offer =
+                                       context.posOffers && Array.isArray(context.posOffers)
+                                               ? context.posOffers.find((o) => {
+                                                       if (!o || !o.items) return false;
+                                                       const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+                                                       return Array.isArray(items) && items.includes(item.posa_row_id);
+                                               })
+                                               : null;
+
+                               if (offer) {
+                                       if (offer.discount_type === "Rate") {
+                                               base_rate = context.flt(
+                                                       offer.rate * item.conversion_factor,
+                                                       context.currency_precision,
+                                               );
+                                               base_price = base_rate;
+                                               item.discount_percentage = 0;
+                                       } else if (offer.discount_type === "Discount Percentage") {
+                                               item.discount_percentage = offer.discount_percentage;
+                                               base_discount = context.flt(
+                                                       (uomRate * offer.discount_percentage) / 100,
+                                                       context.currency_precision,
+                                               );
+                                               base_rate = context.flt(uomRate - base_discount, context.currency_precision);
+                                       } else if (offer.discount_type === "Discount Amount") {
+                                               item.discount_percentage = 0;
+                                               base_discount = context.flt(
+                                                       offer.discount_amount * item.conversion_factor,
+                                                       context.currency_precision,
+                                               );
+                                               base_rate = context.flt(uomRate - base_discount, context.currency_precision);
+                                       }
+                               }
+                       }
+
+                       item.base_price_list_rate = base_price;
+                       item.base_rate = base_rate;
+                       item.base_discount_amount = base_discount;
+
+                       const baseCurrency = context.price_list_currency || context.pos_profile.currency;
+                       if (context.selected_currency !== baseCurrency) {
+                               item.price_list_rate = context.flt(
+                                       base_price * context.exchange_rate,
+                                       context.currency_precision,
+                               );
+                               item.rate = context.flt(base_rate * context.exchange_rate, context.currency_precision);
+                               item.discount_amount = context.flt(
+                                       base_discount * context.exchange_rate,
+                                       context.currency_precision,
+                               );
+                       } else {
+                               item.price_list_rate = base_price;
+                               item.rate = base_rate;
+                               item.discount_amount = base_discount;
+                       }
+
+                       if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+                       if (context.forceUpdate) context.forceUpdate();
+                       return;
+               }
 
                 // No explicit UOM price found, allow normal recalculation
                 item._manual_rate_set = false;

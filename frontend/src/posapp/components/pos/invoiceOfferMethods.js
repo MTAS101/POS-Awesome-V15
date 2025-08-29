@@ -3,6 +3,32 @@ import { formatUtils } from "../../format.js";
 /* global __, frappe, flt */
 
 export default {
+	normalizeBrand(brand) {
+		return (brand || "").trim().toLowerCase();
+	},
+	getItemBrand(item) {
+		let brand = this.normalizeBrand(item.brand);
+		if (brand) {
+			item.brand = brand;
+			return brand;
+		}
+		if (this.brand_cache && this.brand_cache[item.item_code]) {
+			brand = this.brand_cache[item.item_code];
+		} else {
+			frappe.call({
+				method: "posawesome.posawesome.api.items.get_item_brand",
+				args: { item_code: item.item_code },
+				async: false,
+				callback: (r) => {
+					brand = this.normalizeBrand(r.message);
+				},
+			});
+			this.brand_cache = this.brand_cache || {};
+			this.brand_cache[item.item_code] = brand;
+		}
+		item.brand = brand;
+		return brand;
+	},
 	checkOfferIsAppley(item, offer) {
 		let applied = false;
 		const item_offers = JSON.parse(item.posa_offers);
@@ -219,9 +245,11 @@ export default {
 				const items = [];
 				let total_count = 0;
 				let total_amount = 0;
+				const offer_brand = this.normalizeBrand(offer.brand);
 				const combined = [...this.items, ...this.packed_items];
 				combined.forEach((item) => {
-					if (!item.posa_is_offer && item.brand === offer.brand) {
+					const item_brand = this.getItemBrand(item);
+					if (!item.posa_is_offer && item_brand && item_brand === offer_brand) {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
