@@ -107,16 +107,16 @@ export function useStockUtils() {
 		}
 
 		// Update rates based on new conversion factor
-		if (item.posa_offer_applied) {
-			// For items with offer, recalculate from original offer rate
-			const offer =
-				context.posOffers && Array.isArray(context.posOffers)
-					? context.posOffers.find((o) => {
-						if (!o || !o.items) return false;
-						const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
-						return Array.isArray(items) && items.includes(item.posa_row_id);
-					})
-					: null;
+                if (item.posa_offer_applied) {
+                        // For items with offer, recalculate from original offer rate
+                        const offer =
+                                context.posa_offers && Array.isArray(context.posa_offers)
+                                        ? context.posa_offers.find((o) => {
+                                                if (!o || !o.items) return false;
+                                                const items = typeof o.items === "string" ? JSON.parse(o.items) : o.items;
+                                                return Array.isArray(items) && items.includes(item.posa_row_id);
+                                        })
+                                        : null;
 
 			if (offer && offer.discount_type === "Rate") {
 				// Apply offer rate with new conversion factor
@@ -163,27 +163,37 @@ export function useStockUtils() {
 
 				// Convert to selected currency if needed
 				const baseCurrency = context.price_list_currency || context.pos_profile.currency;
-				if (context.selected_currency !== baseCurrency) {
-					item.price_list_rate = context.flt(
-						updated_base_price / context.exchange_rate,
-						context.currency_precision,
-					);
-					item.discount_amount = context.flt(
-						base_discount / context.exchange_rate,
-						context.currency_precision,
-					);
-					item.rate = context.flt(item.base_rate / context.exchange_rate, context.currency_precision);
-				} else {
-					item.price_list_rate = updated_base_price;
-					item.discount_amount = base_discount;
-					item.rate = item.base_rate;
-				}
-			}
-		} else {
-			// For regular items, use standard conversion
-			if (item.batch_price) {
-				item.base_rate = item.batch_price * item.conversion_factor;
-				item.base_price_list_rate = item.base_rate;
+                                if (context.selected_currency !== baseCurrency) {
+                                        item.price_list_rate = context.flt(
+                                                updated_base_price / context.exchange_rate,
+                                                context.currency_precision,
+                                        );
+                                        item.discount_amount = context.flt(
+                                                base_discount / context.exchange_rate,
+                                                context.currency_precision,
+                                        );
+                                        item.rate = context.flt(
+                                                item.base_rate / context.exchange_rate,
+                                                context.currency_precision,
+                                        );
+                                } else {
+                                        item.price_list_rate = updated_base_price;
+                                        item.discount_amount = base_discount;
+                                        item.rate = item.base_rate;
+                                }
+                        }
+
+                        // Recalculate amounts after UOM change
+                        item.amount = context.flt(item.qty * item.rate, context.currency_precision);
+                        item.base_amount = context.flt(item.qty * item.base_rate, context.currency_precision);
+                        if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+                        if (context.forceUpdate) context.forceUpdate();
+                        return;
+                } else {
+                        // For regular items, use standard conversion
+                        if (item.batch_price) {
+                                item.base_rate = item.batch_price * item.conversion_factor;
+                                item.base_price_list_rate = item.base_rate;
 			} else if (item.original_base_rate) {
 				item.base_rate = item.original_base_rate * item.conversion_factor;
 				item.base_price_list_rate = item.original_base_price_list_rate * item.conversion_factor;
@@ -203,10 +213,10 @@ export function useStockUtils() {
 			}
 		}
 
-		// Update item details
-		if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
-		if (context.forceUpdate) context.forceUpdate();
-	};
+                // Update item details
+                if (context.calc_stock_qty) context.calc_stock_qty(item, item.qty);
+                if (context.forceUpdate) context.forceUpdate();
+        };
 
 	// Calculate stock quantity for an item
 	const calcStockQty = (item, value) => {
