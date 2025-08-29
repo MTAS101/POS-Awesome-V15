@@ -1,3 +1,4 @@
+/* global frappe, checkDbHealth */
 import Dexie from "dexie/dist/dexie.mjs";
 
 // --- Dexie initialization ---------------------------------------------------
@@ -8,7 +9,7 @@ let persistWorker = null;
 if (typeof Worker !== "undefined") {
 	try {
 		// Use the plain URL so the service worker cache matches when offline
-                const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
+		const workerUrl = "/assets/posawesome/dist/js/posapp/workers/itemWorker.js";
 		persistWorker = new Worker(workerUrl, { type: "classic" });
 	} catch (e) {
 		console.error("Failed to init persist worker", e);
@@ -458,21 +459,21 @@ export async function syncOfflineInvoices() {
 
 		for (const inv of invoices) {
 			try {
-                                await frappe.call({
-                                        method: "posawesome.posawesome.api.invoices.submit_invoice",
-                                        args: {
-                                                invoice: inv.invoice,
-                                                data: inv.data,
-                                        },
-                                });
+				await frappe.call({
+					method: "posawesome.posawesome.api.invoices.submit_invoice",
+					args: {
+						invoice: inv.invoice,
+						data: inv.data,
+					},
+				});
 				synced++;
 			} catch (error) {
 				console.error("Failed to submit invoice, saving as draft", error);
 				try {
-                                        await frappe.call({
-                                                method: "posawesome.posawesome.api.invoices.update_invoice",
-                                                args: { data: inv.invoice },
-                                        });
+					await frappe.call({
+						method: "posawesome.posawesome.api.invoices.update_invoice",
+						args: { data: inv.invoice },
+					});
 					drafted += 1;
 				} catch (draftErr) {
 					console.error("Failed to save invoice as draft", draftErr);
@@ -526,10 +527,10 @@ export async function syncOfflineCustomers() {
 
 	for (const cust of customers) {
 		try {
-                        const result = await frappe.call({
-                                method: "posawesome.posawesome.api.customers.create_customer",
-                                args: cust.args,
-                        });
+			const result = await frappe.call({
+				method: "posawesome.posawesome.api.customers.create_customer",
+				args: cust.args,
+			});
 			synced++;
 			if (
 				result &&
@@ -609,7 +610,7 @@ export function getItemUOMs(itemCode) {
 	try {
 		const cache = memory.uom_cache || {};
 		return cache[itemCode] || [];
-	} catch (e) {
+	} catch {
 		return [];
 	}
 }
@@ -626,7 +627,7 @@ export function saveOffers(offers) {
 export function getCachedOffers() {
 	try {
 		return memory.offers_cache || [];
-	} catch (e) {
+	} catch {
 		return [];
 	}
 }
@@ -759,6 +760,7 @@ export function saveItemDetailsCache(profileName, priceList, items) {
 				item_uoms: it.item_uoms,
 				rate: it.rate,
 				price_list_rate: it.price_list_rate,
+				brand: it.brand,
 			}));
 			cleanItems = JSON.parse(JSON.stringify(cleanItems));
 		} catch (err) {
@@ -872,7 +874,7 @@ export function getLocalStock(itemCode) {
 	try {
 		const stockCache = memory.local_stock_cache || {};
 		return stockCache[itemCode]?.actual_qty || null;
-	} catch (e) {
+	} catch {
 		return null;
 	}
 }
@@ -912,14 +914,14 @@ export async function fetchItemStockQuantities(items, pos_profile, chunkSize = 1
 		for (let i = 0; i < items.length; i += chunkSize) {
 			const chunk = items.slice(i, i + chunkSize);
 			const response = await new Promise((resolve, reject) => {
-                                frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_items_details",
-                                        args: {
-                                                pos_profile: JSON.stringify(pos_profile),
-                                                items_data: JSON.stringify(chunk),
-                                        },
-                                        freeze: false,
-                                        callback: function (r) {
+				frappe.call({
+					method: "posawesome.posawesome.api.items.get_items_details",
+					args: {
+						pos_profile: JSON.stringify(pos_profile),
+						items_data: JSON.stringify(chunk),
+					},
+					freeze: false,
+					callback: function (r) {
 						if (r.message) {
 							resolve(r.message);
 						} else {

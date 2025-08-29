@@ -120,20 +120,21 @@ export function saveItemDetailsCache(profileName, priceList, items) {
 		const priceCache = profileCache[priceList] || {};
 
 		let cleanItems;
-                try {
-                        // Store only fields required for offline usage
-                        cleanItems = items.map((it) => ({
-                                item_code: it.item_code,
-                                actual_qty: it.actual_qty,
-                                has_batch_no: it.has_batch_no,
-                                has_serial_no: it.has_serial_no,
-                                item_uoms: it.item_uoms,
-                                batch_no_data: it.batch_no_data,
-                                serial_no_data: it.serial_no_data,
-                                rate: it.rate,
-                                price_list_rate: it.price_list_rate,
-                                currency: it.currency,
-                        }));
+		try {
+			// Store only fields required for offline usage
+			cleanItems = items.map((it) => ({
+				item_code: it.item_code,
+				actual_qty: it.actual_qty,
+				has_batch_no: it.has_batch_no,
+				has_serial_no: it.has_serial_no,
+				item_uoms: it.item_uoms,
+				batch_no_data: it.batch_no_data,
+				serial_no_data: it.serial_no_data,
+				rate: it.rate,
+				price_list_rate: it.price_list_rate,
+				currency: it.currency,
+				brand: it.brand,
+			}));
 			cleanItems = JSON.parse(JSON.stringify(cleanItems));
 		} catch (err) {
 			console.error("Failed to serialize item details", err);
@@ -196,43 +197,41 @@ export async function getCachedItemDetails(profileName, priceList, itemCodes, tt
 // Persistent item storage helpers
 
 export async function saveItemsBulk(items) {
-        try {
-                await checkDbHealth();
-                if (!db.isOpen()) await db.open();
-                let cleanItems;
-                try {
-                        cleanItems = JSON.parse(JSON.stringify(items));
-                } catch (err) {
-                        console.error("Failed to serialize items", err);
-                        cleanItems = [];
-                }
-               cleanItems = cleanItems.map((it) => ({
-                       ...it,
-                       barcodes: Array.isArray(it.item_barcode)
-                               ? it.item_barcode.map((b) => b.barcode).filter(Boolean)
-                               : it.item_barcode
-                                       ? [String(it.item_barcode)]
-                                       : [],
-                       name_keywords: it.item_name
-                               ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean)
-                               : [],
-                       serials: Array.isArray(it.serial_no_data)
-                               ? it.serial_no_data.map((s) => s.serial_no).filter(Boolean)
-                               : [],
-                       batches: Array.isArray(it.batch_no_data)
-                               ? it.batch_no_data.map((b) => b.batch_no).filter(Boolean)
-                               : [],
-               }));
-               const CHUNK_SIZE = 1000;
-               await db.transaction("rw", db.table("items"), async () => {
-                       for (let i = 0; i < cleanItems.length; i += CHUNK_SIZE) {
-                               const chunk = cleanItems.slice(i, i + CHUNK_SIZE);
-                               await db.table("items").bulkPut(chunk);
-                       }
-               });
-       } catch (e) {
-               console.error("Failed to save items", e);
-       }
+	try {
+		await checkDbHealth();
+		if (!db.isOpen()) await db.open();
+		let cleanItems;
+		try {
+			cleanItems = JSON.parse(JSON.stringify(items));
+		} catch (err) {
+			console.error("Failed to serialize items", err);
+			cleanItems = [];
+		}
+		cleanItems = cleanItems.map((it) => ({
+			...it,
+			barcodes: Array.isArray(it.item_barcode)
+				? it.item_barcode.map((b) => b.barcode).filter(Boolean)
+				: it.item_barcode
+					? [String(it.item_barcode)]
+					: [],
+			name_keywords: it.item_name ? it.item_name.toLowerCase().split(/\s+/).filter(Boolean) : [],
+			serials: Array.isArray(it.serial_no_data)
+				? it.serial_no_data.map((s) => s.serial_no).filter(Boolean)
+				: [],
+			batches: Array.isArray(it.batch_no_data)
+				? it.batch_no_data.map((b) => b.batch_no).filter(Boolean)
+				: [],
+		}));
+		const CHUNK_SIZE = 1000;
+		await db.transaction("rw", db.table("items"), async () => {
+			for (let i = 0; i < cleanItems.length; i += CHUNK_SIZE) {
+				const chunk = cleanItems.slice(i, i + CHUNK_SIZE);
+				await db.table("items").bulkPut(chunk);
+			}
+		});
+	} catch (e) {
+		console.error("Failed to save items", e);
+	}
 }
 
 export async function getAllStoredItems() {
@@ -251,54 +250,54 @@ export async function searchStoredItems({ search = "", itemGroup = "", limit = 1
 		await checkDbHealth();
 		if (!db.isOpen()) await db.open();
 		const term = search.toLowerCase();
-               if (term) {
-                       let collection = db
-                               .table("items")
-                               .where("item_code")
-                               .startsWithIgnoreCase(term)
-                               .or("item_name")
-                               .startsWithIgnoreCase(term)
-                               .or("barcodes")
-                               .equalsIgnoreCase(term)
-                               .or("name_keywords")
-                               .startsWithIgnoreCase(term)
-                               .or("serials")
-                               .equalsIgnoreCase(term)
-                               .or("batches")
-                               .equalsIgnoreCase(term);
-                       if (itemGroup && itemGroup.toLowerCase() !== "all") {
-                               const group = itemGroup.toLowerCase();
-                               collection = collection.and((it) => it.item_group && it.item_group.toLowerCase() === group);
-                       }
-                       let results = await collection.toArray();
-                       if (!results.length) {
-                               let fallback = db.table("items");
-                               if (itemGroup && itemGroup.toLowerCase() !== "all") {
-                                       fallback = fallback.where("item_group").equalsIgnoreCase(itemGroup);
-                               }
-                               results = await fallback
-                                       .filter((it) => {
-                                               const nameMatch = it.item_name && it.item_name.toLowerCase().includes(term);
-                                               const codeMatch = it.item_code && it.item_code.toLowerCase().includes(term);
-                                               const barcodeMatch = Array.isArray(it.item_barcode)
-                                                       ? it.item_barcode.some((b) => b.barcode && b.barcode.toLowerCase() === term)
-                                                       : it.item_barcode && String(it.item_barcode).toLowerCase().includes(term);
-                                               const serialMatch = Array.isArray(it.serial_no_data)
-                                                       ? it.serial_no_data.some((s) => s.serial_no && s.serial_no.toLowerCase() === term)
-                                                       : Array.isArray(it.serials)
-                                                               ? it.serials.some((s) => s && s.toLowerCase() === term)
-                                                               : false;
-                                               const batchMatch = Array.isArray(it.batch_no_data)
-                                                       ? it.batch_no_data.some((b) => b.batch_no && b.batch_no.toLowerCase() === term)
-                                                       : Array.isArray(it.batches)
-                                                               ? it.batches.some((b) => b && b.toLowerCase() === term)
-                                                               : false;
-                                               return nameMatch || codeMatch || barcodeMatch || serialMatch || batchMatch;
-                                       })
-                                       .toArray();
-                       }
-                       const map = new Map();
-                       results.forEach((it) => {
+		if (term) {
+			let collection = db
+				.table("items")
+				.where("item_code")
+				.startsWithIgnoreCase(term)
+				.or("item_name")
+				.startsWithIgnoreCase(term)
+				.or("barcodes")
+				.equalsIgnoreCase(term)
+				.or("name_keywords")
+				.startsWithIgnoreCase(term)
+				.or("serials")
+				.equalsIgnoreCase(term)
+				.or("batches")
+				.equalsIgnoreCase(term);
+			if (itemGroup && itemGroup.toLowerCase() !== "all") {
+				const group = itemGroup.toLowerCase();
+				collection = collection.and((it) => it.item_group && it.item_group.toLowerCase() === group);
+			}
+			let results = await collection.toArray();
+			if (!results.length) {
+				let fallback = db.table("items");
+				if (itemGroup && itemGroup.toLowerCase() !== "all") {
+					fallback = fallback.where("item_group").equalsIgnoreCase(itemGroup);
+				}
+				results = await fallback
+					.filter((it) => {
+						const nameMatch = it.item_name && it.item_name.toLowerCase().includes(term);
+						const codeMatch = it.item_code && it.item_code.toLowerCase().includes(term);
+						const barcodeMatch = Array.isArray(it.item_barcode)
+							? it.item_barcode.some((b) => b.barcode && b.barcode.toLowerCase() === term)
+							: it.item_barcode && String(it.item_barcode).toLowerCase().includes(term);
+						const serialMatch = Array.isArray(it.serial_no_data)
+							? it.serial_no_data.some((s) => s.serial_no && s.serial_no.toLowerCase() === term)
+							: Array.isArray(it.serials)
+								? it.serials.some((s) => s && s.toLowerCase() === term)
+								: false;
+						const batchMatch = Array.isArray(it.batch_no_data)
+							? it.batch_no_data.some((b) => b.batch_no && b.batch_no.toLowerCase() === term)
+							: Array.isArray(it.batches)
+								? it.batches.some((b) => b && b.toLowerCase() === term)
+								: false;
+						return nameMatch || codeMatch || barcodeMatch || serialMatch || batchMatch;
+					})
+					.toArray();
+			}
+			const map = new Map();
+			results.forEach((it) => {
 				if (!map.has(it.item_code)) {
 					map.set(it.item_code, it);
 				}
@@ -310,27 +309,27 @@ export async function searchStoredItems({ search = "", itemGroup = "", limit = 1
 		if (itemGroup && itemGroup.toLowerCase() !== "all") {
 			collection = collection.where("item_group").equalsIgnoreCase(itemGroup);
 		}
-               if (search) {
-                       const term = search.toLowerCase();
-                       collection = collection.filter((it) => {
-                               const nameMatch = it.item_name && it.item_name.toLowerCase().includes(term);
-                               const codeMatch = it.item_code && it.item_code.toLowerCase().includes(term);
-                               const barcodeMatch = Array.isArray(it.item_barcode)
-                                       ? it.item_barcode.some((b) => b.barcode && b.barcode.toLowerCase() === term)
-                                       : it.item_barcode && String(it.item_barcode).toLowerCase().includes(term);
-                               const serialMatch = Array.isArray(it.serial_no_data)
-                                       ? it.serial_no_data.some((s) => s.serial_no && s.serial_no.toLowerCase() === term)
-                                       : Array.isArray(it.serials)
-                                               ? it.serials.some((s) => s && s.toLowerCase() === term)
-                                               : false;
-                               const batchMatch = Array.isArray(it.batch_no_data)
-                                       ? it.batch_no_data.some((b) => b.batch_no && b.batch_no.toLowerCase() === term)
-                                       : Array.isArray(it.batches)
-                                               ? it.batches.some((b) => b && b.toLowerCase() === term)
-                                               : false;
-                               return nameMatch || codeMatch || barcodeMatch || serialMatch || batchMatch;
-                       });
-               }
+		if (search) {
+			const term = search.toLowerCase();
+			collection = collection.filter((it) => {
+				const nameMatch = it.item_name && it.item_name.toLowerCase().includes(term);
+				const codeMatch = it.item_code && it.item_code.toLowerCase().includes(term);
+				const barcodeMatch = Array.isArray(it.item_barcode)
+					? it.item_barcode.some((b) => b.barcode && b.barcode.toLowerCase() === term)
+					: it.item_barcode && String(it.item_barcode).toLowerCase().includes(term);
+				const serialMatch = Array.isArray(it.serial_no_data)
+					? it.serial_no_data.some((s) => s.serial_no && s.serial_no.toLowerCase() === term)
+					: Array.isArray(it.serials)
+						? it.serials.some((s) => s && s.toLowerCase() === term)
+						: false;
+				const batchMatch = Array.isArray(it.batch_no_data)
+					? it.batch_no_data.some((b) => b.batch_no && b.batch_no.toLowerCase() === term)
+					: Array.isArray(it.batches)
+						? it.batches.some((b) => b && b.toLowerCase() === term)
+						: false;
+				return nameMatch || codeMatch || barcodeMatch || serialMatch || batchMatch;
+			});
+		}
 		const res = await collection.offset(offset).limit(limit).toArray();
 		return res;
 	} catch (e) {

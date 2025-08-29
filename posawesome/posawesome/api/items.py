@@ -614,7 +614,7 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 			return []
 		return frappe.get_all(
 			"Item",
-			fields=["name", "has_batch_no", "has_serial_no", "stock_uom"],
+			fields=["name", "has_batch_no", "has_serial_no", "stock_uom", "brand"],
 			filters={"name": ["in", item_codes]},
 		)
 
@@ -777,6 +777,7 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 				"actual_qty": stock_map.get(item_code, 0) or 0,
 				"has_batch_no": meta.get("has_batch_no"),
 				"has_serial_no": meta.get("has_serial_no"),
+				"brand": meta.get("brand"),
 				"batch_no_data": batch_map.get(item_code, []),
 				"serial_no_data": serial_map.get(item_code, []),
 				"rate": item_price.get("price_list_rate") or 0,

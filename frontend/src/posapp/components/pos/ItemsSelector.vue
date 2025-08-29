@@ -1754,70 +1754,70 @@ export default {
 					item.base_price_list_rate = base_rate;
 				}
 
-                                const hasBarcodeQty = item._barcode_qty;
-                                if (!item.qty || (item.qty === 1 && !hasBarcodeQty)) {
-                                        let qtyVal = this.qty != null ? this.qty : 1;
-                                        qtyVal = Math.abs(qtyVal);
-                                        if (this.hide_qty_decimals) {
-                                                qtyVal = Math.trunc(qtyVal);
-                                        }
-                                        item.qty = qtyVal;
-                                }
-                                const payload = { ...item };
-                                delete payload._barcode_qty;
-                                this.eventBus.emit("add_item", payload);
-                                this.qty = 1;
-                        }
-                },
-               async enter_event() {
-                       if (!this.filtered_items.length || !this.first_search) {
-                               return;
-                       }
+				const hasBarcodeQty = item._barcode_qty;
+				if (!item.qty || (item.qty === 1 && !hasBarcodeQty)) {
+					let qtyVal = this.qty != null ? this.qty : 1;
+					qtyVal = Math.abs(qtyVal);
+					if (this.hide_qty_decimals) {
+						qtyVal = Math.trunc(qtyVal);
+					}
+					item.qty = qtyVal;
+				}
+				const payload = { ...item };
+				delete payload._barcode_qty;
+				this.eventBus.emit("add_item", payload);
+				this.qty = 1;
+			}
+		},
+		async enter_event() {
+			if (!this.filtered_items.length || !this.first_search) {
+				return;
+			}
 
-                       // Derive the searchable code and detect scale barcode
-                       const search = this.get_search(this.first_search);
-                       const isScaleBarcode =
-                               this.pos_profile?.posa_scale_barcode_start &&
-                               this.first_search.startsWith(this.pos_profile.posa_scale_barcode_start);
-                       this.search = search;
+			// Derive the searchable code and detect scale barcode
+			const search = this.get_search(this.first_search);
+			const isScaleBarcode =
+				this.pos_profile?.posa_scale_barcode_start &&
+				this.first_search.startsWith(this.pos_profile.posa_scale_barcode_start);
+			this.search = search;
 
-                       const qty = parseFloat(this.get_item_qty(this.first_search));
-                       const new_item = { ...this.filtered_items[0] };
-                       new_item.qty = flt(qty);
-                       if (isScaleBarcode) {
-                               new_item._barcode_qty = true;
-                       }
+			const qty = parseFloat(this.get_item_qty(this.first_search));
+			const new_item = { ...this.filtered_items[0] };
+			new_item.qty = flt(qty);
+			if (isScaleBarcode) {
+				new_item._barcode_qty = true;
+			}
 
-                       let match = false;
-                       if (Array.isArray(new_item.item_barcode)) {
-                               new_item.item_barcode.forEach((element) => {
-                                       if (search === element.barcode) {
-                                               new_item.uom = element.posa_uom;
-                                               match = true;
-                                       }
-                               });
-                       }
-                       if (!match && new_item.item_code === search) {
-                               match = true;
-                       }
+			let match = false;
+			if (Array.isArray(new_item.item_barcode)) {
+				new_item.item_barcode.forEach((element) => {
+					if (search === element.barcode) {
+						new_item.uom = element.posa_uom;
+						match = true;
+					}
+				});
+			}
+			if (!match && new_item.item_code === search) {
+				match = true;
+			}
 
-                       if (this.flags.serial_no) {
-                               new_item.to_set_serial_no = this.flags.serial_no;
-                       }
-                       if (this.flags.batch_no) {
-                               new_item.to_set_batch_no = this.flags.batch_no;
-                       }
+			if (this.flags.serial_no) {
+				new_item.to_set_serial_no = this.flags.serial_no;
+			}
+			if (this.flags.batch_no) {
+				new_item.to_set_batch_no = this.flags.batch_no;
+			}
 
-                       if (match) {
-                               await this.add_item(new_item);
-                               this.flags.serial_no = null;
-                               this.flags.batch_no = null;
-                               this.qty = 1;
-                               // Clear search field after successfully adding an item
-                               this.clearSearch();
-                               this.$refs.debounce_search.focus();
-                       }
-               },
+			if (match) {
+				await this.add_item(new_item);
+				this.flags.serial_no = null;
+				this.flags.batch_no = null;
+				this.qty = 1;
+				// Clear search field after successfully adding an item
+				this.clearSearch();
+				this.$refs.debounce_search.focus();
+			}
+		},
 		search_onchange: _.debounce(async function (newSearchTerm) {
 			const vm = this;
 
@@ -1856,19 +1856,19 @@ export default {
 				} else {
 					vm.get_items(true);
 				}
-                       } else {
-                               // When local storage is disabled, always fetch items
-                               // from the server so searches aren't limited to the
-                               // initially loaded set.
-                               await vm.get_items(true);
-                               vm.enter_event();
+			} else {
+				// When local storage is disabled, always fetch items
+				// from the server so searches aren't limited to the
+				// initially loaded set.
+				await vm.get_items(true);
+				vm.enter_event();
 
-                               if (vm.filtered_items && vm.filtered_items.length > 0) {
-                                       setTimeout(() => {
-                                               vm.update_items_details(vm.filtered_items);
-                                       }, 300);
-                               }
-                       }
+				if (vm.filtered_items && vm.filtered_items.length > 0) {
+					setTimeout(() => {
+						vm.update_items_details(vm.filtered_items);
+					}, 300);
+				}
+			}
 
 			// Clear the input only when triggered via scanner
 			if (fromScanner) {
@@ -1877,52 +1877,45 @@ export default {
 				vm.search_from_scanner = false;
 			}
 		}, 300),
-                get_item_qty(first_search) {
-                        const qtyVal = this.qty != null ? this.qty : 1;
-                        let scal_qty = Math.abs(qtyVal);
-                        const prefix_len =
-                                this.pos_profile.posa_scale_barcode_start?.length || 0;
+		get_item_qty(first_search) {
+			const qtyVal = this.qty != null ? this.qty : 1;
+			let scal_qty = Math.abs(qtyVal);
+			const prefix_len = this.pos_profile.posa_scale_barcode_start?.length || 0;
 
-                        if (first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
-                                // Determine item code length dynamically based on EAN-13 structure:
-                                // prefix + item_code + 5 qty digits + 1 check digit
-                                const item_code_len =
-                                        first_search.length - prefix_len - 6;
-                                let pesokg1 = first_search.substr(
-                                        prefix_len + item_code_len,
-                                        5,
-                                );
-                                let pesokg;
-                                if (pesokg1.startsWith("0000")) {
-                                        pesokg = "0.00" + pesokg1.substr(4);
-                                } else if (pesokg1.startsWith("000")) {
-                                        pesokg = "0.0" + pesokg1.substr(3);
-                                } else if (pesokg1.startsWith("00")) {
-                                        pesokg = "0." + pesokg1.substr(2);
-                                } else if (pesokg1.startsWith("0")) {
-                                        pesokg = pesokg1.substr(1, 1) + "." + pesokg1.substr(2, pesokg1.length);
-                                } else if (!pesokg1.startsWith("0")) {
-                                        pesokg = pesokg1.substr(0, 2) + "." + pesokg1.substr(2, pesokg1.length);
-                                }
-                                scal_qty = pesokg;
-                        }
-                        if (this.hide_qty_decimals) {
-                                scal_qty = Math.trunc(scal_qty);
-                        }
-                        return scal_qty;
-                },
-                get_search(first_search) {
-                        if (!first_search) return "";
-                        const prefix_len =
-                                this.pos_profile.posa_scale_barcode_start?.length || 0;
-                        if (!first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
-                                return first_search;
-                        }
-                        // Calculate item code length from total barcode length
-                        const item_code_len =
-                                first_search.length - prefix_len - 6;
-                        return first_search.substr(0, prefix_len + item_code_len);
-                },
+			if (first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
+				// Determine item code length dynamically based on EAN-13 structure:
+				// prefix + item_code + 5 qty digits + 1 check digit
+				const item_code_len = first_search.length - prefix_len - 6;
+				let pesokg1 = first_search.substr(prefix_len + item_code_len, 5);
+				let pesokg;
+				if (pesokg1.startsWith("0000")) {
+					pesokg = "0.00" + pesokg1.substr(4);
+				} else if (pesokg1.startsWith("000")) {
+					pesokg = "0.0" + pesokg1.substr(3);
+				} else if (pesokg1.startsWith("00")) {
+					pesokg = "0." + pesokg1.substr(2);
+				} else if (pesokg1.startsWith("0")) {
+					pesokg = pesokg1.substr(1, 1) + "." + pesokg1.substr(2, pesokg1.length);
+				} else if (!pesokg1.startsWith("0")) {
+					pesokg = pesokg1.substr(0, 2) + "." + pesokg1.substr(2, pesokg1.length);
+				}
+				scal_qty = pesokg;
+			}
+			if (this.hide_qty_decimals) {
+				scal_qty = Math.trunc(scal_qty);
+			}
+			return scal_qty;
+		},
+		get_search(first_search) {
+			if (!first_search) return "";
+			const prefix_len = this.pos_profile.posa_scale_barcode_start?.length || 0;
+			if (!first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
+				return first_search;
+			}
+			// Calculate item code length from total barcode length
+			const item_code_len = first_search.length - prefix_len - 6;
+			return first_search.substr(0, prefix_len + item_code_len);
+		},
 		esc_event() {
 			this.search = null;
 			this.first_search = null;
@@ -1953,6 +1946,7 @@ export default {
 						actual_qty: det.actual_qty,
 						has_batch_no: det.has_batch_no,
 						has_serial_no: det.has_serial_no,
+						brand: det.brand || item.brand,
 					});
 					if (det.item_uoms && det.item_uoms.length > 0) {
 						item.item_uoms = det.item_uoms;
@@ -2049,6 +2043,7 @@ export default {
 											? updated_item.price_list_rate
 											: item.price_list_rate,
 									currency: updated_item.currency || item.currency,
+									brand: updated_item.brand || item.brand,
 								},
 							});
 
@@ -2325,82 +2320,81 @@ export default {
 				this.processScannedItem(scannedCode);
 			}, 300);
 		},
-                async processScannedItem(scannedCode) {
-                        // Handle scale barcodes by extracting the item code and quantity
-                        let searchCode = scannedCode;
-                        let qtyFromBarcode = null;
-                        if (
-                                this.pos_profile?.posa_scale_barcode_start &&
-                                scannedCode.startsWith(this.pos_profile.posa_scale_barcode_start)
-                        ) {
-                                searchCode = this.get_search(scannedCode);
-                                qtyFromBarcode = parseFloat(this.get_item_qty(scannedCode));
-                        }
+		async processScannedItem(scannedCode) {
+			// Handle scale barcodes by extracting the item code and quantity
+			let searchCode = scannedCode;
+			let qtyFromBarcode = null;
+			if (
+				this.pos_profile?.posa_scale_barcode_start &&
+				scannedCode.startsWith(this.pos_profile.posa_scale_barcode_start)
+			) {
+				searchCode = this.get_search(scannedCode);
+				qtyFromBarcode = parseFloat(this.get_item_qty(scannedCode));
+			}
 
-                        // First try to find exact match by processed code
-                        let foundItem = this.items.find((item) => {
-                                const barcodeMatch =
-                                        item.barcode === searchCode ||
-                                        (Array.isArray(item.item_barcode) &&
-                                                item.item_barcode.some((b) => b.barcode === searchCode)) ||
-                                        (Array.isArray(item.barcodes) &&
-                                                item.barcodes.some((bc) => String(bc) === searchCode));
-                                return barcodeMatch || item.item_code === searchCode;
-                        });
+			// First try to find exact match by processed code
+			let foundItem = this.items.find((item) => {
+				const barcodeMatch =
+					item.barcode === searchCode ||
+					(Array.isArray(item.item_barcode) &&
+						item.item_barcode.some((b) => b.barcode === searchCode)) ||
+					(Array.isArray(item.barcodes) && item.barcodes.some((bc) => String(bc) === searchCode));
+				return barcodeMatch || item.item_code === searchCode;
+			});
 
-                        if (foundItem) {
-                                console.log("Found item by processed code:", foundItem);
-                                this.addScannedItemToInvoice(foundItem, searchCode, qtyFromBarcode);
-                                return;
-                        }
+			if (foundItem) {
+				console.log("Found item by processed code:", foundItem);
+				this.addScannedItemToInvoice(foundItem, searchCode, qtyFromBarcode);
+				return;
+			}
 
-                        // If not found locally, attempt to fetch from server using processed code
-                        try {
-                                const res = await frappe.call({
-                                        method: "posawesome.posawesome.api.items.get_items_from_barcode",
-                                        args: {
-                                                selling_price_list: this.active_price_list,
-                                                currency: this.pos_profile.currency,
-                                                barcode: searchCode,
-                                        },
-                                });
+			// If not found locally, attempt to fetch from server using processed code
+			try {
+				const res = await frappe.call({
+					method: "posawesome.posawesome.api.items.get_items_from_barcode",
+					args: {
+						selling_price_list: this.active_price_list,
+						currency: this.pos_profile.currency,
+						barcode: searchCode,
+					},
+				});
 
-                                if (res && res.message) {
-                                        const newItem = res.message;
-                                        this.items.push(newItem);
+				if (res && res.message) {
+					const newItem = res.message;
+					this.items.push(newItem);
 
-                                        if (this.searchCache) {
-                                                this.searchCache.clear();
-                                        }
+					if (this.searchCache) {
+						this.searchCache.clear();
+					}
 
-                                        await saveItems(this.items);
-                                        await savePriceListItems(this.customer_price_list, this.items);
-                                        this.eventBus.emit("set_all_items", this.items);
-                                        await this.update_items_details([newItem]);
-                                        this.addScannedItemToInvoice(newItem, searchCode, qtyFromBarcode);
-                                        return;
-                                }
+					await saveItems(this.items);
+					await savePriceListItems(this.customer_price_list, this.items);
+					this.eventBus.emit("set_all_items", this.items);
+					await this.update_items_details([newItem]);
+					this.addScannedItemToInvoice(newItem, searchCode, qtyFromBarcode);
+					return;
+				}
 
-                                frappe.show_alert(
-                                        {
-                                                message: `${this.__("Item not found")}: ${scannedCode}`,
-                                                indicator: "red",
-                                        },
-                                        5,
-                                );
-                                return;
-                        } catch (e) {
-                                console.error("Error fetching item from barcode:", e);
-                                frappe.show_alert(
-                                        {
-                                                message: `${this.__("Item not found")}: ${scannedCode}`,
-                                                indicator: "red",
-                                        },
-                                        5,
-                                );
-                                return;
-                        }
-                },
+				frappe.show_alert(
+					{
+						message: `${this.__("Item not found")}: ${scannedCode}`,
+						indicator: "red",
+					},
+					5,
+				);
+				return;
+			} catch (e) {
+				console.error("Error fetching item from barcode:", e);
+				frappe.show_alert(
+					{
+						message: `${this.__("Item not found")}: ${scannedCode}`,
+						indicator: "red",
+					},
+					5,
+				);
+				return;
+			}
+		},
 		searchItemsByCode(code) {
 			return this.items.filter((item) => {
 				const searchTerm = code.toLowerCase();
@@ -2419,8 +2413,8 @@ export default {
 				);
 			});
 		},
-                async addScannedItemToInvoice(item, scannedCode, qtyFromBarcode = null) {
-                        console.log("Adding scanned item to invoice:", item, scannedCode);
+		async addScannedItemToInvoice(item, scannedCode, qtyFromBarcode = null) {
+			console.log("Adding scanned item to invoice:", item, scannedCode);
 
 			// Clone the item to avoid mutating list data
 			const newItem = { ...item };
@@ -2456,14 +2450,14 @@ export default {
 				}
 			}
 
-                        // Apply quantity from scale barcode if available
-                        if (qtyFromBarcode !== null && !isNaN(qtyFromBarcode)) {
-                                newItem.qty = qtyFromBarcode;
-                                newItem._barcode_qty = true;
-                        }
+			// Apply quantity from scale barcode if available
+			if (qtyFromBarcode !== null && !isNaN(qtyFromBarcode)) {
+				newItem.qty = qtyFromBarcode;
+				newItem._barcode_qty = true;
+			}
 
-                        // Use existing add_item method with enhanced feedback
-                        await this.add_item(newItem);
+			// Use existing add_item method with enhanced feedback
+			await this.add_item(newItem);
 
 			// Show success message
 			frappe.show_alert(
