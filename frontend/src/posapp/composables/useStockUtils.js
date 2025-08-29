@@ -1,5 +1,6 @@
-import { ref } from "vue";
 import { isOffline } from "../../offline/index.js";
+
+/* global __, frappe */
 
 export function useStockUtils() {
 	// Calculate UOM conversion and update item rates
@@ -165,29 +166,62 @@ export function useStockUtils() {
 					})
 					: null;
 
-			if (offer && offer.discount_type === "Rate") {
-				// Apply offer rate with new conversion factor
-				const converted_rate = context.flt(offer.rate * item.conversion_factor);
+                        if (offer && offer.discount_type === "Rate") {
+                                // Apply offer rate with new conversion factor
+                                const converted_rate = context.flt(offer.rate * item.conversion_factor);
 
-				// Set base rates
-				item.base_rate = converted_rate;
-				item.base_price_list_rate = converted_rate;
+                                // Determine original base price for reference
+                                const base_price = context.flt(
+                                        (item.original_base_price_list_rate ||
+                                                item.base_price_list_rate / old_conversion_factor) *
+                                                item.conversion_factor,
+                                        context.currency_precision,
+                                );
 
-				// Convert to selected currency
-				const baseCurrency = context.price_list_currency || context.pos_profile.currency;
-				if (context.selected_currency !== baseCurrency) {
-					item.rate = context.flt(converted_rate / context.exchange_rate, context.currency_precision);
-					item.price_list_rate = item.rate;
-				} else {
-					item.rate = converted_rate;
-					item.price_list_rate = converted_rate;
-				}
-			} else if (offer && offer.discount_type === "Discount Percentage") {
-				// For percentage discount, recalculate from original price but with new conversion factor
-				let updated_base_price;
-				if (item.original_base_price_list_rate) {
-					updated_base_price = context.flt(
-						item.original_base_price_list_rate * item.conversion_factor,
+                                // Set base rates and maintain original price list rate
+                                item.base_rate = converted_rate;
+                                item.base_price_list_rate = base_price;
+
+                                // Convert to selected currency
+                                const baseCurrency = context.price_list_currency || context.pos_profile.currency;
+                                if (context.selected_currency !== baseCurrency) {
+                                        item.rate = context.flt(
+                                                converted_rate / context.exchange_rate,
+                                                context.currency_precision,
+                                        );
+                                        item.price_list_rate = context.flt(
+                                                base_price / context.exchange_rate,
+                                                context.currency_precision,
+                                        );
+                                        item.discount_amount = context.flt(
+                                                (base_price - converted_rate) / context.exchange_rate,
+                                                context.currency_precision,
+                                        );
+                                } else {
+                                        item.rate = converted_rate;
+                                        item.price_list_rate = base_price;
+                                        item.discount_amount = context.flt(
+                                                base_price - converted_rate,
+                                                context.currency_precision,
+                                        );
+                                }
+
+                                item.base_discount_amount = context.flt(
+                                        base_price - converted_rate,
+                                        context.currency_precision,
+                                );
+                                item.discount_percentage = base_price
+                                        ? context.flt(
+                                                  (item.base_discount_amount / base_price) * 100,
+                                                  context.currency_precision,
+                                          )
+                                        : 0;
+                        } else if (offer && offer.discount_type === "Discount Percentage") {
+                                // For percentage discount, recalculate from original price but with new conversion factor
+                                let updated_base_price;
+                                if (item.original_base_price_list_rate) {
+                                        updated_base_price = context.flt(
+                                                item.original_base_price_list_rate * item.conversion_factor,
 						context.currency_precision,
 					);
 				} else {

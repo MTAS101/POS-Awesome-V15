@@ -348,24 +348,34 @@ export function useItemAddition() {
 		}
 
 		new_item.stock_qty = item.qty;
-		new_item.discount_amount = 0;
-		new_item.discount_percentage = 0;
-		new_item.discount_amount_per_item = 0;
-		new_item.price_list_rate = item.rate;
+                new_item.discount_amount = 0;
+                new_item.discount_percentage = 0;
+                new_item.discount_amount_per_item = 0;
+                new_item.price_list_rate = item.price_list_rate || item.rate;
 
-		// Setup base rates properly for multi-currency
-		const baseCurrency = context.price_list_currency || context.pos_profile.currency;
-		if (context.selected_currency !== baseCurrency) {
-			// Store original base currency values
-			new_item.base_price_list_rate = item.rate / context.exchange_rate;
-			new_item.base_rate = item.rate / context.exchange_rate;
-			new_item.base_discount_amount = 0;
-		} else {
-			// In base currency, base rates = displayed rates
-			new_item.base_price_list_rate = item.rate;
-			new_item.base_rate = item.rate;
-			new_item.base_discount_amount = 0;
-		}
+                // Setup base rates properly for multi-currency
+                const baseCurrency = context.price_list_currency || context.pos_profile.currency;
+                if (context.selected_currency !== baseCurrency) {
+                        // Store original base currency values
+                        new_item.base_price_list_rate =
+                                item.base_price_list_rate !== undefined
+                                        ? item.base_price_list_rate
+                                        : item.rate / context.exchange_rate;
+                        new_item.base_rate =
+                                item.base_rate !== undefined
+                                        ? item.base_rate
+                                        : item.rate / context.exchange_rate;
+                        new_item.base_discount_amount = 0;
+                } else {
+                        // In base currency, base rates = displayed rates
+                        new_item.base_price_list_rate =
+                                item.base_price_list_rate !== undefined
+                                        ? item.base_price_list_rate
+                                        : item.rate;
+                        new_item.base_rate =
+                                item.base_rate !== undefined ? item.base_rate : item.rate;
+                        new_item.base_discount_amount = 0;
+                }
 
 		new_item.qty = item.qty;
 		new_item.uom = item.uom ? item.uom : item.stock_uom;
