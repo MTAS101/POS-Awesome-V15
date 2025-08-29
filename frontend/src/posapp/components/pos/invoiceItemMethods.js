@@ -1308,18 +1308,21 @@ export default {
 					const updated_item = response.message.find(
 						(element) => element.posa_row_id == item.posa_row_id,
 					);
-					if (updated_item) {
-						item.actual_qty = updated_item.actual_qty;
-						item.item_uoms = updated_item.item_uoms;
-						item.has_batch_no = updated_item.has_batch_no;
-						item.has_serial_no = updated_item.has_serial_no;
-						item.batch_no_data = updated_item.batch_no_data;
-						item.serial_no_data = updated_item.serial_no_data;
-                                               if (updated_item.rate !== undefined) {
-                                                       if (!item.locked_price && !item.posa_offer_applied) {
-                                                               if (updated_item.rate !== 0 || !item.rate) {
-                                                                       item.rate = updated_item.rate;
-                                                                       item.price_list_rate =
+                                        if (updated_item) {
+                                                item.actual_qty = updated_item.actual_qty;
+                                                item.item_uoms = updated_item.item_uoms;
+                                                item.has_batch_no = updated_item.has_batch_no;
+                                                item.has_serial_no = updated_item.has_serial_no;
+                                                item.batch_no_data = updated_item.batch_no_data;
+                                                item.serial_no_data = updated_item.serial_no_data;
+                                                if (updated_item.brand) {
+                                                        item.brand = updated_item.brand;
+                                                }
+                                                if (updated_item.rate !== undefined) {
+                                                        if (!item.locked_price && !item.posa_offer_applied) {
+                                                                if (updated_item.rate !== 0 || !item.rate) {
+                                                                        item.rate = updated_item.rate;
+                                                                        item.price_list_rate =
                                                                                updated_item.price_list_rate || updated_item.rate;
                                                                }
                                                        } else if (!item.price_list_rate) {
@@ -1398,15 +1401,18 @@ export default {
 				},
 			},
 			callback: function (r) {
-				if (r.message) {
-					const data = r.message;
-					if (!item.warehouse) {
-						item.warehouse = vm.pos_profile.warehouse;
-					}
-					// Ensure price list currency is synced from server response
-					if (data.price_list_currency) {
-						vm.price_list_currency = data.price_list_currency;
-					}
+                                        if (r.message) {
+                                                const data = r.message;
+                                                if (!item.warehouse) {
+                                                        item.warehouse = vm.pos_profile.warehouse;
+                                                }
+                                                if (data.brand) {
+                                                        item.brand = data.brand;
+                                                }
+                                                // Ensure price list currency is synced from server response
+                                                if (data.price_list_currency) {
+                                                        vm.price_list_currency = data.price_list_currency;
+                                                }
 
 					if (!item.original_currency) {
 						item.original_currency =
