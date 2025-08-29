@@ -295,14 +295,22 @@ export default {
 
 	updateInvoiceOffers(offers) {
 		this.posa_offers.forEach((invoiceOffer) => {
-			const existOffer = offers.find((offer) => invoiceOffer.row_id == offer.row_id);
+			const existOffer = offers.find(
+				(offer) => invoiceOffer.row_id == offer.row_id || invoiceOffer.offer_name == offer.name,
+			);
 			if (!existOffer) {
 				this.removeApplyOffer(invoiceOffer);
+			} else if (invoiceOffer.row_id !== existOffer.row_id) {
+				invoiceOffer.row_id = existOffer.row_id;
 			}
 		});
 		offers.forEach((offer) => {
-			const existOffer = this.posa_offers.find((invoiceOffer) => invoiceOffer.row_id == offer.row_id);
+			const existOffer = this.posa_offers.find(
+				(invoiceOffer) =>
+					invoiceOffer.row_id == offer.row_id || invoiceOffer.offer_name == offer.name,
+			);
 			if (existOffer) {
+				existOffer.row_id = offer.row_id;
 				existOffer.items = JSON.stringify(offer.items);
 				if (
 					existOffer.offer === "Give Product" &&
@@ -419,6 +427,7 @@ export default {
 	},
 
 	removeApplyOffer(invoiceOffer) {
+		this.isApplyingOffer = true;
 		if (invoiceOffer.offer === "Item Price") {
 			this.RemoveOnPrice(invoiceOffer);
 			const index = this.posa_offers.findIndex((el) => el.row_id === invoiceOffer.row_id);
@@ -445,6 +454,7 @@ export default {
 			this.posa_offers.splice(index, 1);
 		}
 		this.deleteOfferFromItems(invoiceOffer);
+		this.isApplyingOffer = false;
 	},
 
 	applyNewOffer(offer) {
