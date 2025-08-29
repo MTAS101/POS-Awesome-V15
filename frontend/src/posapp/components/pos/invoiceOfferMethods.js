@@ -5,7 +5,8 @@ import { formatUtils } from "../../format.js";
 export default {
 	checkOfferIsAppley(item, offer) {
 		let applied = false;
-		const item_offers = JSON.parse(item.posa_offers);
+		// Gracefully handle missing or malformed posa_offers data
+		const item_offers = item.posa_offers ? JSON.parse(item.posa_offers) : [];
 		for (const row_id of item_offers) {
 			const exist_offer = this.posa_offers.find((el) => row_id == el.row_id);
 			if (exist_offer && exist_offer.offer_name == offer.name) {
@@ -220,8 +221,22 @@ export default {
 				let total_count = 0;
 				let total_amount = 0;
 				const combined = [...this.items, ...this.packed_items];
+
+				const offerBrand = (offer.brand || "").trim().toLowerCase();
+
 				combined.forEach((item) => {
-					if (!item.posa_is_offer && item.brand === offer.brand) {
+					if (item.posa_is_offer) return;
+
+					// Normalise the item's brand and fallback to template brand for variants
+					let itemBrand = (item.brand || "").trim().toLowerCase();
+					if (!itemBrand && item.variant_of && this.allItems) {
+						const template = this.allItems.find((it) => it.item_code == item.variant_of);
+						if (template && template.brand) {
+							itemBrand = template.brand.trim().toLowerCase();
+						}
+					}
+
+					if (itemBrand && offerBrand && itemBrand === offerBrand) {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
