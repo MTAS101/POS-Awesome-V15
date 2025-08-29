@@ -88,6 +88,16 @@ export default {
 		return combined.find((el) => el.posa_row_id == row_id);
 	},
 
+	// Normalize brand from different possible fields
+	getLineBrand(line) {
+		let brand = line.brand || line.item_brand;
+		if (!brand && this.item_details_cache) {
+			brand = this.item_details_cache[line.item_code]?.brand;
+		}
+		if (!brand) return null;
+		return String(brand).trim().toLowerCase();
+	},
+
 	checkQtyAnountOffer(offer, qty, amount) {
 		let min_qty = false;
 		let max_qty = false;
@@ -220,10 +230,12 @@ export default {
 				let total_count = 0;
 				let total_amount = 0;
 				const combined = [...this.items, ...this.packed_items];
-				const offerBrand = (offer.brand || "").trim().toLowerCase();
+				const offerBrand = String(offer.brand || "")
+					.trim()
+					.toLowerCase();
 				combined.forEach((item) => {
-					const itemBrand = (item.brand || "").trim().toLowerCase();
-					if (!item.posa_is_offer && itemBrand && itemBrand === offerBrand) {
+					const lineBrand = this.getLineBrand(item);
+					if (!item.posa_is_offer && lineBrand && lineBrand === offerBrand) {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
