@@ -220,8 +220,10 @@ export default {
 				let total_count = 0;
 				let total_amount = 0;
 				const combined = [...this.items, ...this.packed_items];
+				const offerBrand = (offer.brand || "").trim().toLowerCase();
 				combined.forEach((item) => {
-					if (!item.posa_is_offer && item.brand === offer.brand) {
+					const itemBrand = (item.brand || "").trim().toLowerCase();
+					if (!item.posa_is_offer && itemBrand && itemBrand === offerBrand) {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
