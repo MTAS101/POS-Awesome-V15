@@ -83,15 +83,24 @@ export default {
 		return result;
 	},
 
-	getItemFromRowID(row_id) {
-		const combined = [...this.items, ...this.packed_items];
-		return combined.find((el) => el.posa_row_id == row_id);
-	},
+        getItemFromRowID(row_id) {
+                const combined = [...this.items, ...this.packed_items];
+                return combined.find((el) => el.posa_row_id == row_id);
+        },
 
-	checkQtyAnountOffer(offer, qty, amount) {
-		let min_qty = false;
-		let max_qty = false;
-		let min_amt = false;
+        // Normalize brand access across line items
+        getLineBrand(line) {
+                const brand =
+                        line.brand ||
+                        line.item_brand ||
+                        this.item_details_cache?.[line.item_code]?.brand;
+                return brand ? String(brand).trim().toLowerCase() : null;
+        },
+
+        checkQtyAnountOffer(offer, qty, amount) {
+                let min_qty = false;
+                let max_qty = false;
+                let min_amt = false;
 		let max_amt = false;
 		const applys = [];
 
@@ -212,40 +221,44 @@ export default {
 		return apply_offer;
 	},
 
-	getBrandOffer(offer) {
-		let apply_offer = null;
-		if (offer.apply_on === "Brand") {
-			if (this.checkOfferCoupon(offer)) {
-				const items = [];
-				let total_count = 0;
-				let total_amount = 0;
-				const combined = [...this.items, ...this.packed_items];
-				combined.forEach((item) => {
-					if (!item.posa_is_offer && item.brand === offer.brand) {
-						if (
-							offer.offer === "Item Price" &&
-							item.posa_offer_applied &&
-							!this.checkOfferIsAppley(item, offer)
-						) {
-							return;
-						}
-						total_count += item.stock_qty;
-						const rate = item.original_price_list_rate || item.price_list_rate;
-						total_amount += item.stock_qty * rate;
-						items.push(item.posa_row_id);
-					}
-				});
-				if (total_count || total_amount) {
-					const res = this.checkQtyAnountOffer(offer, total_count, total_amount);
-					if (res.apply) {
-						offer.items = items;
-						apply_offer = offer;
-					}
-				}
-			}
-		}
-		return apply_offer;
-	},
+        getBrandOffer(offer) {
+                let apply_offer = null;
+                if (offer.apply_on === "Brand") {
+                        if (this.checkOfferCoupon(offer)) {
+                                const combined = [...this.items, ...this.packed_items];
+                                const offerBrand = this.getLineBrand({ brand: offer.brand });
+                                const eligible = combined.filter((item) => {
+                                        const brand = this.getLineBrand(item);
+                                        if (item.posa_is_offer || brand !== offerBrand) return false;
+                                        if (
+                                                offer.offer === "Item Price" &&
+                                                item.posa_offer_applied &&
+                                                !this.checkOfferIsAppley(item, offer)
+                                        ) {
+                                                return false;
+                                        }
+                                        return true;
+                                });
+
+                                let total_count = 0;
+                                let total_amount = 0;
+                                eligible.forEach((item) => {
+                                        total_count += item.stock_qty;
+                                        const rate = item.original_price_list_rate || item.price_list_rate;
+                                        total_amount += item.stock_qty * rate;
+                                });
+
+                                if (total_count || total_amount) {
+                                        const res = this.checkQtyAnountOffer(offer, total_count, total_amount);
+                                        if (res.apply) {
+                                                offer.items = eligible.map((item) => item.posa_row_id);
+                                                apply_offer = offer;
+                                        }
+                                }
+                        }
+                }
+                return apply_offer;
+        },
 	getTransactionOffer(offer) {
 		let apply_offer = null;
 		if (offer.apply_on === "Transaction") {
