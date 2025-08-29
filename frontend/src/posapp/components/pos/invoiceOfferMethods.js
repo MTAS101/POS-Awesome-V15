@@ -168,7 +168,7 @@ export default {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
-							!this.checkOfferIsAppley(item, offer)
+							this.checkOfferIsAppley(item, offer)
 						) {
 							return;
 						}
@@ -200,7 +200,7 @@ export default {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
-							!this.checkOfferIsAppley(item, offer)
+							this.checkOfferIsAppley(item, offer)
 						) {
 							return;
 						}
@@ -239,7 +239,7 @@ export default {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
-							!this.checkOfferIsAppley(item, offer)
+							this.checkOfferIsAppley(item, offer)
 						) {
 							return;
 						}
