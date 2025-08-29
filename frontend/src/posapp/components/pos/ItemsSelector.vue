@@ -1797,9 +1797,12 @@ export default {
                                        }
                                });
                        }
-                       if (!match && new_item.item_code === search) {
-                               match = true;
-                       }
+                      if (!match && new_item.barcode === search) {
+                              match = true;
+                      }
+                      if (!match && Array.isArray(new_item.barcodes)) {
+                              match = new_item.barcodes.some((bc) => String(bc) === search);
+                      }
 
                        if (this.flags.serial_no) {
                                new_item.to_set_serial_no = this.flags.serial_no;
