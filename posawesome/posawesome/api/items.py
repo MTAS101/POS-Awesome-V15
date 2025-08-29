@@ -17,6 +17,11 @@ from frappe.utils.caching import redis_cache
 from .utils import HAS_VARIANTS_EXCLUSION, get_item_groups
 
 
+def normalize_brand(brand: str) -> str:
+	"""Return a normalized representation of a brand name."""
+	return cstr(brand).strip().lower()
+
+
 def get_stock_availability(item_code, warehouse):
 	"""Return total available quantity for an item in the given warehouse.
 
@@ -1081,3 +1086,16 @@ def get_price_for_uom(item_code, price_list, uom):
 		"price_list_rate",
 	)
 	return price
+
+@frappe.whitelist()
+def get_item_brand(item_code):
+	"""Return normalized brand for an item, falling back to its template's brand."""
+	if not item_code:
+		return ""
+	data = frappe.db.get_value("Item", item_code, ["brand", "variant_of"], as_dict=True)
+	if not data:
+		return ""
+	brand = data.brand
+	if not brand and data.variant_of:
+		brand = frappe.db.get_value("Item", data.variant_of, "brand")
+	return normalize_brand(brand) if brand else ""

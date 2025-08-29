@@ -375,6 +375,7 @@ export default {
 			currency_precision: 6, // Currency precision for display
 			new_line: false, // Add new line for item
 			available_stock_cache: {},
+			brand_cache: {},
 			delivery_charges: [], // List of delivery charges
 			delivery_charges_rate: 0, // Selected delivery charge rate
 			selected_delivery_charge: "", // Selected delivery charge object
