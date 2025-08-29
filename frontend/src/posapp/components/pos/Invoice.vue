@@ -359,11 +359,11 @@ export default {
 			packed_items: [], // Packed items for bundles
 			packed_dialog_items: [], // Packed items displayed in dialog
 			show_packed_dialog: false, // Packing list dialog visibility
-                        posOffers: [], // All available offers
-                        posa_offers: [], // Offers applied to this invoice
-                        posa_coupons: [], // Coupons applied
-                        isApplyingOffer: false, // Flag to prevent offer watcher loops
-                        allItems: [], // All items for offer logic
+			posOffers: [], // All available offers
+			posa_offers: [], // Offers applied to this invoice
+			posa_coupons: [], // Coupons applied
+			isApplyingOffer: false, // Flag to prevent offer watcher loops
+			allItems: [], // All items for offer logic
 			discount_percentage_offer_name: null, // Track which offer is applied
 			invoiceTypes: ["Invoice", "Order"], // Types of invoices
 			invoiceType: "Invoice", // Current invoice type
@@ -437,9 +437,10 @@ export default {
 				{ title: __("Name"), align: "start", sortable: true, key: "item_name", required: true },
 				{ title: __("QTY"), key: "qty", align: "start", required: true },
 				{ title: __("UOM"), key: "uom", align: "start", required: false },
-				{ title: __("Rate"), key: "rate", align: "start", required: true },
+				{ title: __("Price List Rate"), key: "price_list_rate", align: "start", required: false },
 				{ title: __("Discount %"), key: "discount_value", align: "start", required: false },
 				{ title: __("Discount Amount"), key: "discount_amount", align: "start", required: false },
+				{ title: __("Rate"), key: "rate", align: "start", required: true },
 				{ title: __("Amount"), key: "amount", align: "start", required: true },
 				{ title: __("Offer?"), key: "posa_is_offer", align: "center", required: false },
 			];
@@ -450,6 +451,7 @@ export default {
 				this.selected_columns = this.available_columns
 					.filter((col) => {
 						if (col.required) return true;
+						if (col.key === "price_list_rate") return true;
 						if (col.key === "discount_value" && this.pos_profile.posa_display_discount_percentage)
 							return true;
 						if (col.key === "discount_amount" && this.pos_profile.posa_display_discount_amount)
