@@ -3,9 +3,23 @@ import { formatUtils } from "../../format.js";
 /* global __, frappe, flt */
 
 export default {
-       checkOfferIsAppley(item, offer) {
-               let applied = false;
-               let item_offers = [];
+       normalizeBrand(brand) {
+               return (brand || "").toString().trim().toLowerCase();
+       },
+       getItemBrand(item) {
+               let brand = this.normalizeBrand(item.brand);
+               if (!brand && item.variant_of && this.allItems) {
+                       const template = this.allItems.find((it) => it.item_code == item.variant_of);
+                       if (template && template.brand) {
+                               brand = this.normalizeBrand(template.brand);
+                               item.brand = template.brand;
+                       }
+               }
+               return brand;
+       },
+checkOfferIsAppley(item, offer) {
+let applied = false;
+let item_offers = [];
 
                try {
                        if (item.posa_offers) {
@@ -233,37 +247,30 @@ export default {
 				let total_amount = 0;
 				const combined = [...this.items, ...this.packed_items];
 
-				const offerBrand = (offer.brand || "").trim().toLowerCase();
+                               const offerBrand = this.normalizeBrand(offer.brand);
 
-				combined.forEach((item) => {
-					if (item.posa_is_offer) return;
+                               combined.forEach((item) => {
+                                       if (item.posa_is_offer) return;
 
-					// Normalise the item's brand and fallback to template brand for variants
-					let itemBrand = (item.brand || "").trim().toLowerCase();
-					if (!itemBrand && item.variant_of && this.allItems) {
-						const template = this.allItems.find((it) => it.item_code == item.variant_of);
-						if (template && template.brand) {
-							itemBrand = template.brand.trim().toLowerCase();
-						}
-					}
+                                       const itemBrand = this.getItemBrand(item);
 
-					if (itemBrand && offerBrand && itemBrand === offerBrand) {
-						if (
-							offer.offer === "Item Price" &&
-							item.posa_offer_applied &&
-							!this.checkOfferIsAppley(item, offer)
-						) {
-							return;
-						}
-						total_count += item.stock_qty;
-						const rate = item.original_price_list_rate || item.price_list_rate;
-						total_amount += item.stock_qty * rate;
-						items.push(item.posa_row_id);
-					}
-				});
-				if (total_count || total_amount) {
-					const res = this.checkQtyAnountOffer(offer, total_count, total_amount);
-					if (res.apply) {
+                                       if (itemBrand && offerBrand && itemBrand === offerBrand) {
+                                               if (
+                                                       offer.offer === "Item Price" &&
+                                                       item.posa_offer_applied &&
+                                                       !this.checkOfferIsAppley(item, offer)
+                                               ) {
+                                                       return;
+                                               }
+                                               total_count += item.stock_qty;
+                                               const rate = item.original_price_list_rate || item.price_list_rate;
+                                               total_amount += item.stock_qty * rate;
+                                               items.push(item.posa_row_id);
+                                       }
+                               });
+                               if (total_count || total_amount) {
+                                       const res = this.checkQtyAnountOffer(offer, total_count, total_amount);
+                                       if (res.apply) {
 						offer.items = items;
 						apply_offer = offer;
 					}
