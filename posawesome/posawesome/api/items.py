@@ -837,8 +837,8 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 
 	item["selling_price_list"] = price_list
 
-        # Determine if multi-currency is enabled via profile settings
-        allow_multi_currency = bool(get_profile_settings().posa_allow_multi_currency)
+	# Determine if multi-currency is enabled via profile settings
+	allow_multi_currency = bool(get_profile_settings().posa_allow_multi_currency)
 
 	# Ensure conversion rate exists when price list currency differs from
 	# company currency to avoid ValidationError from ERPNext. Also provide
