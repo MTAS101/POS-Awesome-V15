@@ -12,5 +12,13 @@ def get_data():
             "icon": "octicon octicon-file-directory",
             "type": "module",
             "label": _("POS Awesome"),
-        }
+        },
+        {
+            "module_name": "POS Awesome Config",
+            "category": "Modules",
+            "color": "grey",
+            "icon": "octicon octicon-file-directory",
+            "type": "module",
+            "label": _("POS Awesome Config"),
+        },
     ]
