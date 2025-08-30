@@ -4,7 +4,12 @@ import frappe
 def execute():
     """Migrate existing POSAwesome custom fields into POS Awesome User Profile Settings."""
     frappe.reload_doc("pos_awesome_config", "doctype", "pos_awesome_user_profile_settings")
-    settings = frappe.get_single("POS Awesome User Profile Settings")
+
+    try:
+        settings = frappe.get_single("POS Awesome User Profile Settings")
+    except frappe.DoesNotExistError:
+        settings = frappe.new_doc("POS Awesome User Profile Settings")
+        settings.insert(ignore_permissions=True)
 
     # list of fields to migrate
     fields = [
