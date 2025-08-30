@@ -1,16 +1,11 @@
 import frappe
-from frappe.exceptions import DoesNotExistError
 
 
 def execute():
     """Migrate existing POSAwesome custom fields into POS Awesome User Profile Settings."""
-    frappe.reload_doc("pos_awesome_config", "doctype", "pos_awesome_user_profile_settings")
-
-    try:
-        settings = frappe.get_single("POS Awesome User Profile Settings")
-    except DoesNotExistError:
-        settings = frappe.new_doc("POS Awesome User Profile Settings")
-        settings.insert(ignore_permissions=True)
+    frappe.reload_doc(
+        "pos_awesome_config", "doctype", "pos_awesome_user_profile_settings"
+    )
 
     # list of fields to migrate
     fields = [
@@ -90,10 +85,19 @@ def execute():
         "posa_default_country",
     ]
 
-    profile = frappe.get_all("POS Profile", limit=1)
-    if profile:
-        doc = frappe.get_doc("POS Profile", profile[0].name)
+    # create settings per user based on their linked POS Profile
+    profile_users = frappe.get_all("POS Profile User", fields=["parent", "user"])
+    for row in profile_users:
+        profile_doc = frappe.get_doc("POS Profile", row.parent)
+        settings = frappe.db.exists(
+            "POS Awesome User Profile Settings", {"user": row.user}
+        )
+        if settings:
+            settings = frappe.get_doc("POS Awesome User Profile Settings", settings)
+        else:
+            settings = frappe.new_doc("POS Awesome User Profile Settings")
+            settings.user = row.user
         for field in fields:
-            if field in doc.as_dict():
-                settings.set(field, doc.get(field))
-    settings.save()
+            if field in profile_doc.as_dict():
+                settings.set(field, profile_doc.get(field))
+        settings.save()

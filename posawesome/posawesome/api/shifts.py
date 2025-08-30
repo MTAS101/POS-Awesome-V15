@@ -7,8 +7,8 @@ import json
 import frappe
 from frappe.utils import nowdate
 from frappe import _
-from frappe.exceptions import DoesNotExistError
 from .utilities import get_version
+from .profile import get_profile_settings
 
 
 @frappe.whitelist()
@@ -110,11 +110,7 @@ def check_opening_shift(user):
 
 def update_opening_shift_data(data, pos_profile):
     data["pos_profile"] = frappe.get_doc("POS Profile", pos_profile)
-    try:
-        settings = frappe.get_single("POS Awesome User Profile Settings")
-    except DoesNotExistError:
-        settings = frappe.new_doc("POS Awesome User Profile Settings")
-        settings.insert(ignore_permissions=True)
+    settings = get_profile_settings()
 
     data["profile_settings"] = settings
     if settings.get("posa_language"):
