@@ -11,7 +11,9 @@ def get_profile_settings(user: str | None = None):
     user = user or frappe.session.user
 
     try:
-        return frappe.get_doc("POS Awesome User Profile Settings", {"user": user})
+        return frappe.get_doc(
+            "POS Awesome User Profile Settings", {"user": user}, ignore_permissions=True
+        )
     except DoesNotExistError:
         settings = frappe.new_doc("POS Awesome User Profile Settings")
         settings.user = user
