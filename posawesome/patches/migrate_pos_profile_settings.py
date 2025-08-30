@@ -1,4 +1,5 @@
 import frappe
+from frappe.exceptions import DoesNotExistError
 
 
 def execute():
@@ -7,7 +8,7 @@ def execute():
 
     try:
         settings = frappe.get_single("POS Awesome User Profile Settings")
-    except frappe.DoesNotExistError:
+    except DoesNotExistError:
         settings = frappe.new_doc("POS Awesome User Profile Settings")
         settings.insert(ignore_permissions=True)
 
