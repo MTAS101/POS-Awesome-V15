@@ -471,7 +471,8 @@
     {
       "role": "System Manager",
       "read": 1,
-      "write": 1
+      "write": 1,
+      "create": 1
     }
   ]
 }
