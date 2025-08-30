@@ -15,6 +15,7 @@ from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
 
 from .utils import HAS_VARIANTS_EXCLUSION, get_item_groups
+from .profile import get_profile_settings
 
 
 def normalize_brand(brand: str) -> str:
@@ -836,12 +837,8 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 
 	item["selling_price_list"] = price_list
 
-	# Determine if multi-currency is enabled on the POS Profile
-	allow_multi_currency = False
-	if item.get("pos_profile"):
-		allow_multi_currency = (
-			frappe.db.get_value("POS Profile", item.get("pos_profile"), "posa_allow_multi_currency") or 0
-		)
+        # Determine if multi-currency is enabled via profile settings
+        allow_multi_currency = bool(get_profile_settings().posa_allow_multi_currency)
 
 	# Ensure conversion rate exists when price list currency differs from
 	# company currency to avoid ValidationError from ERPNext. Also provide

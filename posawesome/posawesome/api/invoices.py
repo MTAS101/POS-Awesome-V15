@@ -15,13 +15,9 @@ from frappe import _
 from frappe.utils import cint, cstr, flt, getdate, money_in_words, nowdate, strip_html_tags
 from frappe.utils.background_jobs import enqueue
 
-from posawesome.posawesome.api.payments import (
-    redeeming_customer_credit,
-)  # Updated import
-from posawesome.posawesome.api.utilities import (
-    ensure_child_doctype,
-    set_batch_nos_for_bundels,
-)  # Updated imports
+from posawesome.posawesome.api.payments import redeeming_customer_credit
+from posawesome.posawesome.api.utilities import ensure_child_doctype, set_batch_nos_for_bundels
+from .profile import get_profile_settings
 
 from .items import get_stock_availability
 
@@ -101,12 +97,8 @@ def _merge_duplicate_taxes(invoice_doc):
 
 
 def _should_block(pos_profile):
-    block_sale = cint(
-        frappe.db.get_value(
-            "POS Profile", pos_profile, "posa_block_sale_beyond_available_qty"
-        )
-        or 1
-    )
+    settings = get_profile_settings()
+    block_sale = cint(settings.get("posa_block_sale_beyond_available_qty") or 1)
     allow_negative = cint(
         frappe.get_value("Stock Settings", None, "allow_negative_stock")
     )
@@ -135,17 +127,14 @@ def _auto_set_return_batches(invoice_doc):
         if not invoice_doc.is_return or invoice_doc.get("return_against"):
                 return
 
-        profile = invoice_doc.get("pos_profile")
-        allow_without_invoice = profile and frappe.db.get_value(
-                "POS Profile", profile, "posa_allow_return_without_invoice"
+        settings = get_profile_settings()
+        allow_without_invoice = cint(
+                settings.get("posa_allow_return_without_invoice")
         )
-        if not cint(allow_without_invoice):
+        if not allow_without_invoice:
                 return
 
-        allow_free = cint(
-                frappe.db.get_value("POS Profile", profile, "posa_allow_free_batch_return")
-                or 0
-        )
+        allow_free = cint(settings.get("posa_allow_free_batch_return") or 0)
 
         for d in invoice_doc.items:
                 if not d.get("item_code") or not d.get("warehouse"):
@@ -240,12 +229,10 @@ def validate_return_items(original_invoice_name, return_items, doctype="Sales In
 @frappe.whitelist()
 def update_invoice(data):
     data = json.loads(data)
-    # Determine doctype based on POS Profile setting
+    # Determine doctype based on POS Awesome profile settings
     pos_profile = data.get("pos_profile")
     doctype = "Sales Invoice"
-    if pos_profile and frappe.db.get_value(
-        "POS Profile", pos_profile, "create_pos_invoice_instead_of_sales_invoice"
-    ):
+    if get_profile_settings().get("create_pos_invoice_instead_of_sales_invoice"):
         doctype = "POS Invoice"
 
     # Ensure the document type is set for new invoices to prevent validation errors
@@ -401,7 +388,7 @@ def update_invoice(data):
         data["plc_conversion_rate"] = plc_conversion_rate
         data["exchange_rate_date"] = exchange_rate_date
 
-    inclusive = frappe.get_cached_value("POS Profile", invoice_doc.pos_profile, "posa_tax_inclusive")
+    inclusive = get_profile_settings().get("posa_tax_inclusive")
     if invoice_doc.get("taxes"):
         for tax in invoice_doc.taxes:
             if tax.charge_type == "Actual":
@@ -441,9 +428,7 @@ def submit_invoice(invoice, data):
     invoice = json.loads(invoice)
     pos_profile = invoice.get("pos_profile")
     doctype = "Sales Invoice"
-    if pos_profile and frappe.db.get_value(
-        "POS Profile", pos_profile, "create_pos_invoice_instead_of_sales_invoice"
-    ):
+    if get_profile_settings().get("create_pos_invoice_instead_of_sales_invoice"):
         doctype = "POS Invoice"
 
     invoice_name = invoice.get("name")
@@ -557,11 +542,7 @@ def submit_invoice(invoice, data):
             update_modified=False,
         )
 
-    if frappe.get_value(
-        "POS Profile",
-        invoice_doc.pos_profile,
-        "posa_allow_submissions_in_background_job",
-    ):
+    if get_profile_settings().get("posa_allow_submissions_in_background_job"):
         invoices_list = frappe.get_all(
             invoice_doc.doctype,
             filters={

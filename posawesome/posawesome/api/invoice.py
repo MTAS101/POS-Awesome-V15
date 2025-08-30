@@ -8,6 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.mapper import get_mapped_doc
 from frappe.utils import flt, add_days
+from .profile import get_profile_settings
 from posawesome.posawesome.doctype.pos_coupon.pos_coupon import update_coupon_code_count
 from posawesome.posawesome.api.utilities import get_company_domain  # Updated import
 from posawesome.posawesome.doctype.delivery_charges.delivery_charges import (
@@ -67,7 +68,7 @@ def create_sales_order(doc):
         and doc.is_pos
         and doc.posa_delivery_date
         and not doc.update_stock
-        and frappe.get_value("POS Profile", doc.pos_profile, "posa_allow_sales_order")
+        and get_profile_settings().posa_allow_sales_order
     ):
         sales_order_doc = make_sales_order(doc.name)
         if sales_order_doc:
@@ -158,9 +159,7 @@ def set_patient(doc):
 def auto_set_delivery_charges(doc):
     if not doc.pos_profile:
         return
-    if not frappe.get_cached_value(
-        "POS Profile", doc.pos_profile, "posa_auto_set_delivery_charges"
-    ):
+    if not get_profile_settings().posa_auto_set_delivery_charges:
         return
 
     delivery_charges = get_applicable_delivery_charges(
@@ -251,9 +250,7 @@ def apply_tax_inclusive(doc):
     if not doc.pos_profile:
         return
     try:
-        tax_inclusive = frappe.get_cached_value(
-            "POS Profile", doc.pos_profile, "posa_tax_inclusive"
-        )
+        tax_inclusive = get_profile_settings().posa_tax_inclusive
     except Exception:
         tax_inclusive = 0
 

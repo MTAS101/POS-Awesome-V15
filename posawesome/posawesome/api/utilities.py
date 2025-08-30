@@ -13,6 +13,7 @@ import psutil
 import functools
 
 from .utils import get_item_groups
+from .profile import get_profile_settings
 
 
 def get_version():
@@ -264,10 +265,8 @@ def get_translation_dict(lang: str) -> dict:
 
 @frappe.whitelist()
 def get_pos_profile_tax_inclusive(pos_profile: str):
-    """Return the 'posa_tax_inclusive' setting for the given POS Profile."""
-    if not pos_profile:
-        return None
-    return frappe.get_cached_value("POS Profile", pos_profile, "posa_tax_inclusive")
+    """Return the 'posa_tax_inclusive' setting from profile settings."""
+    return get_profile_settings().get("posa_tax_inclusive")
 
 
 @frappe.whitelist()

@@ -101,3 +101,13 @@ def execute():
             if field in profile_doc.as_dict():
                 settings.set(field, profile_doc.get(field))
         settings.save()
+
+    # remove migrated custom fields from core doctypes
+    for field in fields:
+        custom_field_names = frappe.get_all(
+            "Custom Field", filters={"fieldname": field}, pluck="name"
+        )
+        for name in custom_field_names:
+            frappe.delete_doc("Custom Field", name, ignore_missing=True)
+
+    frappe.clear_cache()

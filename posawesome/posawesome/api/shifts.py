@@ -114,10 +114,8 @@ def update_opening_shift_data(data, pos_profile):
     custom_fields = [df.fieldname for df in settings_doc.meta.fields]
     settings = {field: settings_doc.get(field) for field in custom_fields}
 
-    # expose settings separately and merge into pos_profile for backward compatibility
+    # expose settings separately and avoid mutating POS Profile
     data["profile_settings"] = settings
-    for key, value in settings.items():
-        pos_profile_doc.set(key, value)
 
     if settings.get("posa_language"):
         frappe.local.lang = settings.get("posa_language")
