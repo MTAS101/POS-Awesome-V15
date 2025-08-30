@@ -458,7 +458,9 @@
   ],
   "permissions": [
     {
-      "role": "System Manager"
+      "role": "System Manager",
+      "read": 1,
+      "write": 1
     }
   ]
 }
