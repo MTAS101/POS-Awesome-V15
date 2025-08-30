@@ -21,6 +21,11 @@ export function usePosShift(openDialog) {
         await initPromise;
         await checkDbHealth();
         await loadProfileSettings();
+        const mergeSettings = (target) => {
+            const { name, ...settings } = profileSettings.value || {};
+            return { ...target, ...settings };
+        };
+
         return frappe
             .call("posawesome.posawesome.api.shifts.check_opening_shift", {
                 user: frappe.session.user,
@@ -28,10 +33,7 @@ export function usePosShift(openDialog) {
             .then((r) => {
                 if (r.message) {
                     r.message.profile_settings = profileSettings.value;
-                    r.message.pos_profile = {
-                        ...r.message.pos_profile,
-                        ...profileSettings.value,
-                    };
+                    r.message.pos_profile = mergeSettings(r.message.pos_profile);
                     pos_profile.value = r.message.pos_profile;
                     pos_opening_shift.value = r.message.pos_opening_shift;
                     if (pos_profile.value.taxes_and_charges) {
@@ -68,10 +70,7 @@ export function usePosShift(openDialog) {
                     const data = getOpeningStorage();
                     if (data) {
                         data.profile_settings = profileSettings.value;
-                        data.pos_profile = {
-                            ...data.pos_profile,
-                            ...profileSettings.value,
-                        };
+                        data.pos_profile = mergeSettings(data.pos_profile);
                         pos_profile.value = data.pos_profile;
                         pos_opening_shift.value = data.pos_opening_shift;
                         eventBus?.emit("register_pos_profile", data);
@@ -91,10 +90,7 @@ export function usePosShift(openDialog) {
                 const data = getOpeningStorage();
                 if (data) {
                     data.profile_settings = profileSettings.value;
-                    data.pos_profile = {
-                        ...data.pos_profile,
-                        ...profileSettings.value,
-                    };
+                    data.pos_profile = mergeSettings(data.pos_profile);
                     pos_profile.value = data.pos_profile;
                     pos_opening_shift.value = data.pos_opening_shift;
                     eventBus?.emit("register_pos_profile", data);
