@@ -28,6 +28,10 @@ export function usePosShift(openDialog) {
             .then((r) => {
                 if (r.message) {
                     r.message.profile_settings = profileSettings.value;
+                    r.message.pos_profile = {
+                        ...r.message.pos_profile,
+                        ...profileSettings.value,
+                    };
                     pos_profile.value = r.message.pos_profile;
                     pos_opening_shift.value = r.message.pos_opening_shift;
                     if (pos_profile.value.taxes_and_charges) {
@@ -64,6 +68,10 @@ export function usePosShift(openDialog) {
                     const data = getOpeningStorage();
                     if (data) {
                         data.profile_settings = profileSettings.value;
+                        data.pos_profile = {
+                            ...data.pos_profile,
+                            ...profileSettings.value,
+                        };
                         pos_profile.value = data.pos_profile;
                         pos_opening_shift.value = data.pos_opening_shift;
                         eventBus?.emit("register_pos_profile", data);
@@ -83,6 +91,10 @@ export function usePosShift(openDialog) {
                 const data = getOpeningStorage();
                 if (data) {
                     data.profile_settings = profileSettings.value;
+                    data.pos_profile = {
+                        ...data.pos_profile,
+                        ...profileSettings.value,
+                    };
                     pos_profile.value = data.pos_profile;
                     pos_opening_shift.value = data.pos_opening_shift;
                     eventBus?.emit("register_pos_profile", data);

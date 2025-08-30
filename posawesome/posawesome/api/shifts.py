@@ -109,12 +109,18 @@ def check_opening_shift(user):
 
 
 def update_opening_shift_data(data, pos_profile):
-    data["pos_profile"] = frappe.get_doc("POS Profile", pos_profile)
+    pos_profile_doc = frappe.get_doc("POS Profile", pos_profile)
     settings = get_profile_settings()
 
+    # expose settings separately and merge into pos_profile for backward compatibility
     data["profile_settings"] = settings
+    for key, value in settings.items():
+        pos_profile_doc.set(key, value)
+
     if settings.get("posa_language"):
         frappe.local.lang = settings.posa_language
+
+    data["pos_profile"] = pos_profile_doc
 
     data["company"] = frappe.get_doc("Company", data["pos_profile"].company)
     allow_negative_stock = frappe.get_value(
