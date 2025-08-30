@@ -1,0 +1,464 @@
+{
+  "doctype": "DocType",
+  "name": "POS Awesome User Profile Settings",
+  "module": "POS Awesome Config",
+  "custom": 0,
+  "istable": 0,
+  "is_single": 1,
+  "editable_grid": 0,
+  "field_order": [
+    "posa_cash_mode_of_payment",
+    "posa_allow_partial_payment",
+    "posa_allow_credit_sale",
+    "posa_allow_write_off_change",
+    "use_cashback",
+    "use_customer_credit",
+    "posa_hide_closing_shift",
+    "hide_expected_amount",
+    "posa_allow_user_to_edit_rate",
+    "posa_allow_user_to_edit_additional_discount",
+    "posa_allow_user_to_edit_item_discount",
+    "posa_use_percentage_discount",
+    "posa_max_discount_allowed",
+    "posa_apply_customer_discount",
+    "posa_allow_price_list_rate_change",
+    "posa_enable_price_list_dropdown",
+    "posa_display_discount_amount",
+    "posa_display_discount_percentage",
+    "posa_allow_zero_rated_items",
+    "posa_fetch_coupon",
+    "posa_allow_delete",
+    "posa_allow_change_posting_date",
+    "posa_default_sales_order",
+    "posa_allow_sales_order",
+    "custom_allow_select_sales_order",
+    "posa_create_only_sales_order",
+    "posa_allow_customer_purchase_order",
+    "create_pos_invoice_instead_of_sales_invoice",
+    "posa_input_qty",
+    "posa_decimal_precision",
+    "posa_allow_return",
+    "posa_allow_return_without_invoice",
+    "posa_allow_free_batch_return",
+    "posa_auto_set_batch",
+    "posa_display_items_in_stock",
+    "posa_display_item_code",
+    "posa_show_template_items",
+    "posa_hide_variants_items",
+    "posa_block_sale_beyond_available_qty",
+    "posa_scale_barcode_start",
+    "posa_enable_camera_scanning",
+    "posa_search_serial_no",
+    "posa_search_batch_no",
+    "posa_show_customer_balance",
+    "posa_default_card_view",
+    "posa_language",
+    "posa_display_additional_notes",
+    "posa_show_custom_name_marker_on_print",
+    "posa_allow_line_item_name_override",
+    "posa_allow_print_last_invoice",
+    "posa_allow_print_draft_invoices",
+    "posa_silent_print",
+    "posa_allow_delete_offline_invoice",
+    "posa_new_line",
+    "posa_use_delivery_charges",
+    "posa_auto_set_delivery_charges",
+    "posa_allow_duplicate_customer_names",
+    "posa_use_pos_awesome_payments",
+    "posa_allow_make_new_payments",
+    "posa_allow_reconcile_payments",
+    "posa_allow_mpesa_reconcile_payments",
+    "posa_allow_submissions_in_background_job",
+    "posa_tax_inclusive",
+    "posa_local_storage",
+    "posa_force_server_items",
+    "posa_use_server_cache",
+    "posa_force_reload_items",
+    "posa_smart_reload_mode",
+    "posa_server_cache_duration",
+    "pose_use_limit_search",
+    "posa_allow_multi_currency",
+    "posa_show_cpu_load_gadget",
+    "posa_show_database_usage_gadget",
+    "posa_default_country"
+  ],
+  "fields": [
+    {
+      "fieldname": "posa_cash_mode_of_payment",
+      "fieldtype": "Link",
+      "label": "Cash Mode of Payment",
+      "options": "Mode of Payment"
+    },
+    {
+      "fieldname": "posa_allow_partial_payment",
+      "fieldtype": "Check",
+      "label": "Allow Partial Payment"
+    },
+    {
+      "fieldname": "posa_allow_credit_sale",
+      "fieldtype": "Check",
+      "label": "Allow Credit Sale"
+    },
+    {
+      "fieldname": "posa_allow_write_off_change",
+      "fieldtype": "Check",
+      "label": "Allow Write Off Change"
+    },
+    {
+      "fieldname": "use_cashback",
+      "fieldtype": "Check",
+      "label": "Use Cashback"
+    },
+    {
+      "fieldname": "use_customer_credit",
+      "fieldtype": "Check",
+      "label": "Use Customer Credit"
+    },
+    {
+      "fieldname": "posa_hide_closing_shift",
+      "fieldtype": "Check",
+      "label": "Hide Close Shift"
+    },
+    {
+      "fieldname": "hide_expected_amount",
+      "fieldtype": "Check",
+      "label": "Hide Expected Amount"
+    },
+    {
+      "fieldname": "posa_allow_user_to_edit_rate",
+      "fieldtype": "Check",
+      "label": "Allow user to edit Rate"
+    },
+    {
+      "fieldname": "posa_allow_user_to_edit_additional_discount",
+      "fieldtype": "Check",
+      "label": "Allow user to edit Additional Discount"
+    },
+    {
+      "fieldname": "posa_allow_user_to_edit_item_discount",
+      "fieldtype": "Check",
+      "label": "Allow User to Edit Item Discount"
+    },
+    {
+      "fieldname": "posa_use_percentage_discount",
+      "fieldtype": "Check",
+      "label": "Use Percentage Discount"
+    },
+    {
+      "fieldname": "posa_max_discount_allowed",
+      "fieldtype": "Float",
+      "label": "Max Discount Percentage Allowed"
+    },
+    {
+      "fieldname": "posa_apply_customer_discount",
+      "fieldtype": "Check",
+      "label": "Apply Customer Discount"
+    },
+    {
+      "fieldname": "posa_allow_price_list_rate_change",
+      "fieldtype": "Check",
+      "label": "Allow Price List Rate Change"
+    },
+    {
+      "fieldname": "posa_enable_price_list_dropdown",
+      "fieldtype": "Check",
+      "label": "Enable Price List Dropdown"
+    },
+    {
+      "fieldname": "posa_display_discount_amount",
+      "fieldtype": "Check",
+      "label": "Display Discount Amount"
+    },
+    {
+      "fieldname": "posa_display_discount_percentage",
+      "fieldtype": "Check",
+      "label": "Display Discount %"
+    },
+    {
+      "fieldname": "posa_allow_zero_rated_items",
+      "fieldtype": "Check",
+      "label": "Allow Zero Rated Items"
+    },
+    {
+      "fieldname": "posa_fetch_coupon",
+      "fieldtype": "Check",
+      "label": "Auto Fetch Coupon Gifts"
+    },
+    {
+      "fieldname": "posa_allow_delete",
+      "fieldtype": "Check",
+      "label": "Allow Delete"
+    },
+    {
+      "fieldname": "posa_allow_change_posting_date",
+      "fieldtype": "Check",
+      "label": "Allow Change Posting Date"
+    },
+    {
+      "fieldname": "posa_default_sales_order",
+      "fieldtype": "Check",
+      "label": "Default Sales Order"
+    },
+    {
+      "fieldname": "posa_allow_sales_order",
+      "fieldtype": "Check",
+      "label": "Allow Create Sales Order"
+    },
+    {
+      "fieldname": "custom_allow_select_sales_order",
+      "fieldtype": "Check",
+      "label": "Allow Select Sales Order"
+    },
+    {
+      "fieldname": "posa_create_only_sales_order",
+      "fieldtype": "Check",
+      "label": "Create Only Sales Order"
+    },
+    {
+      "fieldname": "posa_allow_customer_purchase_order",
+      "fieldtype": "Check",
+      "label": "Allow Customer Purchase Order"
+    },
+    {
+      "fieldname": "create_pos_invoice_instead_of_sales_invoice",
+      "fieldtype": "Check",
+      "label": "Create POS Invoice instead of Sales Invoice"
+    },
+    {
+      "fieldname": "posa_input_qty",
+      "fieldtype": "Check",
+      "label": "Use QTY Input"
+    },
+    {
+      "fieldname": "posa_decimal_precision",
+      "fieldtype": "Int",
+      "label": "Decimal Precision"
+    },
+    {
+      "fieldname": "posa_allow_return",
+      "fieldtype": "Check",
+      "label": "Allow Return"
+    },
+    {
+      "fieldname": "posa_allow_return_without_invoice",
+      "fieldtype": "Check",
+      "label": "Allow Return Without Invoice"
+    },
+    {
+      "fieldname": "posa_allow_free_batch_return",
+      "fieldtype": "Check",
+      "label": "Allow Free Batch Return"
+    },
+    {
+      "fieldname": "posa_auto_set_batch",
+      "fieldtype": "Check",
+      "label": "Auto Set Batch"
+    },
+    {
+      "fieldname": "posa_display_items_in_stock",
+      "fieldtype": "Check",
+      "label": "Hide Unavailable Items"
+    },
+    {
+      "fieldname": "posa_display_item_code",
+      "fieldtype": "Check",
+      "label": "Display Item Code"
+    },
+    {
+      "fieldname": "posa_show_template_items",
+      "fieldtype": "Check",
+      "label": "Show Template Items"
+    },
+    {
+      "fieldname": "posa_hide_variants_items",
+      "fieldtype": "Check",
+      "label": "Hide Variants Items"
+    },
+    {
+      "fieldname": "posa_block_sale_beyond_available_qty",
+      "fieldtype": "Check",
+      "label": "Block Sale Beyond Available Qty"
+    },
+    {
+      "fieldname": "posa_scale_barcode_start",
+      "fieldtype": "Data",
+      "label": "Scale Barcode Start With"
+    },
+    {
+      "fieldname": "posa_enable_camera_scanning",
+      "fieldtype": "Check",
+      "label": "Enable Camera Scanning"
+    },
+    {
+      "fieldname": "posa_search_serial_no",
+      "fieldtype": "Check",
+      "label": "Search by Serial Number"
+    },
+    {
+      "fieldname": "posa_search_batch_no",
+      "fieldtype": "Check",
+      "label": "Search by Batch Number"
+    },
+    {
+      "fieldname": "posa_show_customer_balance",
+      "fieldtype": "Check",
+      "label": "Show Customer Balance"
+    },
+    {
+      "fieldname": "posa_default_card_view",
+      "fieldtype": "Check",
+      "label": "Default Card View"
+    },
+    {
+      "fieldname": "posa_language",
+      "fieldtype": "Data",
+      "label": "POS Language"
+    },
+    {
+      "fieldname": "posa_display_additional_notes",
+      "fieldtype": "Check",
+      "label": "Display Additional Notes"
+    },
+    {
+      "fieldname": "posa_show_custom_name_marker_on_print",
+      "fieldtype": "Check",
+      "label": "Show Custom Name Marker On Print"
+    },
+    {
+      "fieldname": "posa_allow_line_item_name_override",
+      "fieldtype": "Check",
+      "label": "Allow Line Item Name Override"
+    },
+    {
+      "fieldname": "posa_allow_print_last_invoice",
+      "fieldtype": "Check",
+      "label": "Allow Print Last Invoice"
+    },
+    {
+      "fieldname": "posa_allow_print_draft_invoices",
+      "fieldtype": "Check",
+      "label": "Allow Print Draft Invoices"
+    },
+    {
+      "fieldname": "posa_silent_print",
+      "fieldtype": "Check",
+      "label": "Enable Silent Print"
+    },
+    {
+      "fieldname": "posa_allow_delete_offline_invoice",
+      "fieldtype": "Check",
+      "label": "Allow Delete Offline Invoice"
+    },
+    {
+      "fieldname": "posa_new_line",
+      "fieldtype": "Check",
+      "label": "Allow add New Items on New Line"
+    },
+    {
+      "fieldname": "posa_use_delivery_charges",
+      "fieldtype": "Check",
+      "label": "Use Delivery Charges"
+    },
+    {
+      "fieldname": "posa_auto_set_delivery_charges",
+      "fieldtype": "Check",
+      "label": "Auto Set Delivery Charges"
+    },
+    {
+      "fieldname": "posa_allow_duplicate_customer_names",
+      "fieldtype": "Check",
+      "label": "Allow Duplicate Customer Names"
+    },
+    {
+      "fieldname": "posa_use_pos_awesome_payments",
+      "fieldtype": "Check",
+      "label": "Use POS Awesome Payments"
+    },
+    {
+      "fieldname": "posa_allow_make_new_payments",
+      "fieldtype": "Check",
+      "label": "Allow Make New Payments"
+    },
+    {
+      "fieldname": "posa_allow_reconcile_payments",
+      "fieldtype": "Check",
+      "label": "Allow Reconcile Payments"
+    },
+    {
+      "fieldname": "posa_allow_mpesa_reconcile_payments",
+      "fieldtype": "Check",
+      "label": "Allow Mpesa Reconcile Payments"
+    },
+    {
+      "fieldname": "posa_allow_submissions_in_background_job",
+      "fieldtype": "Check",
+      "label": "Allow Submissions in background job"
+    },
+    {
+      "fieldname": "posa_tax_inclusive",
+      "fieldtype": "Check",
+      "label": "Tax Inclusive"
+    },
+    {
+      "fieldname": "posa_local_storage",
+      "fieldtype": "Check",
+      "label": "Use Browser Local Storage"
+    },
+    {
+      "fieldname": "posa_force_server_items",
+      "fieldtype": "Check",
+      "label": "Fetch Items Directly from Server"
+    },
+    {
+      "fieldname": "posa_use_server_cache",
+      "fieldtype": "Check",
+      "label": "Use Server Cache"
+    },
+    {
+      "fieldname": "posa_force_reload_items",
+      "fieldtype": "Check",
+      "label": "Force Reload Items"
+    },
+    {
+      "fieldname": "posa_smart_reload_mode",
+      "fieldtype": "Check",
+      "label": "Smart Reload Mode"
+    },
+    {
+      "fieldname": "posa_server_cache_duration",
+      "fieldtype": "Int",
+      "label": "Server Cache Duration"
+    },
+    {
+      "fieldname": "pose_use_limit_search",
+      "fieldtype": "Check",
+      "label": "Use Limit Search"
+    },
+    {
+      "fieldname": "posa_allow_multi_currency",
+      "fieldtype": "Check",
+      "label": "Allow Multi Currency in POS"
+    },
+    {
+      "fieldname": "posa_show_cpu_load_gadget",
+      "fieldtype": "Check",
+      "label": "Show CPU Load Gadget"
+    },
+    {
+      "fieldname": "posa_show_database_usage_gadget",
+      "fieldtype": "Check",
+      "label": "Show Database Usage Gadget"
+    },
+    {
+      "fieldname": "posa_default_country",
+      "fieldtype": "Link",
+      "label": "Default Country",
+      "options": "Country"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager"
+    }
+  ]
+}

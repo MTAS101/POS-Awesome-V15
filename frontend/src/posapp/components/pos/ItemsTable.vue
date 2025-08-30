@@ -303,7 +303,7 @@
 												calcPrices(item, $event.target.value, $event),
 											]"
 											:disabled="
-												!pos_profile.posa_allow_user_to_edit_rate ||
+                                                                                                !profileSettings.posa_allow_user_to_edit_rate ||
 												!!item.posa_is_replace ||
 												!!item.posa_offer_applied
 											"
@@ -332,7 +332,7 @@
 												calcPrices(item, $event.target.value, $event),
 											]"
 											:disabled="
-												!pos_profile.posa_allow_user_to_edit_item_discount ||
+                                                                                                !profileSettings.posa_allow_user_to_edit_item_discount ||
 												!!item.posa_is_replace ||
 												!!item.posa_offer_applied
 											"
@@ -677,16 +677,22 @@
 
 <script>
 import _ from "lodash";
+import { useProfileSettings } from "../../composables/useProfileSettings.js";
 export default {
-	name: "ItemsTable",
-	props: {
-		headers: Array,
-		items: Array,
+        name: "ItemsTable",
+        setup() {
+                const { settings: profileSettings, loadProfileSettings } = useProfileSettings();
+                loadProfileSettings();
+                return { profileSettings };
+        },
+        props: {
+                headers: Array,
+                items: Array,
 		expanded: Array,
 		itemsPerPage: Number,
 		itemSearch: String,
-		pos_profile: Object,
-		invoice_doc: Object,
+                pos_profile: Object,
+                invoice_doc: Object,
 		invoiceType: String,
 		stock_settings: Object,
 		displayCurrency: String,
