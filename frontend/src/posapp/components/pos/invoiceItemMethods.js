@@ -343,8 +343,10 @@ export default {
 		}
 		doc.is_pos = 1;
 		doc.ignore_pricing_rule = 1;
-		doc.company = doc.company || this.posa_profile.company;
-		doc.posa_profile = doc.posa_profile || this.posa_profile.name;
+               const company =
+                       this.posa_profile?.company || (this.company?.name || this.company);
+               doc.company = doc.company || company;
+               doc.posa_profile = doc.posa_profile || this.posa_profile.name;
 		doc.posa_show_custom_name_marker_on_print = this.posa_profile.posa_show_custom_name_marker_on_print;
 
 		// Currency related fields
@@ -535,7 +537,10 @@ export default {
 		doc.posa_is_offer_applied = this.posa_offers.length > 0 ? 1 : 0;
 
 		// Calculate base amounts using the exchange rate
-		const baseCurrency = this.price_list_currency || this.posa_profile.currency;
+               const baseCurrency =
+                       this.price_list_currency ||
+                       this.posa_profile?.currency ||
+                       this.company?.default_currency;
 		if (this.selected_currency !== baseCurrency) {
 			// For returns, we need to ensure negative values
 			const multiplier = isReturn ? -1 : 1;
@@ -683,7 +688,10 @@ export default {
 			}
 
 			// Handle currency conversion for rates and amounts
-			const baseCurrency = this.price_list_currency || this.posa_profile.currency;
+                       const baseCurrency =
+                               this.price_list_currency ||
+                               this.posa_profile?.currency ||
+                               this.company?.default_currency;
 			if (this.selected_currency !== baseCurrency) {
 				// If exchange rate is 300 PKR = 1 USD
 				// item.rate is in USD (e.g. 10 USD)
@@ -790,7 +798,10 @@ export default {
 			// amount is in USD (e.g. 10 USD)
 			// base_amount should be in PKR (e.g. 3000 PKR)
 			// So multiply by exchange rate to get base_amount
-			const baseCurrency = this.price_list_currency || this.posa_profile.currency;
+			const baseCurrency =
+                               this.price_list_currency ||
+                               this.posa_profile?.currency ||
+                               this.company?.default_currency;
 			const base_amount =
 				this.selected_currency !== baseCurrency
 					? this.flt(adjusted_amount / (this.exchange_rate || 1), this.currency_precision)
@@ -803,16 +814,23 @@ export default {
 				default: payment.default,
 				account: payment.account || "",
 				type: payment.type || "Cash",
-				currency: this.selected_currency || this.posa_profile.currency,
+                               currency:
+                                       this.selected_currency ||
+                                       this.posa_profile?.currency ||
+                                       this.company?.default_currency ||
+                                       "",
 				conversion_rate: this.conversion_rate || 1,
 			});
 
 			remaining_amount -= payment_amount;
 		});
 
-		console.log("Generated payments:", {
-			currency: this.selected_currency,
-			exchange_rate: this.exchange_rate,
+               console.log("Generated payments:", {
+                       currency:
+                               this.selected_currency ||
+                               this.posa_profile?.currency ||
+                               this.company?.default_currency,
+                       exchange_rate: this.exchange_rate,
 			payments: payments.map((p) => ({
 				mode: p.mode_of_payment,
 				amount: p.amount,
@@ -825,7 +843,10 @@ export default {
 
 	// Convert amount to selected currency
 	convert_amount(amount) {
-		const baseCurrency = this.price_list_currency || this.posa_profile.currency;
+               const baseCurrency =
+                       this.price_list_currency ||
+                       this.posa_profile?.currency ||
+                       this.company?.default_currency;
 		if (this.selected_currency === baseCurrency) {
 			return amount;
 		}
@@ -1369,14 +1390,20 @@ export default {
 		//   this.$forceUpdate();
 		// }
 
-		const currentDoc = this.get_invoice_doc();
+               const currentDoc = this.get_invoice_doc();
+               const company =
+                       this.posa_profile?.company || (this.company?.name || this.company);
+               if (!company) {
+                       console.error("Cannot fetch item details without a company");
+                       return;
+               }
                frappe.call({
                        method: "posawesome.posawesome.api.items.get_item_detail",
                        args: {
                                warehouse: item.warehouse || this.posa_profile.warehouse,
                                doc: currentDoc,
                                price_list: this.selected_price_list || this.posa_profile.selling_price_list,
-                               company: this.posa_profile.company,
+                               company,
                                item: {
                                        item_code: item.item_code,
                                        customer: this.customer,
