@@ -774,7 +774,11 @@ export default {
 		const total_amount = this.subtotal;
 		let remaining_amount = total_amount;
 
-		this.posa_profile.payments.forEach((payment, index) => {
+                const posaPayments = Array.isArray(this.posa_profile?.payments)
+                        ? this.posa_profile.payments
+                        : [];
+
+                posaPayments.forEach((payment, index) => {
 			// For the first payment method, assign the full remaining amount
 			const payment_amount = index === 0 ? remaining_amount : payment.amount || 0;
 
