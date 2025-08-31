@@ -1,5 +1,5 @@
 <template>
-	<v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_multi_currency">
+        <v-row align="center" class="items px-3 py-2 mt-0" v-if="posa_profile && posa_profile.posa_allow_multi_currency">
 		<v-col cols="12" sm="4" class="pb-2">
 			<v-select
 				density="compact"
@@ -47,8 +47,8 @@
 
 <script>
 export default {
-	props: {
-		pos_profile: Object,
+        props: {
+                posa_profile: Object,
 		selected_currency: String,
 		plc_conversion_rate: Number,
 		conversion_rate: Number,

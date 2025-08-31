@@ -343,7 +343,7 @@ export default {
 	data() {
 		return {
 			// POS profile settings
-			posa_profile: "",
+                        posa_profile: {},
 			pos_opening_shift: "",
 			stock_settings: "",
 			invoice_doc: "",
@@ -420,12 +420,15 @@ export default {
 		CancelSaleDialog,
 		ItemsTable,
 	},
-	computed: {
-		...invoiceComputed,
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
-	},
+        computed: {
+                pos_profile() {
+                        return this.posa_profile;
+                },
+                ...invoiceComputed,
+                isDarkTheme() {
+                        return this.$theme.current === "dark";
+                },
+        },
 
 	methods: {
 		...shortcutMethods,

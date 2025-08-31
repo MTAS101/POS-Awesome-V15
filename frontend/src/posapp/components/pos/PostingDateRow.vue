@@ -1,5 +1,5 @@
 <template>
-	<v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_allow_change_posting_date">
+        <v-row align="center" class="items px-3 py-2 mt-0" v-if="posa_profile && posa_profile.posa_allow_change_posting_date">
 		<v-col cols="12" sm="4" class="pb-2">
 			<VueDatePicker
 				v-model="internal_posting_date_display"
@@ -13,7 +13,7 @@
 			/>
 		</v-col>
 		<v-col
-			v-if="pos_profile.posa_enable_price_list_dropdown"
+                        v-if="posa_profile && posa_profile.posa_enable_price_list_dropdown"
 			cols="12"
 			sm="6"
 			class="pb-2 d-flex align-center"
@@ -29,13 +29,13 @@
 				class="flex-grow-1 sleek-field"
 				@update:model-value="onPriceListUpdate"
 			/>
-			<div v-if="pos_profile.posa_show_customer_balance" class="balance-field ml-3">
+                        <div v-if="posa_profile && posa_profile.posa_show_customer_balance" class="balance-field ml-3">
 				<strong>{{ __("Customer Balance") }}:</strong>
 				<span class="balance-value">{{ formatCurrency(customer_balance) }}</span>
 			</div>
 		</v-col>
 		<v-col
-			v-else-if="pos_profile.posa_show_customer_balance"
+                        v-else-if="posa_profile && posa_profile.posa_show_customer_balance"
 			cols="12"
 			sm="8"
 			class="pb-2 d-flex align-center"
@@ -50,8 +50,8 @@
 
 <script>
 export default {
-	props: {
-		pos_profile: Object,
+        props: {
+                posa_profile: Object,
 		posting_date_display: String,
 		customer_balance: Number,
 		formatCurrency: Function,
