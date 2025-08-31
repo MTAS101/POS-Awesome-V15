@@ -9,15 +9,27 @@ HAS_VARIANTS_EXCLUSION = {"has_variants": 0}
 
 
 @frappe.whitelist()
+def get_active_posa_profile(user=None):
+       """Return the active POSA profile for the given user."""
+       user = user or frappe.session.user
+       profile = frappe.db.get_value("POS Profile User", {"user": user}, "parent")
+       if not profile:
+               profile = frappe.db.get_single_value("POS Settings", "pos_profile")
+       if not profile:
+               return None
+       return frappe.get_doc("POSA Profile", profile).as_dict()
+
+
+@frappe.whitelist()
 def get_active_pos_profile(user=None):
-	"""Return the active POS profile for the given user."""
-	user = user or frappe.session.user
-	profile = frappe.db.get_value("POS Profile User", {"user": user}, "parent")
-	if not profile:
-		profile = frappe.db.get_single_value("POS Settings", "pos_profile")
-	if not profile:
-		return None
-	return frappe.get_doc("POS Profile", profile).as_dict()
+       """Return the active POS profile for the given user."""
+       user = user or frappe.session.user
+       profile = frappe.db.get_value("POS Profile User", {"user": user}, "parent")
+       if not profile:
+               profile = frappe.db.get_single_value("POS Settings", "pos_profile")
+       if not profile:
+               return None
+       return frappe.get_doc("POS Profile", profile).as_dict()
 
 
 @frappe.whitelist()

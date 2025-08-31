@@ -3,14 +3,13 @@
 
 
 import frappe
+from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
+	get_checks_for_pl_and_bs_accounts,
+)
 from frappe import _, msgprint, scrub, unscrub
 from frappe.core.doctype.user_permission.user_permission import get_permitted_documents
 from frappe.model.document import Document
 from frappe.utils import get_link_to_form, now
-
-from erpnext.accounts.doctype.accounting_dimension.accounting_dimension import (
-	get_checks_for_pl_and_bs_accounts,
-)
 
 
 class POSAProfile(Document):
@@ -20,12 +19,11 @@ class POSAProfile(Document):
 	from typing import TYPE_CHECKING
 
 	if TYPE_CHECKING:
-		from frappe.types import DF
-
 		from erpnext.accounts.doctype.pos_customer_group.pos_customer_group import POSCustomerGroup
 		from erpnext.accounts.doctype.pos_item_group.pos_item_group import POSItemGroup
 		from erpnext.accounts.doctype.pos_payment_method.pos_payment_method import POSPaymentMethod
 		from erpnext.accounts.doctype.pos_profile_user.pos_profile_user import POSProfileUser
+		from frappe.types import DF
 
 		account_for_change_amount: DF.Link | None
 		action_on_new_invoice: DF.Literal[
@@ -193,7 +191,8 @@ class POSAProfile(Document):
 		frappe.defaults.clear_default("is_pos")
 
 		if not include_current_pos:
-			condition = " where pfu.name != '%s' and pfu.default = 1 " % self.name.replace("'", "'")
+			escaped_name = frappe.db.escape(self.name)
+			condition = f" where pfu.name != {escaped_name} and pfu.default = 1 "
 		else:
 			condition = " where pfu.default = 1 "
 
@@ -219,14 +218,14 @@ def get_item_groups(pos_profile):
 		for data in pos_profile.get("item_groups"):
 			item_groups.extend(
 				[
-					"%s" % frappe.db.escape(d.name)
+					f"{frappe.db.escape(d.name)}"
 					for d in get_child_nodes("Item Group", data.item_group)
 					if not permitted_item_groups or d.name in permitted_item_groups
 				]
 			)
 
 	if not item_groups and permitted_item_groups:
-		item_groups = ["%s" % frappe.db.escape(d) for d in permitted_item_groups]
+		item_groups = [f"{frappe.db.escape(d)}" for d in permitted_item_groups]
 
 	return list(set(item_groups))
 
@@ -267,7 +266,7 @@ def pos_profile_query(doctype, txt, searchfield, start, page_len, filters):
 		"start": start,
 		"company": company,
 		"page_len": page_len,
-		"txt": "%%%s%%" % txt,
+		"txt": f"%{txt}%",
 	}
 
 	pos_profile = frappe.db.sql(
