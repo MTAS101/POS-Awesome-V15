@@ -460,23 +460,20 @@
   },
   {
    "fieldname": "utm_campaign",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Campaign",
-   "options": "UTM Campaign",
    "print_hide": 1
   },
   {
    "fieldname": "utm_source",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Source",
-   "options": "UTM Source",
    "print_hide": 1
   },
   {
    "fieldname": "utm_medium",
-   "fieldtype": "Link",
+   "fieldtype": "Data",
    "label": "Medium",
-   "options": "UTM Campaign",
    "print_hide": 1
   },
   {
