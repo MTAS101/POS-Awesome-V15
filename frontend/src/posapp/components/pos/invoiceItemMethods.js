@@ -1370,21 +1370,21 @@ export default {
 		// }
 
 		const currentDoc = this.get_invoice_doc();
-		frappe.call({
-			method: "posawesome.posawesome.api.items.get_item_detail",
-			args: {
-				warehouse: item.warehouse || this.posa_profile.warehouse,
-				doc: currentDoc,
-				price_list: this.selected_price_list || this.posa_profile.selling_price_list,
-				item: {
-					item_code: item.item_code,
-					customer: this.customer,
-					doctype: currentDoc.doctype,
-					name: currentDoc.name || `New ${currentDoc.doctype} 1`,
-					company: this.posa_profile.company,
-					conversion_rate: 1,
-					currency: this.posa_profile.currency,
-					qty: item.qty,
+               frappe.call({
+                       method: "posawesome.posawesome.api.items.get_item_detail",
+                       args: {
+                               warehouse: item.warehouse || this.posa_profile.warehouse,
+                               doc: currentDoc,
+                               price_list: this.selected_price_list || this.posa_profile.selling_price_list,
+                               company: this.posa_profile.company,
+                               item: {
+                                       item_code: item.item_code,
+                                       customer: this.customer,
+                                       doctype: currentDoc.doctype,
+                                       name: currentDoc.name || `New ${currentDoc.doctype} 1`,
+                                       conversion_rate: 1,
+                                       currency: this.posa_profile.currency,
+                                       qty: item.qty,
 					price_list_rate: item.base_price_list_rate || item.price_list_rate,
 					child_docname: `New ${currentDoc.doctype} Item 1`,
 					cost_center: this.posa_profile.cost_center,
