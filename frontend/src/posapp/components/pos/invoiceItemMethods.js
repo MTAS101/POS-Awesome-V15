@@ -112,11 +112,11 @@ export default {
 	// Cancel the current invoice, optionally delete from backend
 	async cancel_invoice() {
 		const doc = this.get_invoice_doc();
-		this.invoiceType = this.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
+		this.invoiceType = this.posa_profile.posa_default_sales_order ? "Order" : "Invoice";
 		this.invoiceTypes = ["Invoice", "Order"];
 		this.posting_date = frappe.datetime.nowdate();
 		var vm = this;
-		if (doc.name && this.pos_profile.posa_allow_delete) {
+		if (doc.name && this.posa_profile.posa_allow_delete) {
 			await frappe.call({
 				method: "posawesome.posawesome.api.invoices.delete_invoice",
 				args: { invoice: doc.name },
@@ -275,7 +275,7 @@ export default {
 		this.return_doc = "";
 		if (!data.name && !data.is_return) {
 			this.items = [];
-			this.customer = this.pos_profile.customer;
+			this.customer = this.posa_profile.customer;
 			this.invoice_doc = "";
 			this.discount_amount = 0;
 			this.additional_discount_percentage = 0;
@@ -334,21 +334,21 @@ export default {
 		}
 
 		// Always set these fields first
-		if (this.invoiceType === "Order" && this.pos_profile.posa_create_only_sales_order) {
+		if (this.invoiceType === "Order" && this.posa_profile.posa_create_only_sales_order) {
 			doc.doctype = "Sales Order";
-		} else if (this.pos_profile.create_pos_invoice_instead_of_sales_invoice) {
+		} else if (this.posa_profile.create_pos_invoice_instead_of_sales_invoice) {
 			doc.doctype = "POS Invoice";
 		} else {
 			doc.doctype = "Sales Invoice";
 		}
 		doc.is_pos = 1;
 		doc.ignore_pricing_rule = 1;
-		doc.company = doc.company || this.pos_profile.company;
-		doc.pos_profile = doc.pos_profile || this.pos_profile.name;
-		doc.posa_show_custom_name_marker_on_print = this.pos_profile.posa_show_custom_name_marker_on_print;
+		doc.company = doc.company || this.posa_profile.company;
+		doc.posa_profile = doc.posa_profile || this.posa_profile.name;
+		doc.posa_show_custom_name_marker_on_print = this.posa_profile.posa_show_custom_name_marker_on_print;
 
 		// Currency related fields
-		doc.currency = this.selected_currency || this.pos_profile.currency;
+		doc.currency = this.selected_currency || this.posa_profile.currency;
 		doc.conversion_rate =
 			(this.invoice_doc && this.invoice_doc.conversion_rate) || this.conversion_rate || 1;
 
@@ -360,9 +360,9 @@ export default {
 			(doc.price_list_currency === doc.currency ? 1 : this.exchange_rate);
 
 		// Other fields
-		doc.campaign = doc.campaign || this.pos_profile.campaign;
-		doc.selling_price_list = this.pos_profile.selling_price_list;
-		doc.naming_series = doc.naming_series || this.pos_profile.naming_series;
+		doc.campaign = doc.campaign || this.posa_profile.campaign;
+		doc.selling_price_list = this.posa_profile.selling_price_list;
+		doc.naming_series = doc.naming_series || this.posa_profile.naming_series;
 		doc.customer = this.customer;
 
 		// Determine if this is a return invoice
@@ -431,7 +431,7 @@ export default {
 			});
 			doc.total_taxes_and_charges = totalTax;
 		} else if (isOffline()) {
-			const tmpl = getTaxTemplate(this.pos_profile.taxes_and_charges);
+			const tmpl = getTaxTemplate(this.posa_profile.taxes_and_charges);
 			if (tmpl && Array.isArray(tmpl.taxes)) {
 				const inclusive = getTaxInclusiveSetting();
 				let runningTotal = grandTotal;
@@ -478,7 +478,7 @@ export default {
 		doc.base_grand_total = grandTotal * (this.exchange_rate || 1);
 
 		// Apply rounding to get rounded total unless disabled in POS Profile
-		if (this.pos_profile.disable_rounded_total) {
+		if (this.posa_profile.disable_rounded_total) {
 			doc.rounded_total = flt(grandTotal, this.currency_precision);
 			doc.base_rounded_total = flt(doc.base_grand_total, this.currency_precision);
 		} else {
@@ -535,7 +535,7 @@ export default {
 		doc.posa_is_offer_applied = this.posa_offers.length > 0 ? 1 : 0;
 
 		// Calculate base amounts using the exchange rate
-		const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+		const baseCurrency = this.price_list_currency || this.posa_profile.currency;
 		if (this.selected_currency !== baseCurrency) {
 			// For returns, we need to ensure negative values
 			const multiplier = isReturn ? -1 : 1;
@@ -646,7 +646,7 @@ export default {
 	get_invoice_items() {
 		const items_list = [];
 		const isReturn = this.isReturnInvoice;
-		const usesPosInvoice = this.pos_profile.create_pos_invoice_instead_of_sales_invoice;
+		const usesPosInvoice = this.posa_profile.create_pos_invoice_instead_of_sales_invoice;
 
 		this.items.forEach((item) => {
 			const new_item = {
@@ -683,7 +683,7 @@ export default {
 			}
 
 			// Handle currency conversion for rates and amounts
-			const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+			const baseCurrency = this.price_list_currency || this.posa_profile.currency;
 			if (this.selected_currency !== baseCurrency) {
 				// If exchange rate is 300 PKR = 1 USD
 				// item.rate is in USD (e.g. 10 USD)
@@ -774,7 +774,7 @@ export default {
 		const total_amount = this.subtotal;
 		let remaining_amount = total_amount;
 
-		this.pos_profile.payments.forEach((payment, index) => {
+		this.posa_profile.payments.forEach((payment, index) => {
 			// For the first payment method, assign the full remaining amount
 			const payment_amount = index === 0 ? remaining_amount : payment.amount || 0;
 
@@ -786,7 +786,7 @@ export default {
 			// amount is in USD (e.g. 10 USD)
 			// base_amount should be in PKR (e.g. 3000 PKR)
 			// So multiply by exchange rate to get base_amount
-			const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+			const baseCurrency = this.price_list_currency || this.posa_profile.currency;
 			const base_amount =
 				this.selected_currency !== baseCurrency
 					? this.flt(adjusted_amount / (this.exchange_rate || 1), this.currency_precision)
@@ -799,7 +799,7 @@ export default {
 				default: payment.default,
 				account: payment.account || "",
 				type: payment.type || "Cash",
-				currency: this.selected_currency || this.pos_profile.currency,
+				currency: this.selected_currency || this.posa_profile.currency,
 				conversion_rate: this.conversion_rate || 1,
 			});
 
@@ -821,7 +821,7 @@ export default {
 
 	// Convert amount to selected currency
 	convert_amount(amount) {
-		const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+		const baseCurrency = this.price_list_currency || this.posa_profile.currency;
 		if (this.selected_currency === baseCurrency) {
 			return amount;
 		}
@@ -839,7 +839,7 @@ export default {
 		}
 		frappe.call({
 			method:
-				doc.doctype === "Sales Order" && this.pos_profile.posa_create_only_sales_order
+				doc.doctype === "Sales Order" && this.posa_profile.posa_create_only_sales_order
 					? "posawesome.posawesome.api.sales_orders.update_sales_order"
 					: "posawesome.posawesome.api.invoices.update_invoice",
 			args: {
@@ -980,7 +980,7 @@ export default {
 			let invoice_doc;
 			if (
 				this.invoiceType === "Order" &&
-				this.pos_profile.posa_create_only_sales_order &&
+				this.posa_profile.posa_create_only_sales_order &&
 				!this.new_delivery_date &&
 				!this.invoice_doc.posa_delivery_date
 			) {
@@ -1000,7 +1000,7 @@ export default {
 			}
 
 			// Update invoice_doc with current currency info
-			invoice_doc.currency = this.selected_currency || this.pos_profile.currency;
+			invoice_doc.currency = this.selected_currency || this.posa_profile.currency;
 			invoice_doc.conversion_rate = this.conversion_rate || 1;
 			invoice_doc.plc_conversion_rate = this.exchange_rate || 1;
 
@@ -1017,14 +1017,14 @@ export default {
 			// invoice_doc.total = this.Total;
 			// invoice_doc.grand_total = this.subtotal;
 
-			// if (this.pos_profile.disable_rounded_total) {
+			// if (this.posa_profile.disable_rounded_total) {
 			//   invoice_doc.rounded_total = flt(this.subtotal, this.currency_precision);
 			// } else {
 			//   invoice_doc.rounded_total = this.roundAmount(this.subtotal);
 			// }
 			// invoice_doc.base_total = this.Total * (1 / this.exchange_rate || 1);
 			// invoice_doc.base_grand_total = this.subtotal * (1 / this.exchange_rate || 1);
-			// if (this.pos_profile.disable_rounded_total) {
+			// if (this.posa_profile.disable_rounded_total) {
 			//   invoice_doc.base_rounded_total = flt(invoice_doc.base_grand_total, this.currency_precision);
 			// } else {
 			//   invoice_doc.base_rounded_total = this.roundAmount(invoice_doc.base_grand_total);
@@ -1139,7 +1139,7 @@ export default {
 					frappe.call({
 						method: "frappe.client.get",
 						args: {
-							doctype: this.pos_profile.create_pos_invoice_instead_of_sales_invoice
+							doctype: this.posa_profile.create_pos_invoice_instead_of_sales_invoice
 								? "POS Invoice"
 								: "Sales Invoice",
 							name: this.invoice_doc.return_against,
@@ -1247,7 +1247,7 @@ export default {
 			method: "posawesome.posawesome.api.invoices.get_draft_invoices",
 			args: {
 				pos_opening_shift: this.pos_opening_shift.name,
-				doctype: this.pos_profile.create_pos_invoice_instead_of_sales_invoice
+				doctype: this.posa_profile.create_pos_invoice_instead_of_sales_invoice
 					? "POS Invoice"
 					: "Sales Invoice",
 			},
@@ -1266,8 +1266,8 @@ export default {
 		frappe.call({
 			method: "posawesome.posawesome.api.sales_orders.search_orders",
 			args: {
-				company: this.pos_profile.company,
-				currency: this.pos_profile.currency,
+				company: this.posa_profile.company,
+				currency: this.posa_profile.currency,
 			},
 			async: false,
 			callback: function (r) {
@@ -1280,7 +1280,7 @@ export default {
 
 	// Open returns dialog
 	open_returns() {
-		this.eventBus.emit("open_returns", this.pos_profile.company);
+		this.eventBus.emit("open_returns", this.posa_profile.company);
 	},
 
 	// Close payment dialog
@@ -1291,15 +1291,15 @@ export default {
 	// Update details for all items (fetch from backend)
 	async update_items_details(items) {
 		if (!items?.length) return;
-		if (!this.pos_profile) return;
+		if (!this.posa_profile) return;
 
 		try {
 			const response = await frappe.call({
 				method: "posawesome.posawesome.api.items.get_items_details",
 				args: {
-					pos_profile: JSON.stringify(this.pos_profile),
+					posa_profile: JSON.stringify(this.posa_profile),
 					items_data: JSON.stringify(items),
-					price_list: this.selected_price_list || this.pos_profile.selling_price_list,
+					price_list: this.selected_price_list || this.posa_profile.selling_price_list,
 				},
 			});
 
@@ -1369,26 +1369,26 @@ export default {
 		frappe.call({
 			method: "posawesome.posawesome.api.items.get_item_detail",
 			args: {
-				warehouse: item.warehouse || this.pos_profile.warehouse,
+				warehouse: item.warehouse || this.posa_profile.warehouse,
 				doc: currentDoc,
-				price_list: this.selected_price_list || this.pos_profile.selling_price_list,
+				price_list: this.selected_price_list || this.posa_profile.selling_price_list,
 				item: {
 					item_code: item.item_code,
 					customer: this.customer,
 					doctype: currentDoc.doctype,
 					name: currentDoc.name || `New ${currentDoc.doctype} 1`,
-					company: this.pos_profile.company,
+					company: this.posa_profile.company,
 					conversion_rate: 1,
-					currency: this.pos_profile.currency,
+					currency: this.posa_profile.currency,
 					qty: item.qty,
 					price_list_rate: item.base_price_list_rate || item.price_list_rate,
 					child_docname: `New ${currentDoc.doctype} Item 1`,
-					cost_center: this.pos_profile.cost_center,
-					pos_profile: this.pos_profile.name,
+					cost_center: this.posa_profile.cost_center,
+					posa_profile: this.posa_profile.name,
 					uom: item.uom,
 					tax_category: "",
 					transaction_type: "selling",
-					update_stock: this.pos_profile.update_stock,
+					update_stock: this.posa_profile.update_stock,
 					price_list: this.get_price_list(),
 					has_batch_no: item.has_batch_no,
 					has_serial_no: item.has_serial_no,
@@ -1401,7 +1401,7 @@ export default {
 				if (r.message) {
 					const data = r.message;
 					if (!item.warehouse) {
-						item.warehouse = vm.pos_profile.warehouse;
+						item.warehouse = vm.posa_profile.warehouse;
 					}
 					// Ensure price list currency is synced from server response
 					if (data.price_list_currency) {
@@ -1423,7 +1423,7 @@ export default {
 					}
 					if (
 						item.has_batch_no &&
-						vm.pos_profile.posa_auto_set_batch &&
+						vm.posa_profile.posa_auto_set_batch &&
 						!item.batch_no &&
 						data.batch_no_data &&
 						data.batch_no_data.length > 0
@@ -1450,7 +1450,7 @@ export default {
 
 						// Only update rates if no offer is applied
 						if (!item.posa_offer_applied) {
-							const companyCurrency = vm.pos_profile.currency;
+							const companyCurrency = vm.posa_profile.currency;
 							const baseCurrency = companyCurrency;
 
 							if (
@@ -1484,7 +1484,7 @@ export default {
                                                } else {
                                                        // Preserve discounted price when an offer is applied so the
                                                        // rate doesn't revert to the original price list value.
-                                                       const baseCurrency = vm.price_list_currency || vm.pos_profile.currency;
+                                                       const baseCurrency = vm.price_list_currency || vm.posa_profile.currency;
                                                        if (vm.selected_currency !== baseCurrency) {
                                                                item.price_list_rate = vm.flt(
                                                                        item.base_rate * vm.exchange_rate,
@@ -1498,7 +1498,7 @@ export default {
 						// Handle customer discount only if no offer is applied
 						if (
 							!item.posa_offer_applied &&
-							vm.pos_profile.posa_apply_customer_discount &&
+							vm.posa_profile.posa_apply_customer_discount &&
 							vm.customer_info.posa_discount > 0 &&
 							vm.customer_info.posa_discount <= 100 &&
 							item.posa_is_offer == 0 &&
@@ -1556,7 +1556,7 @@ export default {
 						price_list_rate: item.price_list_rate,
 						exchange_rate: vm.exchange_rate,
 						selected_currency: vm.selected_currency,
-						default_currency: vm.pos_profile.currency,
+						default_currency: vm.posa_profile.currency,
 					});
 
 					// Force update UI immediately
@@ -1579,7 +1579,7 @@ export default {
                                 );
 				if (cached) {
 					vm.customer_info = { ...cached };
-					if (vm.pos_profile.posa_force_reload_items && cached.customer_price_list) {
+					if (vm.posa_profile.posa_force_reload_items && cached.customer_price_list) {
 						vm.selected_price_list = cached.customer_price_list;
 						vm.eventBus.emit("update_customer_price_list", cached.customer_price_list);
 						vm.apply_cached_price_list(cached.customer_price_list);
@@ -1591,7 +1591,7 @@ export default {
 					.find((c) => c.customer_name === vm.customer);
 				if (queued) {
 					vm.customer_info = { ...queued, name: queued.customer_name };
-					if (vm.pos_profile.posa_force_reload_items && queued.customer_price_list) {
+					if (vm.posa_profile.posa_force_reload_items && queued.customer_price_list) {
 						vm.selected_price_list = queued.customer_price_list;
 						vm.eventBus.emit("update_customer_price_list", queued.customer_price_list);
 						vm.apply_cached_price_list(queued.customer_price_list);
@@ -1619,7 +1619,7 @@ export default {
 			// When force reload is enabled, automatically switch to the
 			// customer's default price list so that item rates are fetched
 			// correctly from the server.
-			if (vm.pos_profile.posa_force_reload_items && message.customer_price_list) {
+			if (vm.posa_profile.posa_force_reload_items && message.customer_price_list) {
 				vm.selected_price_list = message.customer_price_list;
 				vm.eventBus.emit("update_customer_price_list", message.customer_price_list);
 				vm.apply_cached_price_list(message.customer_price_list);
@@ -1633,13 +1633,13 @@ export default {
 	get_price_list() {
 		// Use the currently selected price list if available,
 		// otherwise fall back to the POS Profile selling price list
-		return this.selected_price_list || this.pos_profile.selling_price_list;
+		return this.selected_price_list || this.posa_profile.selling_price_list;
 	},
 
 	// Update price list for customer
 	update_price_list() {
 		// Only set the POS Profile price list if it has changed
-		const price_list = this.pos_profile.selling_price_list;
+		const price_list = this.posa_profile.selling_price_list;
 		if (this.selected_price_list !== price_list) {
 			this.selected_price_list = price_list;
 			// Clear any customer specific price list to avoid reloading items
@@ -1674,7 +1674,7 @@ export default {
 			}
 
 			if (priceCurrency === this.selected_currency) {
-				const companyCurrency = this.pos_profile.currency;
+				const companyCurrency = this.posa_profile.currency;
 				if (priceCurrency !== companyCurrency) {
 					const conv = this.conversion_rate || 1;
 					item.base_price_list_rate = newRate * conv;
@@ -1700,7 +1700,7 @@ export default {
 					}
 				}
 
-				const baseCurrency = this.pos_profile.currency;
+				const baseCurrency = this.posa_profile.currency;
 				if (this.selected_currency !== baseCurrency) {
 					const conv = this.exchange_rate || 1;
 					const convRate = this.flt(newRate * conv, this.currency_precision);
@@ -1757,7 +1757,7 @@ export default {
 		if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
 			const blockSale =
 				!this.stock_settings.allow_negative_stock ||
-				this.pos_profile.posa_block_sale_beyond_available_qty;
+				this.posa_profile.posa_block_sale_beyond_available_qty;
 			if (blockSale) {
 				item.qty = item.max_qty;
 				calcStockQty(item, item.qty, this);
@@ -1785,7 +1785,7 @@ export default {
 			if (item.max_qty !== undefined && flt(item.qty) > flt(item.max_qty)) {
 				const blockSale =
 					!this.stock_settings.allow_negative_stock ||
-					this.pos_profile.posa_block_sale_beyond_available_qty;
+					this.posa_profile.posa_block_sale_beyond_available_qty;
 				if (blockSale) {
 					item.qty = item.max_qty;
 					calcStockQty(item, item.qty, this);
@@ -1806,7 +1806,7 @@ export default {
 
 			item.disable_increment =
 				(!this.stock_settings.allow_negative_stock ||
-					this.pos_profile.posa_block_sale_beyond_available_qty) &&
+					this.posa_profile.posa_block_sale_beyond_available_qty) &&
 				item.qty >= item.max_qty;
 		}
 	},

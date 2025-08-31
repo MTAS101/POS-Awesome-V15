@@ -90,7 +90,7 @@ def get_available_qty(items):
 
 @frappe.whitelist()
 def get_items(
-		pos_profile,
+		posa_profile,
 		price_list=None,
 		item_group="",
 		search_value="",
@@ -103,7 +103,7 @@ def get_items(
 		include_image=False,
 		item_groups=None,
 ):
-		_pos_profile = json.loads(pos_profile)
+		_pos_profile = json.loads(posa_profile)
 		use_price_list = _pos_profile.get("posa_use_server_cache")
 		pos_profile_name = _pos_profile.get("name")
 		warehouse = _pos_profile.get("warehouse")
@@ -136,7 +136,7 @@ def get_items(
 				item_groups_tuple,
 		):
 				return _get_items(
-						pos_profile,
+						posa_profile,
 						price_list,
 						item_group,
 						search_value,
@@ -151,7 +151,7 @@ def get_items(
 				)
 
 		def _get_items(
-				pos_profile,
+				posa_profile,
 				price_list,
 				item_group,
 				search_value,
@@ -164,7 +164,7 @@ def get_items(
 				include_image=False,
 				item_groups=None,
 		):
-				pos_profile = json.loads(pos_profile)
+				pos_profile = json.loads(posa_profile)
 
 				use_limit_search = pos_profile.get("posa_use_limit_search")
 				search_serial_no = pos_profile.get("posa_search_serial_no")
@@ -383,7 +383,7 @@ def get_items(
 				)
 		else:
 				return _get_items(
-						pos_profile,
+						posa_profile,
 						price_list,
 						item_group,
 						search_value,
@@ -408,8 +408,8 @@ def get_items_groups():
 
 
 @frappe.whitelist()
-def get_items_count(pos_profile, item_groups=None):
-		pos_profile = json.loads(pos_profile)
+def get_items_count(posa_profile, item_groups=None):
+		pos_profile = json.loads(posa_profile)
 		if isinstance(item_groups, str):
 			try:
 				item_groups = json.loads(item_groups)
@@ -423,9 +423,9 @@ def get_items_count(pos_profile, item_groups=None):
 
 
 @frappe.whitelist()
-def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=None):
+def get_item_variants(posa_profile, parent_item_code, price_list=None, customer=None):
 	"""Return variants of an item along with attribute metadata."""
-	pos_profile = json.loads(pos_profile)
+	pos_profile = json.loads(posa_profile)
 	price_list = price_list or pos_profile.get("selling_price_list")
 
 	fields = [
@@ -500,7 +500,7 @@ def get_item_variants(pos_profile, parent_item_code, price_list=None, customer=N
 
 
 @frappe.whitelist()
-def get_items_details(pos_profile, items_data, price_list=None, customer=None):
+def get_items_details(posa_profile, items_data, price_list=None, customer=None):
 	"""Bulk fetch item details for a list of items.
 
 	Instead of calling :pyfunc:`get_item_detail` for each item, this
@@ -510,7 +510,7 @@ def get_items_details(pos_profile, items_data, price_list=None, customer=None):
 	for offline selection without additional round trips per item.
 	"""
 
-	pos_profile = json.loads(pos_profile)
+	pos_profile = json.loads(posa_profile)
 	items_data = json.loads(items_data)
 
 	warehouse = pos_profile.get("warehouse")
@@ -836,11 +836,11 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 
 	item["selling_price_list"] = price_list
 
-	# Determine if multi-currency is enabled on the POS Profile
+	# Determine if multi-currency is enabled on the POSA Profile
 	allow_multi_currency = False
 	if item.get("pos_profile"):
 		allow_multi_currency = (
-			frappe.db.get_value("POS Profile", item.get("pos_profile"), "posa_allow_multi_currency") or 0
+			frappe.db.get_value("POSA Profile", item.get("pos_profile"), "posa_allow_multi_currency") or 0
 		)
 
 	# Ensure conversion rate exists when price list currency differs from

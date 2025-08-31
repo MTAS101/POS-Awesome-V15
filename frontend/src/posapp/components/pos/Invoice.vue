@@ -28,18 +28,18 @@
 					type="info"
 					density="compact"
 					class="mb-2"
-					v-if="pos_profile.create_pos_invoice_instead_of_sales_invoice"
+					v-if="posa_profile.create_pos_invoice_instead_of_sales_invoice"
 				>
 					{{ __("Invoices saved as POS Invoices") }}
 				</v-alert>
 				<!-- Top Row: Customer Selection and Invoice Type -->
 				<v-row align="center" class="items px-3 py-2">
-					<v-col :cols="pos_profile.posa_allow_sales_order ? 9 : 12" class="pb-0 pr-0">
+					<v-col :cols="posa_profile.posa_allow_sales_order ? 9 : 12" class="pb-0 pr-0">
 						<!-- Customer selection component -->
 						<Customer />
 					</v-col>
 					<!-- Invoice Type Selection (Only shown if sales orders are allowed) -->
-					<v-col v-if="pos_profile.posa_allow_sales_order" cols="3" class="pb-4">
+					<v-col v-if="posa_profile.posa_allow_sales_order" cols="3" class="pb-4">
 						<v-select
 							density="compact"
 							hide-details
@@ -57,7 +57,7 @@
 
 				<!-- Delivery Charges Section (Only if enabled in POS profile) -->
 				<DeliveryCharges
-					:pos_profile="pos_profile"
+					:posa_profile="posa_profile"
 					:delivery_charges="delivery_charges"
 					:selected_delivery_charge="selected_delivery_charge"
 					:delivery_charges_rate="delivery_charges_rate"
@@ -75,7 +75,7 @@
 
 				<!-- Posting Date and Customer Balance Section -->
 				<PostingDateRow
-					:pos_profile="pos_profile"
+					:posa_profile="posa_profile"
 					:posting_date_display="posting_date_display"
 					:customer_balance="customer_balance"
 					:price-list="selected_price_list"
@@ -95,7 +95,7 @@
 
 				<!-- Multi-Currency Section (Only if enabled in POS profile) -->
 				<MultiCurrencyRow
-					:pos_profile="pos_profile"
+					:posa_profile="posa_profile"
 					:selected_currency="selected_currency"
 					:plc_conversion_rate="exchange_rate"
 					:conversion_rate="conversion_rate"
@@ -194,7 +194,7 @@
 						v-model:expanded="expanded"
 						:itemsPerPage="itemsPerPage"
 						:itemSearch="itemSearch"
-						:pos_profile="pos_profile"
+						:posa_profile="posa_profile"
 						:invoice_doc="invoice_doc"
 						:invoiceType="invoiceType"
 						:stock_settings="stock_settings"
@@ -295,7 +295,7 @@
 		</v-card>
 		<!-- Payment Section -->
 		<InvoiceSummary
-			:pos_profile="pos_profile"
+			:posa_profile="posa_profile"
 			:total_qty="total_qty"
 			:additional_discount="additional_discount"
 			:additional_discount_percentage="additional_discount_percentage"
@@ -343,7 +343,7 @@ export default {
 	data() {
 		return {
 			// POS profile settings
-			pos_profile: "",
+                        posa_profile: {},
 			pos_opening_shift: "",
 			stock_settings: "",
 			invoice_doc: "",
@@ -420,12 +420,15 @@ export default {
 		CancelSaleDialog,
 		ItemsTable,
 	},
-	computed: {
-		...invoiceComputed,
-		isDarkTheme() {
-			return this.$theme.current === "dark";
-		},
-	},
+        computed: {
+                pos_profile() {
+                        return this.posa_profile;
+                },
+                ...invoiceComputed,
+                isDarkTheme() {
+                        return this.$theme.current === "dark";
+                },
+        },
 
 	methods: {
 		...shortcutMethods,
@@ -452,9 +455,9 @@ export default {
 					.filter((col) => {
 						if (col.required) return true;
 						if (col.key === "price_list_rate") return true;
-						if (col.key === "discount_value" && this.pos_profile.posa_display_discount_percentage)
+						if (col.key === "discount_value" && this.posa_profile.posa_display_discount_percentage)
 							return true;
-						if (col.key === "discount_amount" && this.pos_profile.posa_display_discount_amount)
+						if (col.key === "discount_amount" && this.posa_profile.posa_display_discount_amount)
 							return true;
 						return false;
 					})
@@ -597,7 +600,7 @@ export default {
 		},
 
 		print_draft_invoice() {
-			if (!this.pos_profile.posa_allow_print_draft_invoices) {
+			if (!this.posa_profile.posa_allow_print_draft_invoices) {
 				this.eventBus.emit("show_message", {
 					title: __(`You are not allowed to print draft invoices`),
 					color: "error",
@@ -617,7 +620,7 @@ export default {
 		},
 		async set_delivery_charges() {
 			var vm = this;
-			if (!this.pos_profile || !this.customer || !this.pos_profile.posa_use_delivery_charges) {
+			if (!this.posa_profile || !this.customer || !this.posa_profile.posa_use_delivery_charges) {
 				this.delivery_charges = [];
 				this.delivery_charges_rate = 0;
 				this.selected_delivery_charge = "";
@@ -629,8 +632,8 @@ export default {
 				const r = await frappe.call({
 					method: "posawesome.posawesome.api.offers.get_applicable_delivery_charges",
 					args: {
-						company: this.pos_profile.company,
-						pos_profile: this.pos_profile.name,
+						company: this.posa_profile.company,
+						posa_profile: this.posa_profile.name,
 						customer: this.customer,
 					},
 				});
@@ -670,7 +673,7 @@ export default {
 			if (item.max_qty !== undefined && this.flt(item[field_name]) > this.flt(item.max_qty)) {
 				const blockSale =
 					!this.stock_settings.allow_negative_stock ||
-					this.pos_profile.posa_block_sale_beyond_available_qty;
+					this.posa_profile.posa_block_sale_beyond_available_qty;
 				if (blockSale) {
 					item[field_name] = item.max_qty;
 					parsedValue = item.max_qty;
@@ -717,7 +720,7 @@ export default {
 					console.log("Received currencies:", r.message);
 
 					// Get base currency for reference
-					const baseCurrency = this.pos_profile.currency;
+					const baseCurrency = this.posa_profile.currency;
 
 					// Create simple currency list with just names
 					this.available_currencies = r.message.map((currency) => {
@@ -746,7 +749,7 @@ export default {
 			} catch (error) {
 				console.error("Error fetching currencies:", error);
 				// Set default currency as fallback
-				const defaultCurrency = this.pos_profile.currency;
+				const defaultCurrency = this.posa_profile.currency;
 				this.available_currencies = [
 					{
 						value: defaultCurrency,
@@ -759,7 +762,7 @@ export default {
 		},
 
 		async fetch_price_lists() {
-			if (this.pos_profile.posa_enable_price_list_dropdown) {
+			if (this.posa_profile.posa_enable_price_list_dropdown) {
 				try {
 					const r = await frappe.call({
 						method: "posawesome.posawesome.api.utilities.get_selling_price_lists",
@@ -769,15 +772,15 @@ export default {
 					}
 				} catch (error) {
 					console.error("Failed fetching price lists", error);
-					this.price_lists = [this.pos_profile.selling_price_list];
+					this.price_lists = [this.posa_profile.selling_price_list];
 				}
 			} else {
 				// Fallback to the price list defined in the POS Profile
-				this.price_lists = [this.pos_profile.selling_price_list];
+				this.price_lists = [this.posa_profile.selling_price_list];
 			}
 
 			if (!this.selected_price_list) {
-				this.selected_price_list = this.pos_profile.selling_price_list;
+				this.selected_price_list = this.posa_profile.selling_price_list;
 			}
 
 			// Fetch and store currency for the applied price list
@@ -809,7 +812,7 @@ export default {
 
 			// Emit currency update
 			this.eventBus.emit("update_currency", {
-				currency: this.selected_currency || this.pos_profile.currency,
+				currency: this.selected_currency || this.posa_profile.currency,
 				exchange_rate: this.exchange_rate,
 			});
 
@@ -834,7 +837,7 @@ export default {
 				// First ensure base rates exist for all items
 				if (!item.base_rate) {
 					console.log(`Setting base rates for ${item.item_code} for the first time`);
-					const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+					const baseCurrency = this.price_list_currency || this.posa_profile.currency;
 					if (this.selected_currency === baseCurrency) {
 						// When in base currency, base rates = displayed rates
 						item.base_rate = item.rate;
@@ -849,7 +852,7 @@ export default {
 				}
 
 				// Currency conversion logic
-				const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+				const baseCurrency = this.price_list_currency || this.posa_profile.currency;
 				if (this.selected_currency === baseCurrency) {
 					// When switching back to default currency, restore from base rates
 					console.log(`Restoring rates for ${item.item_code} from base rates`);
@@ -939,7 +942,7 @@ export default {
 			if (!this.selected_currency) return;
 
 			const companyCurrency =
-				(this.company && this.company.default_currency) || this.pos_profile.currency;
+				(this.company && this.company.default_currency) || this.posa_profile.currency;
 			const priceListCurrency = this.price_list_currency || companyCurrency;
 
 			try {
@@ -1003,7 +1006,7 @@ export default {
 			if (this.items.length) {
 				const doc = this.get_invoice_doc();
 				doc.currency = this.selected_currency;
-				doc.price_list_currency = priceListCurrency || this.pos_profile.currency;
+				doc.price_list_currency = priceListCurrency || this.posa_profile.currency;
 				doc.conversion_rate = this.conversion_rate;
 				doc.plc_conversion_rate = this.exchange_rate;
 				try {
@@ -1066,7 +1069,7 @@ export default {
 
 			// Emit currency update
 			this.eventBus.emit("update_currency", {
-				currency: this.selected_currency || this.pos_profile.currency,
+				currency: this.selected_currency || this.posa_profile.currency,
 				exchange_rate: this.exchange_rate,
 				conversion_rate: this.conversion_rate,
 			});
@@ -1077,13 +1080,13 @@ export default {
 		// Add new rounding function
 		roundAmount(amount) {
 			// Respect POS Profile setting to disable rounding
-			if (this.pos_profile.disable_rounded_total) {
+			if (this.posa_profile.disable_rounded_total) {
 				// Use configured precision without applying rounding
 				return this.flt(amount, this.currency_precision);
 			}
 			// If multi-currency is enabled and selected currency is different from base currency
-			const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-			if (this.pos_profile.posa_allow_multi_currency && this.selected_currency !== baseCurrency) {
+			const baseCurrency = this.price_list_currency || this.posa_profile.currency;
+			if (this.posa_profile.posa_allow_multi_currency && this.selected_currency !== baseCurrency) {
 				// For multi-currency, just keep 2 decimal places without rounding to nearest integer
 				return this.flt(amount, 2);
 			}
@@ -1100,7 +1103,7 @@ export default {
 				const proposed = item.qty + 1;
 				const blockSale =
 					!this.stock_settings.allow_negative_stock ||
-					this.pos_profile.posa_block_sale_beyond_available_qty;
+					this.posa_profile.posa_block_sale_beyond_available_qty;
 				if (blockSale && item.max_qty !== undefined && proposed > item.max_qty) {
 					item.qty = item.max_qty;
 					this.calc_stock_qty(item, item.qty);
@@ -1196,26 +1199,26 @@ export default {
 		});
 
 		// Register event listeners for POS profile, items, customer, offers, etc.
-		this.eventBus.on("register_pos_profile", (data) => {
-			this.pos_profile = data.pos_profile;
+		this.eventBus.on("register_posa_profile", (data) => {
+			this.posa_profile = data.posa_profile;
 			this.company = data.company || null;
-			this.customer = data.pos_profile.customer;
+			this.customer = data.posa_profile.customer;
 			this.pos_opening_shift = data.pos_opening_shift;
 			this.stock_settings = data.stock_settings;
-			const prec = parseInt(data.pos_profile.posa_decimal_precision);
+			const prec = parseInt(data.posa_profile.posa_decimal_precision);
 			if (!isNaN(prec)) {
 				this.float_precision = prec;
 				this.currency_precision = prec;
 			}
-			this.invoiceType = this.pos_profile.posa_default_sales_order ? "Order" : "Invoice";
+			this.invoiceType = this.posa_profile.posa_default_sales_order ? "Order" : "Invoice";
 			this.initializeItemsHeaders();
 
 			// Add this block to handle currency initialization
-			if (this.pos_profile.posa_allow_multi_currency) {
+			if (this.posa_profile.posa_allow_multi_currency) {
 				this.fetch_available_currencies()
 					.then(async () => {
 						// Set default currency after currencies are loaded
-						this.selected_currency = this.pos_profile.currency;
+						this.selected_currency = this.posa_profile.currency;
 						// Fetch proper exchange rate from server
 						await this.update_currency_and_rate();
 					})
@@ -1306,7 +1309,7 @@ export default {
 		this.eventBus.on("set_new_line", (data) => {
 			this.new_line = data;
 		});
-		if (this.pos_profile.posa_allow_multi_currency) {
+		if (this.posa_profile.posa_allow_multi_currency) {
 			this.fetch_available_currencies();
 		}
 		// Listen for reset_posting_date to reset posting date after invoice submission
@@ -1324,7 +1327,7 @@ export default {
 	// Cleanup event listeners before component is destroyed
 	beforeUnmount() {
 		// Existing cleanup
-		this.eventBus.off("register_pos_profile");
+		this.eventBus.off("register_posa_profile");
 		this.eventBus.off("add_item");
 		this.eventBus.off("update_customer");
 		this.eventBus.off("fetch_customer_details");

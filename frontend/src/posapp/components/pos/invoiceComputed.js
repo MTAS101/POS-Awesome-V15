@@ -1,3 +1,4 @@
+/* global flt, __, get_currency_symbol */
 export default {
 	// Calculate total quantity of all items
 	total_qty() {
@@ -75,12 +76,12 @@ export default {
 	// Get currency symbol for display
 	currencySymbol() {
 		return (currency) => {
-			return get_currency_symbol(currency || this.selected_currency || this.pos_profile.currency);
+                        return get_currency_symbol(currency || this.selected_currency || this.pos_profile?.currency);
 		};
 	},
 	// Get display currency
 	displayCurrency() {
-		return this.selected_currency || this.pos_profile.currency;
+                return this.selected_currency || this.pos_profile?.currency;
 	},
 	// Determine if current invoice is a return
 	isReturnInvoice() {

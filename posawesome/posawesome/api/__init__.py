@@ -58,4 +58,4 @@ from .utilities import (
 	get_translation_dict,
 	get_version,
 )
-from .utils import get_active_pos_profile, get_default_warehouse
+from .utils import get_active_pos_profile, get_active_posa_profile, get_default_warehouse

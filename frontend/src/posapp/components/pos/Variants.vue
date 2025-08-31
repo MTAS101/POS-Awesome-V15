@@ -83,7 +83,7 @@
 
 <script>
 /* global frappe */
-import { ensurePosProfile } from "../../../utils/pos_profile.js";
+import { ensurePosProfile } from "../../../utils/posa_profile.js";
 import _ from "lodash";
 import placeholderImage from "./placeholder-image.png";
 export default {
@@ -192,10 +192,10 @@ export default {
 			try {
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_item_variants",
-					args: {
-						pos_profile: JSON.stringify(profile || this.pos_profile || {}),
-						parent_item_code: code,
-					},
+                                        args: {
+                                                posa_profile: JSON.stringify(profile || this.pos_profile || {}),
+                                                parent_item_code: code,
+                                        },
 				});
 				console.log("variants API result", res);
 				if (res.message) {

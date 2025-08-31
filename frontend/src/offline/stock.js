@@ -1,8 +1,9 @@
+/* global frappe */
 import { memory } from "./cache.js";
 import { persist } from "./core.js";
 
 // Modify initializeStockCache function to set the flag
-export async function initializeStockCache(items, pos_profile) {
+export async function initializeStockCache(items, posa_profile) {
 	try {
 		const existingCache = memory.local_stock_cache || {};
 		const missingItems = Array.isArray(items) ? items.filter((it) => !existingCache[it.item_code]) : [];
@@ -19,7 +20,7 @@ export async function initializeStockCache(items, pos_profile) {
 
 		console.info("Initializing stock cache for", missingItems.length, "new items");
 
-		const updatedItems = await fetchItemStockQuantities(missingItems, pos_profile);
+                const updatedItems = await fetchItemStockQuantities(missingItems, posa_profile);
 
 		if (updatedItems && updatedItems.length > 0) {
 			updatedItems.forEach((item) => {
@@ -128,12 +129,12 @@ export function updateLocalStock(items) {
 }
 
 export function getLocalStock(itemCode) {
-	try {
-		const stockCache = memory.local_stock_cache || {};
-		return stockCache[itemCode]?.actual_qty || null;
-	} catch (e) {
-		return null;
-	}
+        try {
+                const stockCache = memory.local_stock_cache || {};
+                return stockCache[itemCode]?.actual_qty || null;
+        } catch {
+                return null;
+        }
 }
 
 // Update the local stock cache with latest quantities
@@ -165,7 +166,7 @@ export function clearLocalStockCache() {
 }
 
 // Add this new function to fetch stock quantities
-export async function fetchItemStockQuantities(items, pos_profile, chunkSize = 100) {
+export async function fetchItemStockQuantities(items, posa_profile, chunkSize = 100) {
 	const allItems = [];
 	try {
 		for (let i = 0; i < items.length; i += chunkSize) {
@@ -174,7 +175,7 @@ export async function fetchItemStockQuantities(items, pos_profile, chunkSize = 1
                                 frappe.call({
                                         method: "posawesome.posawesome.api.items.get_items_details",
                                         args: {
-                                                pos_profile: JSON.stringify(pos_profile),
+                                                posa_profile: JSON.stringify(posa_profile),
                                                 items_data: JSON.stringify(chunk),
                                         },
                                         freeze: false,

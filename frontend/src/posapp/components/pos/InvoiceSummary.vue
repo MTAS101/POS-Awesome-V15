@@ -20,7 +20,7 @@
 						/>
 					</v-col>
 					<!-- Additional Discount (Amount or Percentage) -->
-					<v-col cols="6" v-if="!pos_profile.posa_use_percentage_discount">
+					<v-col cols="6" v-if="!posa_profile.posa_use_percentage_discount">
 						<v-text-field
 							:model-value="additional_discount"
 							@update:model-value="handleAdditionalDiscountUpdate"
@@ -29,9 +29,9 @@
 							variant="solo"
 							density="compact"
 							color="warning"
-							:prefix="currencySymbol(pos_profile.currency)"
+							:prefix="currencySymbol(posa_profile.currency)"
 							:disabled="
-								!pos_profile.posa_allow_user_to_edit_additional_discount ||
+								!posa_profile.posa_allow_user_to_edit_additional_discount ||
 								!!discount_percentage_offer_name
 							"
 							class="summary-field"
@@ -51,7 +51,7 @@
 							density="compact"
 							color="warning"
 							:disabled="
-								!pos_profile.posa_allow_user_to_edit_additional_discount ||
+								!posa_profile.posa_allow_user_to_edit_additional_discount ||
 								!!discount_percentage_offer_name
 							"
 							class="summary-field"
@@ -119,7 +119,7 @@
 							{{ __("Load Drafts") }}
 						</v-btn>
 					</v-col>
-					<v-col cols="6" v-if="pos_profile.custom_allow_select_sales_order == 1">
+					<v-col cols="6" v-if="posa_profile.custom_allow_select_sales_order == 1">
 						<v-btn
 							block
 							color="info"
@@ -145,7 +145,7 @@
 							{{ __("Cancel Sale") }}
 						</v-btn>
 					</v-col>
-					<v-col cols="6" v-if="pos_profile.posa_allow_return == 1">
+					<v-col cols="6" v-if="posa_profile.posa_allow_return == 1">
 						<v-btn
 							block
 							color="secondary"
@@ -158,7 +158,7 @@
 							{{ __("Sales Return") }}
 						</v-btn>
 					</v-col>
-					<v-col cols="6" v-if="pos_profile.posa_allow_print_draft_invoices">
+					<v-col cols="6" v-if="posa_profile.posa_allow_print_draft_invoices">
 						<v-btn
 							block
 							color="primary"
@@ -194,7 +194,7 @@
 <script>
 export default {
 	props: {
-		pos_profile: Object,
+		posa_profile: Object,
 		total_qty: [Number, String],
 		additional_discount: Number,
 		additional_discount_percentage: Number,

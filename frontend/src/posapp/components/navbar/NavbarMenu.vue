@@ -13,7 +13,7 @@
 			</div>
 			<v-list density="compact" class="menu-list-compact">
 				<v-list-item
-					v-if="!posProfile.posa_hide_closing_shift"
+					v-if="!posaProfile.posa_hide_closing_shift"
 					@click="$emit('close-shift')"
 					class="menu-item-compact primary-action"
 				>
@@ -33,7 +33,7 @@
 				</v-list-item>
 
 				<v-list-item
-					v-if="posProfile.posa_allow_print_last_invoice"
+					v-if="posaProfile.posa_allow_print_last_invoice"
 					@click="$emit('print-last-invoice')"
 					:disabled="!lastInvoiceId"
 					class="menu-item-compact secondary-action"
@@ -293,7 +293,7 @@ const FALLBACK_LANGUAGES = [
 export default {
 	name: "NavbarMenu",
 	props: {
-		posProfile: { type: Object, default: () => ({}) },
+		posaProfile: { type: Object, default: () => ({}) },
 		lastInvoiceId: String,
 		manualOffline: Boolean,
 		networkOnline: Boolean,
@@ -344,7 +344,7 @@ export default {
 				} else if (window.frappe && window.frappe.boot) {
 					const bootVal =
 						window.frappe.boot.use_western_numerals ||
-						window.frappe.boot.pos_profile?.use_western_numerals;
+						window.frappe.boot.posa_profile?.use_western_numerals;
 					if (typeof bootVal !== "undefined") {
 						this.useWesternNumerals = Boolean(bootVal);
 					}

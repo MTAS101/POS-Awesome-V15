@@ -1,5 +1,5 @@
 <template>
-	<v-row align="center" class="items px-3 py-2 mt-0" v-if="pos_profile.posa_use_delivery_charges">
+        <v-row align="center" class="items px-3 py-2 mt-0" v-if="posa_profile && posa_profile.posa_use_delivery_charges">
 		<v-col cols="12" sm="8" class="pb-0 mb-0 pr-0 pt-0">
 			<v-autocomplete
 				density="compact"
@@ -41,8 +41,8 @@
 				:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
 				class="dark-field sleek-field"
 				hide-details
-				:model-value="formatCurrency(delivery_charges_rate)"
-				:prefix="currencySymbol(pos_profile.currency)"
+                                :model-value="formatCurrency(delivery_charges_rate)"
+                                :prefix="currencySymbol(posa_profile && posa_profile.currency)"
 				disabled
 			></v-text-field>
 		</v-col>
@@ -51,8 +51,8 @@
 
 <script>
 export default {
-	props: {
-		pos_profile: Object,
+        props: {
+                posa_profile: Object,
 		delivery_charges: Array,
 		selected_delivery_charge: [Object, String],
 		delivery_charges_rate: Number,
