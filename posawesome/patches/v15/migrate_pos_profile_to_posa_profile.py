@@ -26,9 +26,8 @@ def execute():
             val = src.get(fn)
             if fn in FIELD_MAP:
                 tgt.set(FIELD_MAP[fn], val)
-            else:
-                if fn in frappe.get_meta(TARGET).get_fieldnames():
-                    tgt.set(fn, val)
+            elif frappe.get_meta(TARGET).has_field(fn):
+                tgt.set(fn, val)
         tgt.insert(ignore_permissions=True)
 
     frappe.db.commit()
