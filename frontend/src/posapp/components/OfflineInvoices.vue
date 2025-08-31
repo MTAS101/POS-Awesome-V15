@@ -111,7 +111,7 @@
 
 								<template #item.actions="{ index }">
 									<v-btn
-										v-if="posProfile.posa_allow_delete_offline_invoice"
+										v-if="posaProfile.posa_allow_delete_offline_invoice"
 										icon
 										color="error"
 										size="small"
@@ -176,7 +176,7 @@ export default {
 	mixins: [format],
 	props: {
 		modelValue: Boolean,
-		posProfile: {
+		posaProfile: {
 			type: Object,
 			default: () => ({}),
 		},
@@ -231,7 +231,7 @@ export default {
 			this.invoices = getOfflineInvoices();
 		},
 		removeInvoice(index) {
-			if (!this.posProfile.posa_allow_delete_offline_invoice) {
+			if (!this.posaProfile.posa_allow_delete_offline_invoice) {
 				return;
 			}
 			deleteOfflineInvoice(index);

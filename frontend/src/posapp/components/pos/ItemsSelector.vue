@@ -51,7 +51,7 @@
 								ref="debounce_search"
 							>
 								<!-- Add camera scan button if enabled -->
-								<template v-slot:append-inner v-if="pos_profile.posa_enable_camera_scanning">
+								<template v-slot:append-inner v-if="posa_profile.posa_enable_camera_scanning">
 									<v-btn
 										icon="mdi-camera"
 										size="small"
@@ -64,7 +64,7 @@
 								</template>
 							</v-text-field>
 						</v-col>
-						<v-col cols="3" class="pb-0" v-if="pos_profile.posa_input_qty">
+						<v-col cols="3" class="pb-0" v-if="posa_profile.posa_input_qty">
 							<v-text-field
 								density="compact"
 								variant="solo"
@@ -78,7 +78,7 @@
 								@focus="clearQty"
 							></v-text-field>
 						</v-col>
-						<v-col cols="2" class="pb-0" v-if="pos_profile.posa_new_line">
+						<v-col cols="2" class="pb-0" v-if="posa_profile.posa_new_line">
 							<v-checkbox
 								v-model="new_line"
 								color="accent"
@@ -236,7 +236,7 @@
 														{{
 															currencySymbol(
 																item.original_currency ||
-																	pos_profile.currency,
+																	posa_profile.currency,
 															)
 														}}
 													</span>
@@ -245,7 +245,7 @@
 															format_currency(
 																item.base_price_list_rate || item.rate,
 																item.original_currency ||
-																	pos_profile.currency,
+																	posa_profile.currency,
 																ratePrecision(
 																	item.base_price_list_rate || item.rate,
 																),
@@ -255,8 +255,8 @@
 												</div>
 												<div
 													v-if="
-														pos_profile.posa_allow_multi_currency &&
-														selected_currency !== pos_profile.currency
+														posa_profile.posa_allow_multi_currency &&
+														selected_currency !== posa_profile.currency
 													"
 													class="secondary-price"
 												>
@@ -316,20 +316,20 @@
 									<div>
 										<div class="text-primary">
 											{{
-												currencySymbol(item.original_currency || pos_profile.currency)
+												currencySymbol(item.original_currency || posa_profile.currency)
 											}}
 											{{
 												format_currency(
 													item.base_price_list_rate || item.rate,
-													item.original_currency || pos_profile.currency,
+													item.original_currency || posa_profile.currency,
 													ratePrecision(item.base_price_list_rate || item.rate),
 												)
 											}}
 										</div>
 										<div
 											v-if="
-												pos_profile.posa_allow_multi_currency &&
-												selected_currency !== pos_profile.currency
+												posa_profile.posa_allow_multi_currency &&
+												selected_currency !== posa_profile.currency
 											"
 											class="text-success"
 										>
@@ -369,7 +369,7 @@
 						v-model="item_group"
 					></v-select>
 				</v-col>
-				<v-col cols="12" class="mb-2" v-if="pos_profile.posa_enable_price_list_dropdown !== false">
+				<v-col cols="12" class="mb-2" v-if="posa_profile.posa_enable_price_list_dropdown !== false">
 					<v-text-field
 						density="compact"
 						variant="solo"
@@ -414,9 +414,9 @@
 
 		<!-- Camera Scanner Component -->
 		<CameraScanner
-			v-if="pos_profile.posa_enable_camera_scanning"
+			v-if="posa_profile.posa_enable_camera_scanning"
 			ref="cameraScanner"
-			:scan-type="pos_profile.posa_camera_scan_type || 'Both'"
+			:scan-type="posa_profile.posa_camera_scan_type || 'Both'"
 			@barcode-scanned="onBarcodeScanned"
 		/>
 	</div>
@@ -428,7 +428,7 @@
 import format from "../../format";
 import _ from "lodash";
 import CameraScanner from "./CameraScanner.vue";
-import { ensurePosProfile } from "../../../utils/pos_profile.js";
+import { ensurePosProfile } from "../../../utils/posa_profile.js";
 import {
 	saveItemUOMs,
 	getItemUOMs,
@@ -475,7 +475,7 @@ export default {
 		LoadingOverlay,
 	},
 	data: () => ({
-		pos_profile: {},
+		posa_profile: {},
 		flags: {},
 		items_view: "list",
 		item_group: "ALL",
@@ -548,8 +548,8 @@ export default {
 
 	watch: {
 		customer: _.debounce(function () {
-			if (this.pos_profile.posa_force_reload_items) {
-				if (this.pos_profile.posa_smart_reload_mode) {
+			if (this.posa_profile.posa_force_reload_items) {
+				if (this.posa_profile.posa_smart_reload_mode) {
 					// When limit search is enabled there may be no items yet.
 					// Fallback to full reload if nothing is loaded
 					if (!this.items_loaded || !this.filtered_items.length) {
@@ -558,8 +558,8 @@ export default {
 							this.get_items(true);
 						} else {
 							if (
-								this.pos_profile &&
-								(!this.pos_profile.posa_local_storage || !this.storageAvailable)
+								this.posa_profile &&
+								(!this.posa_profile.posa_local_storage || !this.storageAvailable)
 							) {
 								this.get_items(true);
 							} else {
@@ -577,8 +577,8 @@ export default {
 						this.get_items(true);
 					} else {
 						if (
-							this.pos_profile &&
-							(!this.pos_profile.posa_local_storage || !this.storageAvailable)
+							this.posa_profile &&
+							(!this.posa_profile.posa_local_storage || !this.storageAvailable)
 						) {
 							this.get_items(true);
 						} else {
@@ -593,7 +593,7 @@ export default {
 			if (this.items_loaded && this.filtered_items && this.filtered_items.length > 0) {
 				this.$nextTick(() => this.refreshPricesForVisibleItems());
 			} else {
-				if (this.pos_profile && (!this.pos_profile.posa_local_storage || !this.storageAvailable)) {
+				if (this.posa_profile && (!this.posa_profile.posa_local_storage || !this.storageAvailable)) {
 					this.get_items(true);
 				} else {
 					this.get_items();
@@ -601,8 +601,8 @@ export default {
 			}
 		}, 300),
 		customer_price_list: _.debounce(async function () {
-			if (this.pos_profile.posa_force_reload_items) {
-				if (this.pos_profile.posa_smart_reload_mode) {
+			if (this.posa_profile.posa_force_reload_items) {
+				if (this.posa_profile.posa_smart_reload_mode) {
 					// When limit search is enabled there may be no items yet.
 					// Fallback to full reload if nothing is loaded
 					if (!this.items_loaded || !this.items.length) {
@@ -652,7 +652,7 @@ export default {
 			if (!isOffline()) {
 				this.get_items(true);
 			} else {
-				if (this.pos_profile && (!this.pos_profile.posa_local_storage || !this.storageAvailable)) {
+				if (this.posa_profile && (!this.posa_profile.posa_local_storage || !this.storageAvailable)) {
 					this.get_items(true);
 				} else {
 					this.get_items();
@@ -663,13 +663,13 @@ export default {
 			this.eventBus.emit("set_new_line", this.new_line);
 		},
 		item_group(newValue, oldValue) {
-			if (this.pos_profile && this.pos_profile.pose_use_limit_search && newValue !== oldValue) {
-				if (this.pos_profile && (!this.pos_profile.posa_local_storage || !this.storageAvailable)) {
+			if (this.posa_profile && this.posa_profile.pose_use_limit_search && newValue !== oldValue) {
+				if (this.posa_profile && (!this.posa_profile.posa_local_storage || !this.storageAvailable)) {
 					this.get_items(true);
 				} else {
 					this.get_items();
 				}
-			} else if (this.pos_profile && this.pos_profile.posa_local_storage && newValue !== oldValue) {
+			} else if (this.posa_profile && this.posa_profile.posa_local_storage && newValue !== oldValue) {
 				if (this.storageAvailable) {
 					this.loadVisibleItems(true);
 				} else {
@@ -680,8 +680,8 @@ export default {
 		filtered_items(new_value, old_value) {
 			// Update item details if items changed
 			if (
-				this.pos_profile &&
-				!this.pos_profile.pose_use_limit_search &&
+				this.posa_profile &&
+				!this.posa_profile.pose_use_limit_search &&
 				new_value.length !== old_value.length
 			) {
 				this.update_items_details(new_value);
@@ -853,8 +853,8 @@ export default {
 				this.itemWorker.terminate();
 				this.itemWorker = null;
 			}
-			if (this.pos_profile) {
-				this.pos_profile.posa_local_storage = false;
+			if (this.posa_profile) {
+				this.posa_profile.posa_local_storage = false;
 			}
 		},
 		async ensureStorageHealth() {
@@ -878,8 +878,8 @@ export default {
 					this.localStorageAvailable = true;
 				}
 				if (
-					this.pos_profile &&
-					this.pos_profile.posa_local_storage &&
+					this.posa_profile &&
+					this.posa_profile.posa_local_storage &&
 					typeof Worker !== "undefined" &&
 					!this.itemWorker
 				) {
@@ -977,7 +977,7 @@ export default {
 			}
 
 			const key = [
-				this.pos_profile.name,
+				this.posa_profile.name,
 				this.active_price_list,
 				items.map((i) => i.item_code).join(","),
 			].join(":");
@@ -997,7 +997,7 @@ export default {
 			const requestPromise = frappe.call({
 				method: "posawesome.posawesome.api.items.get_items_details",
 				args: {
-					pos_profile: JSON.stringify(this.pos_profile),
+					posa_profile: JSON.stringify(this.posa_profile),
 					items_data: JSON.stringify(items),
 					price_list: this.active_price_list,
 				},
@@ -1045,7 +1045,7 @@ export default {
 
 			const itemCodes = vm.filtered_items.map((it) => it.item_code);
 			const cacheResult = await getCachedItemDetails(
-				vm.pos_profile.name,
+				vm.posa_profile.name,
 				vm.active_price_list,
 				itemCodes,
 			);
@@ -1115,12 +1115,12 @@ export default {
 				vm.$nextTick(async () => {
 					updates.forEach(({ item, upd }) => Object.assign(item, upd));
 					updateLocalStockCache(details);
-					saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
+					saveItemDetailsCache(vm.posa_profile.name, vm.active_price_list, details);
 					if (
-						vm.pos_profile &&
-						vm.pos_profile.posa_local_storage &&
+						vm.posa_profile &&
+						vm.posa_profile.posa_local_storage &&
 						vm.storageAvailable &&
-						!vm.pos_profile.pose_use_limit_search
+						!vm.posa_profile.pose_use_limit_search
 					) {
 						try {
 							await saveItemsBulk(details);
@@ -1147,7 +1147,7 @@ export default {
 		},
 		async initializeItems() {
 			await this.ensureStorageHealth();
-			if (this.pos_profile && this.pos_profile.posa_local_storage && this.storageAvailable) {
+			if (this.posa_profile && this.posa_profile.posa_local_storage && this.storageAvailable) {
 				const localCount = await getStoredItemsCount();
 				if (localCount > 0) {
 					await this.loadVisibleItems(true);
@@ -1188,11 +1188,11 @@ export default {
 			try {
 				const localCount = await getStoredItemsCount();
 				console.log("[ItemsSelector] verifying server item count", { localCount });
-				const profileGroups = (this.pos_profile?.item_groups || []).map((g) => g.item_group);
+				const profileGroups = (this.posa_profile?.item_groups || []).map((g) => g.item_group);
 				const res = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_items_count",
 					args: {
-						pos_profile: JSON.stringify(this.pos_profile),
+						posa_profile: JSON.stringify(this.posa_profile),
 						item_groups: profileGroups,
 					},
 				});
@@ -1221,12 +1221,12 @@ export default {
 				item_group: this.item_group,
 			});
 			// Ensure POS profile is available
-			if (!this.pos_profile || !this.pos_profile.name) {
+			if (!this.posa_profile || !this.posa_profile.name) {
 				console.warn("No POS Profile available, attempting to get it...");
 				// Try to get the current POS profile
 				try {
-					if (frappe.boot && frappe.boot.pos_profile) {
-						this.pos_profile = frappe.boot.pos_profile;
+					if (frappe.boot && frappe.boot.posa_profile) {
+						this.posa_profile = frappe.boot.posa_profile;
 					} else {
 						// If still no profile, show error and return
 						console.error("No POS Profile configured");
@@ -1242,14 +1242,14 @@ export default {
 			const vm = this;
 
 			// Respect POS profile search limit when limit search is enabled
-			if (vm.pos_profile?.pose_use_limit_search) {
-				vm.itemsPageLimit = parseInt(vm.pos_profile.posa_search_limit) || vm.itemsPageLimit;
+			if (vm.posa_profile?.pose_use_limit_search) {
+				vm.itemsPageLimit = parseInt(vm.posa_profile.posa_search_limit) || vm.itemsPageLimit;
 			}
 
 			const search = this.get_search(this.first_search);
 			const gr = vm.item_group !== "ALL" ? vm.item_group.toLowerCase() : "";
 			const sr = search || "";
-			const profileGroups = (vm.pos_profile?.item_groups || []).map((g) => g.item_group);
+			const profileGroups = (vm.posa_profile?.item_groups || []).map((g) => g.item_group);
 			console.log("[ItemsSelector] prepared fetch params", { search: sr, item_group: gr });
 
 			// Skip if already loading the same data
@@ -1271,7 +1271,7 @@ export default {
 				const countRes = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_items_count",
 					args: {
-						pos_profile: JSON.stringify(vm.pos_profile),
+						posa_profile: JSON.stringify(vm.posa_profile),
 						item_groups: profileGroups,
 					},
 				});
@@ -1286,7 +1286,7 @@ export default {
 				const response = await frappe.call({
 					method: "posawesome.posawesome.api.items.get_items",
 					args: {
-						pos_profile: JSON.stringify(vm.pos_profile),
+						posa_profile: JSON.stringify(vm.posa_profile),
 						price_list: vm.customer_price_list,
 						item_group: gr,
 						search_value: sr,
@@ -1321,7 +1321,7 @@ export default {
 				vm.eventBus.emit("set_all_items", vm.items);
 				console.log("[ItemsSelector] set_all_items emitted", { itemsLength: vm.items.length });
 
-				const hasMore = !vm.pos_profile.pose_use_limit_search && items.length === vm.itemsPageLimit;
+				const hasMore = !vm.posa_profile.pose_use_limit_search && items.length === vm.itemsPageLimit;
 				vm.loadProgress = vm.totalItemCount
 					? Math.round((items.length / vm.totalItemCount) * 100)
 					: 100;
@@ -1329,10 +1329,10 @@ export default {
 				console.log("[ItemsSelector] data-load-progress emitted", { progress: vm.loadProgress });
 
 				if (
-					vm.pos_profile &&
-					vm.pos_profile.posa_local_storage &&
+					vm.posa_profile &&
+					vm.posa_profile.posa_local_storage &&
 					vm.storageAvailable &&
-					!vm.pos_profile.pose_use_limit_search
+					!vm.posa_profile.pose_use_limit_search
 				) {
 					try {
 						if (force_server) {
@@ -1384,7 +1384,7 @@ export default {
 				loaded,
 			});
 			const limit = this.itemsPageLimit;
-			const profileGroups = (this.pos_profile?.item_groups || []).map((g) => g.item_group);
+			const profileGroups = (this.posa_profile?.item_groups || []).map((g) => g.item_group);
 			// When the limit is extremely high, treat it as
 			// "no incremental loading" and exit early.
 			if (!limit || limit >= 10000) {
@@ -1407,7 +1407,7 @@ export default {
 					const res = await frappe.call({
 						method: "posawesome.posawesome.api.items.get_items",
 						args: {
-							pos_profile: JSON.stringify(this.pos_profile),
+							posa_profile: JSON.stringify(this.posa_profile),
 							price_list: this.customer_price_list,
 							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
 							search_value: this.search || "",
@@ -1457,10 +1457,10 @@ export default {
 									length: this.items.length,
 								});
 								if (
-									this.pos_profile &&
-									this.pos_profile.posa_local_storage &&
+									this.posa_profile &&
+									this.posa_profile.posa_local_storage &&
 									this.storageAvailable &&
-									!this.pos_profile.pose_use_limit_search
+									!this.posa_profile.pose_use_limit_search
 								) {
 									try {
 										if (clearBefore) {
@@ -1536,7 +1536,7 @@ export default {
 				frappe.call({
 					method: "posawesome.posawesome.api.items.get_items",
 					args: {
-						pos_profile: JSON.stringify(this.pos_profile),
+						posa_profile: JSON.stringify(this.posa_profile),
 						price_list: this.customer_price_list,
 						item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
 						search_value: this.search || "",
@@ -1567,10 +1567,10 @@ export default {
 							length: this.items.length,
 						});
 						if (
-							this.pos_profile &&
-							this.pos_profile.posa_local_storage &&
+							this.posa_profile &&
+							this.posa_profile.posa_local_storage &&
 							this.storageAvailable &&
-							!this.pos_profile.pose_use_limit_search
+							!this.posa_profile.pose_use_limit_search
 						) {
 							try {
 								if (clearBefore) {
@@ -1623,14 +1623,14 @@ export default {
 			}
 		},
 		get_items_groups() {
-			if (!this.pos_profile) {
+			if (!this.posa_profile) {
 				console.log("No POS Profile");
 				return;
 			}
 			this.items_group = ["ALL"];
-			if (this.pos_profile.item_groups.length > 0) {
+			if (this.posa_profile.item_groups.length > 0) {
 				const groups = [];
-				this.pos_profile.item_groups.forEach((element) => {
+				this.posa_profile.item_groups.forEach((element) => {
 					if (element.item_group !== "All Item Groups") {
 						this.items_group.push(element.item_group);
 						groups.push(element.item_group);
@@ -1678,7 +1678,7 @@ export default {
 				{ title: __("Available QTY"), key: "actual_qty", align: "start" },
 				{ title: __("UOM"), key: "stock_uom", align: "start" },
 			];
-			if (!this.pos_profile.posa_display_item_code) {
+			if (!this.posa_profile.posa_display_item_code) {
 				items_headers.splice(1, 1);
 			}
 
@@ -1697,7 +1697,7 @@ export default {
 						const res = await frappe.call({
 							method: "posawesome.posawesome.api.items.get_item_variants",
 							args: {
-								pos_profile: JSON.stringify(this.pos_profile),
+								posa_profile: JSON.stringify(this.posa_profile),
 								parent_item_code: item.item_code,
 								price_list: this.active_price_list,
 								customer: this.customer,
@@ -1716,12 +1716,12 @@ export default {
 					title: __("This is an item template. Please choose a variant."),
 					color: "warning",
 				});
-				console.log("sending profile", this.pos_profile);
+				console.log("sending profile", this.posa_profile);
 				// Ensure attributes meta is always an object
 				attrsMeta = attrsMeta || {};
-				this.eventBus.emit("open_variants_model", item, variants, this.pos_profile, attrsMeta);
+				this.eventBus.emit("open_variants_model", item, variants, this.posa_profile, attrsMeta);
 			} else {
-				if (item.actual_qty === 0 && this.pos_profile.posa_display_items_in_stock) {
+				if (item.actual_qty === 0 && this.posa_profile.posa_display_items_in_stock) {
 					this.eventBus.emit("show_message", {
 						title: `No stock available for ${item.item_name}`,
 						color: "warning",
@@ -1742,12 +1742,12 @@ export default {
 				}
 
 				// Ensure correct rate based on selected currency
-				if (this.pos_profile.posa_allow_multi_currency) {
+				if (this.posa_profile.posa_allow_multi_currency) {
 					this.applyCurrencyConversionToItem(item);
 
 					// Compute base rates from original values
 					const base_rate =
-						item.original_currency === this.pos_profile.currency
+						item.original_currency === this.posa_profile.currency
 							? item.original_rate
 							: item.original_rate * (item.plc_conversion_rate || this.exchange_rate);
 					item.base_rate = base_rate;
@@ -1777,8 +1777,8 @@ export default {
                        // Derive the searchable code and detect scale barcode
                        const search = this.get_search(this.first_search);
                        const isScaleBarcode =
-                               this.pos_profile?.posa_scale_barcode_start &&
-                               this.first_search.startsWith(this.pos_profile.posa_scale_barcode_start);
+                               this.posa_profile?.posa_scale_barcode_start &&
+                               this.first_search.startsWith(this.posa_profile.posa_scale_barcode_start);
                        this.search = search;
 
                        const qty = parseFloat(this.get_item_qty(this.first_search));
@@ -1846,13 +1846,13 @@ export default {
 
 			const fromScanner = vm.search_from_scanner;
 
-			if (vm.pos_profile && vm.pos_profile.pose_use_limit_search) {
-				if (vm.pos_profile && (!vm.pos_profile.posa_local_storage || !vm.storageAvailable)) {
+			if (vm.posa_profile && vm.posa_profile.pose_use_limit_search) {
+				if (vm.posa_profile && (!vm.posa_profile.posa_local_storage || !vm.storageAvailable)) {
 					vm.get_items(true);
 				} else {
 					vm.get_items();
 				}
-			} else if (vm.pos_profile && vm.pos_profile.posa_local_storage) {
+			} else if (vm.posa_profile && vm.posa_profile.posa_local_storage) {
 				if (vm.storageAvailable) {
 					await vm.loadVisibleItems(true);
 					vm.enter_event();
@@ -1884,9 +1884,9 @@ export default {
                         const qtyVal = this.qty != null ? this.qty : 1;
                         let scal_qty = Math.abs(qtyVal);
                         const prefix_len =
-                                this.pos_profile.posa_scale_barcode_start?.length || 0;
+                                this.posa_profile.posa_scale_barcode_start?.length || 0;
 
-                        if (first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
+                        if (first_search.startsWith(this.posa_profile.posa_scale_barcode_start)) {
                                 // Determine item code length dynamically based on EAN-13 structure:
                                 // prefix + item_code + 5 qty digits + 1 check digit
                                 const item_code_len =
@@ -1917,8 +1917,8 @@ export default {
                 get_search(first_search) {
                         if (!first_search) return "";
                         const prefix_len =
-                                this.pos_profile.posa_scale_barcode_start?.length || 0;
-                        if (!first_search.startsWith(this.pos_profile.posa_scale_barcode_start)) {
+                                this.posa_profile.posa_scale_barcode_start?.length || 0;
+                        if (!first_search.startsWith(this.posa_profile.posa_scale_barcode_start)) {
                                 return first_search;
                         }
                         // Calculate item code length from total barcode length
@@ -1945,7 +1945,7 @@ export default {
 
 			const itemCodes = items.map((it) => it.item_code);
 			const cacheResult = await getCachedItemDetails(
-				vm.pos_profile.name,
+				vm.posa_profile.name,
 				vm.active_price_list,
 				itemCodes,
 			);
@@ -1973,7 +1973,7 @@ export default {
 
 					if (!item.original_rate) {
 						item.original_rate = item.rate;
-						item.original_currency = item.currency || vm.pos_profile.currency;
+						item.original_currency = item.currency || vm.posa_profile.currency;
 					}
 
 					vm.applyCurrencyConversionToItem(item);
@@ -2071,13 +2071,13 @@ export default {
 					});
 
 					updateLocalStockCache(details);
-					saveItemDetailsCache(vm.pos_profile.name, vm.active_price_list, details);
+					saveItemDetailsCache(vm.posa_profile.name, vm.active_price_list, details);
 
 					if (
-						vm.pos_profile &&
-						vm.pos_profile.posa_local_storage &&
+						vm.posa_profile &&
+						vm.posa_profile.posa_local_storage &&
 						vm.storageAvailable &&
-						!vm.pos_profile.pose_use_limit_search
+						!vm.posa_profile.pose_use_limit_search
 					) {
 						try {
 							await saveItemsBulk(details);
@@ -2152,7 +2152,7 @@ export default {
 					console.info("Pre-populating stock cache for", items.length, "items");
 				}
 
-				await initializeStockCache(items, this.pos_profile);
+				await initializeStockCache(items, this.posa_profile);
 			} catch (error) {
 				console.error("Failed to pre-populate stock cache:", error);
 			} finally {
@@ -2167,7 +2167,7 @@ export default {
 
 		applyCurrencyConversionToItem(item) {
 			if (!item) return;
-			const base = this.pos_profile.currency;
+			const base = this.posa_profile.currency;
 
 			if (!item.original_rate) {
 				item.original_rate = item.rate;
@@ -2333,8 +2333,8 @@ export default {
                         let searchCode = scannedCode;
                         let qtyFromBarcode = null;
                         if (
-                                this.pos_profile?.posa_scale_barcode_start &&
-                                scannedCode.startsWith(this.pos_profile.posa_scale_barcode_start)
+                                this.posa_profile?.posa_scale_barcode_start &&
+                                scannedCode.startsWith(this.posa_profile.posa_scale_barcode_start)
                         ) {
                                 searchCode = this.get_search(scannedCode);
                                 qtyFromBarcode = parseFloat(this.get_item_qty(scannedCode));
@@ -2363,7 +2363,7 @@ export default {
                                         method: "posawesome.posawesome.api.items.get_items_from_barcode",
                                         args: {
                                                 selling_price_list: this.active_price_list,
-                                                currency: this.pos_profile.currency,
+                                                currency: this.posa_profile.currency,
                                                 barcode: searchCode,
                                         },
                                 });
@@ -2522,7 +2522,7 @@ export default {
 			<div>
 				<div class="font-weight-bold">${item.item_name}</div>
 				<div class="text-muted small">${item.item_code}</div>
-				<div class="text-primary">${this.format_currency(item.rate, this.pos_profile.currency, this.ratePrecision(item.rate))}</div>
+				<div class="text-primary">${this.format_currency(item.rate, this.posa_profile.currency, this.ratePrecision(item.rate))}</div>
 			</div>
 			</div>
 		</div>
@@ -2609,7 +2609,7 @@ export default {
 			this.temp_hide_zero_rate_items = this.hide_zero_rate_items;
 			this.temp_enable_custom_items_per_page = this.enable_custom_items_per_page;
 			this.temp_items_per_page = this.items_per_page;
-			this.temp_force_server_items = !!(this.pos_profile && this.pos_profile.posa_force_server_items);
+			this.temp_force_server_items = !!(this.posa_profile && this.posa_profile.posa_force_server_items);
 			this.show_item_settings = true;
 		},
 		cancelItemSettings() {
@@ -2625,8 +2625,8 @@ export default {
 				this.items_per_page = 50;
 			}
 			this.itemsPerPage = this.items_per_page;
-			this.pos_profile.posa_force_server_items = this.temp_force_server_items ? 1 : 0;
-			this.savePosProfileSetting("posa_force_server_items", this.pos_profile.posa_force_server_items);
+			this.posa_profile.posa_force_server_items = this.temp_force_server_items ? 1 : 0;
+			this.savePosProfileSetting("posa_force_server_items", this.posa_profile.posa_force_server_items);
 			this.saveItemSettings();
 			this.show_item_settings = false;
 		},
@@ -2669,10 +2669,10 @@ export default {
 			}
 		},
 		savePosProfileSetting(field, value) {
-			if (!this.pos_profile || !this.pos_profile.name) {
+			if (!this.posa_profile || !this.posa_profile.name) {
 				return;
 			}
-			frappe.db.set_value("POS Profile", this.pos_profile.name, field, value ? 1 : 0).catch((e) => {
+			frappe.db.set_value("POS Profile", this.posa_profile.name, field, value ? 1 : 0).catch((e) => {
 				console.error("Failed to save POS Profile setting", e);
 			});
 		},
@@ -2733,10 +2733,10 @@ export default {
 						item.barcode,
 						item.description,
 						...barcodeList,
-						...(this.pos_profile?.posa_search_serial_no && Array.isArray(item.serial_no_data)
+						...(this.posa_profile?.posa_search_serial_no && Array.isArray(item.serial_no_data)
 							? item.serial_no_data.map((s) => s.serial_no)
 							: []),
-						...(this.pos_profile?.posa_search_batch_no && Array.isArray(item.batch_no_data)
+						...(this.posa_profile?.posa_search_batch_no && Array.isArray(item.batch_no_data)
 							? item.batch_no_data.map((b) => b.batch_no)
 							: []),
 					]
@@ -2761,7 +2761,7 @@ export default {
 			}
 
 			// Apply template/variant filter
-			if (this.pos_profile?.posa_hide_variants_items) {
+			if (this.posa_profile?.posa_hide_variants_items) {
 				filteredItems = filteredItems.filter((item) => !item.variant_of);
 			}
 
@@ -2807,7 +2807,7 @@ export default {
 			return this.$theme.current === "dark";
 		},
 		active_price_list() {
-			return this.customer_price_list || (this.pos_profile && this.pos_profile.selling_price_list);
+			return this.customer_price_list || (this.posa_profile && this.posa_profile.selling_price_list);
 		},
 	},
 
@@ -2826,27 +2826,27 @@ export default {
 		memoryInitPromise.then(async () => {
 			try {
 				// Ensure POS profile is available
-				if (!this.pos_profile || !this.pos_profile.name) {
+				if (!this.posa_profile || !this.posa_profile.name) {
 					// Try to get POS profile from boot or current route
-					if (frappe.boot && frappe.boot.pos_profile) {
-						this.pos_profile = frappe.boot.pos_profile;
+					if (frappe.boot && frappe.boot.posa_profile) {
+						this.posa_profile = frappe.boot.posa_profile;
 					} else if (frappe.router && frappe.router.current_route) {
 						// Get from current route context
 						const route_context = frappe.router.current_route;
-						if (route_context.pos_profile) {
-							this.pos_profile = route_context.pos_profile;
+						if (route_context.posa_profile) {
+							this.posa_profile = route_context.posa_profile;
 						}
 					}
 
 					// Final fallback to server/cache
-					if (!this.pos_profile || !this.pos_profile.name) {
-						this.pos_profile = await ensurePosProfile();
+					if (!this.posa_profile || !this.posa_profile.name) {
+						this.posa_profile = await ensurePosProfile();
 					}
 				}
 
 				// Load initial items if we have a profile
-				if (this.pos_profile && this.pos_profile.name) {
-					console.log("Loading items with POS Profile:", this.pos_profile.name);
+				if (this.posa_profile && this.posa_profile.name) {
+					console.log("Loading items with POS Profile:", this.posa_profile.name);
 					this.get_items_groups();
 					await this.initializeItems();
 				} else {
@@ -2858,11 +2858,11 @@ export default {
 		});
 
 		// Event listeners
-		this.eventBus.on("register_pos_profile", async (data) => {
-			this.pos_profile = data.pos_profile;
+		this.eventBus.on("register_posa_profile", async (data) => {
+			this.posa_profile = data.posa_profile;
 			this.get_items_groups();
 			await this.initializeItems();
-			this.items_view = this.pos_profile.posa_default_card_view ? "card" : "list";
+			this.items_view = this.posa_profile.posa_default_card_view ? "card" : "list";
 		});
 		this.eventBus.on("update_cur_items_details", () => {
 			this.update_cur_items_details();
@@ -2887,12 +2887,12 @@ export default {
 			await this.ensureStorageHealth();
 			this.items_loaded = false;
 			if (!isOffline()) {
-				if (this.pos_profile && (!this.pos_profile.posa_local_storage || !this.storageAvailable)) {
+				if (this.posa_profile && (!this.posa_profile.posa_local_storage || !this.storageAvailable)) {
 					await forceClearAllCache();
 				}
 				await this.get_items(true);
 			} else {
-				if (this.pos_profile && (!this.pos_profile.posa_local_storage || !this.storageAvailable)) {
+				if (this.posa_profile && (!this.posa_profile.posa_local_storage || !this.storageAvailable)) {
 					await forceClearAllCache();
 					await this.get_items(true);
 				} else {
@@ -2972,13 +2972,13 @@ export default {
 
 	async mounted() {
 		// Ensure POS profile is available
-		if (!this.pos_profile || !this.pos_profile.name) {
+		if (!this.posa_profile || !this.posa_profile.name) {
 			try {
 				// Try to get from global frappe context
-				if (frappe.boot && frappe.boot.pos_profile) {
-					this.pos_profile = frappe.boot.pos_profile;
-				} else if (window.cur_pos && window.cur_pos.pos_profile) {
-					this.pos_profile = window.cur_pos.pos_profile;
+				if (frappe.boot && frappe.boot.posa_profile) {
+					this.posa_profile = frappe.boot.posa_profile;
+				} else if (window.cur_pos && window.cur_pos.posa_profile) {
+					this.posa_profile = window.cur_pos.posa_profile;
 				}
 			} catch (error) {
 				console.warn("Could not get POS profile in mounted:", error);
@@ -2986,13 +2986,13 @@ export default {
 		}
 
 		// Load items if we have a profile and haven't loaded yet
-		if (this.pos_profile && this.pos_profile.name && !this.items_loaded) {
+		if (this.posa_profile && this.posa_profile.name && !this.items_loaded) {
 			this.get_items_groups();
 			await this.get_items();
 		}
 
 		// Setup barcode scanner if enabled
-		if (this.pos_profile?.posa_enable_barcode_scanning) {
+		if (this.posa_profile?.posa_enable_barcode_scanning) {
 			this.scan_barcoud();
 		}
 
@@ -3034,7 +3034,7 @@ export default {
 
 		this.eventBus.off("update_currency");
 		this.eventBus.off("server-online");
-		this.eventBus.off("register_pos_profile");
+		this.eventBus.off("register_posa_profile");
 		this.eventBus.off("update_cur_items_details");
 		this.eventBus.off("update_offers_counters");
 		this.eventBus.off("update_coupons_counters");

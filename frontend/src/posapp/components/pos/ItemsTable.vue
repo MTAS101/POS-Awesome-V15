@@ -42,7 +42,7 @@
                                                 __("Edited")
                                         }}</v-chip>
 					<v-icon
-						v-if="pos_profile.posa_allow_line_item_name_override && !item.posa_is_replace"
+						v-if="posa_profile.posa_allow_line_item_name_override && !item.posa_is_replace"
 						size="x-small"
 						class="ml-1"
 						@click.stop="openNameDialog(item)"
@@ -187,7 +187,7 @@
 										:disabled="
 											!!item.posa_is_replace ||
 											((!stock_settings.allow_negative_stock ||
-												pos_profile.posa_block_sale_beyond_available_qty) &&
+												posa_profile.posa_block_sale_beyond_available_qty) &&
 												item.max_qty !== undefined &&
 												item.qty >= item.max_qty)
 										"
@@ -303,7 +303,7 @@
 												calcPrices(item, $event.target.value, $event),
 											]"
 											:disabled="
-												!pos_profile.posa_allow_user_to_edit_rate ||
+												!posa_profile.posa_allow_user_to_edit_rate ||
 												!!item.posa_is_replace ||
 												!!item.posa_offer_applied
 											"
@@ -332,7 +332,7 @@
 												calcPrices(item, $event.target.value, $event),
 											]"
 											:disabled="
-												!pos_profile.posa_allow_user_to_edit_item_discount ||
+												!posa_profile.posa_allow_user_to_edit_item_discount ||
 												!!item.posa_is_replace ||
 												!!item.posa_offer_applied
 											"
@@ -361,7 +361,7 @@
 												calcPrices(item, $event.target.value, $event),
 											]"
 											:disabled="
-												!pos_profile.posa_allow_user_to_edit_item_discount ||
+												!posa_profile.posa_allow_user_to_edit_item_discount ||
 												!!item.posa_is_replace ||
 												!!item.posa_offer_applied
 											"
@@ -380,9 +380,9 @@
 											class="dark-field"
 											hide-details
 											:model-value="formatCurrency(item.price_list_rate || 0)"
-											:disabled="!pos_profile.posa_allow_price_list_rate_change"
+											:disabled="!posa_profile.posa_allow_price_list_rate_change"
 											prepend-inner-icon="mdi-format-list-numbered"
-											:prefix="currencySymbol(pos_profile.currency)"
+											:prefix="currencySymbol(posa_profile.currency)"
 											@change="changePriceListRate(item)"
 										></v-text-field>
 									</div>
@@ -402,7 +402,7 @@
 									</div>
 									<div
 										class="form-field"
-										v-if="pos_profile.posa_allow_price_list_rate_change"
+										v-if="posa_profile.posa_allow_price_list_rate_change"
 									>
 										<v-btn
 											size="small"
@@ -628,7 +628,7 @@
 							<!-- Delivery Date Section -->
 							<div
 								class="form-section"
-								v-if="pos_profile.posa_allow_sales_order && invoiceType == 'Order'"
+								v-if="posa_profile.posa_allow_sales_order && invoiceType == 'Order'"
 							>
 								<div class="section-header">
 									<v-icon size="small" class="section-icon">mdi-calendar-check</v-icon>
@@ -685,7 +685,7 @@ export default {
 		expanded: Array,
 		itemsPerPage: Number,
 		itemSearch: String,
-		pos_profile: Object,
+		posa_profile: Object,
 		invoice_doc: Object,
 		invoiceType: String,
 		stock_settings: Object,

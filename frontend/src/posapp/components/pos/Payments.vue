@@ -340,7 +340,7 @@
 					</v-col>
 
 					<!-- Delivery Date and Address (if applicable) -->
-					<v-col cols="6" v-if="pos_profile.posa_allow_sales_order && invoiceType === 'Order'">
+					<v-col cols="6" v-if="posa_profile.posa_allow_sales_order && invoiceType === 'Order'">
 						<VueDatePicker
 							v-model="new_delivery_date"
 							model-type="format"
@@ -405,7 +405,7 @@
 					</v-col>
 
 					<!-- Additional Notes (if enabled in POS profile) -->
-					<v-col cols="12" v-if="pos_profile.posa_display_additional_notes">
+					<v-col cols="12" v-if="posa_profile.posa_display_additional_notes">
 						<v-textarea
 							class="pa-0 dark-field sleek-field"
 							variant="solo"
@@ -422,7 +422,7 @@
 				</v-row>
 
 				<!-- Customer Purchase Order (if enabled in POS profile) -->
-				<div v-if="pos_profile.posa_allow_customer_purchase_order">
+				<div v-if="posa_profile.posa_allow_customer_purchase_order">
 					<v-divider></v-divider>
 					<v-row class="pa-1" justify="center" align="start">
 						<v-col cols="6">
@@ -469,7 +469,7 @@
 					<v-col
 						cols="6"
 						v-if="
-							pos_profile.posa_allow_write_off_change &&
+							posa_profile.posa_allow_write_off_change &&
 							credit_change > 0 &&
 							!invoice_doc.is_return
 						"
@@ -481,10 +481,10 @@
 							class="my-0 pa-1"
 						></v-switch>
 					</v-col>
-					<v-col cols="6" v-if="pos_profile.posa_allow_credit_sale && !invoice_doc.is_return">
+					<v-col cols="6" v-if="posa_profile.posa_allow_credit_sale && !invoice_doc.is_return">
 						<v-switch v-model="is_credit_sale" :label="frappe._('Credit Sale?')"></v-switch>
 					</v-col>
-					<v-col cols="6" v-if="invoice_doc.is_return && pos_profile.use_cashback">
+					<v-col cols="6" v-if="invoice_doc.is_return && posa_profile.use_cashback">
 						<v-switch
 							v-model="is_cashback"
 							flat
@@ -538,7 +538,7 @@
 							</v-chip>
 						</div>
 					</v-col>
-					<v-col cols="6" v-if="!invoice_doc.is_return && pos_profile.use_customer_credit">
+					<v-col cols="6" v-if="!invoice_doc.is_return && posa_profile.use_customer_credit">
 						<v-switch
 							v-model="redeem_customer_credit"
 							flat
@@ -761,7 +761,7 @@ export default {
 	data() {
 		return {
 			loading: false, // UI loading state
-			pos_profile: "", // POS profile settings
+			posa_profile: "", // POS profile settings
 			pos_settings: "", // POS settings
 			invoice_doc: "", // Current invoice document
 			stock_settings: "", // Stock settings
@@ -819,7 +819,7 @@ export default {
 			// Add loyalty amount (convert if needed)
 			if (this.loyalty_amount) {
 				// Loyalty points are stored in base currency (PKR)
-				if (this.invoice_doc.currency !== this.pos_profile.currency) {
+				if (this.invoice_doc.currency !== this.posa_profile.currency) {
 					// Convert to selected currency (e.g. USD) by dividing
 					total += this.flt(
 						this.loyalty_amount / (this.invoice_doc.conversion_rate || 1),
@@ -833,7 +833,7 @@ export default {
 			// Add redeemed customer credit (convert if needed)
 			if (this.redeemed_customer_credit) {
 				// Customer credit is stored in base currency (PKR)
-				if (this.invoice_doc.currency !== this.pos_profile.currency) {
+				if (this.invoice_doc.currency !== this.posa_profile.currency) {
 					// Convert to selected currency (e.g. USD) by dividing
 					total += this.flt(
 						this.redeemed_customer_credit / (this.invoice_doc.conversion_rate || 1),
@@ -856,8 +856,8 @@ export default {
 			// For multi-currency, use grand_total instead of rounded_total
 			let invoice_total;
 			if (
-				this.pos_profile.posa_allow_multi_currency &&
-				this.invoice_doc.currency !== this.pos_profile.currency
+				this.posa_profile.posa_allow_multi_currency &&
+				this.invoice_doc.currency !== this.posa_profile.currency
 			) {
 				invoice_total = this.flt(this.invoice_doc.grand_total, this.currency_precision);
 			} else {
@@ -883,8 +883,8 @@ export default {
 			// For multi-currency, use grand_total instead of rounded_total
 			let invoice_total;
 			if (
-				this.pos_profile.posa_allow_multi_currency &&
-				this.invoice_doc.currency !== this.pos_profile.currency
+				this.posa_profile.posa_allow_multi_currency &&
+				this.invoice_doc.currency !== this.posa_profile.currency
 			) {
 				invoice_total = this.flt(this.invoice_doc.grand_total, this.currency_precision);
 			} else {
@@ -923,7 +923,7 @@ export default {
 				amount = this.customer_info.loyalty_points * this.customer_info.conversion_factor;
 
 				// Convert to selected currency if needed
-				if (this.invoice_doc.currency !== this.pos_profile.currency) {
+				if (this.invoice_doc.currency !== this.posa_profile.currency) {
 					// Convert PKR to USD by dividing
 					amount = this.flt(
 						amount / (this.invoice_doc.conversion_rate || 1),
@@ -939,7 +939,7 @@ export default {
 		},
 		// Validate if payment can be submitted
 		vaildatPayment() {
-			if (this.pos_profile.posa_allow_sales_order) {
+			if (this.posa_profile.posa_allow_sales_order) {
 				if (this.invoiceType === "Order" && !this.invoice_doc.posa_delivery_date) {
 					return true;
 				}
@@ -1161,7 +1161,7 @@ export default {
 				});
 				if (has_cash_payment && cash_amount > 0) {
 					if (
-						!this.pos_profile.posa_allow_partial_payment &&
+						!this.posa_profile.posa_allow_partial_payment &&
 						cash_amount < (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) &&
 						(this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0
 					) {
@@ -1177,7 +1177,7 @@ export default {
 			// Validate partial payments only if not credit sale and invoice total is not zero
 			if (
 				!this.is_credit_sale &&
-				!this.pos_profile.posa_allow_partial_payment &&
+				!this.posa_profile.posa_allow_partial_payment &&
 				this.total_payments < (this.invoice_doc.rounded_total || this.invoice_doc.grand_total) &&
 				(this.invoice_doc.rounded_total || this.invoice_doc.grand_total) > 0
 			) {
@@ -1265,7 +1265,7 @@ export default {
 							.join("\n");
 						const blocking =
 							!this.stock_settings.allow_negative_stock ||
-							this.pos_profile.posa_block_sale_beyond_available_qty;
+							this.posa_profile.posa_block_sale_beyond_available_qty;
 						this.eventBus.emit("show_message", {
 							title: blocking
 								? __("Insufficient stock:\n{0}", [msg])
@@ -1343,7 +1343,7 @@ export default {
 			}
 			frappe.call({
 				method:
-					this.invoiceType === "Order" && this.pos_profile.posa_create_only_sales_order
+					this.invoiceType === "Order" && this.posa_profile.posa_create_only_sales_order
 						? "posawesome.posawesome.api.sales_orders.submit_sales_order"
 						: "posawesome.posawesome.api.invoices.submit_invoice",
 				args: {
@@ -1403,7 +1403,7 @@ export default {
 					vm.eventBus.emit("set_last_invoice", vm.invoice_doc.name);
 					vm.eventBus.emit("show_message", {
 						title:
-							vm.invoiceType === "Order" && vm.pos_profile.posa_create_only_sales_order
+							vm.invoiceType === "Order" && vm.posa_profile.posa_create_only_sales_order
 								? __("Sales Order {0} is Submitted", [r.message.name])
 								: __("Invoice {0} is Submitted", [r.message.name]),
 						color: "success",
@@ -1484,9 +1484,9 @@ export default {
 		},
 		// Open print page for invoice
 		load_print_page() {
-			const print_format = this.pos_profile.print_format_for_online || this.pos_profile.print_format;
-			const letter_head = this.pos_profile.letter_head || 0;
-			const doctype = this.pos_profile.create_pos_invoice_instead_of_sales_invoice
+			const print_format = this.posa_profile.print_format_for_online || this.posa_profile.print_format;
+			const letter_head = this.posa_profile.letter_head || 0;
+			const doctype = this.posa_profile.create_pos_invoice_instead_of_sales_invoice
 				? "POS Invoice"
 				: "Sales Invoice";
 			const url =
@@ -1500,7 +1500,7 @@ export default {
 				print_format +
 				"&no_letterhead=" +
 				letter_head;
-			if (this.pos_profile.posa_silent_print) {
+			if (this.posa_profile.posa_silent_print) {
 				silentPrint(url);
 			} else {
 				const printWindow = window.open(url, "Print");
@@ -1549,7 +1549,7 @@ export default {
 				frappe
 					.call("posawesome.posawesome.api.payments.get_available_credit", {
 						customer: this.invoice_doc.customer,
-						company: this.pos_profile.company,
+						company: this.posa_profile.company,
 					})
 					.then((r) => {
 						const data = r.message;
@@ -1623,7 +1623,7 @@ export default {
 		// Get sales person names from API/localStorage
 		get_sales_person_names() {
 			const vm = this;
-			if (vm.pos_profile.posa_local_storage && getSalesPersonsStorage().length) {
+			if (vm.posa_profile.posa_local_storage && getSalesPersonsStorage().length) {
 				try {
 					vm.sales_persons = getSalesPersonsStorage();
 				} catch (e) {
@@ -1640,7 +1640,7 @@ export default {
 							sales_person_name: sp.sales_person_name,
 							name: sp.name,
 						}));
-						if (vm.pos_profile.posa_local_storage) {
+						if (vm.posa_profile.posa_local_storage) {
 							setSalesPersonsStorage(vm.sales_persons);
 						}
 					} else {
@@ -1743,7 +1743,7 @@ export default {
 			const vm = this;
 			frappe.call({
 				method: "posawesome.posawesome.api.m_pesa.get_mpesa_mode_of_payment",
-				args: { company: vm.pos_profile.company },
+				args: { company: vm.posa_profile.company },
 				async: true,
 				callback: function (r) {
 					if (!r.exc) {
@@ -1766,7 +1766,7 @@ export default {
 		// Open M-Pesa payment dialog
 		mpesa_c2b_dialog(payment) {
 			const data = {
-				company: this.pos_profile.company,
+				company: this.posa_profile.company,
 				mode_of_payment: payment.mode_of_payment,
 				customer: this.invoice_doc.customer,
 			};
@@ -1774,7 +1774,7 @@ export default {
 		},
 		// Set M-Pesa payment as customer credit
 		set_mpesa_payment(payment) {
-			this.pos_profile.use_customer_credit = true;
+			this.posa_profile.use_customer_credit = true;
 			this.redeem_customer_credit = true;
 			const invoiceAmount = this.invoice_doc.rounded_total || this.invoice_doc.grand_total;
 			let amount =
@@ -1987,8 +1987,8 @@ export default {
 				}
 				this.get_sales_person_names();
 			});
-			this.eventBus.on("register_pos_profile", (data) => {
-				this.pos_profile = data.pos_profile;
+			this.eventBus.on("register_posa_profile", (data) => {
+				this.posa_profile = data.posa_profile;
 				this.stock_settings = data.stock_settings || {};
 				this.get_mpesa_modes();
 			});
@@ -2046,7 +2046,7 @@ export default {
 	beforeUnmount() {
 		// Remove all event listeners
 		this.eventBus.off("send_invoice_doc_payment");
-		this.eventBus.off("register_pos_profile");
+		this.eventBus.off("register_posa_profile");
 		this.eventBus.off("add_the_new_address");
 		this.eventBus.off("update_invoice_type");
 		this.eventBus.off("update_customer");

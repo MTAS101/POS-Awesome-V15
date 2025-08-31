@@ -103,7 +103,7 @@ def _merge_duplicate_taxes(invoice_doc):
 def _should_block(pos_profile):
     block_sale = cint(
         frappe.db.get_value(
-            "POS Profile", pos_profile, "posa_block_sale_beyond_available_qty"
+            "POSA Profile", pos_profile, "posa_block_sale_beyond_available_qty"
         )
         or 1
     )
@@ -125,7 +125,7 @@ def _validate_stock_on_invoice(invoice_doc):
 def _auto_set_return_batches(invoice_doc):
         """Assign batch numbers for return invoices without a source invoice.
 
-        When the POS Profile allows returns without an original invoice and an
+        When the POSA Profile allows returns without an original invoice and an
         item requires a batch number, this function allocates the first
         available batch in FIFO order. If no batches exist in the selected
         warehouse, an informative error is raised instead of the generic
@@ -137,13 +137,13 @@ def _auto_set_return_batches(invoice_doc):
 
         profile = invoice_doc.get("pos_profile")
         allow_without_invoice = profile and frappe.db.get_value(
-                "POS Profile", profile, "posa_allow_return_without_invoice"
+                "POSA Profile", profile, "posa_allow_return_without_invoice"
         )
         if not cint(allow_without_invoice):
                 return
 
         allow_free = cint(
-                frappe.db.get_value("POS Profile", profile, "posa_allow_free_batch_return")
+                frappe.db.get_value("POSA Profile", profile, "posa_allow_free_batch_return")
                 or 0
         )
 
@@ -240,11 +240,11 @@ def validate_return_items(original_invoice_name, return_items, doctype="Sales In
 @frappe.whitelist()
 def update_invoice(data):
     data = json.loads(data)
-    # Determine doctype based on POS Profile setting
+    # Determine doctype based on POSA Profile setting
     pos_profile = data.get("pos_profile")
     doctype = "Sales Invoice"
     if pos_profile and frappe.db.get_value(
-        "POS Profile", pos_profile, "create_pos_invoice_instead_of_sales_invoice"
+        "POSA Profile", pos_profile, "create_pos_invoice_instead_of_sales_invoice"
     ):
         doctype = "POS Invoice"
 
@@ -401,7 +401,7 @@ def update_invoice(data):
         data["plc_conversion_rate"] = plc_conversion_rate
         data["exchange_rate_date"] = exchange_rate_date
 
-    inclusive = frappe.get_cached_value("POS Profile", invoice_doc.pos_profile, "posa_tax_inclusive")
+    inclusive = frappe.get_cached_value("POSA Profile", invoice_doc.pos_profile, "posa_tax_inclusive")
     if invoice_doc.get("taxes"):
         for tax in invoice_doc.taxes:
             if tax.charge_type == "Actual":
@@ -442,7 +442,7 @@ def submit_invoice(invoice, data):
     pos_profile = invoice.get("pos_profile")
     doctype = "Sales Invoice"
     if pos_profile and frappe.db.get_value(
-        "POS Profile", pos_profile, "create_pos_invoice_instead_of_sales_invoice"
+        "POSA Profile", pos_profile, "create_pos_invoice_instead_of_sales_invoice"
     ):
         doctype = "POS Invoice"
 
@@ -537,7 +537,7 @@ def submit_invoice(invoice, data):
 
     _auto_set_return_batches(invoice_doc)
 
-    # if frappe.get_value("POS Profile", invoice_doc.pos_profile, "posa_auto_set_batch"):
+    # if frappe.get_value("POSA Profile", invoice_doc.pos_profile, "posa_auto_set_batch"):
     #     set_batch_nos(invoice_doc, "warehouse", throw=True)
     set_batch_nos_for_bundels(invoice_doc, "warehouse", throw=True)
 
@@ -558,7 +558,7 @@ def submit_invoice(invoice, data):
         )
 
     if frappe.get_value(
-        "POS Profile",
+        "POSA Profile",
         invoice_doc.pos_profile,
         "posa_allow_submissions_in_background_job",
     ):

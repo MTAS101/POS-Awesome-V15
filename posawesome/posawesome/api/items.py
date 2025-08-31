@@ -836,11 +836,11 @@ def get_item_detail(item, doc=None, warehouse=None, price_list=None, company=Non
 
 	item["selling_price_list"] = price_list
 
-	# Determine if multi-currency is enabled on the POS Profile
+	# Determine if multi-currency is enabled on the POSA Profile
 	allow_multi_currency = False
 	if item.get("pos_profile"):
 		allow_multi_currency = (
-			frappe.db.get_value("POS Profile", item.get("pos_profile"), "posa_allow_multi_currency") or 0
+			frappe.db.get_value("POSA Profile", item.get("pos_profile"), "posa_allow_multi_currency") or 0
 		)
 
 	# Ensure conversion rate exists when price list currency differs from
