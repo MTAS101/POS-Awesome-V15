@@ -113,12 +113,13 @@
 import format from "../../format";
 export default {
 	mixins: [format],
-	data: () => ({
-		closingDialog: false,
-		itemsPerPage: 20,
-		dialog_data: {},
-		pos_profile: "",
-		headers: [
+        data: () => ({
+                closingDialog: false,
+                itemsPerPage: 20,
+                dialog_data: {},
+                pos_profile: "",
+                profile_settings: {},
+                headers: [
 			{
 				title: __("Mode of Payment"),
 				value: "mode_of_payment",
@@ -166,29 +167,30 @@ export default {
 		},
 	},
 
-	created: function () {
-		this.eventBus.on("open_ClosingDialog", (data) => {
-			this.closingDialog = true;
-			this.dialog_data = data;
-		});
-		this.eventBus.on("register_pos_profile", (data) => {
-			this.pos_profile = data.pos_profile;
-			if (!this.pos_profile.hide_expected_amount) {
-				this.headers.push({
-					title: __("Expected Amount"),
-					value: "expected_amount",
-					align: "end",
-					sortable: false,
-				});
-				this.headers.push({
-					title: __("Difference"),
-					value: "difference",
-					align: "end",
-					sortable: false,
-				});
-			}
-		});
-	},
+        created: function () {
+                this.eventBus.on("open_ClosingDialog", (data) => {
+                        this.closingDialog = true;
+                        this.dialog_data = data;
+                });
+                this.eventBus.on("register_pos_profile", (data) => {
+                        this.pos_profile = data.pos_profile;
+                        this.profile_settings = data.profile_settings || {};
+                        if (!this.profile_settings.hide_expected_amount) {
+                                this.headers.push({
+                                        title: __("Expected Amount"),
+                                        value: "expected_amount",
+                                        align: "end",
+                                        sortable: false,
+                                });
+                                this.headers.push({
+                                        title: __("Difference"),
+                                        value: "difference",
+                                        align: "end",
+                                        sortable: false,
+                                });
+                        }
+                });
+        },
 	beforeUnmount() {
 		this.eventBus.off("open_ClosingDialog");
 		this.eventBus.off("register_pos_profile");

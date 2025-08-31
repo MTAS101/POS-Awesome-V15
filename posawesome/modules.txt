@@ -1,1 +1,2 @@
 POSAwesome
+POS Awesome Config

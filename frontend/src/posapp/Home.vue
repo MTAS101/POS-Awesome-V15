@@ -78,16 +78,20 @@ import {
 	checkWebSocketConnectivity,
 } from "./composables/useNetwork.js";
 import { useRtl } from "./composables/useRtl.js";
+import { useProfileSettings } from "./composables/useProfileSettings.js";
 
 export default {
-	setup() {
-		const { isRtl, rtlStyles, rtlClasses } = useRtl();
-		return {
-			isRtl,
-			rtlStyles,
-			rtlClasses,
-		};
-	},
+        setup() {
+                const { isRtl, rtlStyles, rtlClasses } = useRtl();
+                const { settings: profileSettings, loadProfileSettings } = useProfileSettings();
+                return {
+                        isRtl,
+                        rtlStyles,
+                        rtlClasses,
+                        profileSettings,
+                        loadProfileSettings,
+                };
+        },
 	data: function () {
 		return {
 			page: "POS",
@@ -150,16 +154,17 @@ export default {
 		POS,
 		Payments,
 	},
-	mounted() {
-		this.remove_frappe_nav();
-		// Initialize cache ready state early from stored value
-		this.cacheReady = isCacheReady();
-		initLoadingSources(["init", "items", "customers"]);
-		this.initializeData();
-		this.setupNetworkListeners();
-		this.setupEventListeners();
-		this.handleRefreshCacheUsage();
-	},
+        mounted() {
+                this.remove_frappe_nav();
+                // Initialize cache ready state early from stored value
+                this.cacheReady = isCacheReady();
+                initLoadingSources(["init", "items", "customers"]);
+                this.initializeData();
+                this.setupNetworkListeners();
+                this.setupEventListeners();
+                this.loadProfileSettings();
+                this.handleRefreshCacheUsage();
+        },
 	methods: {
 		setupNetworkListeners,
 		checkNetworkConnectivity,

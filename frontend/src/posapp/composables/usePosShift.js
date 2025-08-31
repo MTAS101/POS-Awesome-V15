@@ -1,4 +1,5 @@
 import { ref, getCurrentInstance } from "vue";
+import { useProfileSettings } from "./useProfileSettings.js";
 import {
     initPromise,
     checkDbHealth,
@@ -11,6 +12,7 @@ import {
 export function usePosShift(openDialog) {
     const { proxy } = getCurrentInstance();
     const eventBus = proxy?.eventBus;
+    const { settings: profileSettings, loadProfileSettings } = useProfileSettings();
 
     const pos_profile = ref(null);
     const pos_opening_shift = ref(null);
@@ -18,12 +20,20 @@ export function usePosShift(openDialog) {
     async function check_opening_entry() {
         await initPromise;
         await checkDbHealth();
+        await loadProfileSettings();
+        const mergeSettings = (target) => {
+            const { name, ...settings } = profileSettings.value || {};
+            return { ...target, ...settings };
+        };
+
         return frappe
             .call("posawesome.posawesome.api.shifts.check_opening_shift", {
                 user: frappe.session.user,
             })
             .then((r) => {
                 if (r.message) {
+                    r.message.profile_settings = profileSettings.value;
+                    r.message.pos_profile = mergeSettings(r.message.pos_profile);
                     pos_profile.value = r.message.pos_profile;
                     pos_opening_shift.value = r.message.pos_opening_shift;
                     if (pos_profile.value.taxes_and_charges) {
@@ -59,6 +69,8 @@ export function usePosShift(openDialog) {
                 } else {
                     const data = getOpeningStorage();
                     if (data) {
+                        data.profile_settings = profileSettings.value;
+                        data.pos_profile = mergeSettings(data.pos_profile);
                         pos_profile.value = data.pos_profile;
                         pos_opening_shift.value = data.pos_opening_shift;
                         eventBus?.emit("register_pos_profile", data);
@@ -77,6 +89,8 @@ export function usePosShift(openDialog) {
             .catch(() => {
                 const data = getOpeningStorage();
                 if (data) {
+                    data.profile_settings = profileSettings.value;
+                    data.pos_profile = mergeSettings(data.pos_profile);
                     pos_profile.value = data.pos_profile;
                     pos_opening_shift.value = data.pos_opening_shift;
                     eventBus?.emit("register_pos_profile", data);
@@ -126,5 +140,11 @@ export function usePosShift(openDialog) {
             });
     }
 
-    return { pos_profile, pos_opening_shift, check_opening_entry, get_closing_data, submit_closing_pos };
+    return {
+        pos_profile,
+        pos_opening_shift,
+        check_opening_entry,
+        get_closing_data,
+        submit_closing_pos,
+    };
 }

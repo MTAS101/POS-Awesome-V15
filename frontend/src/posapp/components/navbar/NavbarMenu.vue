@@ -12,11 +12,11 @@
 				<span class="menu-header-text-compact">{{ __("Actions") }}</span>
 			</div>
 			<v-list density="compact" class="menu-list-compact">
-				<v-list-item
-					v-if="!posProfile.posa_hide_closing_shift"
-					@click="$emit('close-shift')"
-					class="menu-item-compact primary-action"
-				>
+                                <v-list-item
+                                        v-if="!profileSettings.posa_hide_closing_shift"
+                                        @click="$emit('close-shift')"
+                                        class="menu-item-compact primary-action"
+                                >
 					<template v-slot:prepend>
 						<div class="menu-icon-wrapper-compact primary-icon">
 							<v-icon color="white" size="16">mdi-content-save-move-outline</v-icon>
@@ -32,12 +32,12 @@
 					</div>
 				</v-list-item>
 
-				<v-list-item
-					v-if="posProfile.posa_allow_print_last_invoice"
-					@click="$emit('print-last-invoice')"
-					:disabled="!lastInvoiceId"
-					class="menu-item-compact secondary-action"
-				>
+                                <v-list-item
+                                        v-if="profileSettings.posa_allow_print_last_invoice"
+                                        @click="$emit('print-last-invoice')"
+                                        :disabled="!lastInvoiceId"
+                                        class="menu-item-compact secondary-action"
+                                >
 					<template v-slot:prepend>
 						<div class="menu-icon-wrapper-compact secondary-icon">
 							<v-icon color="white" size="16">mdi-printer</v-icon>
@@ -283,6 +283,8 @@
 
 <script>
 /* global frappe */
+import { useProfileSettings } from "../../composables/useProfileSettings.js";
+
 const FALLBACK_LANGUAGES = [
 	{ code: "en", name: "English", native_name: "English" },
 	{ code: "ar", name: "العربية", native_name: "العربية" },
@@ -291,17 +293,23 @@ const FALLBACK_LANGUAGES = [
 ];
 
 export default {
-	name: "NavbarMenu",
-	props: {
-		posProfile: { type: Object, default: () => ({}) },
-		lastInvoiceId: String,
-		manualOffline: Boolean,
-		networkOnline: Boolean,
-		serverOnline: Boolean,
-		isDark: Boolean,
-	},
-	data() {
-		return {
+        name: "NavbarMenu",
+        props: {
+                posProfile: { type: Object, default: () => ({}) },
+                lastInvoiceId: String,
+                manualOffline: Boolean,
+                networkOnline: Boolean,
+                serverOnline: Boolean,
+                isDark: Boolean,
+        },
+        setup() {
+                const { settings: profileSettings, loadProfileSettings } =
+                        useProfileSettings();
+                loadProfileSettings();
+                return { profileSettings };
+        },
+        data() {
+                return {
 			showLanguageDialog: false,
 			selectedLanguage: "en",
 			currentLanguage: "en",
