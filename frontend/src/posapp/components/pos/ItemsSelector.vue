@@ -999,7 +999,7 @@ export default {
 				args: {
 					posa_profile: JSON.stringify(this.posa_profile),
 					items_data: JSON.stringify(items),
-					price_list: this.active_price_list,
+                                        price_list: this.active_price_list || null,
 				},
 				freeze: false,
 				signal: this.abortController.signal,
@@ -1287,7 +1287,7 @@ export default {
 					method: "posawesome.posawesome.api.items.get_items",
 					args: {
 						posa_profile: JSON.stringify(vm.posa_profile),
-						price_list: vm.customer_price_list,
+                                                price_list: vm.customer_price_list || null,
 						item_group: gr,
 						search_value: sr,
 						customer: vm.customer,
@@ -1408,7 +1408,7 @@ export default {
 						method: "posawesome.posawesome.api.items.get_items",
 						args: {
 							posa_profile: JSON.stringify(this.posa_profile),
-							price_list: this.customer_price_list,
+                                                   price_list: this.customer_price_list || null,
 							item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
 							search_value: this.search || "",
 							customer: this.customer,
@@ -1537,7 +1537,7 @@ export default {
 					method: "posawesome.posawesome.api.items.get_items",
 					args: {
 						posa_profile: JSON.stringify(this.posa_profile),
-						price_list: this.customer_price_list,
+                                           price_list: this.customer_price_list || null,
 						item_group: this.item_group !== "ALL" ? this.item_group.toLowerCase() : "",
 						search_value: this.search || "",
 						customer: this.customer,
@@ -1699,7 +1699,7 @@ export default {
 							args: {
 								posa_profile: JSON.stringify(this.posa_profile),
 								parent_item_code: item.item_code,
-								price_list: this.active_price_list,
+                                                           price_list: this.active_price_list || null,
 								customer: this.customer,
 							},
 						});
@@ -2362,7 +2362,7 @@ export default {
                                 const res = await frappe.call({
                                         method: "posawesome.posawesome.api.items.get_items_from_barcode",
                                         args: {
-                                                selling_price_list: this.active_price_list,
+                                                selling_price_list: this.active_price_list || null,
                                                 currency: this.posa_profile.currency,
                                                 barcode: searchCode,
                                         },
@@ -2440,7 +2440,7 @@ export default {
 							method: "posawesome.posawesome.api.items.get_price_for_uom",
 							args: {
 								item_code: newItem.item_code,
-								price_list: this.active_price_list,
+                                                           price_list: this.active_price_list || null,
 								uom: barcodeMatch.posa_uom,
 							},
 						});
@@ -2806,9 +2806,13 @@ export default {
 		isDarkTheme() {
 			return this.$theme.current === "dark";
 		},
-		active_price_list() {
-			return this.customer_price_list || (this.posa_profile && this.posa_profile.selling_price_list);
-		},
+                active_price_list() {
+                        return (
+                                this.customer_price_list ||
+                                (this.posa_profile && this.posa_profile.selling_price_list) ||
+                                null
+                        );
+                },
 	},
 
 	created() {

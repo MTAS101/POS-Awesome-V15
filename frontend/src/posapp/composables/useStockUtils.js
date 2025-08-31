@@ -41,7 +41,8 @@ export function useStockUtils() {
 		const conversion_ratio = item.conversion_factor / old_conversion_factor;
 
 		// Try to fetch rate for this UOM from price list
-                const priceList = context.get_price_list ? context.get_price_list() : null;
+                const priceList =
+                        (context.get_price_list && context.get_price_list()) || null;
                 let uomRate = null;
                 if (priceList && context.getCachedPriceListItems) {
                         const cached = context.getCachedPriceListItems(priceList) || [];
