@@ -167,7 +167,7 @@ def get_items(
 		):
 				pos_profile = json.loads(pos_profile)
 
-				use_limit_search = pos_profile.get("posa_use_limit_search")
+				use_limit_search = pos_profile.get("pose_use_limit_search")
 				search_serial_no = pos_profile.get("posa_search_serial_no")
 				search_batch_no = pos_profile.get("posa_search_batch_no")
 				posa_show_template_items = pos_profile.get("posa_show_template_items")

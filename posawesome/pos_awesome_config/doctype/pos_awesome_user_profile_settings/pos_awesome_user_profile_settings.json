@@ -50,6 +50,7 @@
     "posa_block_sale_beyond_available_qty",
     "posa_scale_barcode_start",
     "posa_enable_camera_scanning",
+    "posa_camera_scan_type",
     "posa_search_serial_no",
     "posa_search_batch_no",
     "posa_show_customer_balance",
@@ -79,6 +80,7 @@
     "posa_smart_reload_mode",
     "posa_server_cache_duration",
     "pose_use_limit_search",
+    "posa_search_limit",
     "posa_allow_multi_currency",
     "posa_show_cpu_load_gadget",
     "posa_show_database_usage_gadget",
@@ -301,6 +303,12 @@
       "label": "Enable Camera Scanning"
     },
     {
+      "fieldname": "posa_camera_scan_type",
+      "fieldtype": "Select",
+      "label": "Camera Scan Type",
+      "options": "QR Code\nBarcode\nBoth"
+    },
+    {
       "fieldname": "posa_search_serial_no",
       "fieldtype": "Check",
       "label": "Search by Serial Number"
@@ -444,6 +452,14 @@
       "fieldname": "pose_use_limit_search",
       "fieldtype": "Check",
       "label": "Use Limit Search"
+    },
+    {
+      "fieldname": "posa_search_limit",
+      "fieldtype": "Int",
+      "label": "Search Limit Number",
+      "description": "Search Limit for Items\nFor best performance keep this under 1500",
+      "mandatory_depends_on": "pose_use_limit_search",
+      "non_negative": 1
     },
     {
       "fieldname": "posa_allow_multi_currency",
