@@ -14,7 +14,8 @@ from frappe.utils import cstr, flt, get_datetime, nowdate
 from frappe.utils.background_jobs import enqueue
 from frappe.utils.caching import redis_cache
 
-from .utils import HAS_VARIANTS_EXCLUSION, get_item_groups
+from .utils import HAS_VARIANTS_EXCLUSION, get_item_groups, expand_item_groups
+
 
 
 def normalize_brand(brand: str) -> str:
@@ -117,6 +118,7 @@ def get_items(
         except Exception:
             item_groups = []
     item_groups = item_groups or get_item_groups(pos_profile_name)
+    item_groups = expand_item_groups(item_groups)
     item_groups_tuple = tuple(sorted(item_groups)) if item_groups else tuple()
 
     @redis_cache(ttl=ttl or 300)
@@ -416,6 +418,7 @@ def get_items_count(pos_profile, item_groups=None):
         except Exception:
             item_groups = []
     item_groups = item_groups or get_item_groups(pos_profile.get("name"))
+    item_groups = expand_item_groups(item_groups)
     filters = {"disabled": 0, "is_sales_item": 1, "is_fixed_asset": 0}
     if item_groups:
         filters["item_group"] = ["in", item_groups]
