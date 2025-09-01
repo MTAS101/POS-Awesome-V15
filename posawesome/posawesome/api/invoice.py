@@ -38,9 +38,7 @@ def add_loyalty_point(invoice_doc):
         if offer.offer == "Loyalty Point":
             original_offer = frappe.get_doc("POS Offer", offer.offer_name)
             if original_offer.loyalty_points > 0:
-                loyalty_program = frappe.get_value(
-                    "Customer", invoice_doc.customer, "loyalty_program"
-                )
+                loyalty_program = frappe.get_value("Customer", invoice_doc.customer, "loyalty_program")
                 if not loyalty_program:
                     loyalty_program = original_offer.loyalty_program
                 doc = frappe.get_doc(
@@ -76,15 +74,9 @@ def create_sales_order(doc):
             sales_order_doc.flags.ignore_account_permission = True
             sales_order_doc.save()
             sales_order_doc.submit()
-            url = frappe.utils.get_url_to_form(
-                sales_order_doc.doctype, sales_order_doc.name
-            )
-            msgprint = "Sales Order Created at <a href='{0}'>{1}</a>".format(
-                url, sales_order_doc.name
-            )
-            frappe.msgprint(
-                _(msgprint), title="Sales Order Created", indicator="green", alert=True
-            )
+            url = frappe.utils.get_url_to_form(sales_order_doc.doctype, sales_order_doc.name)
+            msgprint = "Sales Order Created at <a href='{0}'>{1}</a>".format(url, sales_order_doc.name)
+            frappe.msgprint(_(msgprint), title="Sales Order Created", indicator="green", alert=True)
             i = 0
             for item in sales_order_doc.items:
                 doc.items[i].sales_order = sales_order_doc.name
@@ -101,9 +93,7 @@ def make_sales_order(source_name, target_doc=None, ignore_permissions=True):
 
     def update_item(obj, target, source_parent):
         target.stock_qty = flt(obj.qty) * flt(obj.conversion_factor)
-        target.delivery_date = (
-            obj.posa_delivery_date or source_parent.posa_delivery_date
-        )
+        target.delivery_date = obj.posa_delivery_date or source_parent.posa_delivery_date
 
     doclist = get_mapped_doc(
         "Sales Invoice",
@@ -148,9 +138,7 @@ def set_patient(doc):
     domain = get_company_domain(doc.company)
     if domain != "Healthcare":
         return
-    patient_list = frappe.get_all(
-        "Patient", filters={"customer": doc.customer}, page_length=1
-    )
+    patient_list = frappe.get_all("Patient", filters={"customer": doc.customer}, page_length=1)
     if len(patient_list) > 0:
         doc.patient = patient_list[0].name
 
@@ -158,9 +146,7 @@ def set_patient(doc):
 def auto_set_delivery_charges(doc):
     if not doc.pos_profile:
         return
-    if not frappe.get_cached_value(
-        "POS Profile", doc.pos_profile, "posa_auto_set_delivery_charges"
-    ):
+    if not frappe.get_cached_value("POS Profile", doc.pos_profile, "posa_auto_set_delivery_charges"):
         return
 
     delivery_charges = get_applicable_delivery_charges(
@@ -205,13 +191,9 @@ def calc_delivery_charges(doc):
 
     charges_doc = None
     if doc.posa_delivery_charges:
-        charges_doc = frappe.get_cached_doc(
-            "Delivery Charges", doc.posa_delivery_charges
-        )
+        charges_doc = frappe.get_cached_doc("Delivery Charges", doc.posa_delivery_charges)
         doc.posa_delivery_charges_rate = charges_doc.default_rate
-        charges_profile = next(
-            (i for i in charges_doc.profiles if i.pos_profile == doc.pos_profile), None
-        )
+        charges_profile = next((i for i in charges_doc.profiles if i.pos_profile == doc.pos_profile), None)
         if charges_profile:
             doc.posa_delivery_charges_rate = charges_profile.rate
 
@@ -220,8 +202,7 @@ def calc_delivery_charges(doc):
             (
                 i
                 for i in doc.taxes
-                if i.charge_type == "Actual"
-                and i.description == old_doc.posa_delivery_charges
+                if i.charge_type == "Actual" and i.description == old_doc.posa_delivery_charges
             ),
             None,
         )
@@ -251,9 +232,7 @@ def apply_tax_inclusive(doc):
     if not doc.pos_profile:
         return
     try:
-        tax_inclusive = frappe.get_cached_value(
-            "POS Profile", doc.pos_profile, "posa_tax_inclusive"
-        )
+        tax_inclusive = frappe.get_cached_value("POS Profile", doc.pos_profile, "posa_tax_inclusive")
     except Exception:
         tax_inclusive = 0
 
@@ -282,15 +261,7 @@ def validate_shift(doc):
             frappe.throw(_("POS Shift {0} is not open").format(shift.name))
         # check if shift is for the same profile
         if shift.pos_profile != doc.pos_profile:
-            frappe.throw(
-                _("POS Opening Shift {0} is not for the same POS Profile").format(
-                    shift.name
-                )
-            )
+            frappe.throw(_("POS Opening Shift {0} is not for the same POS Profile").format(shift.name))
         # check if shift is for the same company
         if shift.company != doc.company:
-            frappe.throw(
-                _("POS Opening Shift {0} is not for the same company").format(
-                    shift.name
-                )
-            )
+            frappe.throw(_("POS Opening Shift {0} is not for the same company").format(shift.name))

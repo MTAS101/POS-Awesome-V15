@@ -55,7 +55,7 @@ export default {
 		return {
 			isRtl,
 			rtlStyles,
-			rtlClasses
+			rtlClasses,
 		};
 	},
 	props: {

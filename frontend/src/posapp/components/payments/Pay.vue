@@ -411,7 +411,7 @@ export default {
 		return {
 			isRtl,
 			rtlStyles,
-			rtlClasses
+			rtlClasses,
 		};
 	},
 	data: function () {
@@ -672,12 +672,12 @@ export default {
 			if (!this.customer_name) return;
 
 			// When offline, attempt to load details from cached customers
-                        if (isOffline()) {
-                                try {
-                                        const list = await getCustomerStorage();
-                                        const cached = (list || []).find(
-                                                (c) => c.name === vm.customer_name || c.customer_name === vm.customer_name,
-                                        );
+			if (isOffline()) {
+				try {
+					const list = await getCustomerStorage();
+					const cached = (list || []).find(
+						(c) => c.name === vm.customer_name || c.customer_name === vm.customer_name,
+					);
 					if (cached) {
 						vm.customer_info = { ...cached };
 						vm.set_mpesa_search_params();
@@ -699,12 +699,12 @@ export default {
 			}
 
 			try {
-                                const r = await frappe.call({
-                                        method: "posawesome.posawesome.api.customers.get_customer_info",
-                                        args: {
-                                                customer: vm.customer_name,
-                                        },
-                                });
+				const r = await frappe.call({
+					method: "posawesome.posawesome.api.customers.get_customer_info",
+					args: {
+						customer: vm.customer_name,
+					},
+				});
 				const message = r.message;
 				if (!r.exc) {
 					vm.customer_info = {

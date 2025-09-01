@@ -1,20 +1,38 @@
 <template>
-	<v-app-bar app flat height="56" :color="appBarColor" :theme="isDark ? 'dark' : 'light'"
+	<v-app-bar
+		app
+		flat
+		height="56"
+		:color="appBarColor"
+		:theme="isDark ? 'dark' : 'light'"
 		:class="['navbar-enhanced elevation-2 px-2 pb-1', rtlClasses, isRtl ? 'rtl-app-bar' : 'ltr-app-bar']"
-		:style="[rtlStyles, { flexDirection: isRtl ? 'row-reverse' : 'row' }]">
+		:style="[rtlStyles, { flexDirection: isRtl ? 'row-reverse' : 'row' }]"
+	>
 		<!-- Brand Section (left in LTR, right in RTL) -->
 		<div :class="['navbar-brand-section', isRtl ? 'rtl-brand-section' : 'ltr-brand-section']">
-			<v-app-bar-nav-icon ref="navIcon" @click="$emit('nav-click')"
-				:class="['text-secondary nav-icon', isRtl ? 'rtl-nav-icon' : 'ltr-nav-icon']" />
+			<v-app-bar-nav-icon
+				ref="navIcon"
+				@click="$emit('nav-click')"
+				:class="['text-secondary nav-icon', isRtl ? 'rtl-nav-icon' : 'ltr-nav-icon']"
+			/>
 
-                        <v-img :src="posLogo" alt="POS Awesome" max-width="32"
-                                :class="['navbar-logo', isRtl ? 'rtl-logo' : 'ltr-logo']" />
+			<v-img
+				:src="posLogo"
+				alt="POS Awesome"
+				max-width="32"
+				:class="['navbar-logo', isRtl ? 'rtl-logo' : 'ltr-logo']"
+			/>
 
-			<v-toolbar-title @click="$emit('go-desk')"
-				:class="['text-h6 font-weight-bold text-primary navbar-title', isRtl ? 'rtl-title' : 'ltr-title']"
-				style="cursor: pointer; text-decoration: none">
-				<span class="font-weight-light navbar-title-light">{{ __("POS") }}</span><span
-					class="navbar-title-bold">{{ __("Awesome") }}</span>
+			<v-toolbar-title
+				@click="$emit('go-desk')"
+				:class="[
+					'text-h6 font-weight-bold text-primary navbar-title',
+					isRtl ? 'rtl-title' : 'ltr-title',
+				]"
+				style="cursor: pointer; text-decoration: none"
+			>
+				<span class="font-weight-light navbar-title-light">{{ __("POS") }}</span
+				><span class="navbar-title-bold">{{ __("Awesome") }}</span>
 			</v-toolbar-title>
 		</div>
 
@@ -35,9 +53,16 @@
 			<slot name="cpu-gadget"></slot>
 
 			<div :class="['profile-section', isRtl ? 'rtl-profile-section' : 'ltr-profile-section']">
-				<v-chip color="primary" variant="outlined"
-					:class="['profile-chip', isRtl ? 'rtl-profile-chip' : 'ltr-profile-chip']">
-					<v-icon :start="!isRtl" :end="isRtl" :class="isRtl ? 'rtl-profile-icon' : 'ltr-profile-icon'">
+				<v-chip
+					color="primary"
+					variant="outlined"
+					:class="['profile-chip', isRtl ? 'rtl-profile-chip' : 'ltr-profile-chip']"
+				>
+					<v-icon
+						:start="!isRtl"
+						:end="isRtl"
+						:class="isRtl ? 'rtl-profile-icon' : 'ltr-profile-icon'"
+					>
 						mdi-account-circle
 					</v-icon>
 					<span :class="isRtl ? 'rtl-profile-text' : 'ltr-profile-text'">
@@ -46,9 +71,16 @@
 				</v-chip>
 			</div>
 
-			<v-btn icon color="primary"
-				:class="['offline-invoices-btn', isRtl ? 'rtl-offline-btn' : 'ltr-offline-btn', { 'has-pending': pendingInvoices > 0 }]"
-				@click="$emit('show-offline-invoices')">
+			<v-btn
+				icon
+				color="primary"
+				:class="[
+					'offline-invoices-btn',
+					isRtl ? 'rtl-offline-btn' : 'ltr-offline-btn',
+					{ 'has-pending': pendingInvoices > 0 },
+				]"
+				@click="$emit('show-offline-invoices')"
+			>
 				<v-badge v-if="pendingInvoices > 0" :content="pendingInvoices" color="error" overlap>
 					<v-icon>mdi-file-document-multiple-outline</v-icon>
 				</v-badge>
@@ -69,8 +101,14 @@
 					<span class="loading-message">{{ loadingMessage }}</span>
 					<div class="progress-badge">{{ loadingProgress }}%</div>
 				</div>
-				<v-progress-linear :model-value="loadingProgress" color="primary" height="4" absolute location="bottom"
-					class="glass-progress" />
+				<v-progress-linear
+					:model-value="loadingProgress"
+					color="primary"
+					height="4"
+					absolute
+					location="bottom"
+					class="glass-progress"
+				/>
 			</div>
 		</transition>
 	</v-app-bar>
@@ -82,15 +120,15 @@ import posLogo from "../pos/pos.png";
 
 export default {
 	name: "NavbarAppBar",
-        setup() {
-                const { isRtl, rtlStyles, rtlClasses } = useRtl();
-                return {
-                        isRtl,
-                        rtlStyles,
-                        rtlClasses,
-                        posLogo,
-                };
-        },
+	setup() {
+		const { isRtl, rtlStyles, rtlClasses } = useRtl();
+		return {
+			isRtl,
+			rtlStyles,
+			rtlClasses,
+			posLogo,
+		};
+	},
 	props: {
 		posProfile: {
 			type: Object,
@@ -111,7 +149,7 @@ export default {
 		},
 		loadingMessage: {
 			type: String,
-			default: 'Loading app data...',
+			default: "Loading app data...",
 		},
 	},
 	computed: {
@@ -202,22 +240,22 @@ export default {
 }
 
 /* LTR Actions ordering for proper sequence */
-.ltr-actions-section> :nth-child(1) {
+.ltr-actions-section > :nth-child(1) {
 	/* status-indicator */
 	order: 1;
 }
 
-.ltr-actions-section> :nth-child(2) {
+.ltr-actions-section > :nth-child(2) {
 	/* cache-usage-meter */
 	order: 2;
 }
 
-.ltr-actions-section> :nth-child(3) {
+.ltr-actions-section > :nth-child(3) {
 	/* db-usage-gadget */
 	order: 3;
 }
 
-.ltr-actions-section> :nth-child(4) {
+.ltr-actions-section > :nth-child(4) {
 	/* cpu-gadget */
 	order: 4;
 }
@@ -239,20 +277,20 @@ export default {
 }
 
 /* RTL adjustments for gadgets - reverse the order */
-.rtl-actions-section> :nth-child(1) {
+.rtl-actions-section > :nth-child(1) {
 	order: 6;
 	/* Reverse order in RTL */
 }
 
-.rtl-actions-section> :nth-child(2) {
+.rtl-actions-section > :nth-child(2) {
 	order: 5;
 }
 
-.rtl-actions-section> :nth-child(3) {
+.rtl-actions-section > :nth-child(3) {
 	order: 4;
 }
 
-.rtl-actions-section> :nth-child(4) {
+.rtl-actions-section > :nth-child(4) {
 	order: 3;
 }
 
@@ -514,9 +552,11 @@ export default {
 /* Dark theme adjustments */
 :deep([data-theme="dark"]) .navbar-enhanced,
 :deep(.v-theme--dark) .navbar-enhanced {
-	background-image: linear-gradient(135deg,
-			var(--surface-primary, #1e1e1e) 0%,
-			var(--surface-secondary, #2d2d2d) 100%) !important;
+	background-image: linear-gradient(
+		135deg,
+		var(--surface-primary, #1e1e1e) 0%,
+		var(--surface-secondary, #2d2d2d) 100%
+	) !important;
 	background-color: var(--surface-primary, #1e1e1e) !important;
 	border-bottom: 2px solid var(--border-color, rgba(255, 255, 255, 0.12)) !important;
 	color: var(--text-primary, #ffffff) !important;

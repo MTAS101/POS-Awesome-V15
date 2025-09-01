@@ -21,9 +21,7 @@ def get_customer_groups(pos_profile):
             customer_groups.extend(
                 [
                     "%s" % frappe.db.escape(d.get("name"))
-                    for d in get_child_nodes(
-                        "Customer Group", data.get("customer_group")
-                    )
+                    for d in get_child_nodes("Customer Group", data.get("customer_group"))
                 ]
             )
 
@@ -50,25 +48,17 @@ def get_customer_group_condition(pos_profile):
 
 
 @frappe.whitelist()
-def get_customer_names(
-    pos_profile, limit=None, offset=None, start_after=None, modified_after=None
-):
+def get_customer_names(pos_profile, limit=None, offset=None, start_after=None, modified_after=None):
     _pos_profile = json.loads(pos_profile)
     ttl = _pos_profile.get("posa_server_cache_duration")
     if ttl:
         ttl = int(ttl) * 60
 
     @redis_cache(ttl=ttl or 1800)
-    def __get_customer_names(
-        pos_profile, limit=None, offset=None, start_after=None, modified_after=None
-    ):
-        return _get_customer_names(
-            pos_profile, limit, offset, start_after, modified_after
-        )
+    def __get_customer_names(pos_profile, limit=None, offset=None, start_after=None, modified_after=None):
+        return _get_customer_names(pos_profile, limit, offset, start_after, modified_after)
 
-    def _get_customer_names(
-        pos_profile, limit=None, offset=None, start_after=None, modified_after=None
-    ):
+    def _get_customer_names(pos_profile, limit=None, offset=None, start_after=None, modified_after=None):
         pos_profile = json.loads(pos_profile)
         filters = {"disabled": 0}
 
@@ -103,16 +93,10 @@ def get_customer_names(
         )
         return customers
 
-    if _pos_profile.get("posa_use_server_cache") and not (
-        limit or offset or start_after or modified_after
-    ):
-        return __get_customer_names(
-            pos_profile, limit, offset, start_after, modified_after
-        )
+    if _pos_profile.get("posa_use_server_cache") and not (limit or offset or start_after or modified_after):
+        return __get_customer_names(pos_profile, limit, offset, start_after, modified_after)
     else:
-        return _get_customer_names(
-            pos_profile, limit, offset, start_after, modified_after
-        )
+        return _get_customer_names(pos_profile, limit, offset, start_after, modified_after)
 
 
 @frappe.whitelist()
@@ -336,9 +320,7 @@ def set_customer_info(customer, fieldname, value=""):
     if fieldname == "loyalty_program":
         frappe.db.set_value("Customer", customer, "loyalty_program", value)
 
-    contact = (
-        frappe.get_cached_value("Customer", customer, "customer_primary_contact") or ""
-    )
+    contact = frappe.get_cached_value("Customer", customer, "customer_primary_contact") or ""
 
     if contact:
         contact_doc = frappe.get_doc("Contact", contact)
@@ -365,9 +347,7 @@ def set_customer_info(customer, fieldname, value=""):
 
         contact_doc.flags.ignore_mandatory = True
         contact_doc.save()
-        frappe.set_value(
-            "Customer", customer, "customer_primary_contact", contact_doc.name
-        )
+        frappe.set_value("Customer", customer, "customer_primary_contact", contact_doc.name)
 
 
 @frappe.whitelist()
@@ -411,9 +391,7 @@ def make_address(args):
             "pincode": args.get("pincode"),
             "country": args.get("country"),
             "address_type": "Shipping",
-            "links": [
-                {"link_doctype": args.get("doctype"), "link_name": args.get("customer")}
-            ],
+            "links": [{"link_doctype": args.get("doctype"), "link_name": args.get("customer")}],
         }
     ).insert()
 
@@ -436,7 +414,5 @@ def get_sales_person_names():
         return sales_persons
     except Exception as e:
         print(f"Error fetching sales persons: {str(e)}")
-        frappe.log_error(
-            f"Error fetching sales persons: {str(e)}", "POS Sales Person Error"
-        )
+        frappe.log_error(f"Error fetching sales persons: {str(e)}", "POS Sales Person Error")
         return []

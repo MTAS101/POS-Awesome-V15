@@ -100,5 +100,5 @@ frappe.PosApp.posapp = class {
 				.catch((err) => console.error("SW registration failed", err));
 		}
 	}
-	setup_header() { }
+	setup_header() {}
 };

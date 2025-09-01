@@ -180,52 +180,49 @@ export function useDiscounts() {
 			return;
 		}
 
-                if (item.posa_offer_applied) {
-                        item.amount = context.flt(item.qty * item.rate, context.currency_precision);
-                        const baseCurrency = context.price_list_currency || context.pos_profile.currency;
-                        if (context.selected_currency !== baseCurrency) {
-                                item.base_amount = context.flt(
-                                        item.amount / context.exchange_rate,
-                                        context.currency_precision,
-                                );
-                        } else {
-                                item.base_amount = item.amount;
-                        }
-                        if (context.forceUpdate) context.forceUpdate();
-                        return;
-                }
+		if (item.posa_offer_applied) {
+			item.amount = context.flt(item.qty * item.rate, context.currency_precision);
+			const baseCurrency = context.price_list_currency || context.pos_profile.currency;
+			if (context.selected_currency !== baseCurrency) {
+				item.base_amount = context.flt(
+					item.amount / context.exchange_rate,
+					context.currency_precision,
+				);
+			} else {
+				item.base_amount = item.amount;
+			}
+			if (context.forceUpdate) context.forceUpdate();
+			return;
+		}
 
-                if (item.price_list_rate) {
-                        // Always work with base rates first
-                        if (!item.base_price_list_rate) {
-                                item.base_price_list_rate = item.price_list_rate;
-                                item.base_rate = item.rate;
-                        }
+		if (item.price_list_rate) {
+			// Always work with base rates first
+			if (!item.base_price_list_rate) {
+				item.base_price_list_rate = item.price_list_rate;
+				item.base_rate = item.rate;
+			}
 
-                        // Convert to selected currency
-                        const baseCurrency = context.price_list_currency || context.pos_profile.currency;
-                        if (context.selected_currency !== baseCurrency) {
-                                item.price_list_rate = context.flt(
-                                        item.base_price_list_rate / context.exchange_rate,
-                                        context.currency_precision,
-                                );
-                                item.rate = context.flt(
-                                        item.base_rate / context.exchange_rate,
-                                        context.currency_precision,
-                                );
-                        } else {
-                                item.price_list_rate = item.base_price_list_rate;
-                                item.rate = item.base_rate;
-                        }
-                }
+			// Convert to selected currency
+			const baseCurrency = context.price_list_currency || context.pos_profile.currency;
+			if (context.selected_currency !== baseCurrency) {
+				item.price_list_rate = context.flt(
+					item.base_price_list_rate / context.exchange_rate,
+					context.currency_precision,
+				);
+				item.rate = context.flt(item.base_rate / context.exchange_rate, context.currency_precision);
+			} else {
+				item.price_list_rate = item.base_price_list_rate;
+				item.rate = item.base_rate;
+			}
+		}
 
-                // Handle discounts
-                if (item.discount_percentage) {
-                        // Calculate discount in selected currency
-                        const price_list_rate = item.price_list_rate;
-                        const discount_amount = context.flt(
-                                (price_list_rate * item.discount_percentage) / 100,
-                                context.currency_precision,
+		// Handle discounts
+		if (item.discount_percentage) {
+			// Calculate discount in selected currency
+			const price_list_rate = item.price_list_rate;
+			const discount_amount = context.flt(
+				(price_list_rate * item.discount_percentage) / 100,
+				context.currency_precision,
 			);
 
 			item.discount_amount = discount_amount;

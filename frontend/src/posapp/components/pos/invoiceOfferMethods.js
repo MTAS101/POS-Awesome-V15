@@ -653,29 +653,27 @@ export default {
 
 		new_item.is_free_item = is_free ? 1 : 0;
 
-                // Set price list rate based on currency similar to invoice logic
-                if (is_free) {
-                        new_item.base_price_list_rate = 0;
-                        new_item.price_list_rate = 0;
-                } else {
-                        // Use the item's price list rate if available
-                        new_item.price_list_rate = item.price_list_rate || item.rate;
-                        // Determine base price list rate just like invoice items
-                        const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-                        if (this.selected_currency !== baseCurrency) {
-                                new_item.base_price_list_rate = this.flt(
-                                        (item.base_price_list_rate !== undefined
-                                                ? item.base_price_list_rate
-                                                : item.rate / this.exchange_rate),
-                                        this.currency_precision,
-                                );
-                        } else {
-                                new_item.base_price_list_rate =
-                                        item.base_price_list_rate !== undefined
-                                                ? item.base_price_list_rate
-                                                : item.rate;
-                        }
-                }
+		// Set price list rate based on currency similar to invoice logic
+		if (is_free) {
+			new_item.base_price_list_rate = 0;
+			new_item.price_list_rate = 0;
+		} else {
+			// Use the item's price list rate if available
+			new_item.price_list_rate = item.price_list_rate || item.rate;
+			// Determine base price list rate just like invoice items
+			const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+			if (this.selected_currency !== baseCurrency) {
+				new_item.base_price_list_rate = this.flt(
+					item.base_price_list_rate !== undefined
+						? item.base_price_list_rate
+						: item.rate / this.exchange_rate,
+					this.currency_precision,
+				);
+			} else {
+				new_item.base_price_list_rate =
+					item.base_price_list_rate !== undefined ? item.base_price_list_rate : item.rate;
+			}
+		}
 
 		new_item.posa_row_id = this.makeid(20);
 
@@ -722,61 +720,60 @@ export default {
 
 					const conversion_factor = flt(item.conversion_factor || 1);
 
-                                        if (offer.discount_type === "Rate") {
-                                                // offer.rate is always in base currency (e.g. PKR)
-                                                const base_offer_rate = flt(offer.rate * conversion_factor);
+					if (offer.discount_type === "Rate") {
+						// offer.rate is always in base currency (e.g. PKR)
+						const base_offer_rate = flt(offer.rate * conversion_factor);
 
-                                                // Determine original base price for reference
-                                                const base_price = this.flt(
-                                                        (item.original_base_price_list_rate ||
-                                                                item.base_price_list_rate / conversion_factor) *
-                                                                conversion_factor,
-                                                        this.currency_precision,
-                                                );
+						// Determine original base price for reference
+						const base_price = this.flt(
+							(item.original_base_price_list_rate ||
+								item.base_price_list_rate / conversion_factor) * conversion_factor,
+							this.currency_precision,
+						);
 
-                                                // Set base rates and keep original price list rate
-                                                item.base_rate = base_offer_rate;
-                                                item.base_price_list_rate = base_price;
+						// Set base rates and keep original price list rate
+						item.base_rate = base_offer_rate;
+						item.base_price_list_rate = base_price;
 
-                                                // Convert to selected currency if needed
-                                                const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-                                                if (this.selected_currency !== baseCurrency) {
-                                                        // If exchange rate is 285 PKR = 1 USD
-                                                        // To convert PKR to USD multiply by exchange rate
-                                                        item.rate = this.flt(
-                                                                base_offer_rate * this.exchange_rate,
-                                                                this.currency_precision,
-                                                        );
-                                                        item.price_list_rate = this.flt(
-                                                                base_price * this.exchange_rate,
-                                                                this.currency_precision,
-                                                        );
-                                                        item.discount_amount = this.flt(
-                                                                (base_price - base_offer_rate) * this.exchange_rate,
-                                                                this.currency_precision,
-                                                        );
-                                                } else {
-                                                        item.rate = base_offer_rate;
-                                                        item.price_list_rate = base_price;
-                                                        item.discount_amount = this.flt(
-                                                                base_price - base_offer_rate,
-                                                                this.currency_precision,
-                                                        );
-                                                }
+						// Convert to selected currency if needed
+						const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+						if (this.selected_currency !== baseCurrency) {
+							// If exchange rate is 285 PKR = 1 USD
+							// To convert PKR to USD multiply by exchange rate
+							item.rate = this.flt(
+								base_offer_rate * this.exchange_rate,
+								this.currency_precision,
+							);
+							item.price_list_rate = this.flt(
+								base_price * this.exchange_rate,
+								this.currency_precision,
+							);
+							item.discount_amount = this.flt(
+								(base_price - base_offer_rate) * this.exchange_rate,
+								this.currency_precision,
+							);
+						} else {
+							item.rate = base_offer_rate;
+							item.price_list_rate = base_price;
+							item.discount_amount = this.flt(
+								base_price - base_offer_rate,
+								this.currency_precision,
+							);
+						}
 
-                                                // Compute base discount amounts and percentage
-                                                item.base_discount_amount = this.flt(
-                                                        base_price - base_offer_rate,
-                                                        this.currency_precision,
-                                                );
-                                                item.discount_percentage = base_price
-                                                        ? this.flt(
-                                                                  (item.base_discount_amount / base_price) * 100,
-                                                                  this.currency_precision,
-                                                          )
-                                                        : 0;
-                                        } else if (offer.discount_type === "Discount Percentage") {
-                                                item.discount_percentage = offer.discount_percentage;
+						// Compute base discount amounts and percentage
+						item.base_discount_amount = this.flt(
+							base_price - base_offer_rate,
+							this.currency_precision,
+						);
+						item.discount_percentage = base_price
+							? this.flt(
+									(item.base_discount_amount / base_price) * 100,
+									this.currency_precision,
+								)
+							: 0;
+					} else if (offer.discount_type === "Discount Percentage") {
+						item.discount_percentage = offer.discount_percentage;
 
 						// Calculate discount in base currency first
 						// Use normalized price * current conversion factor
@@ -785,37 +782,37 @@ export default {
 								item.base_price_list_rate / conversion_factor) * conversion_factor,
 							this.currency_precision,
 						);
-                                                const base_discount = this.flt(
-                                                        (base_price * offer.discount_percentage) / 100,
-                                                        this.currency_precision,
-                                                );
-                                                item.base_discount_amount = base_discount;
-                                                item.base_rate = this.flt(base_price - base_discount, this.currency_precision);
+						const base_discount = this.flt(
+							(base_price * offer.discount_percentage) / 100,
+							this.currency_precision,
+						);
+						item.base_discount_amount = base_discount;
+						item.base_rate = this.flt(base_price - base_discount, this.currency_precision);
 
-                                                // Keep price list rate at original price
-                                                item.base_price_list_rate = base_price;
+						// Keep price list rate at original price
+						item.base_price_list_rate = base_price;
 
-                                                // Convert to selected currency if needed
-                                                const baseCurrency = this.price_list_currency || this.pos_profile.currency;
-                                                if (this.selected_currency !== baseCurrency) {
-                                                        item.rate = this.flt(
-                                                                item.base_rate * this.exchange_rate,
-                                                                this.currency_precision,
-                                                        );
-                                                        item.price_list_rate = this.flt(
-                                                                base_price * this.exchange_rate,
-                                                                this.currency_precision,
-                                                        );
-                                                        item.discount_amount = this.flt(
-                                                                base_discount * this.exchange_rate,
-                                                                this.currency_precision,
-                                                        );
-                                                } else {
-                                                        item.rate = item.base_rate;
-                                                        item.price_list_rate = base_price;
-                                                        item.discount_amount = base_discount;
-                                                }
-                                        }
+						// Convert to selected currency if needed
+						const baseCurrency = this.price_list_currency || this.pos_profile.currency;
+						if (this.selected_currency !== baseCurrency) {
+							item.rate = this.flt(
+								item.base_rate * this.exchange_rate,
+								this.currency_precision,
+							);
+							item.price_list_rate = this.flt(
+								base_price * this.exchange_rate,
+								this.currency_precision,
+							);
+							item.discount_amount = this.flt(
+								base_discount * this.exchange_rate,
+								this.currency_precision,
+							);
+						} else {
+							item.rate = item.base_rate;
+							item.price_list_rate = base_price;
+							item.discount_amount = base_discount;
+						}
+					}
 
 					// Calculate final amounts
 					item.amount = this.flt(item.qty * item.rate, this.currency_precision);

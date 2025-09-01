@@ -69,9 +69,5 @@ def get_offers(profile):
 
 
 @frappe.whitelist()
-def get_applicable_delivery_charges(
-    company, pos_profile, customer, shipping_address_name=None
-):
-    return _get_applicable_delivery_charges(
-        company, pos_profile, customer, shipping_address_name
-    )
+def get_applicable_delivery_charges(company, pos_profile, customer, shipping_address_name=None):
+    return _get_applicable_delivery_charges(company, pos_profile, customer, shipping_address_name)
