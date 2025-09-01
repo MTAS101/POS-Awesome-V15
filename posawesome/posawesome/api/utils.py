@@ -10,7 +10,7 @@ HAS_VARIANTS_EXCLUSION = {"has_variants": 0}
 
 def expand_item_groups(item_groups):
     """Expand any parent item groups to include their children.
-    
+
     This function takes a list of item groups and expands any parent groups
     to include all their descendants, while keeping leaf groups as-is.
     """
@@ -26,10 +26,10 @@ def expand_item_groups(item_groups):
     for group in item_groups:
         if not group:
             continue
-        
+
         # Check if this is a parent group
         is_group = frappe.db.get_value("Item Group", group, "is_group")
-        
+
         if is_group:
             # If it's a parent group, get all its children
             if get_child_groups:
@@ -79,9 +79,9 @@ def get_item_groups(pos_profile: str) -> list[str]:
     """Return all item groups for a POS profile, including descendants.
 
     The linked groups from the ``POS Item Group`` child table are
-    expanded to include all of their descendants. Results are cached 
+    expanded to include all of their descendants. Results are cached
     to avoid duplicate database calls within a process.
-    
+
 
     """
     if not pos_profile or not frappe.db.exists("DocType", "POS Item Group"):

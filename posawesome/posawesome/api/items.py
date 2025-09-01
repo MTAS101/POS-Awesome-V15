@@ -17,7 +17,6 @@ from frappe.utils.caching import redis_cache
 from .utils import HAS_VARIANTS_EXCLUSION, get_item_groups, expand_item_groups
 
 
-
 def normalize_brand(brand: str) -> str:
     """Return a normalized representation of a brand name."""
     return cstr(brand).strip().lower()
