@@ -116,6 +116,21 @@ For more details, see the [POS Awesome Wiki](https://github.com/yrestom/POS-Awes
 
 ---
 
+### Code Formatting
+
+This project uses Prettier and Black for consistent formatting. To format locally before
+pushing changes, run:
+
+```bash
+yarn prettier --write "**/*.{js,vue,css,scss,html}"
+pip install -r requirements-dev.txt
+black .
+```
+
+These commands will rewrite files in-place so the CI checks pass.
+
+---
+
 ### Contributing
 
 1. [Issue Guidelines](https://github.com/frappe/erpnext/wiki/Issue-Guidelines)
