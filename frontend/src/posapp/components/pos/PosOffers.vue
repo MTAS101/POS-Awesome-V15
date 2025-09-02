@@ -25,9 +25,9 @@
 					hide-default-footer
 				>
 					<template v-slot:item.offer_applied="{ item }">
-						<v-checkbox-btn
-							@click="toggleOfferApplied"
-							v-model="item.offer_applied"
+						<v-btn
+							:color="item.offer_applied ? 'green' : 'red'"
+							@click="toggleOfferApplied(item)"
 							:disabled="
 								(item.offer == 'Give Product' &&
 									!item.give_item &&
@@ -36,7 +36,9 @@
 									discount_percentage_offer_name &&
 									discount_percentage_offer_name != item.name)
 							"
-						></v-checkbox-btn>
+						>
+							{{ item.offer_applied ? __("Applied") : __("Apply") }}
+						</v-btn>
 					</template>
 					<template v-slot:expanded-row="{ item }">
 						<td :colspan="items_headers.length">
@@ -163,8 +165,9 @@ export default {
 			list_offers = [...this.pos_offers];
 			this.pos_offers = list_offers;
 		},
-		toggleOfferApplied() {
-			// re-emit updated offers so watchers respond
+		toggleOfferApplied(item) {
+			// toggle state and re-emit updated offers so watchers respond
+			item.offer_applied = !item.offer_applied;
 			this.forceUpdateItem();
 		},
 		makeid(length) {
