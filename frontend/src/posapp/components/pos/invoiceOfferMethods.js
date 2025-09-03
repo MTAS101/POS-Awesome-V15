@@ -1133,16 +1133,19 @@ export default {
 	toggleOffer(item) {
 		this.$nextTick(() => {
 			if (!item.posa_is_offer) {
+				this.isApplyingOffer = true;
 				item.posa_offers = JSON.stringify([]);
 				item.posa_offer_applied = 0;
 				item.discount_percentage = 0;
 				item.discount_amount = 0;
 				item.rate = item.price_list_rate;
 				this.calc_item_price(item);
+				this.isApplyingOffer = false;
+			} else {
 				this.handelOffers();
 			}
 			// Ensure Vue reactivity
 			this.$forceUpdate();
 		});
-	}, // Added missing comma here
+	},
 };
