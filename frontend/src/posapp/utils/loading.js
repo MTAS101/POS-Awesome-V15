@@ -37,9 +37,6 @@ export function initLoadingSources(list) {
 
 	loadingState.progress = 0;
 	loadingState.active = true;
-
-	// Start the fallback timeout
-	startLoadingTimeout();
 }
 
 export function setSourceProgress(name, value) {
@@ -105,8 +102,6 @@ function completeLoading() {
 	if (isCompleting) return;
 	isCompleting = true;
 
-	clearLoadingTimeout(); // Clear the fallback timeout
-
 	loadingState.progress = 100;
 	loadingState.message = __("Setup complete!");
 
@@ -127,30 +122,6 @@ function completeLoading() {
 	}, 400);
 }
 
-// Add fallback timeout to ensure loading bar disappears
-let loadingTimeout = null;
-
-export function startLoadingTimeout() {
-	// Clear any existing timeout
-	if (loadingTimeout) {
-		clearTimeout(loadingTimeout);
-	}
-
-	// Set a maximum loading time of 30 seconds
-	loadingTimeout = setTimeout(() => {
-		console.warn("Loading timeout reached, forcing loading state to complete");
-		loadingState.message = __("Taking longer than expected...");
-		completeLoading();
-	}, 30000);
-}
-
-export function clearLoadingTimeout() {
-	if (loadingTimeout) {
-		clearTimeout(loadingTimeout);
-		loadingTimeout = null;
-	}
-}
-
 export function markSourceLoaded(name) {
 	console.log(`Loading source marked as loaded: ${name}`);
 	setSourceProgress(name, 100);
@@ -158,7 +129,6 @@ export function markSourceLoaded(name) {
 
 // Utility function to manually reset loading state
 export function resetLoadingState() {
-	clearLoadingTimeout();
 	loadingState.active = false;
 	loadingState.progress = 0;
 	loadingState.message = __("Loading app data...");

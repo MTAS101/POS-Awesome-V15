@@ -50,13 +50,7 @@ import Navbar from "./components/Navbar.vue";
 import POS from "./components/pos/Pos.vue";
 import Payments from "./components/payments/Pay.vue";
 import LoadingOverlay from "./components/pos/LoadingOverlay.vue";
-import {
-	loadingState,
-	initLoadingSources,
-	setSourceProgress,
-	markSourceLoaded,
-	clearLoadingTimeout,
-} from "./utils/loading.js";
+import { loadingState, initLoadingSources, setSourceProgress, markSourceLoaded } from "./utils/loading.js";
 import {
 	getOpeningStorage,
 	getCacheUsageEstimate,
@@ -490,8 +484,6 @@ export default {
 			this.eventBus.off("pending_invoices_changed");
 			this.eventBus.off("data-loaded");
 		}
-		// Clear loading timeout when component unmounts
-		clearLoadingTimeout();
 	},
 	created: function () {
 		setTimeout(() => {
