@@ -1130,6 +1130,33 @@ export default {
 		return formatUtils.toArabicNumerals(western);
 	},
 
+	hasItemOffer(item) {
+		if (!item) return false;
+		return this.posOffers.some((offer) => {
+			if (!offer.items) return false;
+			let items;
+			try {
+				items = Array.isArray(offer.items) ? offer.items : JSON.parse(offer.items);
+			} catch (e) {
+				return false;
+			}
+			return items.includes(item.posa_row_id);
+		});
+	},
+
+	applyItemOffer(item) {
+		if (!item) return;
+		item.posa_is_offer = 0;
+		this.handelOffers();
+		this.calc_item_price(item);
+	},
+
+	removeItemOffer(item) {
+		if (!item) return;
+		item.posa_is_offer = 0;
+		this.toggleOffer(item);
+	},
+
 	toggleOffer(item) {
 		this.$nextTick(() => {
 			if (!item.posa_is_offer) {

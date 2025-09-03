@@ -125,13 +125,28 @@
 				</div>
 			</template>
 
-			<!-- Offer checkbox column -->
+			<!-- Offer action column -->
 			<template v-slot:item.posa_is_offer="{ item }">
-				<v-checkbox-btn
-					v-model="item.posa_is_offer"
-					class="center"
-					@change="toggleOffer(item)"
-				></v-checkbox-btn>
+				<div class="text-center">
+					<v-btn
+						v-if="item.posa_offer_applied"
+						size="x-small"
+						variant="text"
+						color="primary"
+						@click.stop="removeItemOffer(item)"
+					>
+						{{ __("Remove Offer") }}
+					</v-btn>
+					<v-btn
+						v-else-if="hasItemOffer && hasItemOffer(item)"
+						size="x-small"
+						variant="text"
+						color="primary"
+						@click.stop="applyItemOffer(item)"
+					>
+						{{ __("Apply Offer") }}
+					</v-btn>
+				</div>
 			</template>
 
 			<!-- Expanded row content using Vuetify's built-in system -->
@@ -705,7 +720,9 @@ export default {
 		subtractOne: Function,
 		addOne: Function,
 		isReturnInvoice: Boolean,
-		toggleOffer: Function,
+		applyItemOffer: Function,
+		removeItemOffer: Function,
+		hasItemOffer: Function,
 		changePriceListRate: Function,
 		isNegative: Function,
 	},
