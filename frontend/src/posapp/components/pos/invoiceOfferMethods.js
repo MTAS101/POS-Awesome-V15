@@ -1139,12 +1139,19 @@ export default {
 				item.posa_offer_applied = 0;
 				item.discount_percentage = 0;
 				item.discount_amount = 0;
+				item.base_discount_amount = 0;
 
 				// Restore previous rates if stored, otherwise use price list rate
 				item.rate = item.original_rate || item.price_list_rate;
 				item.price_list_rate = item.original_price_list_rate || item.price_list_rate;
+				item.base_rate = item.original_base_rate || item.base_rate;
+				item.base_price_list_rate = item.original_base_price_list_rate || item.base_price_list_rate;
+
+				// Clear stored original rates
 				item.original_rate = null;
 				item.original_price_list_rate = null;
+				item.original_base_rate = null;
+				item.original_base_price_list_rate = null;
 
 				this.calc_item_price(item);
 				this.handelOffers();
