@@ -15,20 +15,15 @@
 				position: 'relative',
 			}"
 		>
-			<v-progress-linear
-				:active="loading"
-				:indeterminate="loading"
-				absolute
-				location="top"
-				color="info"
-			></v-progress-linear>
-			<LoadingOverlay
-				:loading="loading || isBackgroundLoading"
-				:message="__('Loading item data...')"
-				:progress="loadProgress"
-			/>
+                        <v-progress-linear
+                                :active="loading"
+                                :indeterminate="loading"
+                                absolute
+                                location="top"
+                                color="info"
+                        ></v-progress-linear>
 
-			<!-- Add dynamic-padding wrapper like Invoice component -->
+                        <!-- Add dynamic-padding wrapper like Invoice component -->
 			<div class="dynamic-padding">
 				<div class="sticky-header">
 					<v-row class="items">
@@ -461,7 +456,6 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import placeholderImage from "./placeholder-image.png";
-import LoadingOverlay from "./LoadingOverlay.vue";
 
 export default {
 	mixins: [format],
@@ -470,10 +464,9 @@ export default {
 		const rtl = useRtl();
 		return { ...responsive, ...rtl };
 	},
-	components: {
-		CameraScanner,
-		LoadingOverlay,
-	},
+       components: {
+               CameraScanner,
+       },
 	data: () => ({
 		pos_profile: {},
 		flags: {},

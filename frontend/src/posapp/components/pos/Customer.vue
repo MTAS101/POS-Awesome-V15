@@ -83,15 +83,10 @@
 		</v-autocomplete>
 
 		<!-- Update customer modal -->
-		<div class="mt-4">
-			<UpdateCustomer />
-		</div>
-		<LoadingOverlay
-			:loading="loadingCustomers || isCustomerBackgroundLoading"
-			:message="__('Loading customer data...')"
-			:progress="loadProgress"
-		/>
-	</div>
+                <div class="mt-4">
+                        <UpdateCustomer />
+                </div>
+       </div>
 </template>
 
 <style scoped>
@@ -166,7 +161,6 @@
 <script>
 /* global frappe __ */
 import UpdateCustomer from "./UpdateCustomer.vue";
-import LoadingOverlay from "./LoadingOverlay.vue";
 import {
 	db,
 	checkDbHealth,
@@ -211,10 +205,9 @@ export default {
 		loadedCustomerCount: 0,
 	}),
 
-	components: {
-		UpdateCustomer,
-		LoadingOverlay,
-	},
+       components: {
+               UpdateCustomer,
+       },
 
 	computed: {
 		isDarkTheme() {

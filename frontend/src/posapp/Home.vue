@@ -1,10 +1,11 @@
 <template>
-	<v-app class="container1" :class="rtlClasses">
-		<v-main class="main-content">
-			<Navbar
-				:pos-profile="posProfile"
-				:pending-invoices="pendingInvoices"
-				:last-invoice-id="lastInvoiceId"
+       <v-app class="container1" :class="rtlClasses">
+               <LoadingOverlay :loading="loadingActive" :progress="loadingProgress" :message="loadingMessage" />
+               <v-main class="main-content">
+                       <Navbar
+                               :pos-profile="posProfile"
+                               :pending-invoices="pendingInvoices"
+                               :last-invoice-id="lastInvoiceId"
 				:network-online="networkOnline"
 				:server-online="serverOnline"
 				:server-connecting="serverConnecting"
@@ -42,9 +43,10 @@
 import Navbar from "./components/Navbar.vue";
 import POS from "./components/pos/Pos.vue";
 import Payments from "./components/payments/Pay.vue";
+import LoadingOverlay from "./components/pos/LoadingOverlay.vue";
 import {
-	loadingState,
-	initLoadingSources,
+        loadingState,
+        initLoadingSources,
 	setSourceProgress,
 	markSourceLoaded,
 	clearLoadingTimeout,
@@ -145,11 +147,12 @@ export default {
 			}
 		},
 	},
-	components: {
-		Navbar,
-		POS,
-		Payments,
-	},
+        components: {
+                Navbar,
+                POS,
+               Payments,
+               LoadingOverlay,
+        },
 	mounted() {
 		this.remove_frappe_nav();
 		// Initialize cache ready state early from stored value
