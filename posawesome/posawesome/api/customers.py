@@ -11,6 +11,7 @@ from erpnext.accounts.doctype.loyalty_program.loyalty_program import (
     get_loyalty_program_details_with_points,
 )
 from frappe.utils.caching import redis_cache
+from .utils import get_active_pos_profile
 
 
 def get_customer_groups(pos_profile):
@@ -404,9 +405,18 @@ def get_sales_person_names():
 
     print("Fetching sales persons...")
     try:
+        profile = get_active_pos_profile()
+        allowed = []
+        if profile:
+            allowed = [
+                d.get("sales_person") for d in profile.get("posa_sales_persons", []) if d.get("sales_person")
+            ]
+        filters = {"enabled": 1}
+        if allowed:
+            filters["name"] = ["in", allowed]
         sales_persons = frappe.get_list(
             "Sales Person",
-            filters={"enabled": 1},
+            filters=filters,
             fields=["name", "sales_person_name"],
             limit_page_length=100000,
         )
