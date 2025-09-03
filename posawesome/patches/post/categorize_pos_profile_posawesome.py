@@ -226,6 +226,7 @@ OLD_SECTIONS = [
     "POS Awesome Advance Settings",
 ]
 
+
 def _get_anchor():
     if frappe.db.exists("DocField", {"parent": DT, "fieldname": "company_address"}):
         return "company_address"
@@ -264,13 +265,10 @@ def create_sections():
             {"insert_after": anchor, "collapsible": 1, "label": sec["label"]},
             DT,
         )
-        update_custom_field(
-            sec["left_col"], {"insert_after": sec["section_field"]}, DT
-        )
-        update_custom_field(
-            sec["right_col"], {"insert_after": sec["left_col"]}, DT
-        )
+        update_custom_field(sec["left_col"], {"insert_after": sec["section_field"]}, DT)
+        update_custom_field(sec["right_col"], {"insert_after": sec["left_col"]}, DT)
         anchor = sec["right_col"]
+
 
 def move_fields_in_order(fieldnames, insert_after):
     prev = insert_after
@@ -280,11 +278,13 @@ def move_fields_in_order(fieldnames, insert_after):
         update_custom_field(fname, {"insert_after": prev}, DT)
         prev = fname
 
+
 def hide_old_sections():
     for label in OLD_SECTIONS:
         name = frappe.db.get_value("Custom Field", {"dt": DT, "label": label}, "name")
         if name:
             frappe.db.set_value("Custom Field", name, "hidden", 1)
+
 
 def execute():
     create_sections()
