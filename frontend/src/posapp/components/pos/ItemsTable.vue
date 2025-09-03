@@ -832,10 +832,12 @@ export default {
 			}
 		},
 		applyOffer(item) {
+			item.posa_offer_disabled = false;
 			item.posa_is_offer = 1;
 			this.toggleOffer(item);
 		},
 		removeOffer(item) {
+			item.posa_offer_disabled = true;
 			item.posa_is_offer = 0;
 			this.toggleOffer(item);
 		},

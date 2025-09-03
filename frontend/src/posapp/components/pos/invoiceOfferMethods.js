@@ -180,7 +180,7 @@ export default {
 			if (this.checkOfferCoupon(offer)) {
 				const combined = [...this.items, ...this.packed_items];
 				combined.forEach((item) => {
-					if (!item.posa_is_offer && item.item_code === offer.item) {
+					if (!item.posa_is_offer && !item.posa_offer_disabled && item.item_code === offer.item) {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
@@ -212,7 +212,11 @@ export default {
 				let total_amount = 0;
 				const combined = [...this.items, ...this.packed_items];
 				combined.forEach((item) => {
-					if (!item.posa_is_offer && item.item_group === offer.item_group) {
+					if (
+						!item.posa_is_offer &&
+						!item.posa_offer_disabled &&
+						item.item_group === offer.item_group
+					) {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
@@ -249,7 +253,12 @@ export default {
 				const combined = [...this.items, ...this.packed_items];
 				combined.forEach((item) => {
 					const item_brand = this.getItemBrand(item);
-					if (!item.posa_is_offer && item_brand && item_brand === offer_brand) {
+					if (
+						!item.posa_is_offer &&
+						!item.posa_offer_disabled &&
+						item_brand &&
+						item_brand === offer_brand
+					) {
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
@@ -283,7 +292,7 @@ export default {
 				let total_amount = 0;
 				const items = [];
 				combined.forEach((item) => {
-					if (!item.posa_is_offer && !item.posa_is_replace) {
+					if (!item.posa_is_offer && !item.posa_offer_disabled && !item.posa_is_replace) {
 						total_qty += item.stock_qty;
 						const rate = item.original_price_list_rate || item.price_list_rate;
 						total_amount += item.stock_qty * rate;
@@ -1134,14 +1143,18 @@ export default {
 		this.$nextTick(() => {
 			if (!item.posa_is_offer) {
 				this.isApplyingOffer = true;
-				item.posa_offers = JSON.stringify([]);
-				item.posa_offer_applied = 0;
-				item.discount_percentage = 0;
-				item.discount_amount = 0;
-				item.rate = item.price_list_rate;
-				this.calc_item_price(item);
+				const offerIds = item.posa_offers ? JSON.parse(item.posa_offers) : [];
+				offerIds.forEach((id) => {
+					const invoiceOffer = this.posa_offers.find((el) => el.row_id === id);
+					if (invoiceOffer) {
+						this.removeApplyOffer(invoiceOffer);
+					}
+				});
+				item.posa_offer_disabled = true;
 				this.isApplyingOffer = false;
+				this.handelOffers();
 			} else {
+				item.posa_offer_disabled = false;
 				this.handelOffers();
 			}
 			// Ensure Vue reactivity

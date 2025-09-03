@@ -52,6 +52,7 @@ export function useItemAddition() {
 				posa_offers: JSON.stringify([]),
 				posa_offer_applied: 0,
 				posa_is_offer: 0,
+				posa_offer_disabled: 0,
 			};
 			context.packed_items.push(child);
 			if (context.update_item_detail) {
@@ -385,6 +386,7 @@ export function useItemAddition() {
 		new_item.posa_offers = JSON.stringify([]);
 		new_item.posa_offer_applied = 0;
 		new_item.posa_is_offer = item.posa_is_offer;
+		new_item.posa_offer_disabled = 0;
 		new_item.posa_is_replace = item.posa_is_replace || null;
 		new_item.is_free_item = 0;
 		new_item.is_bundle = 0;
