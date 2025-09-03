@@ -74,6 +74,10 @@ doctype_js = {
 # before_uninstall = "posawesome.uninstall.before_uninstall"
 after_uninstall = "posawesome.uninstall.after_uninstall"
 
+patches = [
+    "posawesome.patches.post.categorize_pos_profile_posawesome",
+]
+
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
