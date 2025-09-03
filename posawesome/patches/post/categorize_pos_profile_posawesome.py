@@ -223,6 +223,7 @@ OLD_SECTIONS = [
     "POS Awesome Advance Settings",
 ]
 
+
 def create_sections():
     anchor = "company_address"
     for sec in SECTIONS:
@@ -250,6 +251,7 @@ def create_sections():
             frappe.db.set_value("Custom Field", f"{DT}-{f['fieldname']}", "insert_after", f["insert_after"])
         anchor = sec["right_col"]
 
+
 def move_fields_in_order(fieldnames, insert_after):
     prev = insert_after
     for fname in fieldnames:
@@ -259,11 +261,13 @@ def move_fields_in_order(fieldnames, insert_after):
         frappe.db.set_value("Custom Field", name, "insert_after", prev)
         prev = fname
 
+
 def hide_old_sections():
     for label in OLD_SECTIONS:
         name = frappe.db.get_value("Custom Field", {"dt": DT, "label": label}, "name")
         if name:
             frappe.db.set_value("Custom Field", name, "hidden", 1)
+
 
 def execute():
     create_sections()
