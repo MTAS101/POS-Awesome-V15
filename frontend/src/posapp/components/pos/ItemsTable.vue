@@ -128,7 +128,7 @@
 			<!-- Offer action column -->
 			<template v-slot:item.posa_is_offer="{ item }">
 				<v-btn
-					v-if="!item.posa_is_offer && !item.posa_offer_applied"
+					v-if="!item.posa_offer_applied"
 					color="green"
 					@mousedown.stop
 					@click.stop="applyOffer(item)"
@@ -833,12 +833,10 @@ export default {
 		},
 		applyOffer(item) {
 			item.posa_offer_disabled = false;
-			item.posa_is_offer = 1;
 			this.toggleOffer(item);
 		},
 		removeOffer(item) {
 			item.posa_offer_disabled = true;
-			item.posa_is_offer = 0;
 			this.toggleOffer(item);
 		},
 	},

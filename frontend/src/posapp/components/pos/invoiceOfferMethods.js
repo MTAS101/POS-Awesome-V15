@@ -180,7 +180,8 @@ export default {
 			if (this.checkOfferCoupon(offer)) {
 				const combined = [...this.items, ...this.packed_items];
 				combined.forEach((item) => {
-					if (!item.posa_is_offer && !item.posa_offer_disabled && item.item_code === offer.item) {
+					if (!item.posa_is_offer && item.item_code === offer.item) {
+						const auto = !item.posa_offer_disabled;
 						if (
 							offer.offer === "Item Price" &&
 							item.posa_offer_applied &&
@@ -194,6 +195,7 @@ export default {
 						if (res.apply) {
 							items.push(item.posa_row_id);
 							offer.items = items;
+							offer.auto = auto;
 							apply_offer = offer;
 						}
 					}
@@ -1141,7 +1143,7 @@ export default {
 
 	toggleOffer(item) {
 		this.$nextTick(() => {
-			if (!item.posa_is_offer) {
+			if (item.posa_offer_applied) {
 				this.isApplyingOffer = true;
 				const offerIds = item.posa_offers ? JSON.parse(item.posa_offers) : [];
 				offerIds.forEach((id) => {
