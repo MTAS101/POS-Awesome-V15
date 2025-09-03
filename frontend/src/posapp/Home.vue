@@ -1,6 +1,12 @@
 <template>
 	<v-app class="container1" :class="rtlClasses">
-		<LoadingOverlay :loading="loadingActive" :progress="loadingProgress" :message="loadingMessage" />
+                <LoadingOverlay
+                        :loading="loadingActive"
+                        :progress="loadingProgress"
+                        :message="loadingMessage"
+                        :sources="loadingSources"
+                        :source-messages="loadingSourceMessages"
+                />
 		<v-main class="main-content">
 			<Navbar
 				:pos-profile="posProfile"
@@ -118,20 +124,26 @@ export default {
 			// Loading progress handled via utility
 		};
 	},
-	computed: {
-		isDark() {
-			return this.$theme?.current === "dark";
-		},
-		loadingProgress() {
-			return loadingState.progress;
-		},
-		loadingActive() {
-			return loadingState.active;
-		},
-		loadingMessage() {
-			return loadingState.message;
-		},
-	},
+        computed: {
+                isDark() {
+                        return this.$theme?.current === "dark";
+                },
+                loadingProgress() {
+                        return loadingState.progress;
+                },
+                loadingActive() {
+                        return loadingState.active;
+                },
+                loadingMessage() {
+                        return loadingState.message;
+                },
+                loadingSources() {
+                        return loadingState.sources;
+                },
+                loadingSourceMessages() {
+                        return loadingState.sourceMessages;
+                },
+        },
 	watch: {
 		networkOnline(newVal, oldVal) {
 			if (newVal && !oldVal) {
