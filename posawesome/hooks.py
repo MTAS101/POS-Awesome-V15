@@ -214,10 +214,9 @@ fixtures = [
         "doctype": "Custom Field",
         "filters": [
             [
-                "name",
-                "in",
-                [
-                ],
+                "dt",
+                "=",
+                "POS Profile",
             ]
         ],
     },
