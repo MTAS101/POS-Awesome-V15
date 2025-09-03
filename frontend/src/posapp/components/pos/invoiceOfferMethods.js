@@ -1132,17 +1132,30 @@ export default {
 
 	toggleOffer(item) {
 		this.$nextTick(() => {
-			if (!item.posa_is_offer) {
+			if (item.posa_offer_applied) {
+				// Remove applied offer and restore original pricing
+				item.posa_is_offer = 1;
 				item.posa_offers = JSON.stringify([]);
 				item.posa_offer_applied = 0;
 				item.discount_percentage = 0;
 				item.discount_amount = 0;
-				item.rate = item.price_list_rate;
+
+				// Restore previous rates if stored, otherwise use price list rate
+				item.rate = item.original_rate || item.price_list_rate;
+				item.price_list_rate = item.original_price_list_rate || item.price_list_rate;
+				item.original_rate = null;
+				item.original_price_list_rate = null;
+
 				this.calc_item_price(item);
 				this.handelOffers();
+			} else {
+				// Allow offers to be applied
+				item.posa_is_offer = 0;
+				this.handelOffers();
 			}
+
 			// Ensure Vue reactivity
 			this.$forceUpdate();
 		});
-	}, // Added missing comma here
+	},
 };
