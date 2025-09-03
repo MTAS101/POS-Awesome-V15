@@ -46,33 +46,33 @@ export function setSourceProgress(name, value) {
 	// Safety checks
 	if (!(name in loadingState.sources) || isCompleting || sourceCount === 0) return;
 
-        // Clamp value between 0 and 100 and prevent regressions
-        const clampedValue = Math.max(0, Math.min(100, value));
-        const oldValue = loadingState.sources[name];
-        const newValue = Math.max(oldValue, clampedValue);
+	// Clamp value between 0 and 100 and prevent regressions
+	const clampedValue = Math.max(0, Math.min(100, value));
+	const oldValue = loadingState.sources[name];
+	const newValue = Math.max(oldValue, clampedValue);
 
-        loadingState.sources[name] = newValue;
+	loadingState.sources[name] = newValue;
 
-        // Update message only if it changed
-        const newMessage = loadingState.sourceMessages[name] || __(`Loading ${name}...`);
-        if (loadingState.message !== newMessage) {
-                loadingState.message = newMessage;
-        }
+	// Update message only if it changed
+	const newMessage = loadingState.sourceMessages[name] || __(`Loading ${name}...`);
+	if (loadingState.message !== newMessage) {
+		loadingState.message = newMessage;
+	}
 
-        // Only update totals when progress increases
-        if (newValue > oldValue) {
-                completedSum += newValue - oldValue;
-                const newProgress = Math.round(completedSum / sourceCount);
+	// Only update totals when progress increases
+	if (newValue > oldValue) {
+		completedSum += newValue - oldValue;
+		const newProgress = Math.round(completedSum / sourceCount);
 
-                // Only animate if progress actually changed
-                if (newProgress !== loadingState.progress && newProgress <= 100) {
-                        animateProgress(loadingState.progress, newProgress);
-                }
+		// Only animate if progress actually changed
+		if (newProgress !== loadingState.progress && newProgress <= 100) {
+			animateProgress(loadingState.progress, newProgress);
+		}
 
-                if (newProgress >= 100 && !isCompleting) {
-                        completeLoading();
-                }
-        }
+		if (newProgress >= 100 && !isCompleting) {
+			completeLoading();
+		}
+	}
 }
 
 function animateProgress(from, to) {
