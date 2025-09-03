@@ -130,7 +130,7 @@
 				<v-btn
 					v-if="!item.posa_is_offer && !item.posa_offer_applied"
 					color="green"
-					@click="
+					@click.stop="
 						item.posa_is_offer = 1;
 						toggleOffer(item);
 					"
@@ -140,7 +140,7 @@
 				<v-btn
 					v-else
 					color="red"
-					@click="
+					@click.stop="
 						item.posa_is_offer = 0;
 						toggleOffer(item);
 					"
