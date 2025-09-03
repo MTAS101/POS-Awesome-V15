@@ -1139,10 +1139,10 @@ export default {
 				item.discount_amount = 0;
 				item.rate = item.price_list_rate;
 				this.calc_item_price(item);
-				this.handelOffers();
 			}
+			this.handelOffers();
 			// Ensure Vue reactivity
 			this.$forceUpdate();
 		});
-	}, // Added missing comma here
+	},
 };

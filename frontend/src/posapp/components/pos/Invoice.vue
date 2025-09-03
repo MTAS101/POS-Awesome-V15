@@ -442,7 +442,7 @@ export default {
 				{ title: __("Discount Amount"), key: "discount_amount", align: "start", required: false },
 				{ title: __("Rate"), key: "rate", align: "start", required: true },
 				{ title: __("Amount"), key: "amount", align: "start", required: true },
-				{ title: __("Offer?"), key: "posa_is_offer", align: "center", required: false },
+				{ title: __("Offer"), key: "posa_is_offer", align: "center", required: false },
 			];
 
 			// Initialize selected columns if empty
