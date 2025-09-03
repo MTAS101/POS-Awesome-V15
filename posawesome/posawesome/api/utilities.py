@@ -126,7 +126,7 @@ def get_company_domain(company):
     return frappe.get_cached_value("Company", cstr(company), "domain")
 
 
-@frappe.whitelist(methods=["GET", "POST"])
+@frappe.whitelist()
 def get_selling_price_lists():
     """Return all selling price lists"""
     return frappe.get_all(
