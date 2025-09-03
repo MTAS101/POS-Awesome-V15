@@ -22,11 +22,6 @@
 				location="top"
 				color="info"
 			></v-progress-linear>
-			<LoadingOverlay
-				:loading="loading || isBackgroundLoading"
-				:message="__('Loading item data...')"
-				:progress="loadProgress"
-			/>
 
 			<!-- Add dynamic-padding wrapper like Invoice component -->
 			<div class="dynamic-padding">
@@ -461,7 +456,6 @@ import {
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import placeholderImage from "./placeholder-image.png";
-import LoadingOverlay from "./LoadingOverlay.vue";
 
 export default {
 	mixins: [format],
@@ -472,7 +466,6 @@ export default {
 	},
 	components: {
 		CameraScanner,
-		LoadingOverlay,
 	},
 	data: () => ({
 		pos_profile: {},

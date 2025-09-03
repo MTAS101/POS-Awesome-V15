@@ -86,11 +86,6 @@
 		<div class="mt-4">
 			<UpdateCustomer />
 		</div>
-		<LoadingOverlay
-			:loading="loadingCustomers || isCustomerBackgroundLoading"
-			:message="__('Loading customer data...')"
-			:progress="loadProgress"
-		/>
 	</div>
 </template>
 
@@ -166,7 +161,6 @@
 <script>
 /* global frappe __ */
 import UpdateCustomer from "./UpdateCustomer.vue";
-import LoadingOverlay from "./LoadingOverlay.vue";
 import {
 	db,
 	checkDbHealth,
@@ -213,7 +207,6 @@ export default {
 
 	components: {
 		UpdateCustomer,
-		LoadingOverlay,
 	},
 
 	computed: {

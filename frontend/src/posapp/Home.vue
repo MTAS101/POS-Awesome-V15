@@ -1,5 +1,12 @@
 <template>
 	<v-app class="container1" :class="rtlClasses">
+		<LoadingOverlay
+			:loading="loadingActive"
+			:progress="loadingProgress"
+			:message="loadingMessage"
+			:sources="loadingSources"
+			:source-messages="loadingSourceMessages"
+		/>
 		<v-main class="main-content">
 			<Navbar
 				:pos-profile="posProfile"
@@ -42,13 +49,8 @@
 import Navbar from "./components/Navbar.vue";
 import POS from "./components/pos/Pos.vue";
 import Payments from "./components/payments/Pay.vue";
-import {
-	loadingState,
-	initLoadingSources,
-	setSourceProgress,
-	markSourceLoaded,
-	clearLoadingTimeout,
-} from "./utils/loading.js";
+import LoadingOverlay from "./components/pos/LoadingOverlay.vue";
+import { loadingState, initLoadingSources, setSourceProgress, markSourceLoaded } from "./utils/loading.js";
 import {
 	getOpeningStorage,
 	getCacheUsageEstimate,
@@ -129,6 +131,12 @@ export default {
 		loadingMessage() {
 			return loadingState.message;
 		},
+		loadingSources() {
+			return loadingState.sources;
+		},
+		loadingSourceMessages() {
+			return loadingState.sourceMessages;
+		},
 	},
 	watch: {
 		networkOnline(newVal, oldVal) {
@@ -149,6 +157,7 @@ export default {
 		Navbar,
 		POS,
 		Payments,
+		LoadingOverlay,
 	},
 	mounted() {
 		this.remove_frappe_nav();
@@ -475,8 +484,6 @@ export default {
 			this.eventBus.off("pending_invoices_changed");
 			this.eventBus.off("data-loaded");
 		}
-		// Clear loading timeout when component unmounts
-		clearLoadingTimeout();
 	},
 	created: function () {
 		setTimeout(() => {
