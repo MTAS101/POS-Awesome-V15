@@ -128,7 +128,7 @@
 			<!-- Offer action column -->
 			<template v-slot:item.posa_is_offer="{ item }">
 				<v-btn
-					v-if="!item.posa_is_offer"
+					v-if="!item.posa_is_offer && !item.posa_offer_applied"
 					color="green"
 					@click="
 						item.posa_is_offer = 1;
