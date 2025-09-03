@@ -399,7 +399,6 @@ def make_address(args):
     return address
 
 
-
 @frappe.whitelist()
 def get_sales_person_names():
     import json
@@ -409,7 +408,9 @@ def get_sales_person_names():
         profile = get_active_pos_profile()
         allowed = []
         if profile:
-            allowed = [d.get("sales_person") for d in profile.get("posa_sales_persons", []) if d.get("sales_person")]
+            allowed = [
+                d.get("sales_person") for d in profile.get("posa_sales_persons", []) if d.get("sales_person")
+            ]
         filters = {"enabled": 1}
         if allowed:
             filters["name"] = ["in", allowed]
