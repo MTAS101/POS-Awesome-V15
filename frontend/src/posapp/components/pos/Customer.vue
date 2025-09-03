@@ -83,10 +83,10 @@
 		</v-autocomplete>
 
 		<!-- Update customer modal -->
-                <div class="mt-4">
-                        <UpdateCustomer />
-                </div>
-       </div>
+		<div class="mt-4">
+			<UpdateCustomer />
+		</div>
+	</div>
 </template>
 
 <style scoped>
@@ -205,9 +205,9 @@ export default {
 		loadedCustomerCount: 0,
 	}),
 
-       components: {
-               UpdateCustomer,
-       },
+	components: {
+		UpdateCustomer,
+	},
 
 	computed: {
 		isDarkTheme() {

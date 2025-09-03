@@ -15,15 +15,15 @@
 				position: 'relative',
 			}"
 		>
-                        <v-progress-linear
-                                :active="loading"
-                                :indeterminate="loading"
-                                absolute
-                                location="top"
-                                color="info"
-                        ></v-progress-linear>
+			<v-progress-linear
+				:active="loading"
+				:indeterminate="loading"
+				absolute
+				location="top"
+				color="info"
+			></v-progress-linear>
 
-                        <!-- Add dynamic-padding wrapper like Invoice component -->
+			<!-- Add dynamic-padding wrapper like Invoice component -->
 			<div class="dynamic-padding">
 				<div class="sticky-header">
 					<v-row class="items">
@@ -464,9 +464,9 @@ export default {
 		const rtl = useRtl();
 		return { ...responsive, ...rtl };
 	},
-       components: {
-               CameraScanner,
-       },
+	components: {
+		CameraScanner,
+	},
 	data: () => ({
 		pos_profile: {},
 		flags: {},
