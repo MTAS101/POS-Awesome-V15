@@ -1,3 +1,4 @@
+/* global __ */
 import { reactive } from "vue";
 
 // Loading state variables
@@ -45,11 +46,12 @@ export function setSourceProgress(name, value) {
 	// Safety checks
 	if (!(name in loadingState.sources) || isCompleting || sourceCount === 0) return;
 
-	// Clamp value between 0 and 100
-	value = Math.max(0, Math.min(100, value));
-
+	// Clamp value between 0 and 100 and prevent regressions
+	const clampedValue = Math.max(0, Math.min(100, value));
 	const oldValue = loadingState.sources[name];
-	loadingState.sources[name] = value;
+	const newValue = Math.max(oldValue, clampedValue);
+
+	loadingState.sources[name] = newValue;
 
 	// Update message only if it changed
 	const newMessage = loadingState.sourceMessages[name] || __(`Loading ${name}...`);
@@ -57,17 +59,19 @@ export function setSourceProgress(name, value) {
 		loadingState.message = newMessage;
 	}
 
-	// Optimized progress calculation with safety check
-	completedSum += value - oldValue;
-	const newProgress = Math.round(completedSum / sourceCount);
+	// Only update totals when progress increases
+	if (newValue > oldValue) {
+		completedSum += newValue - oldValue;
+		const newProgress = Math.round(completedSum / sourceCount);
 
-	// Only animate if progress actually changed
-	if (newProgress !== loadingState.progress && newProgress <= 100) {
-		animateProgress(loadingState.progress, newProgress);
-	}
+		// Only animate if progress actually changed
+		if (newProgress !== loadingState.progress && newProgress <= 100) {
+			animateProgress(loadingState.progress, newProgress);
+		}
 
-	if (newProgress >= 100 && !isCompleting) {
-		completeLoading();
+		if (newProgress >= 100 && !isCompleting) {
+			completeLoading();
+		}
 	}
 }
 
