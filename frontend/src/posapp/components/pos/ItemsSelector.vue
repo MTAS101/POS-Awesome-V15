@@ -1677,94 +1677,94 @@ export default {
 
 			return items_headers;
 		},
-		async click_item_row(event, { item }) {
-			const target = event.currentTarget;
-			const row = target.cloneNode(true);
-			const table = document.createElement("table");
-			const tbody = document.createElement("tbody");
-			table.appendChild(tbody);
-			tbody.appendChild(row);
-			table.classList.add("flying-item");
+                async click_item_row(event, { item }) {
+                        const target = event.currentTarget;
+                        const row = target.cloneNode(true);
+                        const table = document.createElement("table");
+                        const tbody = document.createElement("tbody");
+                        table.appendChild(tbody);
+                        tbody.appendChild(row);
+                        table.classList.add("flying-item");
 
-			const startRect = target.getBoundingClientRect();
-			Object.assign(table.style, {
-				left: `${startRect.left}px`,
-				top: `${startRect.top}px`,
-				width: `${startRect.width}px`,
-				height: `${startRect.height}px`,
-			});
-			document.body.appendChild(table);
+                        const startRect = target.getBoundingClientRect();
+                        Object.assign(table.style, {
+                                left: `${startRect.left}px`,
+                                top: `${startRect.top}px`,
+                                width: `${startRect.width}px`,
+                                height: `${startRect.height}px`,
+                        });
+                        document.body.appendChild(table);
 
-			await this.add_item(item);
-			await this.$nextTick();
+                        await this.add_item(item);
+                        await this.$nextTick();
 
-			const rows = document.querySelectorAll(".items-table-container tbody tr");
-			const destRow = rows[rows.length - 1];
-			if (destRow) {
-				const destRect = destRow.getBoundingClientRect();
-				const translateX = destRect.left - startRect.left;
-				const translateY = destRect.top - startRect.top;
+                        const rows = document.querySelectorAll(".items-table-container tbody tr");
+                        const destRow = rows[rows.length - 1];
+                        if (destRow) {
+                                const destRect = destRow.getBoundingClientRect();
+                                const translateX = destRect.left - startRect.left;
+                                const translateY = destRect.top - startRect.top;
 
-				requestAnimationFrame(() => {
-					table.style.transform = `translate(${translateX}px, ${translateY}px)`;
-					table.style.opacity = "0";
-				});
+                                const animation = table.animate(
+                                        [
+                                                { transform: "translate(0, 0)", opacity: 1 },
+                                                { transform: `translate(${translateX / 2}px, -40px)`, opacity: 0.7 },
+                                                { transform: `translate(${translateX}px, ${translateY}px)`, opacity: 0 },
+                                        ],
+                                        { duration: 500, easing: "ease-in-out" },
+                                );
 
-				table.addEventListener(
-					"transitionend",
-					() => {
-						table.remove();
-						destRow.classList.add("row-highlight");
-						setTimeout(() => destRow.classList.remove("row-highlight"), 300);
-					},
-					{ once: true },
-				);
-			} else {
-				table.remove();
-			}
-		},
-		async onItemClick(event, item) {
-			const target = event.currentTarget;
-			const clone = target.cloneNode(true);
-			clone.classList.add("flying-item");
+                                animation.onfinish = () => {
+                                        table.remove();
+                                        destRow.classList.add("row-highlight");
+                                        setTimeout(() => destRow.classList.remove("row-highlight"), 300);
+                                };
+                        } else {
+                                table.remove();
+                        }
+                },
+                async onItemClick(event, item) {
+                        const target = event.currentTarget;
+                        const clone = target.cloneNode(true);
+                        clone.classList.add("flying-item");
 
-			const startRect = target.getBoundingClientRect();
-			Object.assign(clone.style, {
-				left: `${startRect.left}px`,
-				top: `${startRect.top}px`,
-				width: `${startRect.width}px`,
-				height: `${startRect.height}px`,
-			});
-			document.body.appendChild(clone);
+                        const startRect = target.getBoundingClientRect();
+                        Object.assign(clone.style, {
+                                left: `${startRect.left}px`,
+                                top: `${startRect.top}px`,
+                                width: `${startRect.width}px`,
+                                height: `${startRect.height}px`,
+                        });
+                        document.body.appendChild(clone);
 
-			await this.add_item(item);
-			await this.$nextTick();
+                        await this.add_item(item);
+                        await this.$nextTick();
 
-			const rows = document.querySelectorAll(".items-table-container tbody tr");
-			const destRow = rows[rows.length - 1];
-			if (destRow) {
-				const destRect = destRow.getBoundingClientRect();
-				const translateX = destRect.left - startRect.left;
-				const translateY = destRect.top - startRect.top;
+                        const rows = document.querySelectorAll(".items-table-container tbody tr");
+                        const destRow = rows[rows.length - 1];
+                        if (destRow) {
+                                const destRect = destRow.getBoundingClientRect();
+                                const translateX = destRect.left - startRect.left;
+                                const translateY = destRect.top - startRect.top;
 
-				requestAnimationFrame(() => {
-					clone.style.transform = `translate(${translateX}px, ${translateY}px)`;
-					clone.style.opacity = "0";
-				});
+                                const animation = clone.animate(
+                                        [
+                                                { transform: "translate(0, 0)", opacity: 1 },
+                                                { transform: `translate(${translateX / 2}px, -40px)`, opacity: 0.7 },
+                                                { transform: `translate(${translateX}px, ${translateY}px)`, opacity: 0 },
+                                        ],
+                                        { duration: 500, easing: "ease-in-out" },
+                                );
 
-				clone.addEventListener(
-					"transitionend",
-					() => {
-						clone.remove();
-						destRow.classList.add("row-highlight");
-						setTimeout(() => destRow.classList.remove("row-highlight"), 300);
-					},
-					{ once: true },
-				);
-			} else {
-				clone.remove();
-			}
-		},
+                                animation.onfinish = () => {
+                                        clone.remove();
+                                        destRow.classList.add("row-highlight");
+                                        setTimeout(() => destRow.classList.remove("row-highlight"), 300);
+                                };
+                        } else {
+                                clone.remove();
+                        }
+                },
 		async add_item(item) {
 			item = { ...item };
 			if (item.has_variants) {
@@ -3119,12 +3119,9 @@ export default {
 <style scoped>
 /* Flying item animation */
 .flying-item {
-	position: fixed;
-	pointer-events: none;
-	transition:
-		transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-		opacity 0.5s;
-	z-index: 1000;
+        position: fixed;
+        pointer-events: none;
+        z-index: 1000;
 }
 
 :deep(.row-highlight) {
