@@ -198,7 +198,7 @@
 									v-for="item in filtered_items"
 									:key="item.item_code"
 									class="card-item-card"
-									@click="add_item(item)"
+                                                                        @click="onItemClick($event, item)"
 									:draggable="true"
 									@dragstart="onDragStart($event, item)"
 									@dragend="onDragEnd"
@@ -1677,11 +1677,53 @@ export default {
 
 			return items_headers;
 		},
-		async click_item_row(event, { item }) {
-			await this.add_item(item);
-		},
-		async add_item(item) {
-			item = { ...item };
+                async click_item_row(event, { item }) {
+                        await this.add_item(item);
+                },
+                async onItemClick(event, item) {
+                        const target = event.currentTarget;
+                        const clone = target.cloneNode(true);
+                        clone.classList.add('flying-item');
+
+                        const startRect = target.getBoundingClientRect();
+                        Object.assign(clone.style, {
+                                left: `${startRect.left}px`,
+                                top: `${startRect.top}px`,
+                                width: `${startRect.width}px`,
+                                height: `${startRect.height}px`,
+                        });
+                        document.body.appendChild(clone);
+
+                        await this.add_item(item);
+                        await this.$nextTick();
+
+                        const rows = document.querySelectorAll('.items-table-container tbody tr');
+                        const destRow = rows[rows.length - 1];
+                        if (destRow) {
+                                const destRect = destRow.getBoundingClientRect();
+                                const translateX = destRect.left - startRect.left;
+                                const translateY = destRect.top - startRect.top;
+
+                                requestAnimationFrame(() => {
+                                        clone.style.transform = `translate(${translateX}px, ${translateY}px)`;
+                                        clone.style.opacity = '0';
+                                });
+
+                                clone.addEventListener(
+                                        'transitionend',
+                                        () => {
+                                                clone.remove();
+                                                destRow.classList.add('row-highlight');
+                                                setTimeout(() => destRow.classList.remove('row-highlight'), 300);
+                                        },
+                                        { once: true },
+                                );
+                        } else {
+                                clone.remove();
+                        }
+                },
+                async add_item(item) {
+                        item = { ...item };
 			if (item.has_variants) {
 				let variants = this.items.filter((it) => it.variant_of == item.item_code);
 				let attrsMeta = {};
@@ -3032,10 +3074,31 @@ export default {
 </script>
 
 <style scoped>
+/* Flying item animation */
+.flying-item {
+        position: fixed;
+        pointer-events: none;
+        transition: transform 0.3s ease, opacity 0.3s;
+        z-index: 1000;
+}
+
+:deep(.row-highlight) {
+        animation: rowHighlight 0.3s ease;
+}
+
+@keyframes rowHighlight {
+        from {
+                background-color: #fff9c4;
+        }
+        to {
+                background-color: inherit;
+        }
+}
+
 /* "dynamic-card" no longer composes from pos-card; the pos-card class is added directly in the template */
 .dynamic-padding {
-	/* Equal spacing on all sides for consistent alignment */
-	padding: var(--dynamic-sm);
+        /* Equal spacing on all sides for consistent alignment */
+        padding: var(--dynamic-sm);
 }
 
 .sticky-header {
