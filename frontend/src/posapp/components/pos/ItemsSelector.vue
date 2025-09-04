@@ -187,17 +187,17 @@
 				</div>
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
-                                                <div v-if="items_view == 'card'" class="items-card-container">
-                                                        <div v-if="loading" class="items-card-grid">
-                                                                <Skeleton v-for="n in 8" :key="n" class="mb-4" height="120" />
-                                                        </div>
-                                                        <div
-                                                                v-else
-                                                                class="items-card-grid"
-                                                                ref="itemsContainer"
-                                                                @scroll.passive="onCardScroll"
-                                                                :class="{ 'item-container': isOverflowing }"
-                                                        >
+						<div v-if="items_view == 'card'" class="items-card-container">
+							<div v-if="loading" class="items-card-grid">
+								<Skeleton v-for="n in 8" :key="n" class="mb-4" height="120" />
+							</div>
+							<div
+								v-else
+								class="items-card-grid"
+								ref="itemsContainer"
+								@scroll.passive="onCardScroll"
+								:class="{ 'item-container': isOverflowing }"
+							>
 								<div
 									v-for="item in filtered_items"
 									:key="item.item_code"
@@ -471,10 +471,10 @@ export default {
 		const { fly } = useFlyAnimation();
 		return { ...responsive, ...rtl, fly };
 	},
-        components: {
-                CameraScanner,
-                Skeleton,
-        },
+	components: {
+		CameraScanner,
+		Skeleton,
+	},
 	data: () => ({
 		pos_profile: {},
 		flags: {},

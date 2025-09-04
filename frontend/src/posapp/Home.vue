@@ -1,14 +1,14 @@
 <template>
 	<v-app class="container1" :class="rtlClasses">
-                <LoadingOverlay
-                        :loading="loadingActive"
-                        :progress="loadingProgress"
-                        :message="loadingMessage"
-                        :sources="loadingSources"
-                        :source-messages="loadingSourceMessages"
-                />
-                <AppLoadingOverlay :visible="globalLoading" />
-                <v-main class="main-content">
+		<LoadingOverlay
+			:loading="loadingActive"
+			:progress="loadingProgress"
+			:message="loadingMessage"
+			:sources="loadingSources"
+			:source-messages="loadingSourceMessages"
+		/>
+		<AppLoadingOverlay :visible="globalLoading" />
+		<v-main class="main-content">
 			<Navbar
 				:pos-profile="posProfile"
 				:pending-invoices="pendingInvoices"
@@ -85,16 +85,16 @@ import {
 import { useRtl } from "./composables/useRtl.js";
 
 export default {
-        setup() {
-                const { isRtl, rtlStyles, rtlClasses } = useRtl();
-                const { overlayVisible } = useLoading();
-                return {
-                        isRtl,
-                        rtlStyles,
-                        rtlClasses,
-                        globalLoading: overlayVisible,
-                };
-        },
+	setup() {
+		const { isRtl, rtlStyles, rtlClasses } = useRtl();
+		const { overlayVisible } = useLoading();
+		return {
+			isRtl,
+			rtlStyles,
+			rtlClasses,
+			globalLoading: overlayVisible,
+		};
+	},
 	data: function () {
 		return {
 			page: "POS",
@@ -158,13 +158,13 @@ export default {
 			}
 		},
 	},
-        components: {
-                Navbar,
-                POS,
-                Payments,
-                LoadingOverlay,
-                AppLoadingOverlay,
-        },
+	components: {
+		Navbar,
+		POS,
+		Payments,
+		LoadingOverlay,
+		AppLoadingOverlay,
+	},
 	mounted() {
 		this.remove_frappe_nav();
 		// Initialize cache ready state early from stored value
