@@ -780,23 +780,24 @@ export default {
 				console.error("Error parsing drag data:", error);
 			}
 		},
-		addItem(newItem) {
-			// Find a matching item (by item_code, uom, and rate)
-			const match = this.items.find(
-				(item) =>
-					item.item_code === newItem.item_code &&
-					item.uom === newItem.uom &&
-					item.rate === newItem.rate,
-			);
-			if (match) {
-				// If found, increment quantity
-				match.qty += newItem.qty || 1;
-				match.amount = match.qty * match.rate;
-				this.$forceUpdate();
-			} else {
-				this.items.push({ ...newItem });
-			}
-		},
+                addItem(newItem) {
+                        const qty = newItem.qty && newItem.qty > 0 ? newItem.qty : 1;
+                        // Find a matching item (by item_code, uom, and rate)
+                        const match = this.items.find(
+                                (item) =>
+                                        item.item_code === newItem.item_code &&
+                                        item.uom === newItem.uom &&
+                                        item.rate === newItem.rate,
+                        );
+                        if (match) {
+                                // If found, increment quantity
+                                match.qty += qty;
+                                match.amount = match.qty * match.rate;
+                                this.$forceUpdate();
+                        } else {
+                                this.items.push({ ...newItem, qty });
+                        }
+                },
 		addItemDebounced: _.debounce(function (item) {
 			this.addItem(item);
 		}, 50),
