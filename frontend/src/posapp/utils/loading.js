@@ -1,5 +1,6 @@
 /* global __ */
 import { reactive } from "vue";
+import { start as startGlobalLoading, stop as stopGlobalLoading } from "../composables/useLoading.js";
 
 // Loading state variables
 let sourceCount = 0;
@@ -31,12 +32,13 @@ export function initLoadingSources(list) {
 		return;
 	}
 
-	list.forEach((name) => {
-		loadingState.sources[name] = 0;
-	});
+        list.forEach((name) => {
+                loadingState.sources[name] = 0;
+        });
 
-	loadingState.progress = 0;
-	loadingState.active = true;
+        loadingState.progress = 0;
+        loadingState.active = true;
+        startGlobalLoading();
 }
 
 export function setSourceProgress(name, value) {
@@ -105,21 +107,22 @@ function completeLoading() {
 	loadingState.progress = 100;
 	loadingState.message = __("Setup complete!");
 
-	// Brief completion phase, then show ready
-	setTimeout(() => {
-		if (!loadingState.active) return; // Check if still active
-		loadingState.message = __("Ready!");
+        // Brief completion phase, then show ready
+        setTimeout(() => {
+                if (!loadingState.active) return; // Check if still active
+                loadingState.message = __("Ready!");
 
-		// Hide after showing ready message
-		setTimeout(() => {
-			loadingState.active = false;
-			loadingState.message = __("Loading app data...");
-			// Reset for next use
-			sourceCount = 0;
-			completedSum = 0;
-			isCompleting = false;
-		}, 600);
-	}, 400);
+                // Hide after showing ready message
+                setTimeout(() => {
+                        loadingState.active = false;
+                        loadingState.message = __("Loading app data...");
+                        stopGlobalLoading();
+                        // Reset for next use
+                        sourceCount = 0;
+                        completedSum = 0;
+                        isCompleting = false;
+                }, 600);
+        }, 400);
 }
 
 export function markSourceLoaded(name) {
@@ -129,13 +132,14 @@ export function markSourceLoaded(name) {
 
 // Utility function to manually reset loading state
 export function resetLoadingState() {
-	loadingState.active = false;
-	loadingState.progress = 0;
-	loadingState.message = __("Loading app data...");
-	loadingState.sources = {};
-	sourceCount = 0;
-	completedSum = 0;
-	isCompleting = false;
+        loadingState.active = false;
+        loadingState.progress = 0;
+        loadingState.message = __("Loading app data...");
+        loadingState.sources = {};
+        sourceCount = 0;
+        completedSum = 0;
+        isCompleting = false;
+        stopGlobalLoading();
 }
 
 // Get current loading status for debugging
