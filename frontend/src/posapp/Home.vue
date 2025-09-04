@@ -1,7 +1,7 @@
 <template>
 	<v-app class="container1" :class="rtlClasses">
-                <AppLoadingOverlay :visible="globalLoading" />
-                <v-main class="main-content">
+		<AppLoadingOverlay :visible="globalLoading" />
+		<v-main class="main-content">
 			<Navbar
 				:pos-profile="posProfile"
 				:pending-invoices="pendingInvoices"
@@ -124,9 +124,9 @@ export default {
 		loadingActive() {
 			return loadingState.active;
 		},
-                loadingMessage() {
-                        return loadingState.message;
-                },
+		loadingMessage() {
+			return loadingState.message;
+		},
 	},
 	watch: {
 		networkOnline(newVal, oldVal) {
@@ -144,11 +144,11 @@ export default {
 		},
 	},
 	components: {
-                Navbar,
-                POS,
-                Payments,
-                AppLoadingOverlay,
-        },
+		Navbar,
+		POS,
+		Payments,
+		AppLoadingOverlay,
+	},
 	mounted() {
 		this.remove_frappe_nav();
 		// Initialize cache ready state early from stored value
