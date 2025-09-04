@@ -198,7 +198,7 @@
 									v-for="item in filtered_items"
 									:key="item.item_code"
 									class="card-item-card"
-									@click="add_item(item)"
+									@click="select_item($event, item)"
 									:draggable="true"
 									@dragstart="onDragStart($event, item)"
 									@dragend="onDragEnd"
@@ -455,6 +455,7 @@ import {
 } from "../../../offline/index.js";
 import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
+import { useFlyAnimation } from "../../composables/useFlyAnimation.js";
 import placeholderImage from "./placeholder-image.png";
 
 export default {
@@ -462,7 +463,8 @@ export default {
 	setup() {
 		const responsive = useResponsive();
 		const rtl = useRtl();
-		return { ...responsive, ...rtl };
+		const { fly } = useFlyAnimation();
+		return { ...responsive, ...rtl, fly };
 	},
 	components: {
 		CameraScanner,
@@ -498,6 +500,7 @@ export default {
 		exchange_rate: 1,
 		prePopulateInProgress: false,
 		itemWorker: null,
+		flyConfig: { speed: 0.6, easing: "ease-in-out" },
 		storageAvailable: true,
 		localStorageAvailable: true,
 		items_request_token: 0,
@@ -1677,7 +1680,31 @@ export default {
 
 			return items_headers;
 		},
+		select_item(event, item) {
+			const targets = document.querySelectorAll(".items-table-container");
+			const target = targets[targets.length - 1];
+			const source = event.currentTarget?.querySelector?.(".card-item-image") || event.currentTarget;
+			if (target && source && this.fly) {
+				this.fly(source, target, this.flyConfig);
+			}
+			this.add_item(item);
+		},
 		async click_item_row(event, { item }) {
+			const targets = document.querySelectorAll(".items-table-container");
+			const target = targets[targets.length - 1];
+			if (target && this.fly) {
+				const placeholder = document.createElement("div");
+				placeholder.style.width = "40px";
+				placeholder.style.height = "40px";
+				placeholder.style.background = "#ccc";
+				placeholder.style.borderRadius = "50%";
+				placeholder.style.position = "fixed";
+				placeholder.style.top = `${event.clientY - 20}px`;
+				placeholder.style.left = `${event.clientX - 20}px`;
+				document.body.appendChild(placeholder);
+				this.fly(placeholder, target, this.flyConfig);
+				placeholder.remove();
+			}
 			await this.add_item(item);
 		},
 		async add_item(item) {
