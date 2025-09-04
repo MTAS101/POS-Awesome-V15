@@ -1680,31 +1680,33 @@ export default {
 
 			return items_headers;
 		},
-		select_item(event, item) {
-			const target = document.querySelector(".items-table-container");
-			const source = event.currentTarget?.querySelector?.(".card-item-image") || event.currentTarget;
-			if (target && source && this.fly) {
-				this.fly(source, target, this.flyConfig);
-			}
-			this.add_item(item);
-		},
-		async click_item_row(event, { item }) {
-			const target = document.querySelector(".items-table-container");
-			if (target && this.fly) {
-				const placeholder = document.createElement("div");
-				placeholder.style.width = "40px";
-				placeholder.style.height = "40px";
-				placeholder.style.background = "#ccc";
-				placeholder.style.borderRadius = "50%";
-				placeholder.style.position = "fixed";
-				placeholder.style.top = `${event.clientY - 20}px`;
-				placeholder.style.left = `${event.clientX - 20}px`;
-				document.body.appendChild(placeholder);
-				this.fly(placeholder, target, this.flyConfig);
-				placeholder.remove();
-			}
-			await this.add_item(item);
-		},
+               select_item(event, item) {
+                       const targets = document.querySelectorAll(".items-table-container");
+                       const target = targets[targets.length - 1];
+                       const source = event.currentTarget?.querySelector?.(".card-item-image") || event.currentTarget;
+                       if (target && source && this.fly) {
+                               this.fly(source, target, this.flyConfig);
+                       }
+                       this.add_item(item);
+               },
+               async click_item_row(event, { item }) {
+                       const targets = document.querySelectorAll(".items-table-container");
+                       const target = targets[targets.length - 1];
+                       if (target && this.fly) {
+                               const placeholder = document.createElement("div");
+                               placeholder.style.width = "40px";
+                               placeholder.style.height = "40px";
+                               placeholder.style.background = "#ccc";
+                               placeholder.style.borderRadius = "50%";
+                               placeholder.style.position = "fixed";
+                               placeholder.style.top = `${event.clientY - 20}px`;
+                               placeholder.style.left = `${event.clientX - 20}px`;
+                               document.body.appendChild(placeholder);
+                               this.fly(placeholder, target, this.flyConfig);
+                               placeholder.remove();
+                       }
+                       await this.add_item(item);
+               },
 		async add_item(item) {
 			item = { ...item };
 			if (item.has_variants) {
