@@ -1,7 +1,9 @@
 <template>
 	<!-- ? Disable dropdown if either readonly or loadingCustomers is true -->
 	<div class="customer-input-wrapper">
+		<Skeleton v-if="loadingCustomers" height="48" class="w-100" />
 		<v-autocomplete
+			v-else
 			ref="customerDropdown"
 			class="customer-autocomplete sleek-field"
 			density="compact"
@@ -161,6 +163,7 @@
 <script>
 /* global frappe __ */
 import UpdateCustomer from "./UpdateCustomer.vue";
+import Skeleton from "../ui/Skeleton.vue";
 import {
 	db,
 	checkDbHealth,
@@ -207,6 +210,7 @@ export default {
 
 	components: {
 		UpdateCustomer,
+		Skeleton,
 	},
 
 	computed: {

@@ -1,5 +1,6 @@
 /* global __ */
 import { reactive } from "vue";
+import { start as startGlobalLoading, stop as stopGlobalLoading } from "../composables/useLoading.js";
 
 // Loading state variables
 let sourceCount = 0;
@@ -37,6 +38,7 @@ export function initLoadingSources(list) {
 
 	loadingState.progress = 0;
 	loadingState.active = true;
+	startGlobalLoading();
 }
 
 export function setSourceProgress(name, value) {
@@ -114,6 +116,7 @@ function completeLoading() {
 		setTimeout(() => {
 			loadingState.active = false;
 			loadingState.message = __("Loading app data...");
+			stopGlobalLoading();
 			// Reset for next use
 			sourceCount = 0;
 			completedSum = 0;
@@ -136,6 +139,7 @@ export function resetLoadingState() {
 	sourceCount = 0;
 	completedSum = 0;
 	isCompleting = false;
+	stopGlobalLoading();
 }
 
 // Get current loading status for debugging
