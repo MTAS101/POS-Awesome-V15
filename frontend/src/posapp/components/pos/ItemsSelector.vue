@@ -1678,7 +1678,50 @@ export default {
 			return items_headers;
 		},
 		async click_item_row(event, { item }) {
+			const target = event.currentTarget;
+			const row = target.cloneNode(true);
+			const table = document.createElement("table");
+			const tbody = document.createElement("tbody");
+			table.appendChild(tbody);
+			tbody.appendChild(row);
+			table.classList.add("flying-item");
+
+			const startRect = target.getBoundingClientRect();
+			Object.assign(table.style, {
+				left: `${startRect.left}px`,
+				top: `${startRect.top}px`,
+				width: `${startRect.width}px`,
+				height: `${startRect.height}px`,
+			});
+			document.body.appendChild(table);
+
 			await this.add_item(item);
+			await this.$nextTick();
+
+			const rows = document.querySelectorAll(".items-table-container tbody tr");
+			const destRow = rows[rows.length - 1];
+			if (destRow) {
+				const destRect = destRow.getBoundingClientRect();
+				const translateX = destRect.left - startRect.left;
+				const translateY = destRect.top - startRect.top;
+
+				requestAnimationFrame(() => {
+					table.style.transform = `translate(${translateX}px, ${translateY}px)`;
+					table.style.opacity = "0";
+				});
+
+				table.addEventListener(
+					"transitionend",
+					() => {
+						table.remove();
+						destRow.classList.add("row-highlight");
+						setTimeout(() => destRow.classList.remove("row-highlight"), 300);
+					},
+					{ once: true },
+				);
+			} else {
+				table.remove();
+			}
 		},
 		async onItemClick(event, item) {
 			const target = event.currentTarget;
@@ -3079,13 +3122,13 @@ export default {
 	position: fixed;
 	pointer-events: none;
 	transition:
-		transform 0.3s ease,
-		opacity 0.3s;
+		transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+		opacity 0.5s;
 	z-index: 1000;
 }
 
 :deep(.row-highlight) {
-	animation: rowHighlight 0.3s ease;
+	animation: rowHighlight 0.5s ease-out;
 }
 
 @keyframes rowHighlight {
