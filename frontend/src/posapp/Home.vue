@@ -1,13 +1,14 @@
 <template>
 	<v-app class="container1" :class="rtlClasses">
-		<LoadingOverlay
-			:loading="loadingActive"
-			:progress="loadingProgress"
-			:message="loadingMessage"
-			:sources="loadingSources"
-			:source-messages="loadingSourceMessages"
-		/>
-		<v-main class="main-content">
+                <LoadingOverlay
+                        :loading="loadingActive"
+                        :progress="loadingProgress"
+                        :message="loadingMessage"
+                        :sources="loadingSources"
+                        :source-messages="loadingSourceMessages"
+                />
+                <AppLoadingOverlay :visible="globalLoading" />
+                <v-main class="main-content">
 			<Navbar
 				:pos-profile="posProfile"
 				:pending-invoices="pendingInvoices"
@@ -50,6 +51,8 @@ import Navbar from "./components/Navbar.vue";
 import POS from "./components/pos/Pos.vue";
 import Payments from "./components/payments/Pay.vue";
 import LoadingOverlay from "./components/pos/LoadingOverlay.vue";
+import AppLoadingOverlay from "./components/ui/LoadingOverlay.vue";
+import { useLoading } from "./composables/useLoading.js";
 import { loadingState, initLoadingSources, setSourceProgress, markSourceLoaded } from "./utils/loading.js";
 import {
 	getOpeningStorage,
@@ -82,14 +85,16 @@ import {
 import { useRtl } from "./composables/useRtl.js";
 
 export default {
-	setup() {
-		const { isRtl, rtlStyles, rtlClasses } = useRtl();
-		return {
-			isRtl,
-			rtlStyles,
-			rtlClasses,
-		};
-	},
+        setup() {
+                const { isRtl, rtlStyles, rtlClasses } = useRtl();
+                const { overlayVisible } = useLoading();
+                return {
+                        isRtl,
+                        rtlStyles,
+                        rtlClasses,
+                        globalLoading: overlayVisible,
+                };
+        },
 	data: function () {
 		return {
 			page: "POS",
@@ -153,12 +158,13 @@ export default {
 			}
 		},
 	},
-	components: {
-		Navbar,
-		POS,
-		Payments,
-		LoadingOverlay,
-	},
+        components: {
+                Navbar,
+                POS,
+                Payments,
+                LoadingOverlay,
+                AppLoadingOverlay,
+        },
 	mounted() {
 		this.remove_frappe_nav();
 		// Initialize cache ready state early from stored value

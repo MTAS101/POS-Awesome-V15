@@ -187,13 +187,17 @@
 				</div>
 				<v-row class="items">
 					<v-col cols="12" class="pt-0 mt-0">
-						<div v-if="items_view == 'card'" class="items-card-container">
-							<div
-								class="items-card-grid"
-								ref="itemsContainer"
-								@scroll.passive="onCardScroll"
-								:class="{ 'item-container': isOverflowing }"
-							>
+                                                <div v-if="items_view == 'card'" class="items-card-container">
+                                                        <div v-if="loading" class="items-card-grid">
+                                                                <Skeleton v-for="n in 8" :key="n" class="mb-4" height="120" />
+                                                        </div>
+                                                        <div
+                                                                v-else
+                                                                class="items-card-grid"
+                                                                ref="itemsContainer"
+                                                                @scroll.passive="onCardScroll"
+                                                                :class="{ 'item-container': isOverflowing }"
+                                                        >
 								<div
 									v-for="item in filtered_items"
 									:key="item.item_code"
@@ -457,6 +461,7 @@ import { useResponsive } from "../../composables/useResponsive.js";
 import { useRtl } from "../../composables/useRtl.js";
 import { useFlyAnimation } from "../../composables/useFlyAnimation.js";
 import placeholderImage from "./placeholder-image.png";
+import Skeleton from "../ui/Skeleton.vue";
 
 export default {
 	mixins: [format],
@@ -466,9 +471,10 @@ export default {
 		const { fly } = useFlyAnimation();
 		return { ...responsive, ...rtl, fly };
 	},
-	components: {
-		CameraScanner,
-	},
+        components: {
+                CameraScanner,
+                Skeleton,
+        },
 	data: () => ({
 		pos_profile: {},
 		flags: {},

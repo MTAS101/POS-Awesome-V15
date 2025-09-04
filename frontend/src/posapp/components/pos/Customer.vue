@@ -1,33 +1,35 @@
 <template>
 	<!-- ? Disable dropdown if either readonly or loadingCustomers is true -->
 	<div class="customer-input-wrapper">
-		<v-autocomplete
-			ref="customerDropdown"
-			class="customer-autocomplete sleek-field"
-			density="compact"
-			clearable
-			variant="solo"
-			color="primary"
-			:label="frappe._('Customer')"
-			v-model="internalCustomer"
-			:items="filteredCustomers"
-			item-title="customer_name"
-			item-value="name"
-			:bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
-			:no-data-text="
-				isCustomerBackgroundLoading ? __('Loading customer data...') : __('Customers not found')
-			"
-			hide-details
-			:customFilter="() => true"
-			:disabled="effectiveReadonly || loadingCustomers"
-			:menu-props="{ closeOnContentClick: false }"
-			@update:menu="onCustomerMenuToggle"
-			@update:modelValue="onCustomerChange"
-			@update:search="onCustomerSearch"
-			@keydown.enter="handleEnter"
-			:virtual-scroll="true"
-			:virtual-scroll-item-height="48"
-		>
+                <Skeleton v-if="loadingCustomers" height="48" class="w-100" />
+                <v-autocomplete
+                        v-else
+                        ref="customerDropdown"
+                        class="customer-autocomplete sleek-field"
+                        density="compact"
+                        clearable
+                        variant="solo"
+                        color="primary"
+                        :label="frappe._('Customer')"
+                        v-model="internalCustomer"
+                        :items="filteredCustomers"
+                        item-title="customer_name"
+                        item-value="name"
+                        :bg-color="isDarkTheme ? '#1E1E1E' : 'white'"
+                        :no-data-text="
+                                isCustomerBackgroundLoading ? __('Loading customer data...') : __('Customers not found')
+                        "
+                        hide-details
+                        :customFilter="() => true"
+                        :disabled="effectiveReadonly || loadingCustomers"
+                        :menu-props="{ closeOnContentClick: false }"
+                        @update:menu="onCustomerMenuToggle"
+                        @update:modelValue="onCustomerChange"
+                        @update:search="onCustomerSearch"
+                        @keydown.enter="handleEnter"
+                        :virtual-scroll="true"
+                        :virtual-scroll-item-height="48"
+                >
 			<!-- Edit icon (left) -->
 			<template #prepend-inner>
 				<v-tooltip text="Edit customer">
@@ -161,6 +163,7 @@
 <script>
 /* global frappe __ */
 import UpdateCustomer from "./UpdateCustomer.vue";
+import Skeleton from "../ui/Skeleton.vue";
 import {
 	db,
 	checkDbHealth,
@@ -205,9 +208,10 @@ export default {
 		loadedCustomerCount: 0,
 	}),
 
-	components: {
-		UpdateCustomer,
-	},
+        components: {
+                UpdateCustomer,
+                Skeleton,
+        },
 
 	computed: {
 		isDarkTheme() {
