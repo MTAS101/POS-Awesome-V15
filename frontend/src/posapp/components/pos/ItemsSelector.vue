@@ -1686,6 +1686,12 @@ export default {
 			tbody.appendChild(row);
 			table.classList.add("flying-item");
 
+			// copy vue's scoped style attribute so animation styles apply
+			const scopeAttr = target.getAttributeNames().find((name) => name.startsWith("data-v-"));
+			if (scopeAttr) {
+				table.setAttribute(scopeAttr, "");
+			}
+
 			const startRect = target.getBoundingClientRect();
 			Object.assign(table.style, {
 				left: `${startRect.left}px`,
