@@ -1698,12 +1698,15 @@ export default {
 			await this.add_item(item);
 			await this.$nextTick();
 
-			const rows = document.querySelectorAll(".items-table-container tbody tr");
-			const destRow = rows[rows.length - 1];
+			const destRow = document.querySelector(".items-table-container tbody tr:last-child");
 			if (destRow) {
 				const destRect = destRow.getBoundingClientRect();
 				const translateX = destRect.left - startRect.left;
 				const translateY = destRect.top - startRect.top;
+
+				const distance = Math.hypot(translateX, translateY);
+				const duration = Math.min(distance / 1000, 1);
+				table.style.transition = `transform ${duration}s cubic-bezier(0.4, 0, 0.2, 1), opacity ${duration}s`;
 
 				requestAnimationFrame(() => {
 					table.style.transform = `translate(${translateX}px, ${translateY}px)`;
@@ -1740,12 +1743,15 @@ export default {
 			await this.add_item(item);
 			await this.$nextTick();
 
-			const rows = document.querySelectorAll(".items-table-container tbody tr");
-			const destRow = rows[rows.length - 1];
+			const destRow = document.querySelector(".items-table-container tbody tr:last-child");
 			if (destRow) {
 				const destRect = destRow.getBoundingClientRect();
 				const translateX = destRect.left - startRect.left;
 				const translateY = destRect.top - startRect.top;
+
+				const distance = Math.hypot(translateX, translateY);
+				const duration = Math.min(distance / 1000, 1);
+				clone.style.transition = `transform ${duration}s cubic-bezier(0.4, 0, 0.2, 1), opacity ${duration}s`;
 
 				requestAnimationFrame(() => {
 					clone.style.transform = `translate(${translateX}px, ${translateY}px)`;
