@@ -1380,4 +1380,18 @@ export default {
 .expanded-row {
 	background-color: var(--surface-secondary);
 }
+
+/* Row highlight animation */
+.row-highlight {
+	animation: rowHighlight 0.5s ease-out;
+}
+
+@keyframes rowHighlight {
+	from {
+		background-color: #fff9c4;
+	}
+	to {
+		background-color: inherit;
+	}
+}
 </style>
